@@ -1,85 +1,73 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WildWatch README</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            margin: 20px;
-            padding: 20px;
-            background-color: #f4f4f4;
-        }
-        .container {
-            max-width: 800px;
-            margin: auto;
-            background: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-        h1, h2, h3 {
-            color: #333;
-        }
-        ul {
-            list-style-type: square;
-            margin-left: 20px;
-        }
-        .developer {
-            border-top: 1px solid #ccc;
-            padding-top: 10px;
-            margin-top: 10px;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>WildWatch</h1>
-        <p><strong>Product Description:</strong></p>
-        <p>WildWatch is an official incident reporting system for Cebu Institute of Technology - University (CITU). It provides a structured and confidential platform for students, faculty, and staff to report concerns and incidents. This centralized system enhances campus safety, streamlines reporting, and ensures proper resolution by directing reports to the appropriate university departments.</p>
-        
-        <h2>Web Functionalities:</h2>
-        <ul>
-            <li><strong>Login/Sign-Up with Microsoft</strong> – Secure access through Google or Facebook authentication.</li>
-            <li><strong>Incident Report Submission & Tracking</strong> – File reports with details like location, description, and supporting evidence.</li>
-            <li><strong>Department Selection for Case Submission</strong> – Categorize reports for proper handling.</li>
-            <li><strong>Automated Notifications (Email & SMS)</strong> – Receive real-time updates on report status.</li>
-            <li><strong>Incident Dashboard & Analytics</strong> – Admin view for summary reports and trend analysis.</li>
-            <li><strong>User Feedback & Follow-Up Requests</strong> – Provide feedback and request follow-ups.</li>
-        </ul>
-        
-        <h2>Mobile Functionalities:</h2>
-        <ul>
-            <li><strong>Login/Sign-Up with Microsoft or Biometrics</strong> – Secure access through social logins or biometric authentication.</li>
-            <li><strong>Quick Incident Reporting</strong> – Submit reports with descriptions, location, and media uploads.</li>
-            <li><strong>Real-Time Case Tracking</strong> – Track report status and updates.</li>
-            <li><strong>In-App & Automated SMS/Email Notifications</strong> – Receive push notifications and critical alerts.</li>
-            <li><strong>Emergency Alert Feature</strong> – Quickly notify campus security with live location.</li>
-            <li><strong>Incident History & Report Archive</strong> – Access past reports.</li>
-        </ul>
-        
-        <h2>Links:</h2>
-        <p><strong>Figma:</strong> <a href="https://www.figma.com/design/LECRx0PK3Fn1uTzRoxpS5K/Untitled?node-id=0-1&m=dev&t=fhjCKp0RQMycVBoM-1" target="_blank">View Design</a></p>
-        <p><strong>Diagram:</strong> Created using Visual Paradigm</p>
-        
-        <h2>Developers' Profiles:</h2>
-        <div class="developer">
-            <p><strong>Name:</strong> Alec R. Arela</p>
-            <p><strong>Course & Year:</strong> BSIT-3</p>
-            <p><em>"Kill them with kindness"</em></p>
-        </div>
-        <div class="developer">
-            <p><strong>Name:</strong> Jhean Hecari B. Caag</p>
-            <p><strong>Course & Year:</strong> BSIT-3</p>
-            <p><em>"Life goes on..."</em></p>
-        </div>
-        <div class="developer">
-            <p><strong>Name:</strong> Jermaine L. Gadiano</p>
-            <p><strong>Course & Year:</strong> BSIT-3</p>
-            <p><em>"If You Begin To Regret, You’ll Dull Your Future Decisions And Let Others Make Your Choices For You."</em></p>
-        </div>
-    </div>
-</body>
-</html>
+<!-- PROJECT LOGO -->
+<div align="center">
+    <img src="https://github.com/Alec010/WildWatch/blob/ae78d710ea1d7cada5ce84c87d80c15b89e820c2/474805732_1176042727287250_7817768361149033871_n.png" alt="logoText">
+    <h3>Wildwatch READ ME</h3>
+</div>
+
+<details>
+  <summary>Table of Contents</summary>
+  <ol>
+    <li>
+      <h5>About The Project</h5>
+      <ul>
+        <li><a href="#product-description">Product Description</a></li>
+      </ul>
+    </li>
+       <li>
+       <h5>List of Features</h5>
+      <ul>
+        <li><a href="#web-functionalities">Web Functionalities</a></li>
+        <li><a href="#mobile-functionalities">Web Functionalities</a></li>
+      </ul>
+    </li>
+    <li>
+       <h5>Getting Started</h5>
+      <ul>
+        <li><a href="#prerequisites">Prerequisites</a></li>
+        <li><a href="#installation">Installation</a></li>
+      </ul>
+    </li>
+     <li><a href="#additional-resources">Additional Resources</a></li>
+     <li><a href="#contact">Developers Profiles</a></li>
+  </ol>
+</details>
+
+
+
+## Product Description
+
+The WildWatch is an official incident reporting system for Cebu Institute of Technology - University (CITU). It provides a structured and confidential platform for students, faculty, and staff to report concerns and incidents. This centralized system enhances campus safety, streamlines reporting, and ensures proper resolution by directing reports to the appropriate university departments.
+
+
+
+## List Of Features
+- *Employee Profiles*: Centralized database for managing employee records and personal information.
+- *Attendance Management*: Efficiently track attendance, leaves, and absences with real-time counts for absentees, leaves, and those present, while providing comprehensive records, with overtime and  regular hours record to ensure transparency and accountability.
+- *Payroll Management*: Automated calculations, deductions, and payments with secure storage and accessibility
+- *Performance Management*: Tools for peer feedback, self-assessment, supervisor feedback, and sanction reporting
+- *Recruitment Tools*: Simplifies the hiring process with applicant tracking, resume management, and scheduling capabilities.
+- *Analytics Dashboard*: Real-time insights into HR data to support decision-making and compliance.
+
+## Web Funtionalities
+- Login/Sign-Up with Microsoft – Secure and convenient access through Google or Facebook authentication.
+- Incident Report Submission & Tracking – Users can file incident reports with details such as location, description, and supporting evidence (images/videos) and track the status of their reports.
+- Department Selection for Case Submission – Users can categorize their reports by selecting the relevant department, ensuring that incidents are directed to the appropriate office for proper handling.
+- Automated Notifications (Email & SMS) – Users receive real-time updates on report status through automated email and SMS alerts.
+- Incident Dashboard & Analytics – Admins can view a summary of reported incidents, generate reports, and analyze trends for better campus security management.
+- User Feedback & Follow-Up Requests – Users can provide feedback on how their reports were handled and request follow-ups if further action is needed.
+
+## Mobile Funtionalities
+- Login/Sign-Up with Microsoft or Biometrics – Secure access through social logins or biometric authentication for faster entry.
+- Quick Incident Reporting – Easily submit reports with descriptions, location, and optional image or video uploads.
+- Real-Time Case Tracking – Users can check the status of their submitted reports and receive updates from the assigned department.
+- In-App & Automated SMS/Email Notifications – Users receive push notifications for status updates within the app and automated SMS/email alerts for critical incidents.
+- Emergency Alert Feature – Enables users to quickly notify campus security of urgent situations, sharing their live location for faster response.
+- Incident History & Report Archive – Users can view their past incident reports and access archived reports for reference.
+
+## Additional Resources
+
+- 
+
+## Developers Profile
+
+  
