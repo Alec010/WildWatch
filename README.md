@@ -1,7 +1,7 @@
 <<<<<<< HEAD
 <!-- PROJECT LOGO -->
 <div align="center">
-    <img src="https://github.com/Alec010/WildWatch/blob/ae78d710ea1d7cada5ce84c87d80c15b89e820c2/474805732_1176042727287250_7817768361149033871_n.png" alt="logoText">
+    <img src="WildWatch.png" alt="logoText">
     <h3>Wildwatch READ ME</h3>
 </div>
 
