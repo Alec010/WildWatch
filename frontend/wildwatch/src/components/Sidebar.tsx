@@ -14,9 +14,16 @@ import Cookies from "js-cookie";
 import { useEffect, useState } from "react";
 
 interface User {
-  fullName: string;
-  idNumber: string;
+  id: number;
   email: string;
+  firstName: string;
+  lastName: string;
+  middleInitial: string;
+  schoolIdNumber: string;
+  contactNumber: string;
+  termsAccepted: boolean;
+  role: string;
+  enabled: boolean;
 }
 
 export function Sidebar() {
@@ -27,18 +34,14 @@ export function Sidebar() {
 
   useEffect(() => {
     const fetchUserProfile = async () => {
-      const token = Cookies.get('token');
-      if (!token) {
-        router.push('/login');
-        return;
-      }
-
       try {
         const response = await fetch('http://localhost:8080/api/auth/profile', {
+          method: 'GET',
+          credentials: 'include',
           headers: {
-            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
             'Content-Type': 'application/json',
-          },
+          }
         });
 
         if (!response.ok) {
@@ -52,11 +55,7 @@ export function Sidebar() {
         }
 
         const userData = await response.json();
-        setUser({
-          fullName: userData.fullName,
-          idNumber: userData.idNumber,
-          email: userData.email,
-        });
+        setUser(userData);
       } catch (error) {
         console.error('Error fetching user profile:', error);
         router.push('/login');
@@ -141,8 +140,9 @@ export function Sidebar() {
             <div className="text-sm text-gray-300">Loading...</div>
           ) : user ? (
             <>
-              <div className="text-sm font-medium">{user.fullName}</div>
-              <div className="text-xs text-gray-300">ID: {user.idNumber}</div>
+              <div className="text-sm font-medium">{user.firstName} {user.lastName}</div>
+              <div className="text-xs text-gray-300">ID: {user.schoolIdNumber}</div>
+              <div className="text-xs text-gray-300">{user.email}</div>
             </>
           ) : (
             <div className="text-sm text-gray-300">Not logged in</div>

@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import Image from "next/image";
 import { Sidebar } from "@/components/Sidebar";
+import { Upload, X, Plus, CheckCircle } from "lucide-react";
 
 interface WitnessInfo {
   name: string;
@@ -30,6 +31,7 @@ export default function EvidenceSubmissionPage() {
     fileInfos: [] as FileInfo[]
   });
   const [incidentData, setIncidentData] = useState<any>(null);
+  const [dragActive, setDragActive] = useState(false);
 
   useEffect(() => {
     // Retrieve incident data from session storage
@@ -54,6 +56,13 @@ export default function EvidenceSubmissionPage() {
     setFormData(prev => ({
       ...prev,
       witnesses: updatedWitnesses,
+    }));
+  };
+
+  const handleRemoveWitness = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      witnesses: prev.witnesses.filter((_, i) => i !== index),
     }));
   };
 
@@ -88,103 +97,166 @@ export default function EvidenceSubmissionPage() {
     }
   };
 
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const files = Array.from(e.dataTransfer.files);
+      const fileInfoPromises = files.map(async (file) => {
+        const base64 = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(file);
+        });
+
+        return {
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          data: base64
+        };
+      });
+
+      const newFileInfos = await Promise.all(fileInfoPromises);
+      setFormData(prev => ({
+        ...prev,
+        fileInfos: [...prev.fileInfos, ...newFileInfos]
+      }));
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Store evidence and witness data in session storage
     sessionStorage.setItem("evidenceSubmissionData", JSON.stringify(formData));
-    
-    // Navigate to review page
     router.push("/incidents/submit/review");
+  };
+
+  const removeFile = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      fileInfos: prev.fileInfos.filter((_, i) => i !== index)
+    }));
   };
 
   return (
     <div className="flex min-h-screen bg-[#f5f5f5]">
       <Sidebar />
       
-      {/* Main Content */}
-      <div className="flex-1">
-        <div className="max-w-[1200px] mx-auto p-6">
-          <Card className="bg-white shadow-lg">
-            <div className="mb-6">
-              <h1 className="text-2xl font-semibold text-[#8B0000]">Evidence & Witnesses</h1>
-              <p className="text-gray-500">Add supporting evidence and witness information</p>
-            </div>
+      <div className="flex-1 p-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="mb-8">
+            <h1 className="text-2xl font-semibold text-[#8B0000]">Evidence & Witnesses</h1>
+            <p className="text-gray-500">Add supporting evidence and witness information</p>
+          </div>
 
-            {/* Progress Steps */}
-            <div className="flex items-center mb-8">
-              <div className="flex items-center">
-                <div className="bg-green-500 text-white rounded-full w-8 h-8 flex items-center justify-center">
-                  ✓
-                </div>
-                <span className="ml-2 text-green-500">Incident Details</span>
+          {/* Progress Steps */}
+          <div className="flex items-center mb-8">
+            <div className="flex items-center">
+              <div className="bg-green-500 text-white rounded-full w-8 h-8 flex items-center justify-center">
+                <CheckCircle size={16} />
               </div>
-              <div className="flex-1 h-px bg-gray-300 mx-4"></div>
-              <div className="flex items-center">
-                <div className="bg-[#8B0000] text-white rounded-full w-8 h-8 flex items-center justify-center">
-                  2
-                </div>
-                <span className="ml-2 font-medium text-[#8B0000]">Evidence & Witnesses</span>
-              </div>
-              <div className="flex-1 h-px bg-gray-300 mx-4"></div>
-              <div className="flex items-center">
-                <div className="bg-gray-200 text-gray-600 rounded-full w-8 h-8 flex items-center justify-center">
-                  3
-                </div>
-                <span className="ml-2 text-gray-600">Review & Submit</span>
-              </div>
+              <span className="ml-2 text-green-500">Incident Details</span>
             </div>
+            <div className="flex-1 h-px bg-gray-300 mx-4"></div>
+            <div className="flex items-center">
+              <div className="bg-[#8B0000] text-white rounded-full w-8 h-8 flex items-center justify-center">
+                2
+              </div>
+              <span className="ml-2 font-medium text-[#8B0000]">Evidence & Witnesses</span>
+            </div>
+            <div className="flex-1 h-px bg-gray-300 mx-4"></div>
+            <div className="flex items-center">
+              <div className="bg-gray-200 text-gray-600 rounded-full w-8 h-8 flex items-center justify-center">
+                3
+              </div>
+              <span className="ml-2 text-gray-600">Review & Submit</span>
+            </div>
+          </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+          <Card className="p-6">
+            <form onSubmit={handleSubmit} className="space-y-8">
               {/* File Upload Section */}
-              <div className="space-y-2">
-                <Label>Evidence Files</Label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                  <Input
-                    type="file"
-                    multiple
-                    onChange={handleFileChange}
-                    className="hidden"
-                    id="file-upload"
-                    accept="image/*,video/*"
-                  />
-                  <Label
-                    htmlFor="file-upload"
-                    className="cursor-pointer text-[#8B0000] hover:text-[#6B0000]"
-                  >
-                    Click to upload or drag and drop
-                  </Label>
-                  <p className="text-sm text-gray-500 mt-2">
-                    Support for images and videos
-                  </p>
+              <div className="space-y-4">
+                <Label className="text-lg font-medium">Evidence Files</Label>
+                <div 
+                  className={`border-2 border-dashed rounded-lg p-8 transition-colors ${
+                    dragActive ? 'border-[#8B0000] bg-red-50' : 'border-gray-300'
+                  }`}
+                  onDragEnter={handleDrag}
+                  onDragLeave={handleDrag}
+                  onDragOver={handleDrag}
+                  onDrop={handleDrop}
+                >
+                  <div className="flex flex-col items-center">
+                    <Upload className="h-12 w-12 text-gray-400 mb-4" />
+                    <Input
+                      type="file"
+                      multiple
+                      onChange={handleFileChange}
+                      className="hidden"
+                      id="file-upload"
+                      accept="image/*,video/*"
+                    />
+                    <Label
+                      htmlFor="file-upload"
+                      className="cursor-pointer text-[#8B0000] hover:text-[#6B0000] font-medium"
+                    >
+                      Click to upload
+                    </Label>
+                    <p className="text-sm text-gray-500 mt-2">or drag and drop</p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Supported formats: Images and Videos
+                    </p>
+                  </div>
                 </div>
+
                 {/* File List */}
                 {formData.fileInfos.length > 0 && (
-                  <div className="mt-4">
-                    <h4 className="font-medium mb-2">Uploaded Files:</h4>
+                  <div className="mt-6">
+                    <h4 className="font-medium mb-4">Uploaded Files</h4>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                       {formData.fileInfos.map((file, index) => (
-                        <div key={index} className="space-y-2">
-                          {file.type.startsWith('image/') ? (
-                            <div className="relative aspect-square rounded-lg overflow-hidden border border-gray-200">
+                        <div key={index} className="group relative">
+                          <div className="relative aspect-square rounded-lg overflow-hidden border border-gray-200">
+                            {file.type.startsWith('image/') ? (
                               <Image
                                 src={file.data}
                                 alt={file.name}
                                 fill
                                 style={{ objectFit: 'cover' }}
                               />
-                            </div>
-                          ) : file.type.startsWith('video/') ? (
-                            <div className="relative aspect-video rounded-lg overflow-hidden border border-gray-200">
+                            ) : file.type.startsWith('video/') ? (
                               <video
                                 src={file.data}
                                 controls
                                 className="w-full h-full"
                               />
-                            </div>
-                          ) : null}
-                          <p className="text-sm text-gray-600">
-                            {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                            ) : null}
+                            <button
+                              type="button"
+                              onClick={() => removeFile(index)}
+                              className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                          <p className="text-sm text-gray-600 mt-2 truncate">
+                            {file.name}
+                          </p>
+                          <p className="text-xs text-gray-400">
+                            {(file.size / 1024 / 1024).toFixed(2)} MB
                           </p>
                         </div>
                       ))}
@@ -196,43 +268,54 @@ export default function EvidenceSubmissionPage() {
               {/* Witnesses Section */}
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <Label>Witnesses</Label>
+                  <Label className="text-lg font-medium">Witnesses</Label>
                   <Button
                     type="button"
-                    variant="outline"
                     onClick={handleAddWitness}
-                    className="text-[#8B0000] border-[#8B0000] hover:bg-[#8B0000] hover:text-white"
+                    variant="outline"
+                    className="text-[#8B0000] border-[#8B0000] hover:bg-red-50"
                   >
-                    + Add Witness
+                    <Plus size={16} className="mr-2" />
+                    Add Witness
                   </Button>
                 </div>
 
                 {formData.witnesses.map((witness, index) => (
-                  <Card key={index} className="p-4">
-                    <div className="space-y-4">
+                  <Card key={index} className="p-6 relative">
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveWitness(index)}
+                      className="absolute top-4 right-4 text-gray-400 hover:text-red-500"
+                    >
+                      <X size={16} />
+                    </button>
+                    <div className="grid gap-6">
                       <div className="space-y-2">
-                        <Label>Name</Label>
+                        <Label className="block text-sm font-medium text-gray-700">Name</Label>
                         <Input
                           value={witness.name}
                           onChange={(e) => handleWitnessChange(index, "name", e.target.value)}
                           placeholder="Witness name"
+                          className="w-full"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>Contact Information</Label>
+                        <Label className="block text-sm font-medium text-gray-700">Contact Information</Label>
                         <Input
                           value={witness.contactInformation}
                           onChange={(e) => handleWitnessChange(index, "contactInformation", e.target.value)}
                           placeholder="Phone number or email"
+                          className="w-full"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>Statement</Label>
+                        <Label className="block text-sm font-medium text-gray-700">Statement</Label>
                         <Textarea
                           value={witness.statement}
                           onChange={(e) => handleWitnessChange(index, "statement", e.target.value)}
-                          placeholder="What did the witness observe?"
-                          className="min-h-[100px]"
+                          placeholder="Witness statement"
+                          rows={3}
+                          className="w-full min-h-[100px] resize-y"
                         />
                       </div>
                     </div>
@@ -240,18 +323,17 @@ export default function EvidenceSubmissionPage() {
                 ))}
               </div>
 
-              {/* Navigation Buttons */}
-              <div className="flex justify-between">
+              <div className="flex justify-between pt-6">
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => router.push("/incidents/submit")}
+                  onClick={() => router.back()}
                 >
                   Back
                 </Button>
                 <Button
                   type="submit"
-                  className="bg-[#8B0000] hover:bg-[#6B0000] text-white"
+                  className="bg-[#8B0000] hover:bg-[#6B0000]"
                 >
                   Continue to Review
                 </Button>

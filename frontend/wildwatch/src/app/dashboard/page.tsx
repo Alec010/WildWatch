@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Cookies from "js-cookie";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,20 +12,83 @@ import {
   FileText,
   AlertCircle,
   CheckCircle2,
-  CircleDot
+  CircleDot,
+  User
 } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
+import { checkAuth } from "@/utils/auth";
+
+interface UserData {
+  id: number;
+  email: string;
+  firstName: string;
+  lastName: string;
+  middleInitial: string;
+  schoolIdNumber: string;
+  contactNumber: string;
+  termsAccepted: boolean;
+  role: string;
+  enabled: boolean;
+}
 
 export default function DashboardPage() {
   const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
+  const [authError, setAuthError] = useState(false);
+  const [userData, setUserData] = useState<UserData | null>(null);
 
   useEffect(() => {
-    // Check if user is authenticated
-    const token = Cookies.get("token");
-    if (!token) {
-      router.push("/login");
-    }
+    let isMounted = true;
+
+    const verifyAuth = async () => {
+      console.log('Starting dashboard authentication verification...');
+      try {
+        // Verify with the backend
+        const { isAuthenticated, user } = await checkAuth();
+        console.log('Backend authentication result:', { isAuthenticated, user });
+
+        if (isMounted) {
+          if (!isAuthenticated) {
+            console.log('Not authenticated by backend, redirecting to login...');
+            setAuthError(true);
+            router.push('/login');
+            return;
+          }
+
+          setUserData(user);
+          console.log('Authentication successful, showing dashboard...');
+          setIsLoading(false);
+        }
+      } catch (error) {
+        console.error('Error in authentication verification:', error);
+        if (isMounted) {
+          setAuthError(true);
+          router.push('/login');
+        }
+      }
+    };
+
+    verifyAuth();
+
+    return () => {
+      isMounted = false;
+    };
   }, [router]);
+
+  if (authError) {
+    return null; // Don't render anything if there's an auth error
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#8B0000] mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex bg-[#f5f5f5]">
@@ -38,25 +100,16 @@ export default function DashboardPage() {
           <div className="max-w-7xl mx-auto px-6 py-4">
             <div className="flex justify-between items-center">
               <div>
-                <h1 className="text-2xl font-semibold text-[#8B0000]">Incident Dashboard</h1>
+                <h1 className="text-2xl font-semibold text-[#8B0000]">Welcome, {userData?.firstName || 'User'}</h1>
                 <p className="text-gray-500 text-sm">View and manage your reported incidents</p>
               </div>
               <div className="flex items-center space-x-4">
-                <div className="relative w-64">
-                  <Input
-                    type="text"
-                    placeholder="Search incidents..."
-                    className="pl-4 pr-10"
-                  />
+                <div className="text-right mr-4">
+                  <p className="text-sm font-medium">{userData?.email}</p>
+                  <p className="text-xs text-gray-500">{userData?.role}</p>
                 </div>
-                <Button 
-                  className="bg-[#8B0000] hover:bg-[#6B0000]"
-                  onClick={() => router.push('/incidents/submit')}
-                >
-                  + Report New Incident
-                </Button>
-                <Button variant="ghost" size="icon">
-                  <Bell size={20} />
+                <Button variant="outline" size="icon">
+                  <Bell className="h-5 w-5" />
                 </Button>
               </div>
             </div>

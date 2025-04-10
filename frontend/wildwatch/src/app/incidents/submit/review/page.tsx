@@ -39,20 +39,45 @@ export default function ReviewSubmissionPage() {
         throw new Error('No authentication token found');
       }
 
+      // Create FormData object
+      const formData = new FormData();
+
+      // Add incident data as JSON string
+      const incidentDataWithWitnesses = {
+        ...incidentData,
+        assignedOffice: incidentData.assignedOffice.trim().toUpperCase(),
+        witnesses: evidenceData.witnesses
+      };
+
+      // Debug log
+      console.log('Submitting incident data:', incidentDataWithWitnesses);
+
+      formData.append('incidentData', JSON.stringify(incidentDataWithWitnesses));
+
+      // Add files
+      if (evidenceData.fileInfos && evidenceData.fileInfos.length > 0) {
+        for (const fileInfo of evidenceData.fileInfos) {
+          // Convert base64 to blob
+          const response = await fetch(fileInfo.data);
+          const blob = await response.blob();
+          
+          // Create a File object from the blob
+          const file = new File([blob], fileInfo.name, { type: fileInfo.type });
+          formData.append('files', file);
+        }
+      }
+
       const response = await fetch("http://localhost:8080/api/incidents", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({
-          ...incidentData,
-          evidence: evidenceData
-        })
+        body: formData
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
 
       // Clear session storage
@@ -63,7 +88,7 @@ export default function ReviewSubmissionPage() {
       router.push("/dashboard");
     } catch (error) {
       console.error("Error submitting incident:", error);
-      alert("Failed to submit incident. Please try again.");
+      alert("Failed to submit incident: " + (error instanceof Error ? error.message : "Unknown error"));
     } finally {
       setIsSubmitting(false);
     }

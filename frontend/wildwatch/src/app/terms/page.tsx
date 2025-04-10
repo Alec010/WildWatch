@@ -5,35 +5,60 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import Image from "next/image";
-import Cookies from "js-cookie";
 
 export default function TermsPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleAccept = async () => {
+  const handleAcceptTerms = async () => {
+    setIsLoading(true);
+    setError('');
+    
     try {
-      setLoading(true);
-      const token = Cookies.get('token');
+      console.log('Sending terms acceptance request...');
       
       const response = await fetch('http://localhost:8080/api/terms/accept', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        credentials: 'include',
+        mode: 'cors'
       });
 
+      console.log('Response status:', response.status);
+      
       if (!response.ok) {
-        throw new Error('Failed to accept terms');
+        const errorText = await response.text();
+        console.error('Error response:', errorText);
+        throw new Error(`Failed to accept terms: ${errorText}`);
       }
 
+      // Don't try to parse response as JSON since it's just a success message
+      const responseText = await response.text();
+      console.log('Success response:', responseText);
+
+      // Update user data in localStorage
+      const userData = JSON.parse(localStorage.getItem('user') || '{}');
+      userData.termsAccepted = true;
+      localStorage.setItem('user', JSON.stringify(userData));
+
+      console.log('Redirecting to dashboard...');
       router.push('/dashboard');
-    } catch (error) {
-      console.error('Error accepting terms:', error);
-      alert('Failed to accept terms. Please try again.');
+    } catch (err) {
+      console.error('Error accepting terms:', err);
+      setError(err instanceof Error ? err.message : 'Failed to accept terms');
+      
+      // If the error is due to authentication, redirect to login
+      if (err instanceof Error && err.message.includes('401')) {
+        console.log('Authentication failed, redirecting to login...');
+        router.push('/login');
+        return;
+      }
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -128,13 +153,19 @@ export default function TermsPage() {
                 </p>
               </div>
 
+              {error && (
+                <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
+                  {error}
+                </div>
+              )}
+
               <div className="flex justify-center mt-8">
                 <Button
-                  onClick={handleAccept}
-                  disabled={loading}
+                  onClick={handleAcceptTerms}
                   className="bg-[#8B0000] hover:bg-[#6B0000] text-white px-8 py-2"
+                  disabled={isLoading}
                 >
-                  {loading ? "Accepting..." : "I Agree"}
+                  {isLoading ? 'Accepting Terms...' : 'Accept Terms'}
                 </Button>
               </div>
             </div>

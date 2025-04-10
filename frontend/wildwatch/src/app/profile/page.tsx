@@ -331,7 +331,6 @@ function ProfileContent({ user }: { user: UserProfile }) {
 
                 {!isEditing && (
                   <div className="flex justify-end space-x-4">
-                    <Button variant="destructive">Delete Account</Button>
                     <Button 
                       onClick={() => setIsEditing(true)}
                       className="bg-[#8B0000] hover:bg-[#6B0000]"

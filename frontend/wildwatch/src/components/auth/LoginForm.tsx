@@ -56,6 +56,7 @@ export function LoginForm() {
       }
 
       const data = await response.json();
+      console.log('Login response data:', data);
       
       // Store the token in a cookie
       Cookies.set("token", data.token, {
@@ -176,7 +177,9 @@ export function LoginForm() {
           type="button" 
           variant="outline" 
           className="w-full flex items-center justify-center gap-2"
-          onClick={() => {/* Implement Microsoft sign in */}}
+          onClick={() => {
+            window.location.href = "http://localhost:8080/oauth2/authorization/microsoft";
+          }}
         >
           <MicrosoftLogo />
           Sign in with Microsoft
