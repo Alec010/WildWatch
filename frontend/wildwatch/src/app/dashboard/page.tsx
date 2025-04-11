@@ -12,30 +12,15 @@ import {
   FileText,
   AlertCircle,
   CheckCircle2,
-  CircleDot,
-  User
+  CircleDot
 } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import { checkAuth } from "@/utils/auth";
-
-interface UserData {
-  id: number;
-  email: string;
-  firstName: string;
-  lastName: string;
-  middleInitial: string;
-  schoolIdNumber: string;
-  contactNumber: string;
-  termsAccepted: boolean;
-  role: string;
-  enabled: boolean;
-}
 
 export default function DashboardPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [authError, setAuthError] = useState(false);
-  const [userData, setUserData] = useState<UserData | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -55,7 +40,6 @@ export default function DashboardPage() {
             return;
           }
 
-          setUserData(user);
           console.log('Authentication successful, showing dashboard...');
           setIsLoading(false);
         }
@@ -100,14 +84,10 @@ export default function DashboardPage() {
           <div className="max-w-7xl mx-auto px-6 py-4">
             <div className="flex justify-between items-center">
               <div>
-                <h1 className="text-2xl font-semibold text-[#8B0000]">Welcome, {userData?.firstName || 'User'}</h1>
+                <h1 className="text-2xl font-semibold text-[#8B0000]">Incident Dashboard</h1>
                 <p className="text-gray-500 text-sm">View and manage your reported incidents</p>
               </div>
               <div className="flex items-center space-x-4">
-                <div className="text-right mr-4">
-                  <p className="text-sm font-medium">{userData?.email}</p>
-                  <p className="text-xs text-gray-500">{userData?.role}</p>
-                </div>
                 <Button variant="outline" size="icon">
                   <Bell className="h-5 w-5" />
                 </Button>
@@ -125,7 +105,7 @@ export default function DashboardPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-gray-500">Total Reports</p>
-                      <p className="text-2xl font-bold">12</p>
+                      <p className="text-2xl font-bold">0</p>
                     </div>
                     <FileText className="h-8 w-8 text-[#8B0000]" />
                   </div>
@@ -136,7 +116,7 @@ export default function DashboardPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-gray-500">In Progress</p>
-                      <p className="text-2xl font-bold">3</p>
+                      <p className="text-2xl font-bold">0</p>
                     </div>
                     <CircleDot className="h-8 w-8 text-yellow-500" />
                   </div>
@@ -147,7 +127,7 @@ export default function DashboardPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-gray-500">Resolved</p>
-                      <p className="text-2xl font-bold">8</p>
+                      <p className="text-2xl font-bold">0</p>
                     </div>
                     <CheckCircle2 className="h-8 w-8 text-green-500" />
                   </div>
@@ -157,8 +137,8 @@ export default function DashboardPage() {
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-gray-500">Urgent</p>
-                      <p className="text-2xl font-bold">1</p>
+                      <p className="text-sm font-medium text-gray-500">High</p>
+                      <p className="text-2xl font-bold">0</p>
                     </div>
                     <AlertCircle className="h-8 w-8 text-red-500" />
                   </div>

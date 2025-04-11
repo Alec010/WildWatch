@@ -22,7 +22,9 @@ import {
 } from "@/components/ui/form";
 
 const formSchema = z.object({
-  email: z.string().email("Invalid email").endsWith(".edu", "Must be an institutional email"),
+  email: z.string()
+    .email("Invalid email")
+    .endsWith("@cit.edu", "Must be a CIT email address"),
   password: z.string().min(1, "Password is required"),
 });
 
@@ -107,10 +109,10 @@ export function LoginForm() {
             name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Institutional Email</FormLabel>
+                <FormLabel>CIT Email</FormLabel>
                 <FormControl>
                   <Input 
-                    placeholder="your.name@institution.edu" 
+                    placeholder="your.name@cit.edu" 
                     type="email"
                     {...field} 
                   />

@@ -7,7 +7,6 @@ import lombok.Data;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.util.Arrays;
 import java.util.List;
 
 @Data
@@ -28,18 +27,9 @@ public class IncidentRequest {
     private String description;
 
     @NotNull(message = "Assigned office is required")
-    private String assignedOffice;
+    private Office assignedOffice;
 
     private List<WitnessDTO> witnesses;
-
-    public Office getAssignedOfficeEnum() {
-        try {
-            return Office.valueOf(assignedOffice.toUpperCase());
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Invalid office code: " + assignedOffice + ". Valid values are: " + 
-                Arrays.toString(Office.values()));
-        }
-    }
 
     @Data
     public static class WitnessDTO {

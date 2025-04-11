@@ -24,7 +24,9 @@ const formSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   middleInitial: z.string().max(1, "Middle initial should be a single character"),
-  email: z.string().email("Invalid email").endsWith(".edu", "Must be an institutional email"),
+  email: z.string()
+    .email("Invalid email")
+    .endsWith("@cit.edu", "Must be a CIT email address"),
   schoolIdNumber: z.string().min(1, "School ID number is required"),
   password: z.string()
     .min(8, "Password must be at least 8 characters")
@@ -115,7 +117,7 @@ export function SignUpForm() {
   }
 
   return (
-    <div className="w-full max-w-md p-8 space-y-6">
+    <div className="w-full max-w-lg p-8 space-y-6">
       {/* Logo */}
       <div className="flex flex-col items-center space-y-2">
         <Link href="/">
@@ -134,12 +136,12 @@ export function SignUpForm() {
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           {/* Name Fields */}
-          <div className="grid grid-cols-7 gap-4">
+          <div className="grid grid-cols-12 gap-4">
             <FormField
               control={form.control}
               name="firstName"
               render={({ field }) => (
-                <FormItem className="col-span-3">
+                <FormItem className="col-span-5">
                   <FormLabel>First Name</FormLabel>
                   <FormControl>
                     <Input placeholder="Enter first name" {...field} />
@@ -153,10 +155,10 @@ export function SignUpForm() {
               control={form.control}
               name="middleInitial"
               render={({ field }) => (
-                <FormItem className="col-span-1">
+                <FormItem className="col-span-2">
                   <FormLabel>M.I.</FormLabel>
                   <FormControl>
-                    <Input placeholder="M.I." maxLength={1} {...field} />
+                    <Input placeholder="M.I." maxLength={1} className="text-center" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -167,7 +169,7 @@ export function SignUpForm() {
               control={form.control}
               name="lastName"
               render={({ field }) => (
-                <FormItem className="col-span-3">
+                <FormItem className="col-span-5">
                   <FormLabel>Last Name</FormLabel>
                   <FormControl>
                     <Input placeholder="Enter last name" {...field} />
@@ -184,10 +186,10 @@ export function SignUpForm() {
             name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Institutional Email</FormLabel>
+                <FormLabel>CIT Email</FormLabel>
                 <FormControl>
                   <Input 
-                    placeholder="your.name@institution.edu" 
+                    placeholder="your.name@cit.edu" 
                     type="email"
                     {...field} 
                   />

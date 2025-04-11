@@ -21,7 +21,7 @@ export const checkAuth = async () => {
     const data = await response.json();
     console.log('Authentication successful, user data:', data);
 
-    // Update localStorage with the latest user data
+    
     localStorage.setItem('user', JSON.stringify(data));
     
     return { isAuthenticated: true, user: data };

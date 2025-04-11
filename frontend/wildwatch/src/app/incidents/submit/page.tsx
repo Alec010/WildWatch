@@ -91,10 +91,9 @@ export default function IncidentSubmissionPage() {
   };
 
   const handleOfficeSelect = (office: string) => {
-    console.log('Selected office:', office);
     setFormData(prev => ({
       ...prev,
-      assignedOffice: office.trim().toUpperCase()
+      assignedOffice: office
     }));
   };
 
@@ -107,7 +106,6 @@ export default function IncidentSubmissionPage() {
       return;
     }
 
-    console.log('Submitting form data:', formData);
     sessionStorage.setItem("incidentSubmissionData", JSON.stringify(formData));
     router.push("/incidents/submit/evidence");
   };

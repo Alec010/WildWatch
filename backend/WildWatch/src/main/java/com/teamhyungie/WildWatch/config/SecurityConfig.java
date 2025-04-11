@@ -17,7 +17,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.http.HttpMethod;
 
 import java.util.Arrays;
@@ -63,13 +62,14 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers(
                     "/api/auth/**",
                     "/login/**",
                     "/oauth2/**",
-                    "/error"
+                    "/error",
+                    "/favicon.ico"
                 ).permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/incidents/**").authenticated()
                 .requestMatchers("/api/terms/**").authenticated()
                 .anyRequest().authenticated()
             )
@@ -78,16 +78,22 @@ public class SecurityConfig {
                     .userService(customOAuth2UserService)
                 )
                 .successHandler(oAuth2SuccessHandler)
-                .defaultSuccessUrl("http://localhost:3000/dashboard", true)
-                .failureUrl("http://localhost:3000/login?error=true")
             )
-            .exceptionHandling(exceptions -> exceptions
-                .defaultAuthenticationEntryPointFor(
-                    (request, response, exception) -> response.setStatus(401),
-                    new AntPathRequestMatcher("/api/**")
-                )
-            )
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+            .exceptionHandling(exception -> exception
+                .authenticationEntryPoint((request, response, authException) -> {
+                    // Check if it's an API request
+                    if (request.getHeader("Accept") != null && 
+                        request.getHeader("Accept").contains("application/json")) {
+                        response.setStatus(401);
+                        response.setContentType("application/json");
+                        response.getWriter().write("{\"error\":\"Unauthorized\"}");
+                    } else {
+                        // For non-API requests, redirect to login page
+                        response.sendRedirect("/api/auth/login");
+                    }
+                })
+            );
 
         return http.build();
     }
