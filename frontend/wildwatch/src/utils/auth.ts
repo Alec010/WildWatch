@@ -1,3 +1,5 @@
+import Cookies from 'js-cookie';
+
 export const checkAuth = async () => {
   console.log('Starting authentication check...');
   try {
@@ -20,9 +22,6 @@ export const checkAuth = async () => {
 
     const data = await response.json();
     console.log('Authentication successful, user data:', data);
-
-    
-    localStorage.setItem('user', JSON.stringify(data));
     
     return { isAuthenticated: true, user: data };
   } catch (error) {
@@ -31,12 +30,29 @@ export const checkAuth = async () => {
   }
 };
 
-export const getUserFromStorage = () => {
+export const getCurrentUser = async () => {
   try {
-    const userData = localStorage.getItem('user');
-    return userData ? JSON.parse(userData) : null;
+    const response = await fetch('http://localhost:8080/api/users/me', {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${Cookies.get('token')}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch user data');
+    }
+
+    return await response.json();
   } catch (error) {
-    console.error('Error reading user from storage:', error);
+    console.error('Error fetching user data:', error);
     return null;
   }
+};
+
+export const logout = () => {
+  Cookies.remove('token');
+  window.location.href = '/login';
 }; 
