@@ -13,7 +13,7 @@ fun SignUpScreenPreview() {
         val navController = rememberNavController() // Create a dummy navController for preview
         SignUpScreen(
             onSignInClick = {},
-            navController = navController // Pass the dummy navController to SignUpScreen
+
         )
     }
 }

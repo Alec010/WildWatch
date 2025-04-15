@@ -17,6 +17,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.wildwatch.R
 import com.wildwatch.ui.components.auth.PasswordTextField
+import com.wildwatch.utils.TokenManager
 import com.wildwatch.viewmodel.LoginViewModel
 
 @Composable
@@ -35,10 +36,14 @@ fun LoginScreen(
     val viewModel: LoginViewModel = viewModel()
     val context = LocalContext.current
     val loginResult by viewModel.loginResult.collectAsState()
+    val tokenManager = remember { TokenManager(context) }
 
     LaunchedEffect(loginResult) {
         loginResult?.let { result ->
             result.onSuccess { response ->
+                // ✅ Save the token to DataStore
+                tokenManager.saveToken(response.token)
+
                 Toast.makeText(context, "Login successful!", Toast.LENGTH_SHORT).show()
                 if (response.termsAccepted) {
                     navController.navigate("main") {
