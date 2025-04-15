@@ -5,8 +5,7 @@ import com.wildwatch.api.RetrofitClient
 import com.wildwatch.model.LoginRequest
 import com.wildwatch.model.LoginResponse
 import com.wildwatch.model.RegisterRequest
-import retrofit2.HttpException
-import java.io.IOException
+import com.wildwatch.model.UserProfile
 
 class AuthRepository {
     suspend fun login(email: String, password: String): Result<LoginResponse> {
@@ -44,5 +43,17 @@ class AuthRepository {
         }
     }
 
+    suspend fun getUserProfile(authHeader: String): Result<UserProfile> {
+        return try {
+            val response = RetrofitClient.authApi.getProfile(authHeader)
+            if (response.isSuccessful) {
+                Result.success(response.body()!!)
+            } else {
+                Result.failure(Exception("Failed: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }
 

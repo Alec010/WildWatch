@@ -46,7 +46,7 @@ fun NavGraph(navController: NavHostController) {
                         popUpTo(Screen.Login.route) { inclusive = true }
                     }
                 },
-                navController = navController
+
             )
         }
 

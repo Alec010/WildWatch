@@ -17,6 +17,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.wildwatch.navigation.BottomNavItem
 import com.wildwatch.ui.components.bottomnav.WildWatchBottomNavigation
+import com.wildwatch.ui.screens.casetracking.CaseTrackingScreen
 import com.wildwatch.ui.screens.dashboard.DashboardScreen
 import com.wildwatch.ui.screens.profile.ProfileScreen
 import com.wildwatch.ui.screens.report.ReportIncidentScreen
@@ -80,7 +81,7 @@ fun MainScreen() {
                     ReportIncidentScreen()
                 }
                 composable("cases") {
-                    PlaceholderScreen("Case Tracking")
+                    CaseTrackingScreen()
                 }
                 composable("settings") {
                     ProfileScreen()
