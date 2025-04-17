@@ -6,12 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Sidebar } from "@/components/Sidebar";
 import Image from "next/image";
+import { CheckCircle2 } from "lucide-react";
 
 export default function ReviewSubmissionPage() {
   const router = useRouter();
   const [incidentData, setIncidentData] = useState<any>(null);
   const [evidenceData, setEvidenceData] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [trackingNumber, setTrackingNumber] = useState<string>("");
 
   useEffect(() => {
     // Retrieve data from session storage
@@ -39,28 +42,48 @@ export default function ReviewSubmissionPage() {
         throw new Error('No authentication token found');
       }
 
+      // Create FormData instance
+      const formData = new FormData();
+
+      // Add incident data and evidence data as JSON strings
+      formData.append('incidentData', JSON.stringify(incidentData));
+      formData.append('witnesses', JSON.stringify(evidenceData.witnesses));
+
+      // Add files
+      for (const fileInfo of evidenceData.fileInfos) {
+        // Convert base64 to blob
+        const response = await fetch(fileInfo.data);
+        const blob = await response.blob();
+        formData.append('files', blob, fileInfo.name);
+      }
+
       const response = await fetch("http://localhost:8080/api/incidents", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({
-          ...incidentData,
-          evidence: evidenceData
-        })
+        body: formData
       });
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
+      const responseData = await response.json();
+      setTrackingNumber(responseData.trackingNumber);
+
       // Clear session storage
       sessionStorage.removeItem("incidentSubmissionData");
       sessionStorage.removeItem("evidenceSubmissionData");
 
-      // Redirect to success page or dashboard
-      router.push("/dashboard");
+      // Show success modal
+      setShowSuccessModal(true);
+
+      // Redirect to dashboard after 3 seconds
+      setTimeout(() => {
+        router.push("/dashboard");
+      }, 3000);
+
     } catch (error) {
       console.error("Error submitting incident:", error);
       alert("Failed to submit incident. Please try again.");
@@ -76,6 +99,27 @@ export default function ReviewSubmissionPage() {
   return (
     <div className="flex min-h-screen bg-[#f5f5f5]">
       <Sidebar />
+
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+            <div className="flex flex-col items-center text-center">
+              <CheckCircle2 className="h-16 w-16 text-green-500 mb-4" />
+              <h2 className="text-2xl font-semibold text-gray-800 mb-2">Report Submitted Successfully!</h2>
+              <p className="text-gray-600 mb-4">
+                Your incident report has been created with tracking number:
+              </p>
+              <p className="text-lg font-mono font-semibold text-[#8B0000] mb-6">
+                {trackingNumber}
+              </p>
+              <p className="text-sm text-gray-500">
+                You will be redirected to the dashboard in a few seconds...
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Content */}
       <div className="flex-1">

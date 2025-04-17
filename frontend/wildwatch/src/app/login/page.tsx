@@ -1,10 +1,6 @@
-import { LoginForm } from "@/components/auth/LoginForm"
-import type { Metadata } from "next"
+'use client';
 
-export const metadata: Metadata = {
-  title: "Sign In - WildWatch",
-  description: "Sign in to your WildWatch account",
-}
+import { LoginForm } from "@/components/auth/LoginForm"
 
 export default function LoginPage() {
   return (

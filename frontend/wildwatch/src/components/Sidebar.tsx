@@ -14,8 +14,9 @@ import Cookies from "js-cookie";
 import { useEffect, useState } from "react";
 
 interface User {
-  fullName: string;
-  idNumber: string;
+  firstName: string;
+  lastName: string;
+  schoolIdNumber: string;
   email: string;
 }
 
@@ -53,8 +54,9 @@ export function Sidebar() {
 
         const userData = await response.json();
         setUser({
-          fullName: userData.fullName,
-          idNumber: userData.idNumber,
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          schoolIdNumber: userData.schoolIdNumber,
           email: userData.email,
         });
       } catch (error) {
@@ -141,8 +143,8 @@ export function Sidebar() {
             <div className="text-sm text-gray-300">Loading...</div>
           ) : user ? (
             <>
-              <div className="text-sm font-medium">{user.fullName}</div>
-              <div className="text-xs text-gray-300">ID: {user.idNumber}</div>
+              <div className="text-sm font-medium">{user.firstName} {user.lastName}</div>
+              <div className="text-xs text-gray-300">ID: {user.schoolIdNumber}</div>
             </>
           ) : (
             <div className="text-sm text-gray-300">Not logged in</div>

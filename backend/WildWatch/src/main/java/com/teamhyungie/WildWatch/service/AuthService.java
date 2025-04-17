@@ -66,23 +66,24 @@ public class AuthService {
                 .build();
     }
 
-    public Map<String, String> getUserProfile(String email) {
+    public Map<String, Object> getUserProfile(String email) {
         User user = userService.findByUsername(email);
         if (user == null) {
             throw new RuntimeException("User not found");
         }
 
-        Map<String, String> profile = new HashMap<>();
-        // Combine first name, middle initial, and last name
-        String fullName = user.getFirstName();
-        if (user.getMiddleInitial() != null && !user.getMiddleInitial().isEmpty()) {
-            fullName += " " + user.getMiddleInitial() + ".";
-        }
-        fullName += " " + user.getLastName();
-        
-        profile.put("fullName", fullName);
-        profile.put("idNumber", user.getSchoolIdNumber());
+        Map<String, Object> profile = new HashMap<>();
+        profile.put("id", user.getId());
         profile.put("email", user.getEmail());
+        profile.put("firstName", user.getFirstName());
+        profile.put("lastName", user.getLastName());
+        profile.put("middleInitial", user.getMiddleInitial());
+        profile.put("schoolIdNumber", user.getSchoolIdNumber());
+        profile.put("contactNumber", user.getContactNumber());
+        profile.put("role", user.getRole().toString());
+        profile.put("termsAccepted", user.isTermsAccepted());
+        profile.put("enabled", user.isEnabled());
+        
         return profile;
     }
 } 
