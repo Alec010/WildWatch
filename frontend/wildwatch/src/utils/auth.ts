@@ -1,6 +1,15 @@
 import Cookies from 'js-cookie';
 
-export const checkAuth = async () => {
+interface AuthResponse {
+  isAuthenticated: boolean;
+  user: {
+    role: string;
+    termsAccepted: boolean;
+    [key: string]: any;
+  } | null;
+}
+
+export const checkAuth = async (): Promise<AuthResponse> => {
   console.log('Starting authentication check...');
   try {
     console.log('Making request to /api/auth/profile...');
@@ -10,6 +19,7 @@ export const checkAuth = async () => {
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${Cookies.get('token')}`
       }
     });
 
@@ -55,4 +65,20 @@ export const getCurrentUser = async () => {
 export const logout = () => {
   Cookies.remove('token');
   window.location.href = '/login';
+};
+
+export const handleAuthRedirect = (user: { role: string; termsAccepted: boolean }) => {
+  if (!user.termsAccepted) {
+    return '/terms';
+  }
+
+  switch (user.role) {
+    case 'OFFICE_ADMIN':
+      return '/office-admin/dashboard';
+    case 'SYSTEM_ADMIN':
+      return '/admin/dashboard';
+    case 'REGULAR_USER':
+    default:
+      return '/dashboard';
+  }
 }; 

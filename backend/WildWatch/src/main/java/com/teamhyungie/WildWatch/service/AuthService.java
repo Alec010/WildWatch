@@ -55,14 +55,24 @@ public class AuthService {
         System.out.println("Generated Token: " + token);
         System.out.println("Terms Accepted: " + termsAccepted);
         
-        if (!termsAccepted) {
-            System.out.println("User has not accepted terms, redirecting to terms page");
-        }
+        // Create user data map
+        Map<String, Object> userData = new HashMap<>();
+        userData.put("id", user.getId());
+        userData.put("email", user.getEmail());
+        userData.put("firstName", user.getFirstName());
+        userData.put("lastName", user.getLastName());
+        userData.put("middleInitial", user.getMiddleInitial());
+        userData.put("schoolIdNumber", user.getSchoolIdNumber());
+        userData.put("contactNumber", user.getContactNumber());
+        userData.put("role", user.getRole().toString());
+        userData.put("termsAccepted", user.isTermsAccepted());
+        userData.put("enabled", user.isEnabled());
         
         return AuthResponse.builder()
                 .token(token)
                 .termsAccepted(termsAccepted)
                 .message("Login successful")
+                .user(userData)
                 .build();
     }
 

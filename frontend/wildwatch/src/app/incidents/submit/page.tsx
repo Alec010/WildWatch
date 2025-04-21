@@ -40,6 +40,12 @@ export default function IncidentSubmissionPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Load saved form data if it exists
+    const storedData = sessionStorage.getItem("incidentSubmissionData");
+    if (storedData) {
+      setFormData(JSON.parse(storedData));
+    }
+
     const fetchOffices = async () => {
       try {
         setLoading(true);
@@ -81,6 +87,13 @@ export default function IncidentSubmissionPage() {
 
     fetchOffices();
   }, [router]);
+
+  // Save form data to session storage whenever it changes
+  useEffect(() => {
+    if (formData.incidentType || formData.location || formData.description) {
+      sessionStorage.setItem("incidentSubmissionData", JSON.stringify(formData));
+    }
+  }, [formData]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
