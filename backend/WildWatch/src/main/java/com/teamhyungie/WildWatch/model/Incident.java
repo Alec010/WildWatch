@@ -56,6 +56,9 @@ public class Incident {
     @Column(name = "status")
     private String status = "Pending"; // Default status
 
+    @Column(name = "verified")
+    private Boolean verified = false; // Changed from boolean to Boolean
+
     @PrePersist
     protected void onCreate() {
         submittedAt = LocalDateTime.now();

@@ -10,7 +10,8 @@ public enum Office {
     MIS("Management Information Systems Office", "Maintains and develops information systems and technical infrastructure."),
     MPO("Marketing and Promotions Office", "Leads branding, advertising, and promotional campaigns for the university."),
     ASO("Office of Admissions and Scholarships", "Handles student enrollment, entrance exams, and scholarship applications."),
-    SSO("Student Success Office", "Provides academic support, student services, and disciplinary coordination.");
+    SSO("Student Success Office", "Provides academic support, student services, and disciplinary coordination."),
+    TSG("Technical Service Group", "Provides technical support and maintenance services for university equipment and facilities.");
 
     private final String fullName;
     private final String description;
