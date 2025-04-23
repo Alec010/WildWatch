@@ -47,7 +47,15 @@ fun ReportIncidentScreen(
 
     // Date picker state
     var showDatePicker by remember { mutableStateOf(false) }
-    val datePickerState = rememberDatePickerState()
+    val datePickerState = rememberDatePickerState(
+        initialSelectedDateMillis = System.currentTimeMillis(),
+        initialDisplayedMonthMillis = System.currentTimeMillis(),
+        selectableDates = object : SelectableDates {
+            override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+                return utcTimeMillis <= System.currentTimeMillis() // ✅ Block future dates
+            }
+        }
+    )
 
     // Time picker state
     var showTimePicker by remember { mutableStateOf(false) }
