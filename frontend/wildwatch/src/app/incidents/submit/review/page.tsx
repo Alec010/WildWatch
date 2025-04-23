@@ -4,9 +4,10 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Sidebar } from "@/components/Sidebar";
 import Image from "next/image";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, ArrowLeft, Info } from "lucide-react";
 
 export default function ReviewSubmissionPage() {
   const router = useRouter();
@@ -15,6 +16,10 @@ export default function ReviewSubmissionPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [trackingNumber, setTrackingNumber] = useState<string>("");
+  const [confirmations, setConfirmations] = useState({
+    accurateInfo: false,
+    contactConsent: false
+  });
 
   useEffect(() => {
     // Retrieve data from session storage
@@ -46,8 +51,10 @@ export default function ReviewSubmissionPage() {
       const formData = new FormData();
 
       // Add incident data and evidence data as JSON strings
-      formData.append('incidentData', JSON.stringify(incidentData));
-      formData.append('witnesses', JSON.stringify(evidenceData.witnesses));
+      formData.append('incidentData', JSON.stringify({
+        ...incidentData,
+        witnesses: evidenceData.witnesses
+      }));
 
       // Add files
       for (const fileInfo of evidenceData.fileInfos) {
@@ -248,21 +255,64 @@ export default function ReviewSubmissionPage() {
                     </div>
                   )}
                 </div>
+
+                {/* Confirmations */}
+                <div className="mt-8 space-y-4 border-t pt-6">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="accurateInfo"
+                      checked={confirmations.accurateInfo}
+                      onCheckedChange={(checked: boolean) => 
+                        setConfirmations(prev => ({ ...prev, accurateInfo: checked }))
+                      }
+                    />
+                    <label
+                      htmlFor="accurateInfo"
+                      className="text-sm text-gray-600 leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      I confirm that all information provided is accurate to the best of my knowledge
+                    </label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="contactConsent"
+                      checked={confirmations.contactConsent}
+                      onCheckedChange={(checked: boolean) => 
+                        setConfirmations(prev => ({ ...prev, contactConsent: checked }))
+                      }
+                    />
+                    <label
+                      htmlFor="contactConsent"
+                      className="text-sm text-gray-600 leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      I understand that campus security may contact me for additional information
+                    </label>
+                  </div>
+
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-start space-x-3">
+                    <Info className="h-5 w-5 text-blue-500 mt-0.5" />
+                    <p className="text-sm text-blue-700">
+                      Your report will be reviewed by campus security personnel. You will receive a confirmation email with a tracking number once your report is submitted.
+                    </p>
+                  </div>
+                </div>
               </div>
 
-              {/* Navigation Buttons */}
+              {/* Bottom Navigation */}
               <div className="flex justify-between mt-8">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => router.push("/incidents/submit/evidence")}
+                  className="flex items-center gap-2"
                 >
-                  Back
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to Evidence & Witnesses
                 </Button>
                 <Button
                   onClick={handleSubmit}
-                  disabled={isSubmitting}
-                  className="bg-[#8B0000] hover:bg-[#8B0000]/90 text-white"
+                  disabled={isSubmitting || !confirmations.accurateInfo || !confirmations.contactConsent}
+                  className="bg-[#8B0000] hover:bg-[#8B0000]/90 text-white disabled:opacity-50"
                 >
                   {isSubmitting ? "Submitting..." : "Submit Report"}
                 </Button>

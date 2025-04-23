@@ -36,14 +36,8 @@ export default function TermsPage() {
         throw new Error(`Failed to accept terms: ${errorText}`);
       }
 
-      // Don't try to parse response as JSON since it's just a success message
       const responseText = await response.text();
       console.log('Success response:', responseText);
-
-      // Update user data in localStorage
-      const userData = JSON.parse(localStorage.getItem('user') || '{}');
-      userData.termsAccepted = true;
-      localStorage.setItem('user', JSON.stringify(userData));
 
       console.log('Redirecting to dashboard...');
       router.push('/dashboard');
@@ -53,7 +47,7 @@ export default function TermsPage() {
       
       // If the error is due to authentication, redirect to login
       if (err instanceof Error && err.message.includes('401')) {
-        console.log('Authentication failed, redirecting to login...');
+        console.log('Authentication failed, redirect to login...');
         router.push('/login');
         return;
       }

@@ -24,6 +24,10 @@ public class IncidentResponse {
     private PriorityLevel priorityLevel;
     private String status;
     private String submittedBy;
+    private String submittedByFullName;
+    private String submittedByIdNumber;
+    private String submittedByEmail;
+    private String submittedByPhone;
     private LocalDateTime submittedAt;
     private List<EvidenceDTO> evidence;
     private List<WitnessDTO> witnesses;
@@ -59,6 +63,10 @@ public class IncidentResponse {
         response.setPriorityLevel(incident.getPriorityLevel());
         response.setStatus(incident.getStatus());
         response.setSubmittedBy(incident.getSubmittedBy().getEmail());
+        response.setSubmittedByFullName(incident.getSubmittedBy().getFirstName() + " " + incident.getSubmittedBy().getLastName());
+        response.setSubmittedByIdNumber(incident.getSubmittedBy().getSchoolIdNumber());
+        response.setSubmittedByEmail(incident.getSubmittedBy().getEmail());
+        response.setSubmittedByPhone(incident.getSubmittedBy().getContactNumber());
         response.setSubmittedAt(incident.getSubmittedAt());
         
         return response;

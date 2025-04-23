@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
+import { handleAuthRedirect } from '@/utils/auth';
 
 export default function OAuth2Redirect() {
     const router = useRouter();
@@ -35,12 +36,9 @@ export default function OAuth2Redirect() {
                     throw new Error('Invalid user data received');
                 }
 
-                // Redirect based on terms acceptance
-                if (data.user.termsAccepted) {
-                    router.push('/dashboard');
-                } else {
-                    router.push('/terms');
-                }
+                // Use handleAuthRedirect to determine the correct redirect path
+                const redirectPath = handleAuthRedirect(data.user);
+                router.push(redirectPath);
             } catch (err) {
                 console.error('Error during OAuth redirect:', err);
                 setError('Failed to process login. Please try again.');

@@ -1,11 +1,12 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
+import { OfficeAdminSidebar } from "@/components/OfficeAdminSidebar"
 import { Card } from "@/components/ui/card"
-import { MapPin, Clock, AlertCircle, AlertTriangle, CheckCircle, Search, Plus } from "lucide-react"
-import { Sidebar } from "@/components/Sidebar"
+import { Button } from "@/components/ui/button"
+import { AlertCircle, CheckCircle, Clock, AlertTriangle, Search, Plus } from "lucide-react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
 
 interface Incident {
   id: string
@@ -19,10 +20,10 @@ interface Incident {
   submittedAt: string
 }
 
-export default function DashboardPage() {
+export default function OfficeAdminDashboard() {
   const router = useRouter()
   const [stats, setStats] = useState({
-    total: 0,
+    totalAssigned: 0,
     pending: 0,
     inProgress: 0,
     resolved: 0,
@@ -43,8 +44,8 @@ export default function DashboardPage() {
           throw new Error("No authentication token found")
         }
 
-        // Fetch user's incidents
-        const response = await fetch("http://localhost:8080/api/incidents/my-incidents", {
+        // Fetch incidents
+        const response = await fetch("http://localhost:8080/api/incidents/office", {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
@@ -59,7 +60,7 @@ export default function DashboardPage() {
 
         // Calculate statistics
         const stats = {
-          total: incidents.length,
+          totalAssigned: incidents.length,
           pending: incidents.filter((inc: Incident) => inc.status === "Pending").length,
           inProgress: incidents.filter((inc: Incident) => inc.status === "In Progress").length,
           resolved: incidents.filter((inc: Incident) => inc.status === "Resolved").length,
@@ -95,20 +96,27 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#8B0000] mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
-        </div>
+      <div className="flex h-screen bg-gray-100">
+        <OfficeAdminSidebar />
+        <main className="flex-1 p-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#8B0000] mx-auto mb-4"></div>
+                <p className="text-gray-600">Loading dashboard data...</p>
+              </div>
+            </div>
+          </div>
+        </main>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="min-h-screen flex bg-[#f5f5f5]">
-        <Sidebar />
-        <div className="flex-1 p-8">
+      <div className="flex h-screen bg-gray-100">
+        <OfficeAdminSidebar />
+        <main className="flex-1 p-8">
           <div className="max-w-7xl mx-auto">
             <div className="bg-red-50 border border-red-200 rounded-lg p-4">
               <div className="flex items-center gap-3">
@@ -117,19 +125,18 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
-        </div>
+        </main>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen flex bg-[#f5f5f5]">
-      <Sidebar />
+    <div className="flex h-screen bg-gray-100">
+      <OfficeAdminSidebar />
 
-      {/* Main Content */}
-      <div className="flex-1 overflow-auto">
-        {/* Header */}
+      <main className="flex-1 overflow-auto bg-[#f5f5f5]">
         <div className="p-6">
+          {/* Header */}
           <div className="flex justify-between items-center mb-6">
             <div>
               <h1 className="text-xl font-semibold text-gray-800">Incident Dashboard</h1>
@@ -146,7 +153,7 @@ export default function DashboardPage() {
               </div>
               <Button
                 className="bg-[#8B0000] hover:bg-[#700000] text-white flex items-center gap-2"
-                onClick={() => router.push("/report-incident")}
+                onClick={() => router.push("/office-admin/incidents/new")}
               >
                 <Plus className="h-4 w-4" />
                 Report New Incident
@@ -165,7 +172,7 @@ export default function DashboardPage() {
                   </div>
                   <div>
                     <p className="text-sm text-gray-500 mb-1">Total Reports</p>
-                    <p className="text-2xl font-semibold">{stats.total}</p>
+                    <p className="text-2xl font-semibold">{stats.totalAssigned}</p>
                   </div>
                 </div>
               </Card>
@@ -212,13 +219,9 @@ export default function DashboardPage() {
           <div className="mb-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-medium text-gray-800">Recent Incidents</h2>
-              <Button
-                variant="link"
-                className="text-[#8B0000] p-0 h-auto text-sm hover:underline"
-                onClick={() => router.push("/incidents")}
-              >
+              <Link href="/office-admin/incidents" className="text-sm text-[#8B0000] hover:underline">
                 View All
-              </Button>
+              </Link>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -239,7 +242,7 @@ export default function DashboardPage() {
                       <div className="mb-3">
                         <div className="flex items-start mb-1">
                           <div className="flex-shrink-0 mr-1">
-                            <MapPin className="h-4 w-4 text-gray-400" />
+                            <AlertCircle className="h-4 w-4 text-gray-400" />
                           </div>
                           <p className="text-xs text-gray-700">{incident.location}</p>
                         </div>
@@ -261,14 +264,11 @@ export default function DashboardPage() {
                         >
                           {incident.status}
                         </span>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-xs"
-                          onClick={() => router.push(`/incidents/${incident.id}`)}
-                        >
-                          View Details
-                        </Button>
+                        <Link href={`/office-admin/incidents/${incident.id}`}>
+                          <Button variant="outline" size="sm" className="text-xs">
+                            View Details
+                          </Button>
+                        </Link>
                       </div>
                     </div>
                   </Card>
@@ -281,7 +281,7 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   )
 }

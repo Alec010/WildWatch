@@ -19,6 +19,8 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Sidebar } from "@/components/Sidebar";
+import { OfficeAdminSidebar } from "@/components/OfficeAdminSidebar";
 
 interface UserProfile {
   firstName: string;
@@ -49,6 +51,10 @@ function ProfileContent({ user }: { user: UserProfile }) {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    console.log('Current user role:', user.role);
+  }, [user.role]);
 
   const form = useForm<z.infer<typeof editFormSchema>>({
     resolver: zodResolver(editFormSchema),
@@ -95,74 +101,8 @@ function ProfileContent({ user }: { user: UserProfile }) {
 
   return (
     <div className="min-h-screen flex bg-[#f5f5f5]">
-      {/* Sidebar */}
-      <div className="w-64 bg-[#8B0000] text-white">
-        <div className="p-6">
-          <Image
-            src="/logo2.png"
-            alt="WildWatch Logo"
-            width={150}
-            height={50}
-            className="mb-8"
-          />
-          <nav className="space-y-4">
-            <Link 
-              href="/dashboard"
-              className="flex items-center space-x-3 p-3 rounded-lg hover:bg-[#6B0000] transition-colors"
-            >
-              <LayoutDashboard size={20} />
-              <span>Dashboard</span>
-            </Link>
-            <Link 
-              href="#"
-              className="flex items-center space-x-3 p-3 rounded-lg hover:bg-[#6B0000] transition-colors"
-            >
-              <AlertTriangle size={20} />
-              <span>Report Incident</span>
-            </Link>
-            <Link 
-              href="#"
-              className="flex items-center space-x-3 p-3 rounded-lg hover:bg-[#6B0000] transition-colors"
-            >
-              <FileText size={20} />
-              <span>Case Tracking</span>
-            </Link>
-            <Link 
-              href="#"
-              className="flex items-center space-x-3 p-3 rounded-lg hover:bg-[#6B0000] transition-colors"
-            >
-              <History size={20} />
-              <span>Incident History</span>
-            </Link>
-            <Link 
-              href="#"
-              className="flex items-center space-x-3 p-3 rounded-lg hover:bg-[#6B0000] transition-colors"
-            >
-              <Settings size={20} />
-              <span>Settings</span>
-            </Link>
-          </nav>
-        </div>
-        {/* User Profile Section */}
-        <div className="absolute bottom-0 w-64 p-4 border-t border-[#6B0000]">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium">{user.firstName} {user.lastName}</p>
-              <p className="text-sm text-gray-300">ID: {user.schoolIdNumber}</p>
-            </div>
-          </div>
-          <button
-            onClick={() => {
-              Cookies.remove('token');
-              router.push('/login');
-            }}
-            className="flex items-center space-x-3 p-3 rounded-lg hover:bg-[#6B0000] transition-colors w-full mt-2"
-          >
-            <LogOut size={20} />
-            <span>Sign Out</span>
-          </button>
-        </div>
-      </div>
+      {/* Render appropriate sidebar based on user role */}
+      {user.role === 'OFFICE_ADMIN' ? <OfficeAdminSidebar /> : <Sidebar />}
 
       {/* Main Content */}
       <div className="flex-1 overflow-auto">
@@ -193,7 +133,7 @@ function ProfileContent({ user }: { user: UserProfile }) {
           </div>
         </header>
 
-        <main className="max-w-4xl mx-auto px-6 py-8">
+        <main className="max-w-7xl mx-auto py-6 px-6 space-y-6">
           <div className="bg-[#8B0000] text-white p-6 rounded-t-lg">
             <div className="flex items-center justify-between">
               <div className="flex-1">
@@ -204,7 +144,7 @@ function ProfileContent({ user }: { user: UserProfile }) {
                   </span>
                 </h2>
                 <p className="text-sm opacity-90">
-                  {user.email} • {user.role ? user.role.replace('_', ' ').toLowerCase() : 'regular user'}
+                  {user.email} • {user.role ? user.role.split('_').map(word => word.toLowerCase()).join(' ') : 'regular user'}
                 </p>
               </div>
               {isEditing && (
@@ -231,7 +171,7 @@ function ProfileContent({ user }: { user: UserProfile }) {
             </div>
           </div>
 
-          <div className="bg-white p-8 rounded-b-lg shadow">
+          <div className="bg-white p-6 rounded-b-lg shadow">
             <Form {...form}>
               <form className="space-y-8">
                 <section>
@@ -320,7 +260,7 @@ function ProfileContent({ user }: { user: UserProfile }) {
                     <div>
                       <label className="block text-sm font-medium text-gray-700">Role</label>
                       <Input 
-                        value={user.role ? user.role.replace('_', ' ').toLowerCase() : 'regular user'} 
+                        value={user.role ? user.role.split('_').map(word => word.toLowerCase()).join(' ') : 'regular user'} 
                         disabled 
                         className="mt-1 bg-gray-50" 
                       />
@@ -365,9 +305,10 @@ export default function ProfilePage() {
 
   const fetchUserProfile = async (token: string) => {
     try {
-      const response = await fetch("http://localhost:8080/api/users/me", {
+      const response = await fetch("http://localhost:8080/api/auth/profile", {
         headers: {
           Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
       });
 
@@ -376,6 +317,7 @@ export default function ProfilePage() {
       }
 
       const data = await response.json();
+      console.log('API Response - User Data:', data);
       setUser(data);
     } catch (error) {
       console.error("Error fetching user profile:", error);
