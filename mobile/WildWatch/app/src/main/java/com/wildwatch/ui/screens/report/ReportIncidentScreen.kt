@@ -3,7 +3,6 @@ package com.wildwatch.ui.screens.report
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -13,7 +12,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -22,22 +20,30 @@ import androidx.compose.ui.unit.sp
 import com.wildwatch.ui.theme.WildWatchRed
 import java.text.SimpleDateFormat
 import java.util.*
+import android.widget.Toast
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.ui.platform.LocalContext
+import com.wildwatch.api.RetrofitClient
+import com.wildwatch.model.IncidentRequest
+import com.wildwatch.model.IncidentFormState
+import com.wildwatch.repository.IncidentRepository
+import com.wildwatch.viewmodel.IncidentFormViewModel
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
+import com.wildwatch.ui.components.*
+import com.wildwatch.viewmodel.IncidentFormViewModelFactory
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReportIncidentScreen(
     onBackClick: () -> Unit = {},
-    onContinueClick: () -> Unit = {}
+    onContinueClick: () -> Unit = {},
+    formViewModel: IncidentFormViewModel
 ) {
     val darkRed = WildWatchRed
-
-    // Form state
-    var incidentType by remember { mutableStateOf("") }
-    var incidentDate by remember { mutableStateOf("") }
-    var incidentTime by remember { mutableStateOf("") }
-    var location by remember { mutableStateOf("") }
-    var selectedOffice by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
 
     // Date picker state
     var showDatePicker by remember { mutableStateOf(false) }
@@ -46,6 +52,34 @@ fun ReportIncidentScreen(
     // Time picker state
     var showTimePicker by remember { mutableStateOf(false) }
     val timePickerState = rememberTimePickerState()
+
+    val context = LocalContext.current
+
+    // After collecting formState properly:
+    val formState by formViewModel.formState.collectAsState()
+
+    // Define state holders (initialized blank)
+    var incidentType by rememberSaveable { mutableStateOf("") }
+    var incidentDate by rememberSaveable { mutableStateOf("") }
+    var incidentTime by rememberSaveable { mutableStateOf("") }
+    var location by rememberSaveable { mutableStateOf("") }
+    var selectedOffice by rememberSaveable { mutableStateOf("") }
+    var description by rememberSaveable { mutableStateOf("") }
+
+    // Sync values from ViewModel when formState changes
+    LaunchedEffect(formState) {
+        incidentType = formState.incidentType
+        incidentDate = formState.dateOfIncident
+        incidentTime = formState.timeOfIncident
+        location = formState.location
+        selectedOffice = formState.assignedOffice
+        description = formState.description
+    }
+
+
+    LaunchedEffect(Unit) {
+        println("🔥 SCREEN: ReportIncident | formState = ${formViewModel.formState.value}")
+    }
 
     if (showDatePicker) {
         DatePickerDialog(
@@ -90,7 +124,7 @@ fun ReportIncidentScreen(
 
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar( // Changed to CenterAlignedTopAppBar
+            CenterAlignedTopAppBar(
                 title = {
                     Text(
                         text = "Report an Incident",
@@ -136,10 +170,10 @@ fun ReportIncidentScreen(
                     .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                ProgressStep(number = 1, title = "Incident Details", isActive = true)
+                ProgressStep(number = 1, title = "Incident Details", isActive = true, isCompleted = false)
 
                 // Line between steps 1 and 2
-                Divider(
+                HorizontalDivider(
                     modifier = Modifier
                         .weight(1f)
                         .padding(horizontal = 8.dp),
@@ -147,10 +181,10 @@ fun ReportIncidentScreen(
                     thickness = 1.dp
                 )
 
-                ProgressStep(number = 2, title = "Evidence & Witnesses", isActive = false)
+                ProgressStep(number = 2, title = "Evidence & Witnesses", isActive = false, isCompleted = false)
 
                 // Line between steps 2 and 3
-                Divider(
+                HorizontalDivider(
                     modifier = Modifier
                         .weight(1f)
                         .padding(horizontal = 8.dp),
@@ -158,7 +192,7 @@ fun ReportIncidentScreen(
                     thickness = 1.dp
                 )
 
-                ProgressStep(number = 3, title = "Review & Submit", isActive = false)
+                ProgressStep(number = 3, title = "Review & Submit", isActive = false, isCompleted = false)
             }
 
             // Main form card
@@ -436,18 +470,46 @@ fun ReportIncidentScreen(
                             .padding(bottom = 16.dp),
                         textAlign = TextAlign.End
                     )
-
                     // Continue button
                     Button(
-                        onClick = onContinueClick,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = darkRed
-                        ),
+                        onClick = {
+                            if (
+                                incidentType.isBlank() ||
+                                incidentDate.isBlank() ||
+                                incidentTime.isBlank() ||
+                                location.isBlank() ||
+                                selectedOffice.isBlank() ||
+                                description.isBlank()
+                            ) {
+                                Toast.makeText(
+                                    context,
+                                    "Please fill in all required fields before continuing.",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                                return@Button // ✅ This works
+                            }
+
+                            // ✅ Save form
+                            formViewModel.updateFormState(
+                                formViewModel.formState.value.copy(
+                                    incidentType = incidentType,
+                                    dateOfIncident = incidentDate,
+                                    timeOfIncident = incidentTime,
+                                    location = location,
+                                    assignedOffice = selectedOffice,
+                                    description = description
+                                )
+                            )
+                            println("✅ Updated IncidentFormViewModel: ${formViewModel.formState.value}")
+                            // ✅ Navigate
+                            onContinueClick()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = darkRed),
                         modifier = Modifier
-                            .align(Alignment.Start)
+                            .align(Alignment.End)
                             .padding(top = 8.dp)
                     ) {
-                        Text("Continue to Evidence")
+                        Text("Continue")
                         Icon(
                             imageVector = Icons.Default.ArrowForward,
                             contentDescription = null,
@@ -458,134 +520,14 @@ fun ReportIncidentScreen(
             }
 
             // Help section
-            Card(
+            HelpPanel(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
-                shape = RoundedCornerShape(8.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color.White
-                ),
-                elevation = CardDefaults.cardElevation(
-                    defaultElevation = 2.dp
-                )
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                ) {
-                    // Help header
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(darkRed)
-                            .padding(8.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Help,
-                            contentDescription = null,
-                            tint = Color.White
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Need Help?",
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Reporting tips
-                    Text(
-                        text = "Reporting Tips",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-
-                    // Tips list
-                    BulletPoint("Be as specific as possible about the location")
-                    BulletPoint("Include time details even if approximate")
-                    BulletPoint("Photos and videos help security respond effectively")
-                    BulletPoint("Mention any witnesses who can provide additional information")
-                }
-            }
+                darkRed = darkRed
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
         }
     }
-}
-
-@Composable
-fun ProgressStep(number: Int, title: String, isActive: Boolean) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        // Circle with number
-        Box(
-            modifier = Modifier
-                .size(28.dp)
-                .clip(CircleShape)
-                .background(if (isActive) WildWatchRed else Color.Gray)
-                .padding(4.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = number.toString(),
-                color = Color.White,
-                fontWeight = FontWeight.Bold,
-                fontSize = 14.sp
-            )
-        }
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        // Step title
-        Text(
-            text = title,
-            fontSize = 12.sp,
-            color = if (isActive) Color.Black else Color.Gray,
-            textAlign = TextAlign.Center
-        )
-    }
-}
-
-@Composable
-fun BulletPoint(text: String) {
-    Row(
-        modifier = Modifier.padding(bottom = 8.dp),
-        verticalAlignment = Alignment.Top
-    ) {
-        Text(
-            text = "•",
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(end = 8.dp, top = 2.dp)
-        )
-        Text(text = text)
-    }
-}
-
-@Composable
-fun TimePickerDialog(
-    onDismissRequest: () -> Unit,
-    onConfirm: () -> Unit,
-    content: @Composable () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismissRequest,
-        confirmButton = {
-            TextButton(onClick = onConfirm) {
-                Text("OK")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismissRequest) {
-                Text("Cancel")
-            }
-        },
-        text = { content() }
-    )
 }

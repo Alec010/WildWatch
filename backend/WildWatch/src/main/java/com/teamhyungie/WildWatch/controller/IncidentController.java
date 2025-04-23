@@ -3,6 +3,7 @@ package com.teamhyungie.WildWatch.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.teamhyungie.WildWatch.dto.IncidentRequest;
 import com.teamhyungie.WildWatch.dto.IncidentResponse;
+import com.teamhyungie.WildWatch.dto.IncidentUpdateRequest;
 import com.teamhyungie.WildWatch.service.IncidentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -50,5 +51,34 @@ public class IncidentController {
             @PathVariable String trackingNumber) {
         IncidentResponse incident = incidentService.getIncidentByTrackingNumber(trackingNumber);
         return ResponseEntity.ok(incident);
+    }
+
+    @GetMapping("/office")
+    public ResponseEntity<List<IncidentResponse>> getOfficeIncidents(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        List<IncidentResponse> incidents = incidentService.getOfficeIncidents(userDetails.getUsername());
+        return ResponseEntity.ok(incidents);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<IncidentResponse> getIncidentById(
+            @PathVariable String id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        IncidentResponse incident = incidentService.getIncidentById(id, userDetails.getUsername());
+        return ResponseEntity.ok(incident);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<IncidentResponse> updateIncident(
+            @PathVariable String id,
+            @RequestBody IncidentUpdateRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        try {
+            IncidentResponse response = incidentService.updateIncident(id, userDetails.getUsername(), request);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().build();
+        }
     }
 } 

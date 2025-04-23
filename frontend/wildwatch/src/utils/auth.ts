@@ -1,4 +1,15 @@
-export const checkAuth = async () => {
+import Cookies from 'js-cookie';
+
+interface AuthResponse {
+  isAuthenticated: boolean;
+  user: {
+    role: string;
+    termsAccepted: boolean;
+    [key: string]: any;
+  } | null;
+}
+
+export const checkAuth = async (): Promise<AuthResponse> => {
   console.log('Starting authentication check...');
   try {
     console.log('Making request to /api/auth/profile...');
@@ -8,6 +19,7 @@ export const checkAuth = async () => {
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${Cookies.get('token')}`
       }
     });
 
@@ -20,9 +32,6 @@ export const checkAuth = async () => {
 
     const data = await response.json();
     console.log('Authentication successful, user data:', data);
-
-    
-    localStorage.setItem('user', JSON.stringify(data));
     
     return { isAuthenticated: true, user: data };
   } catch (error) {
@@ -31,12 +40,45 @@ export const checkAuth = async () => {
   }
 };
 
-export const getUserFromStorage = () => {
+export const getCurrentUser = async () => {
   try {
-    const userData = localStorage.getItem('user');
-    return userData ? JSON.parse(userData) : null;
+    const response = await fetch('http://localhost:8080/api/users/me', {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${Cookies.get('token')}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch user data');
+    }
+
+    return await response.json();
   } catch (error) {
-    console.error('Error reading user from storage:', error);
+    console.error('Error fetching user data:', error);
     return null;
+  }
+};
+
+export const logout = () => {
+  Cookies.remove('token');
+  window.location.href = '/login';
+};
+
+export const handleAuthRedirect = (user: { role: string; termsAccepted: boolean }) => {
+  if (!user.termsAccepted) {
+    return '/terms';
+  }
+
+  switch (user.role) {
+    case 'OFFICE_ADMIN':
+      return '/office-admin/dashboard';
+    case 'SYSTEM_ADMIN':
+      return '/admin/dashboard';
+    case 'REGULAR_USER':
+    default:
+      return '/dashboard';
   }
 }; 

@@ -20,6 +20,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { handleAuthRedirect } from "@/utils/auth";
 
 const formSchema = z.object({
   email: z.string()
@@ -67,15 +68,18 @@ export function LoginForm() {
         sameSite: "strict",
         path: "/"
       });
-      
-      // Check if terms are accepted
-      if (!data.termsAccepted) {
-        // Redirect to terms page if terms are not accepted
-        router.push("/terms");
-      } else {
-        // Redirect to dashboard if terms are accepted
-        router.push("/dashboard");
+
+      // Check if we have user data
+      if (!data.user) {
+        throw new Error("No user data received");
       }
+      
+      // Use the handleAuthRedirect function to determine where to redirect
+      const redirectPath = handleAuthRedirect({
+        role: data.user.role,
+        termsAccepted: data.user.termsAccepted
+      });
+      router.push(redirectPath);
     } catch (error) {
       console.error("Login error:", error);
       alert(error instanceof Error ? error.message : "Failed to sign in");

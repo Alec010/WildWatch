@@ -9,8 +9,15 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, X } from "lucide-react";
 import Cookies from "js-cookie";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -34,6 +41,9 @@ const formSchema = z.object({
       "Password must include uppercase, lowercase, number and special character"),
   confirmPassword: z.string(),
   contactNumber: z.string().regex(/^\+?[0-9]{10,15}$/, "Please enter a valid contact number"),
+  acceptTerms: z.boolean().refine((val) => val === true, {
+    message: "You must accept the Terms and Conditions to create an account"
+  })
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
@@ -43,6 +53,7 @@ export function SignUpForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
   const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -56,6 +67,7 @@ export function SignUpForm() {
       password: "",
       confirmPassword: "",
       contactNumber: "",
+      acceptTerms: false
     },
   });
 
@@ -299,6 +311,37 @@ export function SignUpForm() {
             )}
           />
 
+          {/* Terms and Conditions Checkbox */}
+          <FormField
+            control={form.control}
+            name="acceptTerms"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md">
+                <FormControl>
+                  <input
+                    type="checkbox"
+                    checked={field.value}
+                    onChange={field.onChange}
+                    className="mt-1"
+                  />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                  <FormLabel>
+                    By creating an account, you agree to our{" "}
+                    <button
+                      type="button"
+                      onClick={() => setShowTerms(true)}
+                      className="text-[#8B0000] underline hover:text-[#6B0000] font-medium"
+                    >
+                      Terms and Conditions
+                    </button>
+                  </FormLabel>
+                  <FormMessage />
+                </div>
+              </FormItem>
+            )}
+          />
+
           <Button 
             type="submit" 
             className="w-full bg-[#8B0000] hover:bg-[#6B0000]"
@@ -308,6 +351,121 @@ export function SignUpForm() {
           </Button>
         </form>
       </Form>
+
+      {/* Terms Modal using shadcn Dialog */}
+      <Dialog open={showTerms} onOpenChange={setShowTerms}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-semibold text-[#8B0000] flex justify-between items-center">
+              Terms and Conditions
+              <Button
+                variant="ghost"
+                className="h-6 w-6 p-0 text-gray-500 hover:text-gray-700"
+                onClick={() => setShowTerms(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="prose max-w-none space-y-6">
+            <p className="text-gray-600">Effective Date: April 08, 2025</p>
+
+            <p>
+              Welcome to WildWatch, the official incident reporting and case management platform of Cebu Institute of Technology – University (CITU). By accessing or using the WildWatch website and application (the "Platform"), you agree to comply with and be bound by the following Terms and Conditions. Please read them carefully.
+            </p>
+
+            <div>
+              <h3 className="text-xl font-semibold text-gray-800">1. Use of the Platform</h3>
+              <p>
+                WildWatch is intended to facilitate the structured reporting, tracking, and resolution of campus-related incidents within CITU. Use of this platform must be in accordance with university policies, applicable laws, and ethical conduct.
+              </p>
+              <ul className="list-disc pl-6 space-y-2">
+                <li>You must be a currently enrolled student or an authorized CITU personnel to use the platform.</li>
+                <li>You agree to provide accurate, truthful, and complete information when submitting a report or using any part of the Platform.</li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="text-xl font-semibold text-gray-800">2. User Responsibilities</h3>
+              <ul className="list-disc pl-6 space-y-2">
+                <li>Maintain the confidentiality of your account credentials</li>
+                <li>Report incidents truthfully and in good faith</li>
+                <li>Respect the privacy and rights of others involved in reported incidents</li>
+                <li>Use the platform responsibly and not for any malicious purposes</li>
+                <li>Keep your contact information updated</li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="text-xl font-semibold text-gray-800">3. Privacy and Data Protection</h3>
+              <ul className="list-disc pl-6 space-y-2">
+                <li>Your personal information will be handled in accordance with our Privacy Policy</li>
+                <li>Incident reports and related information will be treated with appropriate confidentiality</li>
+                <li>Access to incident details will be restricted to authorized personnel only</li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="text-xl font-semibold text-gray-800">4. Platform Rules</h3>
+              <p>Users must NOT:</p>
+              <ul className="list-disc pl-6 space-y-2">
+                <li>Submit false or malicious reports</li>
+                <li>Harass or intimidate other users</li>
+                <li>Share confidential information about incidents publicly</li>
+                <li>Attempt to compromise the platform's security</li>
+                <li>Use the platform for any illegal activities</li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="text-xl font-semibold text-gray-800">5. Consequences of Violation</h3>
+              <p>
+                Violation of these terms may result in:
+              </p>
+              <ul className="list-disc pl-6 space-y-2">
+                <li>Temporary or permanent account suspension</li>
+                <li>Disciplinary action under university policies</li>
+                <li>Legal action in severe cases</li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="text-xl font-semibold text-gray-800">6. Changes to Terms</h3>
+              <p>
+                CITU reserves the right to modify these terms at any time. Users will be notified of significant changes, and continued use of the platform constitutes acceptance of modified terms.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="text-xl font-semibold text-gray-800">7. Contact Information</h3>
+              <p>
+                For questions about these terms or the platform, contact the CITU Security Office or IT Department.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter className="mt-6 flex justify-end gap-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowTerms(false)}
+            >
+              Close
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                form.setValue('acceptTerms', true);
+                setShowTerms(false);
+              }}
+              className="bg-[#8B0000] hover:bg-[#6B0000] text-white"
+            >
+              Accept Terms
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="text-center text-sm">
         Already have an account?{" "}

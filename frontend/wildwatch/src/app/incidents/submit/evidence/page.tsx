@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import Image from "next/image";
 import { Sidebar } from "@/components/Sidebar";
-import { AlertTriangle, Upload } from "lucide-react";
+import { AlertTriangle, Upload, ArrowLeft } from "lucide-react";
 
 interface WitnessInfo {
   name: string;
@@ -40,7 +40,20 @@ export default function EvidenceSubmissionPage() {
       return;
     }
     setIncidentData(JSON.parse(storedData));
+
+    // Retrieve previously saved evidence data if it exists
+    const storedEvidenceData = sessionStorage.getItem("evidenceSubmissionData");
+    if (storedEvidenceData) {
+      setFormData(JSON.parse(storedEvidenceData));
+    }
   }, [router]);
+
+  // Save form data to session storage whenever it changes
+  useEffect(() => {
+    if (formData.witnesses.length > 0 || formData.fileInfos.length > 0) {
+      sessionStorage.setItem("evidenceSubmissionData", JSON.stringify(formData));
+    }
+  }, [formData]);
 
   const handleAddWitness = () => {
     setFormData(prev => ({
@@ -251,18 +264,20 @@ export default function EvidenceSubmissionPage() {
                       ))}
                     </div>
 
-                    {/* Navigation Buttons */}
-                    <div className="flex justify-between pt-4">
+                    {/* Bottom Navigation */}
+                    <div className="flex justify-between mt-8">
                       <Button
                         type="button"
                         variant="outline"
                         onClick={() => router.push("/incidents/submit")}
+                        className="flex items-center gap-2"
                       >
-                        Back
+                        <ArrowLeft className="h-4 w-4" />
+                        Back to Incident Details
                       </Button>
                       <Button
                         type="submit"
-                        className="bg-[#8B0000] hover:bg-[#6B0000] text-white"
+                        className="bg-[#8B0000] hover:bg-[#8B0000]/90 text-white"
                       >
                         Continue to Review
                       </Button>
