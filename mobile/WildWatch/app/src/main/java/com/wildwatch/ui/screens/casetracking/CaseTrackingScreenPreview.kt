@@ -8,6 +8,6 @@ import com.wildwatch.ui.theme.WildWatchTheme
 @Composable
 fun CaseTrackingScreenPreview() {
     WildWatchTheme {
-        CaseTrackingScreen()
+        //CaseTrackingScreen()
     }
 }

@@ -48,4 +48,27 @@ object RetrofitClient {
             .build()
             .create(IncidentApi::class.java)
     }
+
+    fun getCaseApi(context: Context): CaseApi {
+        val tokenManager = TokenManager(context)
+
+        val client = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                val token = runBlocking { tokenManager.getToken() }
+                val requestBuilder = chain.request().newBuilder()
+                if (token != null) {
+                    requestBuilder.addHeader("Authorization", "Bearer $token")
+                }
+                chain.proceed(requestBuilder.build())
+            }
+            .build()
+
+        return Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(CaseApi::class.java)
+    }
+
 }

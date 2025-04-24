@@ -26,31 +26,36 @@ import com.wildwatch.ui.theme.*
 import androidx.compose.foundation.Image
 import androidx.navigation.NavController
 import com.wildwatch.navigation.Screen
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.wildwatch.viewmodel.DashboardViewModel
+import com.wildwatch.viewmodel.DashboardViewModelFactory
+import com.wildwatch.utils.toIncidentInfo
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
     onProfileClick: () -> Unit = {}
 ) {
-    // Sample data
-    val incidents = listOf(
-        IncidentInfo(
-            title = "Suspicious Person",
-            location = "Library",
-            locationDetail = "2nd Floor Study Area",
-            description = "Unidentified individual looking through personal belongings when students were away.",
-            status = IncidentStatus.IN_PROGRESS,
-            timestamp = "Today, 2:35 PM"
-        ),
-        IncidentInfo(
-            title = "Broken Facility",
-            location = "Science Building",
-            locationDetail = "Room 302",
-            description = "Broken window in the chemistry lab that poses potential safety hazard.",
-            status = IncidentStatus.ASSIGNED,
-            timestamp = "Yesterday, 11:15 AM"
-        )
+    val context = LocalContext.current
+
+
+    val viewModel: DashboardViewModel = viewModel(
+        factory = DashboardViewModelFactory(context)
     )
+
+    val total by viewModel.totalReports.collectAsState()
+    val pending by viewModel.pendingReports.collectAsState()
+    val inProgress by viewModel.inProgressReports.collectAsState()
+    val resolved by viewModel.resolvedReports.collectAsState()
+    val recentIncidents by viewModel.recentIncidents.collectAsState()
+    val loading by viewModel.loading.collectAsState()
+    val error by viewModel.error.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.fetchDashboardData()
+    }
+
 
     Scaffold(
         topBar = {
@@ -98,130 +103,140 @@ fun DashboardScreen(
         },
         containerColor = LightGray
     ) { paddingValues ->
+        if (loading) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        } else if (error != null) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(text = "Error: $error", color = MaterialTheme.colorScheme.error)
+            }
+        } else {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            item {
-                Spacer(modifier = Modifier.height(8.dp))
+            ) {
+                item {
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                Column(
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text = "Incident Dashboard",
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = WildWatchRed
-                    )
-
-                    Text(
-                        text = "View and manage your reported incidents",
-                        fontSize = 14.sp,
-                        color = Color.Gray
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-                }
-            }
-
-            item {
-                Column(
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text = "Overview",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Divider(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp),
-                        color = Color.LightGray
-                    )
-                }
-            }
-
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    StatCard(
-                        title = "Total Reports",
-                        count = 12,
-                        icon = Icons.Default.Description,
-                        iconTint = Color(0xFF5C6BC0),
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    StatCard(
-                        title = "In Progress",
-                        count = 3,
-                        icon = Icons.Default.Pending,
-                        iconTint = InProgressYellow,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    StatCard(
-                        title = "Resolved",
-                        count = 8,
-                        icon = Icons.Default.CheckCircle,
-                        iconTint = ResolvedGreen,
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    StatCard(
-                        title = "Urgent",
-                        count = 1,
-                        icon = Icons.Default.Warning,
-                        iconTint = UrgentRed,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Recent Incidents",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    TextButton(onClick = { /* View all action */ }) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
                         Text(
-                            text = "View All",
+                            text = "Incident Dashboard",
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = WildWatchRed
+                        )
+
+                        Text(
+                            text = "View and manage your reported incidents",
+                            fontSize = 14.sp,
                             color = Color.Gray
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                }
+
+                item {
+                    Column(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "Overview",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        Divider(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            color = Color.LightGray
                         )
                     }
                 }
-            }
 
-            items(incidents.size) { index ->
-                IncidentCard(incident = incidents[index])
-            }
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        StatCard(
+                            title = "Total Reports",
+                            count = total,
+                            icon = Icons.Default.Description,
+                            iconTint = Color(0xFF5C6BC0),
+                            modifier = Modifier.weight(1f)
+                        )
 
-            item {
-                Spacer(modifier = Modifier.height(16.dp))
+                        StatCard(
+                            title = "In Progress",
+                            count = inProgress,
+                            icon = Icons.Default.Pending,
+                            iconTint = InProgressYellow,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        StatCard(
+                            title = "Resolved",
+                            count = resolved,
+                            icon = Icons.Default.CheckCircle,
+                            iconTint = ResolvedGreen,
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        StatCard(
+                            title = "Pending",
+                            count = pending,
+                            icon = Icons.Default.Warning,
+                            iconTint = UrgentRed,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Recent Incidents",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        TextButton(onClick = { /* View all action */ }) {
+                            Text(
+                                text = "View All",
+                                color = Color.Gray
+                            )
+                        }
+                    }
+                }
+
+                items(recentIncidents) { incident ->
+                    IncidentCard(incident = incident.toIncidentInfo())
+                }
+
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
             }
         }
     }
