@@ -79,4 +79,7 @@ dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 
     implementation ("androidx.activity:activity-compose:1.7.2") // or latest stable version
+
+    implementation ("io.coil-kt:coil-compose:2.2.2")
+
 }
