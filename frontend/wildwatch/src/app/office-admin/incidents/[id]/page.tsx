@@ -258,6 +258,67 @@ export default function IncidentDetailsPage({ params }: PageProps) {
     }
   }
 
+  const handleStatusUpdate = async () => {
+    setIsProcessing(true)
+    try {
+      const token = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("token="))
+        ?.split("=")[1]
+
+      if (!token) {
+        throw new Error("No authentication token found")
+      }
+
+      const response = await fetch(`http://localhost:8080/api/incidents/${id}`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          administrativeNotes,
+          verified: isVerified,
+          verificationNotes,
+          status,
+          priorityLevel,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const updatedIncident = await response.json()
+      setIncident(updatedIncident)
+      
+      // Show success modal
+      setModalContent({
+        title: "Status Updated",
+        message: `The incident status has been successfully updated to ${status}.`,
+        icon: <CheckCircle className="h-12 w-12 text-green-500" />,
+        color: "bg-green-50 border-green-200",
+      })
+      setShowModal(true)
+
+      // Redirect after 3 seconds
+      setTimeout(() => {
+        router.push("/office-admin/dashboard")
+      }, 3000)
+    } catch (error) {
+      console.error("Error updating incident status:", error)
+      setModalContent({
+        title: "Error",
+        message: "Failed to update incident status. Please try again.",
+        icon: <AlertTriangle className="h-12 w-12 text-red-500" />,
+        color: "bg-red-50 border-red-200",
+      })
+      setShowModal(true)
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "Pending":
@@ -583,6 +644,15 @@ export default function IncidentDetailsPage({ params }: PageProps) {
                       className="mt-1 min-h-[100px] focus:ring-2 focus:ring-[#8B0000]/20 focus:border-[#8B0000] transition-all"
                     />
                   </div>
+
+                  {/* Update Button */}
+                  <Button
+                    onClick={handleStatusUpdate}
+                    disabled={isProcessing}
+                    className="w-full bg-[#8B0000] hover:bg-[#700000] text-white"
+                  >
+                    {isProcessing ? "Updating..." : "Update Status"}
+                  </Button>
                 </CardContent>
               </Card>
 

@@ -29,6 +29,7 @@ public class IncidentService {
     private final UserService userService;
     private final FileStorageService fileStorageService;
     private final OfficeAdminService officeAdminService;
+    private final ActivityLogService activityLogService;
 
     @Transactional
     public IncidentResponse createIncident(IncidentRequest request, String userEmail, List<MultipartFile> files) {
@@ -52,6 +53,14 @@ public class IncidentService {
                 .collect(Collectors.toList());
             evidenceRepository.saveAll(evidenceList);
         }
+
+        // Log activity
+        activityLogService.logActivity(
+            "NEW_REPORT",
+            "You submitted a new incident report for " + request.getIncidentType(),
+            savedIncident,
+            user
+        );
 
         return IncidentResponse.fromIncident(savedIncident);
     }
@@ -187,6 +196,9 @@ public class IncidentService {
             throw new RuntimeException("Not authorized to update this incident");
         }
 
+        // Store old status for comparison
+        String oldStatus = incident.getStatus();
+
         // Update incident fields
         incident.setStatus(request.getStatus());
         incident.setPriorityLevel(request.getPriorityLevel());
@@ -194,7 +206,27 @@ public class IncidentService {
         
         // Save the updated incident
         Incident updatedIncident = incidentRepository.save(incident);
-        
+
+        // Log activity for status change
+        if (!oldStatus.equals(request.getStatus())) {
+            activityLogService.logActivity(
+                "STATUS_CHANGE",
+                "Case #" + incident.getTrackingNumber() + " status changed from '" + oldStatus + "' to '" + request.getStatus() + "'",
+                updatedIncident,
+                incident.getSubmittedBy()
+            );
+        }
+
+        // Log activity for verification
+        if (request.isVerified() && !incident.getVerified()) {
+            activityLogService.logActivity(
+                "CASE_VERIFIED",
+                "Case #" + incident.getTrackingNumber() + " has been verified",
+                updatedIncident,
+                incident.getSubmittedBy()
+            );
+        }
+
         return IncidentResponse.fromIncident(updatedIncident);
     }
 } 
