@@ -31,6 +31,8 @@ export default function OfficeAdminDashboard() {
   const [recentIncidents, setRecentIncidents] = useState<Incident[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [filteredIncidents, setFilteredIncidents] = useState<Incident[]>([])
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -82,6 +84,18 @@ export default function OfficeAdminDashboard() {
 
     fetchDashboardData()
   }, [])
+
+  useEffect(() => {
+    // Filter incidents based on search query
+    const filtered = recentIncidents.filter((incident) => {
+      const searchLower = searchQuery.toLowerCase()
+      return (
+        incident.incidentType.toLowerCase().includes(searchLower) ||
+        incident.trackingNumber.toLowerCase().includes(searchLower)
+      )
+    })
+    setFilteredIncidents(filtered)
+  }, [searchQuery, recentIncidents])
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -143,12 +157,14 @@ export default function OfficeAdminDashboard() {
               <p className="text-sm text-gray-500">View and manage your reported incidents</p>
             </div>
             <div className="flex items-center gap-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <div className="relative flex flex-col">
+                <Search className="absolute left-3 top-[13px] text-gray-400 h-4 w-4" />
                 <input
                   type="text"
-                  placeholder="Search incidents..."
-                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-md w-64 focus:outline-none focus:ring-1 focus:ring-[#8B0000] focus:border-[#8B0000]"
+                  placeholder="Search by type or tracking number..."
+                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-md w-64 focus:outline-none focus:ring-1 focus:ring-[#8B0000] focus:border-[#8B0000] mb-6"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
               <Button
@@ -224,9 +240,9 @@ export default function OfficeAdminDashboard() {
               </Link>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {recentIncidents.length > 0 ? (
-                recentIncidents.slice(0, 3).map((incident) => (
+            <div className="grid grid-cols-1 gap-4">
+              {filteredIncidents.length > 0 ? (
+                filteredIncidents.map((incident) => (
                   <Card key={incident.id} className="bg-white border border-gray-200 rounded-md overflow-hidden">
                     <div className="p-4 border-l-4 border-l-[#8B0000]">
                       <div className="mb-3">

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.teamhyungie.WildWatch.dto.IncidentRequest;
 import com.teamhyungie.WildWatch.dto.IncidentResponse;
 import com.teamhyungie.WildWatch.dto.IncidentUpdateRequest;
+import com.teamhyungie.WildWatch.dto.IncidentUpdateResponse;
 import com.teamhyungie.WildWatch.service.IncidentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -80,5 +81,20 @@ public class IncidentController {
             e.printStackTrace();
             return ResponseEntity.badRequest().build();
         }
+    }
+
+    @GetMapping("/in-progress")
+    public ResponseEntity<List<IncidentResponse>> getInProgressIncidents(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        List<IncidentResponse> incidents = incidentService.getInProgressIncidents(userDetails.getUsername());
+        return ResponseEntity.ok(incidents);
+    }
+
+    @GetMapping("/{id}/updates")
+    public ResponseEntity<List<IncidentUpdateResponse>> getIncidentUpdates(
+            @PathVariable String id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        List<IncidentUpdateResponse> updates = incidentService.getIncidentUpdates(id, userDetails.getUsername());
+        return ResponseEntity.ok(updates);
     }
 } 

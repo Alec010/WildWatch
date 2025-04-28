@@ -56,6 +56,9 @@ public class User {
     @Column(name = "terms_accepted_date")
     private LocalDateTime termsAcceptedDate;
 
+    @OneToOne(mappedBy = "user", fetch = FetchType.LAZY)
+    private OfficeAdmin officeAdmin;
+
     // Getters and Setters
     public Long getId() {
         return id;
@@ -154,5 +157,21 @@ public class User {
     
     public void setTermsAcceptedDate(LocalDateTime termsAcceptedDate) {
         this.termsAcceptedDate = termsAcceptedDate;
+    }
+
+    public String getFullName() {
+        return firstName + " " + lastName;
+    }
+
+    public OfficeAdmin getOfficeAdmin() {
+        return officeAdmin;
+    }
+
+    public void setOfficeAdmin(OfficeAdmin officeAdmin) {
+        this.officeAdmin = officeAdmin;
+    }
+
+    public Office getOffice() {
+        return officeAdmin != null ? Office.valueOf(officeAdmin.getOfficeCode()) : null;
     }
 } 

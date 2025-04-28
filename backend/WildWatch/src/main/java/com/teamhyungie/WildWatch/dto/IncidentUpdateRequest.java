@@ -5,9 +5,10 @@ import lombok.Data;
 
 @Data
 public class IncidentUpdateRequest {
-    private String administrativeNotes;
-    private boolean verified;
-    private String verificationNotes;
     private String status;
+    private String updateMessage;
+    private String updatedBy;
+    private boolean isVisibleToReporter = true;
     private PriorityLevel priorityLevel;
+    private boolean isVerified;
 } 
