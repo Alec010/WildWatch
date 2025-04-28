@@ -1,5 +1,7 @@
 "use client";
 
+import type React from "react";
+
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -9,7 +11,14 @@ import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import Image from "next/image";
 import { Sidebar } from "@/components/Sidebar";
-import { AlertTriangle, Upload, ArrowLeft } from "lucide-react";
+import {
+  AlertTriangle,
+  Upload,
+  ArrowLeft,
+  Camera,
+  X,
+  HelpCircle,
+} from "lucide-react";
 
 interface WitnessInfo {
   name: string;
@@ -21,19 +30,18 @@ interface FileInfo {
   name: string;
   size: number;
   type: string;
-  data: string; // base64 string
+  data: string;
 }
 
 export default function EvidenceSubmissionPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({
     witnesses: [] as WitnessInfo[],
-    fileInfos: [] as FileInfo[]
+    fileInfos: [] as FileInfo[],
   });
   const [incidentData, setIncidentData] = useState<any>(null);
 
   useEffect(() => {
-    // Retrieve incident data from session storage
     const storedData = sessionStorage.getItem("incidentSubmissionData");
     if (!storedData) {
       router.push("/incidents/submit");
@@ -41,273 +49,386 @@ export default function EvidenceSubmissionPage() {
     }
     setIncidentData(JSON.parse(storedData));
 
-    // Retrieve previously saved evidence data if it exists
     const storedEvidenceData = sessionStorage.getItem("evidenceSubmissionData");
     if (storedEvidenceData) {
       setFormData(JSON.parse(storedEvidenceData));
     }
   }, [router]);
 
-  // Save form data to session storage whenever it changes
   useEffect(() => {
     if (formData.witnesses.length > 0 || formData.fileInfos.length > 0) {
-      sessionStorage.setItem("evidenceSubmissionData", JSON.stringify(formData));
+      sessionStorage.setItem(
+        "evidenceSubmissionData",
+        JSON.stringify(formData)
+      );
     }
   }, [formData]);
 
   const handleAddWitness = () => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      witnesses: [...prev.witnesses, { name: "", contactInformation: "", statement: "" }],
+      witnesses: [
+        ...prev.witnesses,
+        { name: "", contactInformation: "", statement: "" },
+      ],
     }));
   };
 
-  const handleWitnessChange = (index: number, field: keyof WitnessInfo, value: string) => {
+  const handleWitnessChange = (
+    index: number,
+    field: keyof WitnessInfo,
+    value: string
+  ) => {
     const updatedWitnesses = [...formData.witnesses];
     updatedWitnesses[index] = { ...updatedWitnesses[index], [field]: value };
-    setFormData(prev => ({
-      ...prev,
-      witnesses: updatedWitnesses,
-    }));
+    setFormData((prev) => ({ ...prev, witnesses: updatedWitnesses }));
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files);
       const fileInfoPromises = newFiles.map(async (file) => {
-        // Convert file to base64
         const base64 = await new Promise<string>((resolve) => {
           const reader = new FileReader();
-          reader.onloadend = () => {
-            const base64String = reader.result as string;
-            resolve(base64String);
-          };
+          reader.onloadend = () => resolve(reader.result as string);
           reader.readAsDataURL(file);
         });
-
         return {
           name: file.name,
           size: file.size,
           type: file.type,
-          data: base64
+          data: base64,
         };
       });
-
       const newFileInfos = await Promise.all(fileInfoPromises);
-      
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        fileInfos: [...prev.fileInfos, ...newFileInfos]
+        fileInfos: [...prev.fileInfos, ...newFileInfos],
       }));
     }
   };
 
+  const handleRemoveFile = (indexToRemove: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      fileInfos: prev.fileInfos.filter((_, index) => index !== indexToRemove),
+    }));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Store evidence and witness data in session storage
-    sessionStorage.setItem("evidenceSubmissionData", JSON.stringify(formData));
-    
-    // Navigate to review page
     router.push("/incidents/submit/review");
   };
 
   return (
     <div className="flex min-h-screen bg-[#f5f5f5]">
       <Sidebar />
-      
-      {/* Main Content */}
-      <div className="flex-1">
-        <div className="max-w-[1200px] mx-auto p-6">
-          <Card className="bg-white shadow-lg">
-            <div className="p-6">
-              <h1 className="text-2xl font-semibold text-[#8B0000] mb-1">Evidence & Witnesses</h1>
-              <p className="text-gray-600 mb-6">Add supporting evidence and witness information</p>
+      <div className="flex-1 p-6 max-w-[1700px] mx-auto">
+        <h1 className="text-2xl font-bold text-[#8B0000] mb-1">
+          Report an Incident
+        </h1>
+        <p className="text-gray-600 mb-6">
+          Submit details about a security incident or concern
+        </p>
 
-              {/* Progress Steps */}
-              <div className="flex items-center mb-8 border-b pb-4">
-                <div className="flex items-center">
-                  <div className="bg-green-500 text-white rounded-full w-8 h-8 flex items-center justify-center">
-                    ✓
-                  </div>
-                  <span className="ml-2 text-green-500">Incident Details</span>
-                </div>
-                <div className="flex-1 h-px bg-gray-300 mx-4"></div>
-                <div className="flex items-center">
-                  <div className="bg-[#8B0000] text-white rounded-full w-8 h-8 flex items-center justify-center">
-                    2
-                  </div>
-                  <span className="ml-2 font-medium text-[#8B0000]">Evidence & Witnesses</span>
-                </div>
-                <div className="flex-1 h-px bg-gray-300 mx-4"></div>
-                <div className="flex items-center opacity-50">
-                  <div className="bg-gray-300 text-gray-600 rounded-full w-8 h-8 flex items-center justify-center">
-                    3
-                  </div>
-                  <span className="ml-2 text-gray-600">Review & Submit</span>
-                </div>
+        {/* Progress Steps */}
+        <div className="flex items-center mb-8">
+          <StepItem label="Incident Details" completed />
+          <StepItem label="Evidence & Witnesses" active />
+          <StepItem label="Review & Submit" />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-[1fr,300px] gap-6">
+          {/* Main Form */}
+          <Card className="p-6 bg-white shadow-sm border-0">
+            <div className="flex items-center gap-3 border-b pb-5 mb-6">
+              <div className="bg-[#8B0000] rounded-full w-10 h-10 flex items-center justify-center">
+                <Camera className="text-white w-5 h-5" />
               </div>
-
-              <div className="grid grid-cols-[1fr,300px] gap-6">
-                {/* Form Section */}
-                <div>
-                  <form onSubmit={handleSubmit} className="space-y-6">
-                    {/* File Upload Section */}
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2 mb-4">
-                        <Upload className="text-[#8B0000]" />
-                        <h2 className="text-lg font-semibold text-gray-700">Evidence Files</h2>
-                      </div>
-                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
-                        <Input
-                          type="file"
-                          multiple
-                          onChange={handleFileChange}
-                          className="hidden"
-                          id="file-upload"
-                          accept="image/*,video/*"
-                        />
-                        <Label
-                          htmlFor="file-upload"
-                          className="cursor-pointer text-[#8B0000] hover:text-[#6B0000] flex flex-col items-center"
-                        >
-                          <Upload className="h-8 w-8 mb-2" />
-                          <span>Click to upload or drag and drop</span>
-                          <p className="text-sm text-gray-500 mt-2">
-                            Support for images and videos
-                          </p>
-                        </Label>
-                      </div>
-
-                      {/* File List */}
-                      {formData.fileInfos.length > 0 && (
-                        <div className="mt-4">
-                          <h4 className="font-medium mb-2">Uploaded Files:</h4>
-                          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                            {formData.fileInfos.map((file, index) => (
-                              <div key={index} className="space-y-2">
-                                {file.type.startsWith('image/') ? (
-                                  <div className="relative aspect-square rounded-lg overflow-hidden border border-gray-200">
-                                    <Image
-                                      src={file.data}
-                                      alt={file.name}
-                                      fill
-                                      style={{ objectFit: 'cover' }}
-                                    />
-                                  </div>
-                                ) : file.type.startsWith('video/') ? (
-                                  <div className="relative aspect-video rounded-lg overflow-hidden border border-gray-200">
-                                    <video
-                                      src={file.data}
-                                      controls
-                                      className="w-full h-full"
-                                    />
-                                  </div>
-                                ) : null}
-                                <p className="text-sm text-gray-600">
-                                  {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
-                                </p>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Witnesses Section */}
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <AlertTriangle className="text-[#8B0000]" />
-                          <h2 className="text-lg font-semibold text-gray-700">Witnesses</h2>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={handleAddWitness}
-                          className="text-[#8B0000] border-[#8B0000] hover:bg-[#8B0000] hover:text-white"
-                        >
-                          + Add Witness
-                        </Button>
-                      </div>
-
-                      {formData.witnesses.map((witness, index) => (
-                        <Card key={index} className="p-4">
-                          <div className="space-y-4">
-                            <div className="space-y-2">
-                              <Label>Name</Label>
-                              <Input
-                                value={witness.name}
-                                onChange={(e) => handleWitnessChange(index, "name", e.target.value)}
-                                placeholder="Witness name"
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Contact Information</Label>
-                              <Input
-                                value={witness.contactInformation}
-                                onChange={(e) => handleWitnessChange(index, "contactInformation", e.target.value)}
-                                placeholder="Phone number or email"
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Statement</Label>
-                              <Textarea
-                                value={witness.statement}
-                                onChange={(e) => handleWitnessChange(index, "statement", e.target.value)}
-                                placeholder="What did the witness observe?"
-                                className="min-h-[100px]"
-                              />
-                            </div>
-                          </div>
-                        </Card>
-                      ))}
-                    </div>
-
-                    {/* Bottom Navigation */}
-                    <div className="flex justify-between mt-8">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => router.push("/incidents/submit")}
-                        className="flex items-center gap-2"
-                      >
-                        <ArrowLeft className="h-4 w-4" />
-                        Back to Incident Details
-                      </Button>
-                      <Button
-                        type="submit"
-                        className="bg-[#8B0000] hover:bg-[#8B0000]/90 text-white"
-                      >
-                        Continue to Review
-                      </Button>
-                    </div>
-                  </form>
-                </div>
-
-                {/* Help Section */}
-                <div className="space-y-4">
-                  <div className="bg-[#8B0000] text-white p-4 rounded-lg">
-                    <div className="flex items-center gap-2 mb-3">
-                      <AlertTriangle size={20} />
-                      <h3 className="font-semibold">Evidence Guidelines</h3>
-                    </div>
-                    <div className="space-y-3 text-sm">
-                      <p>Tips for submitting evidence:</p>
-                      <ul className="list-disc pl-5 space-y-2">
-                        <li>Upload clear, high-quality images</li>
-                        <li>Include relevant timestamps in photos if possible</li>
-                        <li>Ensure witness statements are detailed and accurate</li>
-                        <li>Provide contact information for follow-up</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
+              <div>
+                <h2 className="text-lg font-semibold text-gray-800">
+                  Evidence & Witnesses
+                </h2>
+                <p className="text-sm text-gray-500">
+                  Upload evidence and provide witness information
+                </p>
               </div>
             </div>
+
+            <form onSubmit={handleSubmit} className="space-y-8">
+              {/* Evidence Upload */}
+              <div>
+                <div className="flex items-center gap-2 mb-4">
+                  <Upload className="text-[#8B0000]" size={18} />
+                  <h3 className="text-base font-semibold text-gray-700">
+                    Evidence Upload
+                  </h3>
+                </div>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                  <Input
+                    type="file"
+                    multiple
+                    onChange={handleFileChange}
+                    className="hidden"
+                    id="file-upload"
+                    accept="image/*,video/*"
+                  />
+                  <Label
+                    htmlFor="file-upload"
+                    className="cursor-pointer text-[#8B0000] hover:text-[#6B0000] flex flex-col items-center"
+                  >
+                    <Upload className="h-8 w-8 mb-2" />
+                    <span className="text-sm">
+                      Drag & Drop files here or <b>Browse Files</b>
+                    </span>
+                    <p className="text-xs text-gray-500 mt-2">
+                      Supports JPG, PNG, MP4 (Max 10MB each)
+                    </p>
+                  </Label>
+                </div>
+
+                {/* Uploaded Files */}
+                {formData.fileInfos.length > 0 && (
+                  <div className="mt-6">
+                    <h4 className="font-medium mb-2 text-sm">
+                      Uploaded Files ({formData.fileInfos.length}):
+                    </h4>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {formData.fileInfos.map((file, index) => (
+                        <div
+                          key={index}
+                          className="relative space-y-1 group rounded-lg border border-gray-200 overflow-hidden"
+                        >
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveFile(index)}
+                            className="absolute top-2 right-2 bg-[#8B0000] text-white rounded-full p-1 opacity-80 hover:opacity-100 z-10"
+                            title="Remove File"
+                          >
+                            <X size={16} />
+                          </button>
+                          {file.type.startsWith("image/") ? (
+                            <div className="relative aspect-square">
+                              <Image
+                                src={file.data || "/placeholder.svg"}
+                                alt={file.name}
+                                fill
+                                style={{ objectFit: "cover" }}
+                              />
+                            </div>
+                          ) : file.type.startsWith("video/") ? (
+                            <div className="relative aspect-video">
+                              <video
+                                src={file.data}
+                                controls
+                                className="w-full h-full"
+                              />
+                            </div>
+                          ) : null}
+                          <p className="text-xs text-gray-600 text-center px-2 pb-2 truncate">
+                            {file.name} ({(file.size / 1024 / 1024).toFixed(2)}{" "}
+                            MB)
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Witness Section */}
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="text-[#8B0000]" size={18} />
+                    <h3 className="text-base font-semibold text-gray-700">
+                      Witness Information
+                    </h3>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleAddWitness}
+                    className="text-[#8B0000] border-[#8B0000] hover:bg-[#8B0000]/10 text-sm h-8"
+                  >
+                    + Add Another Witness
+                  </Button>
+                </div>
+
+                {formData.witnesses.length > 0 ? (
+                  formData.witnesses.map((witness, index) => (
+                    <Card
+                      key={index}
+                      className="p-4 space-y-4 mb-4 border-gray-200"
+                    >
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-sm">Name</Label>
+                          <Input
+                            value={witness.name}
+                            onChange={(e) =>
+                              handleWitnessChange(index, "name", e.target.value)
+                            }
+                            placeholder="Witness full name"
+                            className="border-gray-300"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-sm">Contact Information</Label>
+                          <Input
+                            value={witness.contactInformation}
+                            onChange={(e) =>
+                              handleWitnessChange(
+                                index,
+                                "contactInformation",
+                                e.target.value
+                              )
+                            }
+                            placeholder="Email or phone number"
+                            className="border-gray-300"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm">
+                          Statement (What did they see or hear?)
+                        </Label>
+                        <Textarea
+                          value={witness.statement}
+                          onChange={(e) =>
+                            handleWitnessChange(
+                              index,
+                              "statement",
+                              e.target.value
+                            )
+                          }
+                          placeholder="Describe what the witness observed"
+                          className="min-h-[100px] border-gray-300 resize-none"
+                        />
+                      </div>
+                    </Card>
+                  ))
+                ) : (
+                  <div className="text-center py-4 border border-dashed border-gray-300 rounded-lg">
+                    <p className="text-sm text-gray-500">
+                      No witnesses added yet
+                    </p>
+                    <Button
+                      type="button"
+                      variant="link"
+                      onClick={handleAddWitness}
+                      className="text-[#8B0000] mt-1"
+                    >
+                      + Add a Witness
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {/* Additional Notes */}
+              <div className="space-y-2">
+                <Label className="text-sm">Additional Notes (optional)</Label>
+                <Textarea
+                  placeholder="Add any other relevant information about the incident"
+                  className="min-h-[80px] border-gray-300 resize-none"
+                />
+              </div>
+
+              {/* Navigation Buttons */}
+              <div className="flex justify-between pt-4 border-t">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => router.push("/incidents/submit")}
+                  className="flex items-center gap-2"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to Incident Details
+                </Button>
+                <Button
+                  type="submit"
+                  className="bg-[#8B0000] hover:bg-[#8B0000]/90 text-white"
+                >
+                  Continue to Review →
+                </Button>
+              </div>
+            </form>
           </Card>
+
+          {/* Help Section */}
+          <div className="bg-[#8B0000] text-white rounded-lg p-4 h-fit">
+            <h2 className="flex items-center gap-2 text-lg font-semibold mb-4">
+              <HelpCircle size={20} /> Need Help?
+            </h2>
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium">Reporting Tips</h3>
+              <ul className="list-disc pl-5 text-sm space-y-2">
+                <li>Be as specific as possible about the location</li>
+                <li>Include time details even if approximate</li>
+                <li>Photos and videos help security respond effectively</li>
+                <li>
+                  Mention any witnesses who can provide additional information
+                </li>
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
-} 
+}
+
+function StepItem({
+  label,
+  completed = false,
+  active = false,
+}: {
+  label: string;
+  completed?: boolean;
+  active?: boolean;
+}) {
+  return (
+    <>
+      <div
+        className={`flex items-center ${
+          completed
+            ? "text-green-500"
+            : active
+            ? "text-[#8B0000]"
+            : "opacity-50 text-gray-600"
+        }`}
+      >
+        <div
+          className={`${
+            completed ? "bg-green-500" : active ? "bg-[#8B0000]" : "bg-gray-300"
+          } text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-medium`}
+        >
+          {completed ? (
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fillRule="evenodd"
+                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                clipRule="evenodd"
+              />
+            </svg>
+          ) : active ? (
+            "2"
+          ) : (
+            "3"
+          )}
+        </div>
+        <span className="ml-2 font-medium">{label}</span>
+      </div>
+      <div
+        className={`flex-1 h-1 ${
+          completed ? "bg-green-500" : active ? "bg-[#8B0000]" : "bg-gray-300"
+        } mx-4`}
+      ></div>
+    </>
+  );
+}
