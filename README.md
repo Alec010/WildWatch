@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 <!-- PROJECT LOGO -->
 <div align="center">
     <img src="WildWatch.png" alt="logoText">

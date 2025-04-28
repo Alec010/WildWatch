@@ -7,28 +7,25 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import com.wildwatch.navigation.BottomNavItem
+import com.wildwatch.navigation.Screen
 import com.wildwatch.ui.components.bottomnav.WildWatchBottomNavigation
+import com.wildwatch.ui.screens.casetracking.CaseTrackingScreen
 import com.wildwatch.ui.screens.dashboard.DashboardScreen
 import com.wildwatch.ui.screens.profile.ProfileScreen
-import com.wildwatch.ui.screens.report.ReportIncidentScreen
+import com.wildwatch.viewmodel.CaseTrackingViewModel
+import com.wildwatch.viewmodel.CaseTrackingViewModelFactory
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen() {
-    val navController = rememberNavController()
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route
-
-    // Define navigation items
+fun MainScreen(
+    navController: NavController,
+    currentTab: String,                      // ✅ Tab now comes from parent
+    onTabChange: (String) -> Unit
+) {
     val bottomNavItems = listOf(
         BottomNavItem(
             route = "dashboard",
@@ -58,47 +55,35 @@ fun MainScreen() {
         )
     )
 
-    // Use a Box instead of Scaffold to have more control over the layout
     Box(modifier = Modifier.fillMaxSize()) {
-        // Content area
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(bottom = 52.dp) // Match the height of the navigation bar
+                .padding(bottom = 52.dp) // leave space for bottom nav
         ) {
-            NavHost(
-                navController = navController,
-                startDestination = "dashboard"
-            ) {
-                composable("dashboard") {
-                    DashboardScreen()
-                }
-                composable("history") {
-                    PlaceholderScreen("History")
-                }
-                composable("report") {
-                    ReportIncidentScreen()
-                }
-                composable("cases") {
-                    PlaceholderScreen("Case Tracking")
-                }
-                composable("settings") {
-                    ProfileScreen()
-                }
+            when (currentTab) {
+                "dashboard" -> DashboardScreen()
+                "history" -> PlaceholderScreen("History")
+                "cases" -> {
+                val context = LocalContext.current
+                val caseTrackingViewModel: CaseTrackingViewModel = viewModel(
+                    factory = CaseTrackingViewModelFactory(context)
+                )
+                CaseTrackingScreen(viewModel = caseTrackingViewModel)
+            }
+
+                "settings" -> ProfileScreen()
             }
         }
 
-        // Bottom navigation
         WildWatchBottomNavigation(
             items = bottomNavItems,
-            selectedItemRoute = currentRoute ?: "dashboard",
+            selectedItemRoute = currentTab,
             onItemSelected = { item ->
-                navController.navigate(item.route) {
-                    popUpTo(navController.graph.startDestinationId) {
-                        saveState = true
-                    }
-                    launchSingleTop = true
-                    restoreState = true
+                if (item.route == "report") {
+                    navController.navigate(Screen.ReportFlow.route)
+                } else {
+                    onTabChange(item.route)         // ✅ Update the state via the parent!
                 }
             },
             modifier = Modifier.align(Alignment.BottomCenter)
@@ -114,9 +99,7 @@ fun PlaceholderScreen(screenName: String) {
     ) {
         Text(
             text = screenName,
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold
+            style = MaterialTheme.typography.headlineMedium
         )
     }
 }
-

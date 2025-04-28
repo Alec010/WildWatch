@@ -1,29 +1,36 @@
 package com.wildwatch.ui.screens.profile
 
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
+import android.widget.Toast
+import androidx.compose.animation.*
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.wildwatch.model.UserUpdateRequest
 import com.wildwatch.ui.theme.WildWatchRed
+import com.wildwatch.viewmodel.UserProfileViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,29 +40,74 @@ fun ProfileScreen(
     onUpdateAccountClick: () -> Unit = {},
     onDeleteAccountClick: () -> Unit = {}
 ) {
-    val darkRed = WildWatchRed
+    // Define colors
+    val primaryColor = Color(0xFF8B0000) // Original WildWatchRed
+    val secondaryColor = Color(0xFF9E2A2B) // Slightly lighter red
+    val accentColor = Color(0xFFE09F3E) // Gold accent
+    val backgroundColor = Color(0xFFF9F7F7) // Light background
+    val cardColor = Color.White
+    val textPrimaryColor = Color(0xFF333333)
+    val textSecondaryColor = Color(0xFF666666)
+
+    val viewModel: UserProfileViewModel = viewModel()
+
+    var firstName by remember { mutableStateOf("") }
+    var lastName by remember { mutableStateOf("") }
+    var middleInitial by remember { mutableStateOf("") }
+    var contactNumber by remember { mutableStateOf("") }
+
+    // Store original values for cancel functionality
+    val originalFirstName = remember { mutableStateOf("") }
+    val originalLastName = remember { mutableStateOf("") }
+    val originalMiddleInitial = remember { mutableStateOf("") }
+    val originalContactNumber = remember { mutableStateOf("") }
+
+    val user by viewModel.user.collectAsState()
+    var isEditing by remember { mutableStateOf(false) }
+    var isSaving by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        viewModel.fetchProfile(context)
+    }
+
+    LaunchedEffect(user) {
+        user?.let {
+            firstName = it.firstName
+            lastName = it.lastName
+            middleInitial = it.middleInitial ?: ""
+            contactNumber = it.contactNumber
+
+            // Store original values for cancel functionality
+            originalFirstName.value = it.firstName
+            originalLastName.value = it.lastName
+            originalMiddleInitial.value = it.middleInitial ?: ""
+            originalContactNumber.value = it.contactNumber
+        }
+    }
 
     Scaffold(
+        containerColor = backgroundColor,
         topBar = {
-            CenterAlignedTopAppBar(
+            TopAppBar(
                 title = {
                     Text(
                         text = "Profile",
-                        fontWeight = FontWeight.Medium,
-                        color = darkRed
+                        fontWeight = FontWeight.SemiBold,
+                        color = textPrimaryColor
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(
-                            imageVector = Icons.Default.ArrowBack,
+                            imageVector = Icons.Rounded.ArrowBack,
                             contentDescription = "Back",
-                            tint = darkRed
+                            tint = primaryColor
                         )
                     }
                 },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = Color.White
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = cardColor
                 )
             )
         }
@@ -65,273 +117,538 @@ fun ProfileScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
+                .background(backgroundColor)
         ) {
-            // Profile Banner
+            // Profile Header
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(180.dp)
-                    .background(darkRed)
+                    .height(200.dp)
             ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
+                // Gradient Background
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp)
+                        .height(140.dp)
+                        .background(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(primaryColor, secondaryColor)
+                            )
+                        )
+                )
+
+                // Profile Card
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .padding(top = 70.dp)
+                        .shadow(
+                            elevation = 4.dp,
+                            shape = RoundedCornerShape(16.dp),
+                            spotColor = Color.Black.copy(alpha = 0.1f)
+                        ),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = cardColor
+                    )
                 ) {
-                    // Profile Image with Edit Icon
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                    ) {
+                        Spacer(modifier = Modifier.height(40.dp))
+
+                        // Name
+                        Text(
+                            text = firstName,
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = textPrimaryColor
+                        )
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        // ID and Role
+                        Surface(
+                            shape = RoundedCornerShape(20.dp),
+                            color = accentColor.copy(alpha = 0.15f)
+                        ) {
+                            Text(
+                                text = "ID: ${user?.schoolIdNumber ?: ""} • ${user?.role ?: ""}",
+                                color = accentColor.copy(alpha = 0.8f),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                }
+
+                // Profile Image
+                Box(
+                    modifier = Modifier
+                        .size(90.dp)
+                        .align(Alignment.TopCenter)
+                        .offset(y = 30.dp)
+                ) {
+                    // Profile Image Background
                     Box(
                         modifier = Modifier
-                            .size(80.dp)
-                            .padding(4.dp)
+                            .size(90.dp)
+                            .clip(CircleShape)
+                            .background(cardColor)
+                            .border(
+                                width = 3.dp,
+                                color = cardColor,
+                                shape = CircleShape
+                            )
+                            .padding(3.dp),
+                        contentAlignment = Alignment.Center
                     ) {
                         // Profile Image
                         Box(
                             modifier = Modifier
-                                .size(72.dp)
+                                .fillMaxSize()
                                 .clip(CircleShape)
-                                .background(Color.White)
-                                .align(Alignment.Center),
+                                .background(backgroundColor),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Person,
                                 contentDescription = "Profile Picture",
-                                tint = Color.Gray,
-                                modifier = Modifier.size(40.dp)
-                            )
-                        }
-
-                        // Edit Icon
-                        Box(
-                            modifier = Modifier
-                                .size(24.dp)
-                                .clip(CircleShape)
-                                .background(Color.White)
-                                .align(Alignment.BottomEnd)
-                                .clickable { onEditProfileClick() },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Edit,
-                                contentDescription = "Edit Profile Picture",
-                                tint = darkRed,
-                                modifier = Modifier.size(14.dp)
+                                tint = primaryColor,
+                                modifier = Modifier.size(50.dp)
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Name
-                    Text(
-                        text = "John Smith",
-                        color = Color.White,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // ID and Role
-                    Surface(
-                        shape = RoundedCornerShape(16.dp),
-                        color = Color(0x33FFFFFF) // Semi-transparent white
+                    // Edit Button
+                    FloatingActionButton(
+                        onClick = onEditProfileClick,
+                        modifier = Modifier
+                            .size(32.dp)
+                            .align(Alignment.BottomEnd),
+                        containerColor = accentColor,
+                        contentColor = Color.White,
+                        elevation = FloatingActionButtonDefaults.elevation(4.dp)
                     ) {
-                        Text(
-                            text = "ID: 22-2222-222 • Student",
-                            color = Color.White,
-                            fontSize = 12.sp,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        Icon(
+                            imageVector = Icons.Rounded.Edit,
+                            contentDescription = "Edit Profile Picture",
+                            modifier = Modifier.size(16.dp)
                         )
                     }
                 }
             }
 
-            // Personal Information Section
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Information Sections
+            ProfileSection(
+                title = "Personal Information",
+                icon = Icons.Outlined.Person,
+                iconTint = primaryColor,
+                backgroundColor = cardColor
             ) {
-                Text(
-                    text = "Personal Information",
-                    color = darkRed,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
                 // Name Fields Row
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     // First Name
-                    OutlinedTextField(
-                        value = "Alec",
-                        onValueChange = { },
-                        label = { Text("First Name") },
-                        singleLine = true,
-                        modifier = Modifier.weight(1f),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            unfocusedBorderColor = Color.LightGray,
-                            unfocusedLabelColor = Color.Gray
-                        )
+                    ProfileTextField(
+                        value = firstName,
+                        onValueChange = {
+                            firstName = it.replaceFirstChar { char -> char.uppercaseChar() }
+                        },
+                        label = "First Name",
+                        readOnly = !isEditing,
+                        modifier = Modifier.weight(1f)
                     )
 
                     // Middle Initial
-                    OutlinedTextField(
-                        value = "R",
-                        onValueChange = { },
-                        label = { Text("M.I.") },
-                        singleLine = true,
-                        modifier = Modifier.width(60.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            unfocusedBorderColor = Color.LightGray,
-                            unfocusedLabelColor = Color.Gray
-                        )
+                    ProfileTextField(
+                        value = middleInitial,
+                        onValueChange = { middleInitial = it.uppercase().take(1) },
+                        label = "M.I.",
+                        readOnly = !isEditing,
+                        modifier = Modifier.width(60.dp)
                     )
 
                     // Last Name
-                    OutlinedTextField(
-                        value = "Arola",
-                        onValueChange = { },
-                        label = { Text("Last Name") },
-                        singleLine = true,
-                        modifier = Modifier.weight(1f),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            unfocusedBorderColor = Color.LightGray,
-                            unfocusedLabelColor = Color.Gray
-                        )
+                    ProfileTextField(
+                        value = lastName,
+                        onValueChange = {
+                            lastName = it.replaceFirstChar { char -> char.uppercaseChar() }
+                        },
+                        label = "Last Name",
+                        readOnly = !isEditing,
+                        modifier = Modifier.weight(1f)
                     )
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
-
                 // Contact Number
-                OutlinedTextField(
-                    value = "09123456789",
-                    onValueChange = { },
-                    label = { Text("Contact Number") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        unfocusedBorderColor = Color.LightGray,
-                        unfocusedLabelColor = Color.Gray
-                    )
+                ProfileTextField(
+                    value = contactNumber,
+                    onValueChange = { contactNumber = it },
+                    label = "Contact Number",
+                    readOnly = !isEditing,
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Outlined.Phone,
+                            contentDescription = null,
+                            tint = textSecondaryColor
+                        )
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
                 )
             }
 
+            Spacer(modifier = Modifier.height(16.dp))
+
             // Account Information Section
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
+            ProfileSection(
+                title = "Account Information",
+                icon = Icons.Outlined.AccountCircle,
+                iconTint = primaryColor,
+                backgroundColor = cardColor
             ) {
-                Text(
-                    text = "Account Information",
-                    color = darkRed,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
                 // Institutional Email
-                Column(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
                     Text(
                         text = "Institutional Email",
                         fontSize = 12.sp,
-                        color = Color.Gray
+                        color = textSecondaryColor,
+                        fontWeight = FontWeight.Medium
                     )
 
+                    Spacer(modifier = Modifier.height(4.dp))
+
                     OutlinedTextField(
-                        value = "alec",
+                        value = user?.email ?: "",
                         onValueChange = { },
                         readOnly = true,
                         enabled = false,
                         modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(
-                            unfocusedBorderColor = Color.LightGray,
                             disabledBorderColor = Color.LightGray,
-                            disabledTextColor = Color.DarkGray
-                        )
+                            disabledTextColor = textSecondaryColor,
+                            disabledContainerColor = backgroundColor.copy(alpha = 0.5f)
+                        ),
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Outlined.Email,
+                                contentDescription = null,
+                                tint = textSecondaryColor
+                            )
+                        },
+                        shape = RoundedCornerShape(12.dp)
                     )
 
                     Text(
                         text = "Email cannot be changed",
                         fontSize = 10.sp,
-                        color = Color.Gray,
+                        color = textSecondaryColor,
                         modifier = Modifier.padding(top = 4.dp, start = 4.dp)
                     )
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
-
                 // Role
-                Column(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
                     Text(
                         text = "Role",
                         fontSize = 12.sp,
-                        color = Color.Gray
+                        color = textSecondaryColor,
+                        fontWeight = FontWeight.Medium
                     )
 
+                    Spacer(modifier = Modifier.height(4.dp))
+
                     OutlinedTextField(
-                        value = "Student",
+                        value = user?.role ?: "",
                         onValueChange = { },
                         readOnly = true,
                         enabled = false,
                         modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(
-                            unfocusedBorderColor = Color.LightGray,
                             disabledBorderColor = Color.LightGray,
-                            disabledTextColor = Color.DarkGray
-                        )
+                            disabledTextColor = textSecondaryColor,
+                            disabledContainerColor = backgroundColor.copy(alpha = 0.5f)
+                        ),
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Outlined.School,
+                                contentDescription = null,
+                                tint = textSecondaryColor
+                            )
+                        },
+                        shape = RoundedCornerShape(12.dp)
                     )
 
                     Text(
                         text = "Role is assigned by the system",
                         fontSize = 10.sp,
-                        color = Color.Gray,
+                        color = textSecondaryColor,
                         modifier = Modifier.padding(top = 4.dp, start = 4.dp)
                     )
                 }
             }
 
-            // Buttons
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                // Delete Account Button
-                OutlinedButton(
-                    onClick = onDeleteAccountClick,
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = darkRed
-                    ),
-                    border = BorderStroke(1.dp, darkRed),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text("Delete Account")
-                }
+            Spacer(modifier = Modifier.height(16.dp))
 
-                // Edit Profile Button
-                Button(
-                    onClick = onEditProfileClick,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = darkRed
-                    ),
-                    modifier = Modifier.weight(1f)
+            // Account Actions
+            ProfileSection(
+                title = "Account Actions",
+                icon = Icons.Outlined.Settings,
+                iconTint = primaryColor,
+                backgroundColor = cardColor
+            ) {
+                // Action buttons
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text("Edit Profile")
+                    if (isEditing) {
+                        // Show both Save and Cancel buttons when editing
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            // Cancel Button
+                            OutlinedButton(
+                                onClick = {
+                                    // Reset to original values
+                                    firstName = originalFirstName.value
+                                    lastName = originalLastName.value
+                                    middleInitial = originalMiddleInitial.value
+                                    contactNumber = originalContactNumber.value
+                                    isEditing = false
+                                },
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = textSecondaryColor
+                                ),
+                                border = BorderStroke(1.dp, Color.LightGray),
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp),
+                                contentPadding = PaddingValues(vertical = 12.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Close,
+                                    contentDescription = "Cancel",
+                                    modifier = Modifier.padding(end = 8.dp)
+                                )
+                                Text(
+                                    text = "Cancel",
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+
+                            // Save Button
+                            Button(
+                                onClick = {
+                                    if (
+                                        firstName == user?.firstName &&
+                                        lastName == user?.lastName &&
+                                        middleInitial == (user?.middleInitial ?: "") &&
+                                        contactNumber == user?.contactNumber
+                                    ) {
+                                        Toast.makeText(context, "No changes to save.", Toast.LENGTH_SHORT).show()
+                                        isEditing = false
+                                        return@Button
+                                    }
+                                    isSaving = true
+                                    viewModel.updateUserProfile(
+                                        context = context,
+                                        updated = UserUpdateRequest(
+                                            firstName = firstName,
+                                            lastName = lastName,
+                                            middleInitial = middleInitial,
+                                            contactNumber = contactNumber
+                                        ),
+                                        onSuccess = {
+                                            Toast.makeText(context, "Profile updated!", Toast.LENGTH_SHORT).show()
+                                            isSaving = false
+                                            isEditing = false
+                                        },
+                                        onError = {
+                                            Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+                                            isSaving = false
+                                        }
+                                    )
+                                },
+                                enabled = !isSaving,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = primaryColor
+                                ),
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp),
+                                contentPadding = PaddingValues(vertical = 12.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Save,
+                                    contentDescription = "Save",
+                                    modifier = Modifier.padding(end = 8.dp)
+                                )
+                                Text(
+                                    text = "Save Changes",
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+                    } else {
+                        // Edit Profile Button (only when not editing)
+                        Button(
+                            onClick = { isEditing = true },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = primaryColor
+                            ),
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            contentPadding = PaddingValues(vertical = 12.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Edit,
+                                contentDescription = "Edit",
+                                modifier = Modifier.padding(end = 8.dp)
+                            )
+                            Text(
+                                text = "Edit Profile",
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+
+                    // Delete Account Button (only show when not editing)
+                    AnimatedVisibility(
+                        visible = !isEditing,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically()
+                    ) {
+                        OutlinedButton(
+                            onClick = onDeleteAccountClick,
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = Color(0xFFE63946)
+                            ),
+                            border = BorderStroke(1.dp, Color(0xFFE63946)),
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            contentPadding = PaddingValues(vertical = 12.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Delete,
+                                contentDescription = "Delete",
+                                modifier = Modifier.padding(end = 8.dp)
+                            )
+                            Text(
+                                text = "Delete Account",
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
+}
+
+@Composable
+fun ProfileSection(
+    title: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    iconTint: Color,
+    backgroundColor: Color = Color.White,
+    content: @Composable () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = backgroundColor
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 2.dp
+        )
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            // Section Header
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = iconTint,
+                    modifier = Modifier.size(24.dp)
+                )
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Text(
+                    text = title,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF333333)
+                )
+            }
+
+            Divider(color = Color(0xFFEEEEEE))
+
+            // Section Content
+            content()
+        }
+    }
+}
+
+@Composable
+fun ProfileTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier,
+    readOnly: Boolean = true,
+    leadingIcon: @Composable (() -> Unit)? = null
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label) },
+        singleLine = true,
+        readOnly = readOnly,
+        modifier = modifier,
+        colors = OutlinedTextFieldDefaults.colors(
+            unfocusedBorderColor = Color.LightGray,
+            unfocusedLabelColor = Color.Gray,
+            unfocusedContainerColor = if (readOnly) Color(0xFFFAFAFA) else Color.White
+        ),
+        leadingIcon = leadingIcon,
+        shape = RoundedCornerShape(12.dp)
+    )
 }
