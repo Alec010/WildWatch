@@ -1,7 +1,7 @@
 package com.teamhyungie.WildWatch.model;
 
 public enum PriorityLevel {
-    LOW,
+    HIGH,
     MEDIUM,
-    HIGH
+    LOW
 } 
