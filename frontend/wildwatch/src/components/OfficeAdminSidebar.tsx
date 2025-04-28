@@ -9,7 +9,8 @@ import {
   AlertTriangle,
   ClipboardCheck,
   History,
-  LogOut
+  LogOut,
+  User2
 } from 'lucide-react';
 import Cookies from 'js-cookie';
 
@@ -76,87 +77,95 @@ export function OfficeAdminSidebar() {
     router.push('/login');
   };
 
-  const navigation = [
-    {
-      name: 'Dashboard',
-      href: '/office-admin/dashboard',
-      icon: LayoutDashboard,
-      current: pathname === '/office-admin/dashboard'
-    },
-    {
-      name: 'Incident Management',
-      href: '/office-admin/incidents',
-      icon: AlertTriangle,
-      current: pathname === '/office-admin/incidents'
-    },
-    {
-      name: 'Approved Case Tracker',
-      href: '/office-admin/approved-cases',
-      icon: ClipboardCheck,
-      current: pathname === '/office-admin/approved-cases'
-    },
-    {
-      name: 'Incident History',
-      href: '/office-admin/history',
-      icon: History,
-      current: pathname === '/office-admin/history'
-    }
-  ];
-
   return (
-    <div className="flex flex-col w-64 bg-[#800000] min-h-screen text-white">
-      {/* Logo */}
-      <div className="p-4">
+    <div className="w-64 bg-[#800000] text-white flex flex-col min-h-screen">
+      <div className="p-6">
         <Image
           src="/logo2.png"
           alt="WildWatch Logo"
           width={150}
-          height={40}
-          className="mx-auto"
+          height={50}
+          className="mb-8"
         />
-      </div>
-
-      {/* Navigation */}
-      <nav className="flex-1 px-2 py-4 space-y-1">
-        {navigation.map((item) => (
+        <nav className="space-y-4">
           <Link
-            key={item.name}
-            href={item.href}
-            className={`flex items-center px-4 py-3 text-sm rounded-lg transition-colors ${
-              item.current
-                ? 'bg-white/10 text-white'
-                : 'text-gray-300 hover:bg-white/5 hover:text-white'
+            href="/office-admin/dashboard"
+            className={`flex items-center space-x-3 p-3 rounded-lg transition-colors ${
+              pathname === "/office-admin/dashboard"
+                ? "bg-[#6B0000] text-[#F0B429] border-l-4 border-[#F0B429]"
+                : "hover:bg-[#6B0000]"
             }`}
           >
-            <item.icon className="mr-3 h-5 w-5" />
-            {item.name}
+            <LayoutDashboard size={20} />
+            <span>Dashboard</span>
           </Link>
-        ))}
-      </nav>
+          <Link
+            href="/office-admin/incidents"
+            className={`flex items-center space-x-3 p-3 rounded-lg transition-colors ${
+              pathname === "/office-admin/incidents"
+                ? "bg-[#6B0000] text-[#F0B429] border-l-4 border-[#F0B429]"
+                : "hover:bg-[#6B0000]"
+            }`}
+          >
+            <AlertTriangle size={20} />
+            <span>Incident Management</span>
+          </Link>
+          <Link
+            href="/office-admin/approved-cases"
+            className={`flex items-center space-x-3 p-3 rounded-lg transition-colors ${
+              pathname === "/office-admin/approved-cases"
+                ? "bg-[#6B0000] text-[#F0B429] border-l-4 border-[#F0B429]"
+                : "hover:bg-[#6B0000]"
+            }`}
+          >
+            <ClipboardCheck size={20} />
+            <span>Approved Case Tracker</span>
+          </Link>
+          <Link
+            href="/office-admin/history"
+            className={`flex items-center space-x-3 p-3 rounded-lg transition-colors ${
+              pathname === "/office-admin/history"
+                ? "bg-[#6B0000] text-[#F0B429] border-l-4 border-[#F0B429]"
+                : "hover:bg-[#6B0000]"
+            }`}
+          >
+            <History size={20} />
+            <span>Incident History</span>
+          </Link>
+        </nav>
+      </div>
 
-      {/* User Profile */}
-      <div className="mt-auto border-t border-[#6B0000] p-4">
-        <Link 
+      {/* User Profile Section */}
+      <div className="mt-auto border-t border-[#6B0000] p-4 flex items-center justify-between">
+        <Link
           href="/profile"
-          className="flex flex-col cursor-pointer hover:opacity-80 transition-opacity"
+          className="flex items-center space-x-3 hover:opacity-80 transition-opacity"
         >
-          {loading ? (
-            <div className="text-sm text-gray-300">Loading...</div>
-          ) : user ? (
-            <>
-              <div className="text-sm font-medium">{user.firstName} {user.lastName}</div>
-              <div className="text-xs text-gray-300">ID: {user.schoolIdNumber}</div>
-            </>
-          ) : (
-            <div className="text-sm text-gray-300">Not logged in</div>
-          )}
+          <div className="w-8 h-8 rounded-full bg-[#6B0000] flex items-center justify-center">
+            <User2 size={20} />
+          </div>
+          <div className="flex flex-col">
+            {loading ? (
+              <div className="text-sm text-gray-300">Loading...</div>
+            ) : user ? (
+              <>
+                <div className="text-sm font-medium">
+                  {user.firstName} {user.lastName}
+                </div>
+                <div className="text-xs text-gray-300">
+                  ID: {user.schoolIdNumber}
+                </div>
+              </>
+            ) : (
+              <div className="text-sm text-gray-300">Not logged in</div>
+            )}
+          </div>
         </Link>
         <button
           onClick={handleSignOut}
-          className="flex items-center space-x-2 mt-2 text-sm text-gray-300 hover:text-white"
+          className="text-gray-300 hover:text-white"
         >
-          <LogOut size={16} />
-          <span>Sign Out</span>
+          <LogOut size={20} />
         </button>
       </div>
     </div>

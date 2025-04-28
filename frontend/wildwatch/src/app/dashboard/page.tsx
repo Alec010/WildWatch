@@ -43,6 +43,8 @@ export default function DashboardPage() {
   const [recentIncidents, setRecentIncidents] = useState<Incident[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filteredIncidents, setFilteredIncidents] = useState<Incident[]>([]);
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
@@ -113,14 +115,14 @@ export default function DashboardPage() {
   useEffect(() => {
     // Filter incidents based on search query
     const filtered = recentIncidents.filter((incident) => {
-      const searchLower = searchQuery.toLowerCase()
+      const searchLower = searchQuery.toLowerCase();
       return (
         incident.incidentType.toLowerCase().includes(searchLower) ||
         incident.trackingNumber.toLowerCase().includes(searchLower)
-      )
-    })
-    setFilteredIncidents(filtered)
-  }, [searchQuery, recentIncidents])
+      );
+    });
+    setFilteredIncidents(filtered);
+  }, [searchQuery, recentIncidents]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -180,12 +182,14 @@ export default function DashboardPage() {
               </p>
             </div>
             <div className="flex items-center gap-4">
-              <div className="relative flex flex-col">
-                <Search className="absolute left-3 top-[13px] text-gray-400 h-4 w-4" />
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <input
                   type="text"
                   placeholder="Search incidents..."
                   className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg w-64 focus:outline-none focus:ring-1 focus:ring-[#800000] focus:border-[#800000]"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
               <Button
@@ -274,8 +278,8 @@ export default function DashboardPage() {
               </Button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {recentIncidents.length > 0 ? (
-                recentIncidents.slice(0, 3).map((incident) => (
+              {(searchQuery ? filteredIncidents : recentIncidents).length > 0 ? (
+                (searchQuery ? filteredIncidents : recentIncidents).slice(0, 3).map((incident) => (
                   <Card
                     key={incident.id}
                     className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden"
