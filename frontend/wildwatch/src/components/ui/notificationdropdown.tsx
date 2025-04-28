@@ -13,14 +13,16 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-interface Notification {
+interface ActivityLog {
   id: string;
-  title: string;
-  message: string;
-  timestamp: string;
-  isRead: boolean;
-  type: "status_change" | "comment" | "assignment" | "resolution" | "new";
-  incidentId?: string;
+  activityType: string;
+  description: string;
+  createdAt: string;
+  incident: {
+    id: string;
+    trackingNumber: string;
+  } | null;
+  isRead?: boolean;
 }
 
 interface NotificationDropdownProps {
@@ -31,7 +33,7 @@ export default function NotificationDropdown({
   className,
 }: NotificationDropdownProps) {
   const router = useRouter();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<ActivityLog[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -60,80 +62,49 @@ export default function NotificationDropdown({
 
   // Setup WebSocket for real-time notifications
   useEffect(() => {
-    // In a real application, you would connect to a WebSocket server here
-    // const socket = new WebSocket('ws://your-websocket-server/notifications');
+    const ws = new WebSocket('ws://localhost:8080/ws/notifications');
+    
+    ws.onmessage = (event) => {
+      const newActivity = JSON.parse(event.data);
+      setNotifications(prev => [newActivity, ...prev]);
+      setUnreadCount(prev => prev + 1);
+    };
 
-    // socket.onmessage = (event) => {
-    //   const newNotification = JSON.parse(event.data);
-    //   setNotifications(prev => [newNotification, ...prev]);
-    //   setUnreadCount(prev => prev + 1);
-    // };
-
-    // return () => {
-    //   socket.close();
-    // };
-
-    // For demo purposes, we'll simulate a new notification after 10 seconds
-    const timer = setTimeout(() => {
-      const newNotification: Notification = {
-        id: "4",
-        title: "New Assignment",
-        message: "Your incident has been assigned to Officer Johnson",
-        timestamp: new Date().toISOString(),
-        isRead: false,
-        type: "assignment",
-        incidentId: "inc-001",
-      };
-      setNotifications((prev) => [newNotification, ...prev]);
-      setUnreadCount((prev) => prev + 1);
-    }, 10000);
-
-    return () => clearTimeout(timer);
+    return () => {
+      ws.close();
+    };
   }, []);
 
   const fetchNotifications = async () => {
     try {
-      // In a real app, you would fetch notifications from an API
-      // const response = await fetch('/api/notifications');
-      // const data = await response.json();
-      // setNotifications(data);
-      // setUnreadCount(data.filter(n => !n.isRead).length);
+      const token = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("token="))
+        ?.split("=")[1];
 
-      // For demo purposes, we'll use sample data
-      const sampleNotifications: Notification[] = [
-        {
-          id: "1",
-          title: "Status Update",
-          message:
-            "Your incident report INC-2023-0001 (Bullying) has been changed to 'In Progress'",
-          timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(), // 30 minutes ago
-          isRead: false,
-          type: "status_change",
-          incidentId: "inc-001",
+      if (!token) {
+        throw new Error("No authentication token found");
+      }
+
+      const response = await fetch("http://localhost:8080/api/activities/my-activities", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
-        {
-          id: "2",
-          title: "New Comment",
-          message:
-            "Admin added a comment to your incident report: 'We are investigating this issue'",
-          timestamp: new Date(Date.now() - 1000 * 60 * 120).toISOString(), // 2 hours ago
-          isRead: false,
-          type: "comment",
-          incidentId: "inc-001",
-        },
-        {
-          id: "3",
-          title: "Incident Resolved",
-          message:
-            "Your incident report INC-2023-0002 (Lost Item) has been resolved",
-          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(), // 5 hours ago
-          isRead: false,
-          type: "resolution",
-          incidentId: "inc-002",
-        },
-      ];
-      setNotifications(sampleNotifications);
-      setUnreadCount(sampleNotifications.filter((n) => !n.isRead).length);
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      // Initialize notifications with isRead status
+      const notificationsWithReadStatus = data.content.map((notification: ActivityLog) => ({
+        ...notification,
+        isRead: false
+      }));
+      setNotifications(notificationsWithReadStatus);
+      setUnreadCount(notificationsWithReadStatus.length);
     } catch (error) {
       console.error("Error fetching notifications:", error);
     }
@@ -161,26 +132,21 @@ export default function NotificationDropdown({
   };
 
   const markAllAsRead = () => {
-    setNotifications(
-      notifications.map((notification) => ({ ...notification, isRead: true }))
-    );
+    setNotifications(prev => prev.map(notification => ({ ...notification, isRead: true })));
     setUnreadCount(0);
   };
 
   const markAsRead = (id: string) => {
-    setNotifications(
-      notifications.map((notification) =>
-        notification.id === id
-          ? { ...notification, isRead: true }
-          : notification
+    setNotifications(prev => 
+      prev.map(notification => 
+        notification.id === id ? { ...notification, isRead: true } : notification
       )
     );
-    setUnreadCount((prev) => Math.max(0, prev - 1));
+    setUnreadCount(prev => Math.max(0, prev - 1));
   };
 
   const refreshNotifications = () => {
     setIsRefreshing(true);
-    // In a real app, you would fetch new notifications here
     fetchNotifications();
     setTimeout(() => {
       setIsRefreshing(false);
@@ -189,25 +155,25 @@ export default function NotificationDropdown({
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
-      case "status_change":
+      case "STATUS_CHANGE":
         return <Clock className="h-5 w-5 text-blue-500" />;
-      case "comment":
+      case "UPDATE":
         return <AlertCircle className="h-5 w-5 text-purple-500" />;
-      case "assignment":
-        return <AlertTriangle className="h-5 w-5 text-orange-500" />;
-      case "resolution":
-        return <CheckCircle className="h-5 w-5 text-green-500" />;
-      case "new":
+      case "NEW_REPORT":
         return <FileText className="h-5 w-5 text-red-500" />;
+      case "CASE_RESOLVED":
+        return <CheckCircle className="h-5 w-5 text-green-500" />;
       default:
         return <Bell className="h-5 w-5 text-gray-500" />;
     }
   };
 
-  const handleNotificationItemClick = (notification: Notification) => {
-    markAsRead(notification.id);
-    if (notification.incidentId) {
-      router.push(`/incidents/${notification.incidentId}`);
+  const handleNotificationItemClick = (notification: ActivityLog) => {
+    if (!notification.isRead) {
+      markAsRead(notification.id);
+    }
+    if (notification.incident) {
+      router.push(`/incidents/${notification.incident.id}`);
     }
   };
 
@@ -256,7 +222,7 @@ export default function NotificationDropdown({
               </Button>
             </div>
           </div>
-          <div className="max-h-80 overflow-y-auto">
+          <div className="max-h-96 overflow-y-auto">
             {notifications.length === 0 ? (
               <div className="p-4 text-center text-gray-500">
                 No notifications
@@ -272,19 +238,19 @@ export default function NotificationDropdown({
                 >
                   <div className="flex items-start">
                     <div className="bg-gray-100 rounded-full p-2 mr-3">
-                      {getNotificationIcon(notification.type)}
+                      {getNotificationIcon(notification.activityType)}
                     </div>
                     <div className="flex-1">
                       <div className="flex justify-between items-start">
                         <h4 className="font-medium text-sm text-gray-900">
-                          {notification.title}
+                          {notification.activityType.replace(/_/g, ' ')}
                         </h4>
                         <span className="text-xs text-gray-500">
-                          {formatNotificationTime(notification.timestamp)}
+                          {formatNotificationTime(notification.createdAt)}
                         </span>
                       </div>
                       <p className="text-xs text-gray-600 mt-1">
-                        {notification.message}
+                        {notification.description}
                       </p>
                     </div>
                   </div>

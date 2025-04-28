@@ -8,6 +8,7 @@ import { handleAuthRedirect } from '@/utils/auth';
 export default function OAuth2Redirect() {
     const router = useRouter();
     const [error, setError] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         const processLogin = async () => {
@@ -36,13 +37,26 @@ export default function OAuth2Redirect() {
                     throw new Error('Invalid user data received');
                 }
 
+                // Check if terms are accepted
+                if (!data.user.termsAccepted) {
+                    console.log('Terms not accepted, redirecting to terms page');
+                    // Store the user data in session storage to be used after terms acceptance
+                    sessionStorage.setItem('oauthUserData', JSON.stringify(data.user));
+                    router.push('/terms');
+                    return;
+                }
+
+                console.log('Terms accepted, redirecting to dashboard');
                 // Use handleAuthRedirect to determine the correct redirect path
                 const redirectPath = handleAuthRedirect(data.user);
                 router.push(redirectPath);
             } catch (err) {
                 console.error('Error during OAuth redirect:', err);
                 setError('Failed to process login. Please try again.');
-                router.push('/auth/login');
+                // Redirect to login page with error message
+                router.push('/login?error=' + encodeURIComponent(err instanceof Error ? err.message : 'Failed to process login'));
+            } finally {
+                setIsLoading(false);
             }
         };
 
@@ -50,7 +64,19 @@ export default function OAuth2Redirect() {
     }, [router]);
 
     if (error) {
-        return <div className="text-red-500">{error}</div>;
+        return (
+            <div className="flex justify-center items-center min-h-screen">
+                <div className="text-center">
+                    <div className="text-red-500 mb-4">{error}</div>
+                    <button 
+                        onClick={() => router.push('/login')}
+                        className="text-blue-500 hover:underline"
+                    >
+                        Return to Login
+                    </button>
+                </div>
+            </div>
+        );
     }
 
     return (

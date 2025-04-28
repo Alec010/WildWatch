@@ -18,8 +18,17 @@ public class TermsController {
     public ResponseEntity<String> acceptTerms(Authentication authentication) {
         try {
             User user = userService.findByUsername(authentication.getName());
+            if (user == null) {
+                return ResponseEntity.badRequest().body("User not found");
+            }
+            
             user.setTermsAccepted(true);
-            userService.save(user);
+            user = userService.save(user);
+            
+            if (!user.isTermsAccepted()) {
+                return ResponseEntity.badRequest().body("Failed to update terms acceptance status");
+            }
+            
             return ResponseEntity.ok("Terms accepted successfully");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Failed to accept terms: " + e.getMessage());
@@ -30,6 +39,9 @@ public class TermsController {
     public ResponseEntity<Boolean> getTermsStatus(Authentication authentication) {
         try {
             User user = userService.findByUsername(authentication.getName());
+            if (user == null) {
+                return ResponseEntity.badRequest().body(false);
+            }
             return ResponseEntity.ok(user.isTermsAccepted());
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(false);

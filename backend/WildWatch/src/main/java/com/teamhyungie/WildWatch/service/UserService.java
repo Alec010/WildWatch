@@ -70,7 +70,7 @@ public class UserService {
 
     public User findByUsername(String username) {
         return userRepository.findByEmail(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username));
+                .orElse(null);
     }
 
     public User save(User user) {
