@@ -52,7 +52,9 @@ export default function IncidentManagementPage() {
         }
 
         const data = await response.json();
-        setIncidents(data);
+        // Filter out incidents that are "In Progress"
+        const filteredData = data.filter((incident: Incident) => incident.status !== "In Progress");
+        setIncidents(filteredData);
       } catch (error) {
         console.error('Error fetching incidents:', error);
         setError(error instanceof Error ? error.message : 'Failed to load incidents');

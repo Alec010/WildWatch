@@ -3,15 +3,18 @@ package com.teamhyungie.WildWatch.service;
 import com.teamhyungie.WildWatch.dto.IncidentRequest;
 import com.teamhyungie.WildWatch.dto.IncidentResponse;
 import com.teamhyungie.WildWatch.dto.IncidentUpdateRequest;
+import com.teamhyungie.WildWatch.dto.IncidentUpdateResponse;
 import com.teamhyungie.WildWatch.model.Evidence;
 import com.teamhyungie.WildWatch.model.Incident;
 import com.teamhyungie.WildWatch.model.User;
 import com.teamhyungie.WildWatch.model.Witness;
 import com.teamhyungie.WildWatch.model.Office;
 import com.teamhyungie.WildWatch.model.OfficeAdmin;
+import com.teamhyungie.WildWatch.model.IncidentUpdate;
 import com.teamhyungie.WildWatch.repository.EvidenceRepository;
 import com.teamhyungie.WildWatch.repository.IncidentRepository;
 import com.teamhyungie.WildWatch.repository.WitnessRepository;
+import com.teamhyungie.WildWatch.repository.IncidentUpdateRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +33,7 @@ public class IncidentService {
     private final FileStorageService fileStorageService;
     private final OfficeAdminService officeAdminService;
     private final ActivityLogService activityLogService;
+    private final IncidentUpdateRepository incidentUpdateRepository;
 
     @Transactional
     public IncidentResponse createIncident(IncidentRequest request, String userEmail, List<MultipartFile> files) {
@@ -200,33 +204,126 @@ public class IncidentService {
         String oldStatus = incident.getStatus();
 
         // Update incident fields
-        incident.setStatus(request.getStatus());
-        incident.setPriorityLevel(request.getPriorityLevel());
+        if (request.getStatus() != null) {
+            incident.setStatus(request.getStatus());
+        }
+        if (request.getPriorityLevel() != null) {
+            incident.setPriorityLevel(request.getPriorityLevel());
+        }
         incident.setVerified(request.isVerified());
         
         // Save the updated incident
         Incident updatedIncident = incidentRepository.save(incident);
 
-        // Log activity for status change
-        if (!oldStatus.equals(request.getStatus())) {
+        // Create an incident update if a message is provided
+        if (request.getUpdateMessage() != null && !request.getUpdateMessage().trim().isEmpty()) {
+            IncidentUpdate update = new IncidentUpdate();
+            update.setIncident(updatedIncident);
+            update.setMessage(request.getUpdateMessage());
+            update.setStatus(updatedIncident.getStatus());
+            update.setUpdatedBy(user);
+            update.setVisibleToReporter(request.isVisibleToReporter());
+            
+            // Add the updatedBy information to the activity log
+            String updateInfo = request.getUpdatedBy() != null ? 
+                " (Updated by: " + request.getUpdatedBy() + ")" : "";
+            
             activityLogService.logActivity(
-                "STATUS_CHANGE",
-                "Case #" + incident.getTrackingNumber() + " status changed from '" + oldStatus + "' to '" + request.getStatus() + "'",
+                "UPDATE",
+                "Update provided" + updateInfo + ": " + request.getUpdateMessage(),
                 updatedIncident,
-                incident.getSubmittedBy()
+                user
             );
+            
+            incidentUpdateRepository.save(update);
         }
 
-        // Log activity for verification
-        if (request.isVerified() && !incident.getVerified()) {
+        // Log activity for status change
+        if (!oldStatus.equals(request.getStatus())) {
+            String updateInfo = request.getUpdatedBy() != null ? 
+                " by " + request.getUpdatedBy() : "";
+            
             activityLogService.logActivity(
-                "CASE_VERIFIED",
-                "Case #" + incident.getTrackingNumber() + " has been verified",
+                "STATUS_CHANGE",
+                "Case #" + incident.getTrackingNumber() + " status changed from '" + oldStatus + "' to '" + request.getStatus() + "'" + updateInfo,
                 updatedIncident,
                 incident.getSubmittedBy()
             );
         }
 
         return IncidentResponse.fromIncident(updatedIncident);
+    }
+
+    public List<IncidentUpdateResponse> getIncidentUpdates(String id, String userEmail) {
+        User user = userService.getUserByEmail(userEmail);
+        
+        // Get the incident
+        Incident incident = incidentRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Incident not found"));
+
+        // Check if user is authorized to view this incident
+        boolean isOfficeAdmin = officeAdminService.findByUserEmail(userEmail).isPresent();
+        boolean isSubmitter = incident.getSubmittedBy().getEmail().equals(userEmail);
+        
+        if (!isOfficeAdmin && !isSubmitter) {
+            throw new RuntimeException("Not authorized to view this incident");
+        }
+
+        return incidentUpdateRepository.findByIncidentOrderByUpdatedAtDesc(incident)
+            .stream()
+            .map(update -> {
+                IncidentUpdateResponse response = new IncidentUpdateResponse();
+                response.setId(update.getId());
+                response.setMessage(update.getMessage());
+                response.setStatus(update.getStatus());
+                response.setUpdatedByFullName(update.getUpdatedBy().getFullName());
+                response.setUpdatedAt(update.getUpdatedAt());
+                response.setVisibleToReporter(update.isVisibleToReporter());
+                return response;
+            })
+            .collect(Collectors.toList());
+    }
+
+    public List<IncidentResponse> getInProgressIncidents(String userEmail) {
+        User user = userService.getUserByEmail(userEmail);
+        
+        // Get the office admin details
+        OfficeAdmin officeAdmin = officeAdminService.findByUserEmail(userEmail)
+            .orElseThrow(() -> new RuntimeException("User is not an office admin"));
+
+        // Get the office from the office admin's office name
+        Office office = Office.valueOf(officeAdmin.getOfficeCode());
+
+        return incidentRepository.findByAssignedOfficeAndStatusOrderBySubmittedAtDesc(office, "In Progress")
+            .stream()
+            .map(IncidentResponse::fromIncident)
+            .collect(Collectors.toList());
+    }
+
+    public void createIncidentUpdate(String incidentId, String userEmail, String message, String status) {
+        User user = userService.getUserByEmail(userEmail);
+
+        Incident incident = incidentRepository.findById(incidentId)
+            .orElseThrow(() -> new RuntimeException("Incident not found"));
+
+        // Check if user has permission to create updates
+        OfficeAdmin officeAdmin = officeAdminService.findByUserEmail(userEmail)
+            .orElseThrow(() -> new RuntimeException("User is not an office admin"));
+
+        if (!incident.getAssignedOffice().equals(Office.valueOf(officeAdmin.getOfficeCode()))) {
+            throw new RuntimeException("User does not have permission to update this incident");
+        }
+
+        IncidentUpdate update = new IncidentUpdate();
+        update.setIncident(incident);
+        update.setMessage(message);
+        update.setStatus(status);
+        update.setUpdatedBy(user);
+
+        incidentUpdateRepository.save(update);
+
+        // Update incident status
+        incident.setStatus(status);
+        incidentRepository.save(incident);
     }
 } 
