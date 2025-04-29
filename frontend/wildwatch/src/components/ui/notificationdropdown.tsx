@@ -58,6 +58,9 @@ export default function NotificationDropdown({
   // Fetch notifications
   useEffect(() => {
     fetchNotifications();
+    // Poll every 2 seconds
+    const interval = setInterval(fetchNotifications, 2000);
+    return () => clearInterval(interval);
   }, []);
 
   // Setup WebSocket for real-time notifications
@@ -86,7 +89,7 @@ export default function NotificationDropdown({
         throw new Error("No authentication token found");
       }
 
-      const response = await fetch("http://localhost:8080/api/activities/my-activities", {
+      const response = await fetch("http://localhost:8080/api/activity-logs", {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",

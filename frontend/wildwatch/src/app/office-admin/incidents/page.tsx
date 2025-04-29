@@ -72,11 +72,12 @@ export default function IncidentManagementPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen bg-[#f5f5f5]">
+      <div className="min-h-screen flex bg-[#f5f5f5]">
         <OfficeAdminSidebar />
-        <div className="flex-1 p-8">
-          <div className="max-w-7xl mx-auto">
-            <p>Loading incidents...</p>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#8B0000] mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading incidents...</p>
           </div>
         </div>
       </div>
@@ -85,7 +86,7 @@ export default function IncidentManagementPage() {
 
   if (error) {
     return (
-      <div className="flex min-h-screen bg-[#f5f5f5]">
+      <div className="min-h-screen flex bg-[#f5f5f5]">
         <OfficeAdminSidebar />
         <div className="flex-1 p-8">
           <div className="max-w-7xl mx-auto">

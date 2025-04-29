@@ -7,6 +7,7 @@ public class IncidentUpdateResponse {
     private String message;
     private String status;
     private String updatedByFullName;
+    private String updatedByName;
     private LocalDateTime updatedAt;
     private boolean isVisibleToReporter;
 
@@ -43,6 +44,14 @@ public class IncidentUpdateResponse {
 
     public void setUpdatedByFullName(String updatedByFullName) {
         this.updatedByFullName = updatedByFullName;
+    }
+
+    public String getUpdatedByName() {
+        return updatedByName;
+    }
+
+    public void setUpdatedByName(String updatedByName) {
+        this.updatedByName = updatedByName;
     }
 
     public LocalDateTime getUpdatedAt() {

@@ -33,7 +33,7 @@ interface Witness {
   id: string
   name: string
   contactInformation: string
-  statement: string
+  additionalNotes: string
 }
 
 interface Evidence {
@@ -517,7 +517,7 @@ export default function IncidentDetailsPage({ params }: PageProps) {
                               {file.fileType.startsWith("image/") ? (
                                 <div className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 shadow-sm group-hover:shadow-md transition-shadow">
                                   <Image
-                                    src={`http://localhost:8080${file.fileUrl}`}
+                                    src={file.fileUrl}
                                     alt={file.fileName}
                                     fill
                                     style={{ objectFit: "cover" }}
@@ -528,7 +528,7 @@ export default function IncidentDetailsPage({ params }: PageProps) {
                               ) : file.fileType.startsWith("video/") ? (
                                 <div className="relative aspect-video rounded-lg overflow-hidden border border-gray-200 shadow-sm group-hover:shadow-md transition-shadow">
                                   <video
-                                    src={`http://localhost:8080${file.fileUrl}`}
+                                    src={file.fileUrl}
                                     controls
                                     className="w-full h-full"
                                   />
@@ -576,7 +576,7 @@ export default function IncidentDetailsPage({ params }: PageProps) {
                                 </div>
                               </div>
                               <div className="p-4">
-                                <p className="text-gray-700 whitespace-pre-line">{witness.statement}</p>
+                                <p className="text-gray-700 whitespace-pre-line">{witness.additionalNotes}</p>
                               </div>
                             </Card>
                           ))}

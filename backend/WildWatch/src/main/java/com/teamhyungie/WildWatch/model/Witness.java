@@ -22,6 +22,6 @@ public class Witness {
     @Column(name = "contact_information")
     private String contactInformation;
 
-    @Column(name = "statement", length = 1000)
-    private String statement;
+    @Column(name = "additional_notes", length = 1000)
+    private String additionalNotes;
 } 

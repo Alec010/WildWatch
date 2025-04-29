@@ -30,6 +30,9 @@ public class IncidentUpdate {
     @Column(nullable = false)
     private boolean isVisibleToReporter = true;
 
+    @Column(name = "updated_by_name")
+    private String updatedByName;
+
     @PrePersist
     protected void onCreate() {
         updatedAt = LocalDateTime.now();
@@ -89,5 +92,13 @@ public class IncidentUpdate {
 
     public void setVisibleToReporter(boolean visibleToReporter) {
         isVisibleToReporter = visibleToReporter;
+    }
+
+    public String getUpdatedByName() {
+        return updatedByName;
+    }
+
+    public void setUpdatedByName(String updatedByName) {
+        this.updatedByName = updatedByName;
     }
 } 

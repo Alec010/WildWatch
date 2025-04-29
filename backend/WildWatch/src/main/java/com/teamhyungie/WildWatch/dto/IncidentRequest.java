@@ -35,6 +35,6 @@ public class IncidentRequest {
     public static class WitnessDTO {
         private String name;
         private String contactInformation;
-        private String statement;
+        private String additionalNotes;
     }
 } 

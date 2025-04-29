@@ -41,6 +41,11 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         OAuth2User oauthUser = oauthToken.getPrincipal();
         Map<String, Object> attributes = oauthUser.getAttributes();
 
+        // Log all attributes received from Microsoft
+        System.out.println("=== Microsoft OAuth2 Attributes ===");
+        attributes.forEach((key, value) -> System.out.println(key + ": " + value));
+        System.out.println("=================================");
+
         // Extract email from Microsoft OAuth response
         String email = (String) attributes.get("email");
         if (email == null) {
@@ -51,18 +56,25 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
             throw new RuntimeException("No email found in OAuth response");
         }
 
+        System.out.println("Extracted email: " + email);
+
         // Extract school ID from given_name (format: "22-0073-220 Jhean Hecari")
         String givenName = (String) attributes.get("given_name");
         String schoolIdNumber = null;
         String firstName = null;
         
+        System.out.println("Given name from Microsoft: " + givenName);
+        
         if (givenName != null && givenName.matches("\\d{2}-\\d{4}-\\d{3}\\s+.*")) {
             String[] parts = givenName.split("\\s+", 2);
             schoolIdNumber = parts[0];
             firstName = parts[1];
+            System.out.println("Extracted school ID: " + schoolIdNumber);
+            System.out.println("Extracted first name: " + firstName);
         } else {
             firstName = givenName;
             schoolIdNumber = "TEMP_" + System.currentTimeMillis();
+            System.out.println("No school ID found in given_name, using temporary ID: " + schoolIdNumber);
         }
 
         // Find or create user
@@ -93,8 +105,12 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
                     throw new RuntimeException("Failed to create new user");
                 }
                 
-                System.out.println("Created new user from OAuth: " + user.getEmail());
-                System.out.println("School ID: " + schoolIdNumber);
+                System.out.println("=== Created new user from OAuth ===");
+                System.out.println("Email: " + user.getEmail());
+                System.out.println("School ID: " + user.getSchoolIdNumber());
+                System.out.println("First Name: " + user.getFirstName());
+                System.out.println("Last Name: " + user.getLastName());
+                System.out.println("=================================");
             } catch (Exception e) {
                 System.err.println("Error creating new user: " + e.getMessage());
                 e.printStackTrace();
@@ -104,6 +120,13 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
                 getRedirectStrategy().sendRedirect(request, response, redirectUrl);
                 return;
             }
+        } else {
+            System.out.println("=== Found existing user ===");
+            System.out.println("Email: " + user.getEmail());
+            System.out.println("School ID: " + user.getSchoolIdNumber());
+            System.out.println("First Name: " + user.getFirstName());
+            System.out.println("Last Name: " + user.getLastName());
+            System.out.println("=================================");
         }
 
         try {

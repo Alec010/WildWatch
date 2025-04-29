@@ -23,7 +23,7 @@ import {
 interface WitnessInfo {
   name: string;
   contactInformation: string;
-  statement: string;
+  additionalNotes: string;
 }
 
 interface FileInfo {
@@ -69,7 +69,7 @@ export default function EvidenceSubmissionPage() {
       ...prev,
       witnesses: [
         ...prev.witnesses,
-        { name: "", contactInformation: "", statement: "" },
+        { name: "", contactInformation: "", additionalNotes: "" },
       ],
     }));
   };
@@ -291,14 +291,14 @@ export default function EvidenceSubmissionPage() {
                       </div>
                       <div className="space-y-2">
                         <Label className="text-sm">
-                          Statement (What did they see or hear?)
+                          Additional Notes (What did they see or hear?)
                         </Label>
                         <Textarea
-                          value={witness.statement}
+                          value={witness.additionalNotes}
                           onChange={(e) =>
                             handleWitnessChange(
                               index,
-                              "statement",
+                              "additionalNotes",
                               e.target.value
                             )
                           }
