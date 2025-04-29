@@ -1,6 +1,7 @@
 package com.wildwatch.viewmodel
 
 import android.content.Context
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wildwatch.model.Activity
@@ -39,18 +40,19 @@ class CaseTrackingViewModel(context: Context) : ViewModel() {
     private val _totalActivities = MutableStateFlow(0)
     val totalActivities: StateFlow<Int> = _totalActivities
 
-    // ✅ Filtered Cases based on search query
-    val filteredCases: StateFlow<List<IncidentResponse>> = combine(_cases, _searchQuery) { cases, query ->
-        if (query.isBlank()) {
-            cases
-        } else {
-            cases.filter {
-                it.trackingNumber.contains(query, ignoreCase = true) ||
-                        it.incidentType.contains(query, ignoreCase = true) ||
-                        it.location.contains(query, ignoreCase = true)
-            }
+    // Add this at the top of your ViewModel
+    private val _selectedStatus = MutableStateFlow("All") // Default is "All"
+    val selectedStatus: StateFlow<String> = _selectedStatus
+
+    val filteredCases: StateFlow<List<IncidentResponse>> = combine(_cases, _searchQuery, _selectedStatus) { cases, query, status ->
+        cases.filter {
+            (it.status == status || status == "All") && // Check status filter
+                    (it.incidentType.contains(query, ignoreCase = true) ||
+                            it.location.contains(query, ignoreCase = true) ||
+                            it.trackingNumber.contains(query, ignoreCase = true)) // Check search query
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
 
     // ✅ Status Counts (calculated from the full case list)
     val pendingCount: StateFlow<Int> = _cases.map { cases -> cases.count { it.status == "Pending" } }
@@ -92,11 +94,14 @@ class CaseTrackingViewModel(context: Context) : ViewModel() {
                 _totalPages.value = response.totalPages
                 _totalActivities.value = response.totalElements
                 _currentPage.value = page
+
+                Log.d("CaseTracking", "Fetched ${response.content.size} activities")
             } catch (e: Exception) {
-                // Optional: handle activity fetch error
+                Log.e("CaseTracking", "Error fetching activities: ${e.localizedMessage}")
             }
         }
     }
+
 
     fun nextPage() {
         if (_currentPage.value < _totalPages.value - 1) {

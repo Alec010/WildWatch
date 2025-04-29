@@ -1,5 +1,6 @@
 package com.wildwatch.ui.screens.casetracking
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -15,9 +16,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.wildwatch.model.Activity
 import com.wildwatch.model.IncidentResponse
 import com.wildwatch.ui.components.dashboard.StatCard
 import com.wildwatch.viewmodel.CaseTrackingViewModel
+import com.wildwatch.ui.components.casetracking.ActivityCard
+import com.wildwatch.ui.components.casetracking.CaseCard
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,6 +39,7 @@ fun CaseTrackingScreen(
     val inProgressCount by viewModel.inProgressCount.collectAsState()
     val resolvedCount by viewModel.resolvedCount.collectAsState()
 
+    // Status filter dropdown
     val statusOptions = listOf("All", "Pending", "In Progress", "Resolved")
     var selectedStatus by remember { mutableStateOf("All") }
     var expanded by remember { mutableStateOf(false) }
@@ -42,12 +48,14 @@ fun CaseTrackingScreen(
     val currentPage by viewModel.currentPage.collectAsState()
     val totalPages by viewModel.totalPages.collectAsState()
 
+    // Filtering logic
     val statusFilteredCases = if (selectedStatus == "All") {
         filteredCases
     } else {
         filteredCases.filter { it.status == selectedStatus }
     }
 
+    // Fetch incidents and activities when screen loads
     LaunchedEffect(Unit) {
         viewModel.fetchUserIncidents()
         viewModel.fetchActivities()
@@ -85,143 +93,150 @@ fun CaseTrackingScreen(
                 }
                 else -> {
                     Column(modifier = Modifier.fillMaxSize()) {
-                        // 1️⃣ Status Counts Overview
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            StatCard(
-                                title = "Pending",
-                                count = pendingCount,
-                                icon = Icons.Default.Pending,
-                                iconTint = Color(0xFFFFC107),
-                                modifier = Modifier.weight(1f)
+                        // 1️⃣ Tabs for "All Cases" and "Recent Activity"
+                        var selectedTab by remember { mutableStateOf(0) } // 0 = "All Cases", 1 = "Recent Activity"
+                        TabRow(selectedTabIndex = selectedTab) {
+                            Tab(
+                                selected = selectedTab == 0,
+                                onClick = { selectedTab = 0 },
+                                text = { Text("All Cases", color = if (selectedTab == 0) Color.Red else Color.Black) }
                             )
-                            StatCard(
-                                title = "In Progress",
-                                count = inProgressCount,
-                                icon = Icons.Default.Schedule,
-                                iconTint = Color(0xFF2196F3),
-                                modifier = Modifier.weight(1f)
-                            )
-                            StatCard(
-                                title = "Resolved",
-                                count = resolvedCount,
-                                icon = Icons.Default.CheckCircle,
-                                iconTint = Color(0xFF4CAF50),
-                                modifier = Modifier.weight(1f)
+                            Tab(
+                                selected = selectedTab == 1,
+                                onClick = { selectedTab = 1 },
+                                text = { Text("Recent Activity", color = if (selectedTab == 1) Color.Red else Color.Black) }
                             )
                         }
 
-                        // 2️⃣ Status Filter Dropdown
-                        Box(modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
-                        ) {
-                            OutlinedTextField(
-                                value = selectedStatus,
-                                onValueChange = {},
-                                label = { Text("Filter by Status") },
-                                readOnly = true,
-                                modifier = Modifier.fillMaxWidth(),
-                                trailingIcon = {
-                                    IconButton(onClick = { expanded = !expanded }) {
-                                        Icon(
-                                            imageVector = Icons.Default.ArrowDropDown,
-                                            contentDescription = "Dropdown"
-                                        )
-                                    }
-                                }
-                            )
+                        // 2️⃣ Conditional Rendering based on Selected Tab
+                        when (selectedTab) {
+                            0 -> {
+                                // All Cases Tab
+                                Spacer(modifier = Modifier.height(16.dp))
 
-                            DropdownMenu(
-                                expanded = expanded,
-                                onDismissRequest = { expanded = false }
-                            ) {
-                                statusOptions.forEach { status ->
-                                    DropdownMenuItem(
-                                        text = { Text(status) },
-                                        onClick = {
-                                            selectedStatus = status
-                                            expanded = false
-                                        }
+                                // 3️⃣ Status Counts Overview
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                ) {
+                                    StatCard(
+                                        title = "Pending",
+                                        count = pendingCount,
+                                        icon = Icons.Default.Pending,
+                                        iconTint = Color(0xFFFFC107),
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    StatCard(
+                                        title = "In Progress",
+                                        count = inProgressCount,
+                                        icon = Icons.Default.Schedule,
+                                        iconTint = Color(0xFF2196F3),
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    StatCard(
+                                        title = "Resolved",
+                                        count = resolvedCount,
+                                        icon = Icons.Default.CheckCircle,
+                                        iconTint = Color(0xFF4CAF50),
+                                        modifier = Modifier.weight(1f)
                                     )
                                 }
-                            }
-                        }
 
-                        // 3️⃣ Search Bar
-                        OutlinedTextField(
-                            value = searchQuery,
-                            onValueChange = { viewModel.onSearchQueryChanged(it) },
-                            label = { Text("Search by Case ID, Type, or Location") },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp),
-                            singleLine = true,
-                            leadingIcon = {
-                                Icon(Icons.Default.Search, contentDescription = "Search")
-                            }
-                        )
-
-                        // 4️⃣ Case List
-                        if (statusFilteredCases.isEmpty()) {
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text("No cases found for the current filter.", color = Color.Gray)
-                            }
-                        } else {
-                            LazyColumn(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                                verticalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                items(statusFilteredCases) { incident ->
-                                    CaseCard(incident = incident, onClick = { onCaseClick(incident.id) })
-                                }
-                            }
-                        }
-
-                        // 5️⃣ Recent Activity Section
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Text(
-                            text = "Recent Activity",
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier
-                                .padding(horizontal = 16.dp)
-                                .padding(bottom = 8.dp)
-                        )
-
-                        activities.forEach { activity ->
-                            ActivityCard(activity)
-                        }
-
-                        if (totalPages > 1) {
-                            Row(
-                                modifier = Modifier
+                                // 4️⃣ Status Filter Dropdown
+                                Box(modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Button(
-                                    onClick = { viewModel.previousPage() },
-                                    enabled = currentPage > 0
+                                    .padding(horizontal = 16.dp)
                                 ) {
-                                    Text("Previous")
+                                    OutlinedTextField(
+                                        value = selectedStatus,
+                                        onValueChange = {},
+                                        label = { Text("Filter by Status") },
+                                        readOnly = true,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        trailingIcon = {
+                                            IconButton(onClick = { expanded = !expanded }) {
+                                                Icon(
+                                                    imageVector = Icons.Default.ArrowDropDown,
+                                                    contentDescription = "Dropdown"
+                                                )
+                                            }
+                                        }
+                                    )
+
+                                    DropdownMenu(
+                                        expanded = expanded,
+                                        onDismissRequest = { expanded = false }
+                                    ) {
+                                        statusOptions.forEach { status ->
+                                            DropdownMenuItem(
+                                                text = { Text(status) },
+                                                onClick = {
+                                                    selectedStatus = status
+                                                    expanded = false
+                                                }
+                                            )
+                                        }
+                                    }
                                 }
-                                Text("Page ${currentPage + 1} of $totalPages")
-                                Button(
-                                    onClick = { viewModel.nextPage() },
-                                    enabled = currentPage < totalPages - 1
-                                ) {
-                                    Text("Next")
+
+                                // 5️⃣ Search Bar
+                                OutlinedTextField(
+                                    value = searchQuery,
+                                    onValueChange = { viewModel.onSearchQueryChanged(it) },
+                                    label = { Text("Search by Case ID, Type, or Location") },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                                    singleLine = true,
+                                    leadingIcon = {
+                                        Icon(Icons.Default.Search, contentDescription = "Search")
+                                    }
+                                )
+
+                                // 6️⃣ Case List
+                                if (statusFilteredCases.isEmpty()) {
+                                    Box(
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text("No cases found for the current filter.", color = Color.Gray)
+                                    }
+                                } else {
+                                    LazyColumn(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        items(statusFilteredCases) { incident ->
+                                            CaseCard(incident = incident, onClick = { onCaseClick(incident.id) })
+                                        }
+                                    }
+                                }
+                            }
+
+                            1 -> {
+                                // Recent Activity Tab
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                // Display Activities
+                                if (activities.isEmpty()) {
+                                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                        Text("No recent activities found", color = Color.Gray)
+                                    }
+                                } else {
+                                    LazyColumn(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        items(activities) { activity ->
+                                            ActivityCard(activity)
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -232,73 +247,3 @@ fun CaseTrackingScreen(
     }
 }
 
-@Composable
-fun ActivityCard(activity: com.wildwatch.model.Activity) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Text(
-                text = activity.description,
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "Case: ${activity.incident.trackingNumber}",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.Gray
-            )
-            Text(
-                text = "At: ${activity.createdAt}",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.Gray
-            )
-        }
-    }
-}
-
-@Composable
-fun CaseCard(
-    incident: IncidentResponse,
-    onClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = incident.trackingNumber,
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.Gray
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = incident.incidentType,
-                style = MaterialTheme.typography.titleMedium
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Status: ${incident.status ?: "Unknown"}",
-                style = MaterialTheme.typography.bodySmall
-            )
-            Text(
-                text = "Location: ${incident.location}",
-                style = MaterialTheme.typography.bodySmall
-            )
-            Text(
-                text = "Date: ${incident.dateOfIncident} ${incident.timeOfIncident}",
-                style = MaterialTheme.typography.bodySmall
-            )
-        }
-    }
-}
