@@ -59,6 +59,12 @@ public class Incident {
     @Column(name = "verified")
     private Boolean verified = false; // Changed from boolean to Boolean
 
+    @OneToMany(mappedBy = "incident", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private java.util.List<Evidence> evidence;
+
+    @OneToMany(mappedBy = "incident", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private java.util.List<Witness> witnesses;
+
     @PrePersist
     protected void onCreate() {
         submittedAt = LocalDateTime.now();

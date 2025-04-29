@@ -22,11 +22,13 @@ const inter = Inter({ subsets: ["latin"] });
 
 interface Incident {
   id: string; // UUID from backend
+  trackingNumber?: string; // Add this field for backend tracking number
   caseNumber?: string; // Case number like INC-2025-0001
   incidentType: string;
   location: string;
   dateOfIncident: string;
   status: string;
+  priorityLevel?: "HIGH" | "MEDIUM" | "LOW" | null;
 }
 
 interface Activity {
@@ -289,13 +291,14 @@ export default function CaseTrackingPage() {
                 <th className="p-4 text-center font-semibold">LOCATION</th>
                 <th className="p-4 text-center font-semibold">REPORTED DATE</th>
                 <th className="p-4 text-center font-semibold">STATUS</th>
+                <th className="p-4 text-center font-semibold">PRIORITY</th>
                 <th className="p-4 text-center font-semibold">ACTIONS</th>
               </tr>
             </thead>
             <tbody>
               {filteredCases.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="p-6 text-center text-[#374151]">
+                  <td colSpan={7} className="p-6 text-center text-[#374151]">
                     No reports found for "{selectedStatus}".
                   </td>
                 </tr>
@@ -306,7 +309,9 @@ export default function CaseTrackingPage() {
                     className="border-t hover:bg-[#fff9f9] transition-colors duration-150"
                   >
                     <td className="p-3 text-[#800000] font-medium text-center">
-                      {item.caseNumber
+                      {item.trackingNumber
+                        ? item.trackingNumber
+                        : item.caseNumber
                         ? item.caseNumber
                         : formatCaseNumber(index)}
                     </td>
@@ -333,9 +338,28 @@ export default function CaseTrackingPage() {
                       </span>
                     </td>
                     <td className="p-3 text-center font-medium">
+                      {item.priorityLevel ? (
+                        <span
+                          className={`px-3 py-1 text-xs rounded-full ${
+                            item.priorityLevel === "HIGH"
+                              ? "bg-red-100 text-red-800"
+                              : item.priorityLevel === "MEDIUM"
+                              ? "bg-orange-100 text-orange-800"
+                              : item.priorityLevel === "LOW"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-gray-100 text-gray-800"
+                          }`}
+                        >
+                          {item.priorityLevel.charAt(0) + item.priorityLevel.slice(1).toLowerCase()}
+                        </span>
+                      ) : (
+                        <span className="px-3 py-1 text-xs rounded-full bg-gray-100 text-gray-800">N/A</span>
+                      )}
+                    </td>
+                    <td className="p-3 text-center font-medium">
                       <button
                         onClick={() =>
-                          router.push(`/incidents/tracking/${item.id}`)
+                          router.push(`/incidents/tracking/${item.trackingNumber ? item.trackingNumber : item.id}`)
                         }
                         className="text-[#800000] hover:text-[#5B0000]"
                       >

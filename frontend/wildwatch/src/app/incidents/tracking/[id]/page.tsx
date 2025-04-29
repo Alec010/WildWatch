@@ -1,215 +1,575 @@
-"use client";
+"use client"
 
-import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
-import Cookies from "js-cookie";
-import { Sidebar } from "@/components/Sidebar";
-import { AlertTriangle } from "lucide-react";
+import { useEffect, useState } from "react"
+import { useParams, useRouter } from "next/navigation"
+import { Sidebar } from "@/components/Sidebar"
+import { CheckCircle, Clock, ChevronLeft, FileText, AlertCircle, Loader2 } from "lucide-react"
+import Image from "next/image"
+import Link from "next/link"
 
 interface IncidentDetails {
-  id: string;
-  incidentType: string;
-  location: string;
-  dateOfIncident: string;
-  timeOfIncident: string;
-  description: string;
-  status: string;
-  priority: string;
-  assignedTo: string;
-  contactEmail: string;
-  contactNumber: string;
-  submittedEvidence: string[];
-  witnesses: { name: string; statement: string }[];
-  caseUpdates: {
-    type: string;
-    message: string;
-    time: string;
-    author: string;
-  }[];
+  id: string
+  trackingNumber: string
+  status: string
+  priorityLevel: "HIGH" | "MEDIUM" | "LOW" | string
+  dateOfIncident: string
+  submittedAt?: string
+  incidentType?: string
+  location?: string
+  timeOfIncident?: string
+  description?: string
+  submittedByFullName?: string
+  submittedByEmail?: string
+  submittedByPhone?: string
+}
+
+interface IncidentUpdate {
+  id?: number
+  title?: string
+  status?: string
+  message?: string
+  description?: string
+  updatedAt: string
+  updatedByName?: string
+  updatedByFullName?: string
+  author?: string
+}
+
+interface OfficeAdminUser {
+  firstName: string
+  lastName: string
+  email: string
+  contactNumber: string
+}
+
+interface Evidence {
+  id: string
+  fileUrl: string
+  fileName: string
+  fileType: string
+  fileSize: number
+  uploadedAt: string
+}
+
+function getEstimatedResolution(submittedAt: string, priority: string) {
+  const base = new Date(submittedAt)
+  let days = 2
+  if (priority === "MEDIUM") days = 3
+  if (priority === "HIGH") days = 5
+  base.setDate(base.getDate() + days)
+  return base
 }
 
 export default function CaseDetailsPage() {
-  const { id } = useParams();
-  const router = useRouter();
-  const [incident, setIncident] = useState<IncidentDetails | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { id } = useParams() // id is trackingNumber
+  const router = useRouter()
+  const [incident, setIncident] = useState<IncidentDetails | null>(null)
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [officeAdmin, setOfficeAdmin] = useState<OfficeAdminUser | null>(null)
+  const [evidenceModal, setEvidenceModal] = useState<{ open: boolean; fileUrl: string; fileName: string } | null>(null)
+  const [updates, setUpdates] = useState<IncidentUpdate[]>([])
+
+  const statusSteps = [
+    { key: "Submitted", label: "Submitted" },
+    { key: "Reviewed", label: "Reviewed" },
+    { key: "In Progress", label: "In Progress" },
+    { key: "Resolved", label: "Resolved" },
+  ]
+  const statusOrder = ["Submitted", "Reviewed", "In Progress", "Resolved"]
+  const currentStep = statusOrder.indexOf(
+    statusOrder.find((s) => incident?.status.toLowerCase().includes(s.toLowerCase())) || "Submitted",
+  )
 
   useEffect(() => {
     const fetchIncidentDetails = async () => {
-      const token = Cookies.get("token");
-
-      if (!token) {
-        router.push("/login");
-        return;
-      }
-
       try {
-        const response = await fetch(
-          `http://localhost:8080/api/incidents/case/${id}`,
-          {
+        const token = document.cookie
+          .split("; ")
+          .find((row) => row.startsWith("token="))
+          ?.split("=")[1]
+        if (!token) {
+          router.push("/login")
+          return
+        }
+        // Fetch incident details
+        const response = await fetch(`http://localhost:8080/api/incidents/track/${id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        })
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+        const data = await response.json()
+        setIncident(data)
+        // Fetch updates for last updated
+        if (data.id) {
+          const updatesRes = await fetch(`http://localhost:8080/api/incidents/${data.id}/updates`, {
             headers: {
               Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
             },
+          })
+          if (updatesRes.ok) {
+            const updatesData = await updatesRes.json()
+            setUpdates(updatesData)
+            if (updatesData.length > 0) {
+              setLastUpdated(updatesData[0].updatedAt)
+            }
           }
-        );
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
         }
-
-        const data = await response.json();
-        setIncident(data);
+        // Fetch office admin info
+        if (data.assignedOffice) {
+          const officeAdminRes = await fetch(`http://localhost:8080/api/setup/by-office/${data.assignedOffice}`)
+          if (officeAdminRes.ok) {
+            const admin: OfficeAdminUser = await officeAdminRes.json()
+            setOfficeAdmin(admin)
+          }
+        }
       } catch (error: any) {
-        setError(error.message || "Failed to load case details.");
+        setError(error.message || "Failed to load case details.")
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
-
-    if (id) {
-      fetchIncidentDetails();
     }
-  }, [id, router]);
+    if (id) fetchIncidentDetails()
+  }, [id, router])
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-600">Loading case details...</p>
+      <div className="min-h-screen flex">
+        <Sidebar />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-3">
+            <Loader2 className="h-10 w-10 text-[#8B0000] animate-spin" />
+            <p className="text-gray-600 font-medium">Loading case details...</p>
+          </div>
+        </div>
       </div>
-    );
+    )
   }
 
   if (error || !incident) {
     return (
-      <div className="min-h-screen flex bg-[#f5f5f5]">
+      <div className="min-h-screen flex">
         <Sidebar />
         <div className="flex-1 p-8">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <div className="flex items-center gap-3">
-              <AlertTriangle className="h-6 w-6 text-red-500" />
-              <p className="text-red-700 font-medium">
-                Error: {error || "Case not found"}
-              </p>
-            </div>
+          <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-8 flex flex-col items-center">
+            <AlertCircle className="h-16 w-16 text-red-500 mb-4" />
+            <h2 className="text-xl font-bold text-gray-800 mb-2">Error Loading Case</h2>
+            <p className="text-red-600 font-medium mb-6">{error || "Case not found"}</p>
+            <button
+              onClick={() => router.push("/incidents/tracking")}
+              className="px-4 py-2 bg-[#8B0000] text-white rounded-md hover:bg-[#700000] transition-colors"
+            >
+              Return to Case List
+            </button>
           </div>
         </div>
       </div>
-    );
+    )
+  }
+
+  const estimatedResolution = getEstimatedResolution(
+    incident.submittedAt || incident.dateOfIncident,
+    incident.priorityLevel,
+  )
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "-"
+    return new Date(dateString).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    })
   }
 
   return (
-    <div className="min-h-screen flex bg-[#f5f5f5]">
-      <Sidebar />
-      <div className="flex-1 p-8 max-w-5xl mx-auto">
-        <div className="mb-4">
-          <button
-            onClick={() => router.push("/incidents/tracking")}
-            className="text-[#800000] hover:underline mb-4"
-          >
-            ← Back to Cases
-          </button>
-          <h1 className="text-2xl font-bold text-[#800000]">
-            Case: {incident.id}
-          </h1>
-          <div className="flex gap-4 mt-2">
-            <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
-              {incident.status}
-            </span>
-            <span className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm">
-              {incident.priority}
-            </span>
+    <div className="min-h-screen flex">
+      <div className="w-[240px] bg-[#8B0000] flex-shrink-0">
+        <Sidebar />
+      </div>
+      <div className="flex-1 bg-[#f5f5f5]">
+        <div className="p-6 max-w-[1200px] mx-auto">
+          {/* Header Section */}
+          <div className="mb-6">
+            {/* Back to Cases */}
+            <div className="flex items-center text-sm text-gray-500 mb-2">
+              <Link href="/incidents/tracking" className="hover:text-[#8B0000] transition-colors">
+                <span className="flex items-center">
+                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  Back to Cases
+                </span>
+              </Link>
+            </div>
+
+            {/* Case Tracking Header */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+              <div>
+                <h1 className="text-xl font-bold text-gray-800">Case Tracking</h1>
+                <div className="flex items-center mt-1">
+                  <h2 className="text-lg font-semibold">Case: {incident.trackingNumber}</h2>
+                  <span
+                    className={`ml-3 px-2 py-0.5 text-xs font-medium rounded-sm
+                    ${
+                      incident.priorityLevel === "HIGH"
+                        ? "bg-red-100 text-red-800"
+                        : incident.priorityLevel === "MEDIUM"
+                          ? "bg-amber-100 text-amber-800"
+                          : "bg-green-100 text-green-800"
+                    }`}
+                  >
+                    {incident.priorityLevel}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex gap-6 text-sm">
+                <div>
+                  <div className="text-xs text-gray-500">Submitted</div>
+                  <div className="font-medium">{formatDate(incident.dateOfIncident)}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500">Last Updated</div>
+                  <div className="font-medium">{lastUpdated ? formatDate(lastUpdated) : "-"}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500">Estimated Resolution</div>
+                  <div className="font-medium">
+                    {estimatedResolution ? formatDate(estimatedResolution.toISOString()) : "-"}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Progress Tracker */}
+            <div className="bg-white rounded-md shadow-sm p-6 mb-6">
+              <div className="flex items-center justify-between">
+                {statusSteps.map((step, idx) => {
+                  const isCompleted = idx < currentStep
+                  const isCurrent = idx === currentStep
+                  const isPending = idx > currentStep
+
+                  return (
+                    <div key={step.key} className="flex-1 flex flex-col items-center relative">
+                      <div
+                        className={`flex items-center justify-center w-10 h-10 rounded-full border-2 z-10
+                        ${
+                          isCompleted
+                            ? "border-green-500 bg-green-50 text-green-600"
+                            : isCurrent
+                              ? "border-[#8B0000] bg-red-50 text-[#8B0000]"
+                              : "border-gray-200 bg-gray-50 text-gray-400"
+                        }`}
+                      >
+                        {isCompleted ? (
+                          <CheckCircle className="w-5 h-5" />
+                        ) : isCurrent ? (
+                          <Clock className="w-5 h-5" />
+                        ) : (
+                          <div className="w-3 h-3 rounded-full bg-gray-200" />
+                        )}
+                      </div>
+                      <span
+                        className={`mt-2 text-xs font-medium
+                        ${isCompleted ? "text-green-600" : isCurrent ? "text-[#8B0000]" : "text-gray-400"}`}
+                      >
+                        {step.label}
+                      </span>
+
+                      {/* Connector line */}
+                      {idx < statusSteps.length - 1 && (
+                        <div
+                          className={`absolute top-5 left-1/2 h-[2px]
+                            ${isCompleted ? "bg-green-500" : "bg-gray-200"}`}
+                          style={{ width: "100%", zIndex: 0 }}
+                        />
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left Column - Incident Details */}
+            <div className="lg:col-span-2">
+              {/* Incident Details */}
+              <div className="bg-white rounded-md shadow-sm p-6 mb-6">
+                <h2 className="text-base font-semibold mb-4 text-gray-800">Incident Details</h2>
+                <div className="space-y-3">
+                  <div>
+                    <div className="text-sm font-medium text-gray-500">Incident Type</div>
+                    <p className="text-sm">{incident.incidentType || "-"}</p>
+                  </div>
+
+                  <div>
+                    <div className="text-sm font-medium text-gray-500">Location</div>
+                    <p className="text-sm">{incident.location || "-"}</p>
+                  </div>
+
+                  <div>
+                    <div className="text-sm font-medium text-gray-500">Date & Time of Incident</div>
+                    <p className="text-sm">
+                      {formatDate(incident.dateOfIncident)}
+                      {incident.timeOfIncident ? `, ${incident.timeOfIncident}` : ""}
+                    </p>
+                  </div>
+
+                  <div>
+                    <div className="text-sm font-medium text-gray-500">Description</div>
+                    <div className="text-sm whitespace-pre-line">{incident.description || "-"}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Submitted Evidence */}
+              <div className="bg-white rounded-md shadow-sm p-6 mb-6">
+                <h2 className="text-base font-semibold mb-4 text-gray-800">Submitted Evidence</h2>
+                {Array.isArray((incident as any).evidence) && (incident as any).evidence.length > 0 ? (
+                  <div className="space-y-3">
+                    {(incident as any).evidence.map((file: Evidence) => (
+                      <div
+                        key={file.id}
+                        className="flex items-center gap-3 p-2 hover:bg-gray-50 transition-colors cursor-pointer"
+                        onClick={() =>
+                          file.fileType.startsWith("image/") &&
+                          setEvidenceModal({ open: true, fileUrl: file.fileUrl, fileName: file.fileName })
+                        }
+                      >
+                        <div className="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-sm overflow-hidden flex-shrink-0">
+                          {file.fileType.startsWith("image/") ? (
+                            <Image
+                              src={file.fileUrl || "/placeholder.svg"}
+                              alt={file.fileName}
+                              width={32}
+                              height={32}
+                              className="object-cover w-8 h-8"
+                            />
+                          ) : (
+                            <FileText className="h-4 w-4 text-gray-400" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm truncate">{file.fileName}</div>
+                          <div className="text-xs text-gray-500">Image • Uploaded {formatDate(file.uploadedAt)}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-500">No evidence submitted for this case.</div>
+                )}
+              </div>
+
+              {/* Witnesses */}
+              {Array.isArray((incident as any).witnesses) && (incident as any).witnesses.length > 0 && (
+                <div className="bg-white rounded-md shadow-sm p-6 mb-6">
+                  <h2 className="text-base font-semibold mb-4 text-gray-800">Witnesses</h2>
+                  <div className="space-y-4">
+                    {(incident as any).witnesses.map((witness: any) => (
+                      <div key={witness.id} className="flex items-start gap-3">
+                        {/* Avatar */}
+                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-sm font-bold text-[#8B0000]">
+                          {witness.name
+                            .split(" ")
+                            .map((n: string) => n[0])
+                            .join("")
+                            .toUpperCase()}
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-medium text-sm mb-1">{witness.name}</div>
+                          <div className="text-sm text-gray-700 border-l-2 border-[#8B0000] pl-3 py-1">
+                            {witness.additionalNotes || (
+                              <span className="italic text-gray-400">No additional notes provided.</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Case Updates */}
+              {updates.length > 0 && (
+                <div className="bg-white rounded-md shadow-sm p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-base font-semibold text-gray-800">Case Updates</h2>
+                    <span className="text-xs text-gray-500">
+                      {updates.length} update{updates.length > 1 ? "s" : ""}
+                    </span>
+                  </div>
+                  <div className="space-y-6">
+                    {updates.map((update, idx) => {
+                      let iconColor = "text-blue-500"
+                      let iconBg = "bg-blue-50"
+
+                      const title = update.title?.toLowerCase() || ""
+                      const status = update.status?.toLowerCase() || ""
+
+                      if (title.includes("security") || title.includes("team")) {
+                        iconColor = "text-yellow-500"
+                        iconBg = "bg-yellow-50"
+                      } else if (title.includes("priority") || title.includes("changed")) {
+                        iconColor = "text-blue-500"
+                        iconBg = "bg-blue-50"
+                      } else if (title.includes("closed") || title.includes("resolved")) {
+                        iconColor = "text-green-500"
+                        iconBg = "bg-green-50"
+                      }
+
+                      return (
+                        <div key={update.id || idx} className="flex gap-3 items-start">
+                          <div
+                            className={`flex-shrink-0 w-8 h-8 rounded-full ${iconBg} flex items-center justify-center ${iconColor}`}
+                          >
+                            <Clock className="w-4 h-4" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-1">
+                              <span className="font-medium text-sm">{update.title || update.status || "Update"}</span>
+                              <span className="text-xs text-gray-500">
+                                {update.updatedAt ? formatDate(update.updatedAt) : ""} •{" "}
+                                {update.updatedAt
+                                  ? new Date(update.updatedAt).toLocaleTimeString([], {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    })
+                                  : ""}
+                              </span>
+                            </div>
+                            <div className="text-sm mb-1">{update.message || update.description || "-"}</div>
+                            <div className="text-xs text-gray-500">
+                              {update.updatedByName || update.updatedByFullName || update.author || "System"}
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Right Column - Case Information */}
+            <div>
+              {/* Case Information */}
+              <div className="bg-white rounded-md shadow-sm p-6 mb-6">
+                <h2 className="text-base font-semibold mb-4 text-gray-800">Case Information</h2>
+                <div className="space-y-3">
+                  <div>
+                    <div className="text-sm font-medium text-gray-500">Assigned To</div>
+                    <p className="text-sm">{officeAdmin ? `${officeAdmin.firstName} ${officeAdmin.lastName}` : "-"}</p>
+                  </div>
+
+                  <div>
+                    <div className="text-sm font-medium text-gray-500">Technical Services Office</div>
+                    <p className="text-sm">{officeAdmin ? officeAdmin.email : "-"}</p>
+                  </div>
+
+                  <div>
+                    <div className="text-sm font-medium text-gray-500">Contact number</div>
+                    <p className="text-sm">{officeAdmin ? officeAdmin.contactNumber : "-"}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Next Steps */}
+              <div className="bg-white rounded-md shadow-sm p-6">
+                <h2 className="text-base font-semibold mb-4 text-gray-800">Next Steps</h2>
+                <ul className="space-y-4">
+                  <li className="flex items-start gap-3">
+                    <div className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
+                      <CheckCircle className="w-3 h-3 text-green-600" />
+                    </div>
+                    <div>
+                      <span className="font-medium text-sm">Initial Review</span>
+                      <div className="text-xs text-gray-500">Case reviewed by security team</div>
+                    </div>
+                  </li>
+
+                  <li className="flex items-start gap-3">
+                    <div className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
+                      <CheckCircle className="w-3 h-3 text-green-600" />
+                    </div>
+                    <div>
+                      <span className="font-medium text-sm">Incident Updates</span>
+                      <div className="text-xs text-gray-500">Gathering security footage and witness statements</div>
+                    </div>
+                  </li>
+
+                  <li className="flex items-start gap-3">
+                    <div
+                      className={`mt-0.5 flex-shrink-0 w-5 h-5 rounded-full ${currentStep >= 2 ? "bg-green-100" : "bg-gray-100"} flex items-center justify-center`}
+                    >
+                      {currentStep >= 2 ? (
+                        <CheckCircle className="w-3 h-3 text-green-600" />
+                      ) : (
+                        <div className="w-2 h-2 rounded-full bg-gray-300" />
+                      )}
+                    </div>
+                    <div>
+                      <span className="font-medium text-sm">In Progress</span>
+                      <div className="text-xs text-gray-500">Implementing security measures based on findings</div>
+                    </div>
+                  </li>
+
+                  <li className="flex items-start gap-3">
+                    <div
+                      className={`mt-0.5 flex-shrink-0 w-5 h-5 rounded-full ${currentStep >= 3 ? "bg-green-100" : "bg-gray-100"} flex items-center justify-center`}
+                    >
+                      {currentStep >= 3 ? (
+                        <CheckCircle className="w-3 h-3 text-green-600" />
+                      ) : (
+                        <div className="w-2 h-2 rounded-full bg-gray-300" />
+                      )}
+                    </div>
+                    <div>
+                      <span className="font-medium text-sm">Case Resolution</span>
+                      <div className="text-xs text-gray-500">Final report and case closure</div>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+            </div>
           </div>
         </div>
-
-        {/* Incident Details */}
-        <div className="bg-white p-6 rounded-lg shadow mb-6">
-          <h2 className="text-lg font-semibold mb-4 text-[#800000]">
-            Incident Details
-          </h2>
-          <p>
-            <strong>Incident Type:</strong> {incident.incidentType}
-          </p>
-          <p>
-            <strong>Location:</strong> {incident.location}
-          </p>
-          <p>
-            <strong>Date & Time of Incident:</strong> {incident.dateOfIncident}{" "}
-            at {incident.timeOfIncident}
-          </p>
-          <p className="mt-4">
-            <strong>Description:</strong> {incident.description}
-          </p>
-        </div>
-
-        {/* Assigned Info */}
-        <div className="bg-white p-6 rounded-lg shadow mb-6">
-          <h2 className="text-lg font-semibold mb-4 text-[#800000]">
-            Case Information
-          </h2>
-          <p>
-            <strong>Assigned To:</strong> {incident.assignedTo}
-          </p>
-          <p>
-            <strong>Contact Email:</strong> {incident.contactEmail}
-          </p>
-          <p>
-            <strong>Contact Number:</strong> {incident.contactNumber}
-          </p>
-        </div>
-
-        {/* Evidence */}
-        <div className="bg-white p-6 rounded-lg shadow mb-6">
-          <h2 className="text-lg font-semibold mb-4 text-[#800000]">
-            Submitted Evidence
-          </h2>
-          {incident.submittedEvidence.length > 0 ? (
-            incident.submittedEvidence.map((file, index) => (
-              <div key={index} className="mb-2">
-                📎 {file}
-              </div>
-            ))
-          ) : (
-            <p>No evidence uploaded.</p>
-          )}
-        </div>
-
-        {/* Witnesses */}
-        <div className="bg-white p-6 rounded-lg shadow mb-6">
-          <h2 className="text-lg font-semibold mb-4 text-[#800000]">
-            Witnesses
-          </h2>
-          {incident.witnesses.length > 0 ? (
-            incident.witnesses.map((witness, index) => (
-              <div key={index} className="mb-4">
-                <p className="font-medium">{witness.name}</p>
-                <blockquote className="text-gray-700 italic border-l-4 pl-4 mt-2">
-                  "{witness.statement}"
-                </blockquote>
-              </div>
-            ))
-          ) : (
-            <p>No witnesses recorded.</p>
-          )}
-        </div>
-
-        {/* Case Updates */}
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-lg font-semibold mb-4 text-[#800000]">
-            Case Updates
-          </h2>
-          {incident.caseUpdates.map((update, index) => (
-            <div key={index} className="mb-4 border-b pb-3">
-              <p className="font-medium">{update.type}</p>
-              <p className="text-gray-600 text-sm">{update.message}</p>
-              <p className="text-xs text-gray-400">
-                {update.time} by {update.author}
-              </p>
-            </div>
-          ))}
-        </div>
       </div>
+
+      {/* Evidence Modal */}
+      {evidenceModal?.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-lg shadow-xl p-4 max-w-4xl w-full max-h-[90vh] relative">
+            <button
+              className="absolute top-2 right-2 p-1 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 hover:text-[#8B0000] transition-colors"
+              onClick={() => setEvidenceModal(null)}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <div className="flex flex-col items-center overflow-auto max-h-[calc(90vh-2rem)]">
+              <Image
+                src={evidenceModal.fileUrl || "/placeholder.svg"}
+                alt={evidenceModal.fileName}
+                width={900}
+                height={600}
+                className="object-contain max-h-[70vh] w-auto h-auto rounded-md"
+              />
+              <div className="mt-3 text-gray-700 font-medium">{evidenceModal.fileName}</div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
-  );
+  )
 }
