@@ -11,6 +11,8 @@ import {
   AlertTriangle,
   CheckCircle,
   Plus,
+  RefreshCw,
+  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import NotificationDropdown from "@/components/ui/notificationdropdown";
@@ -28,10 +30,14 @@ interface Incident {
 }
 
 interface Activity {
-  type: string;
-  message: string;
-  time: string;
-  color: "blue" | "red" | "green";
+  id: string;
+  activityType: string;
+  description: string;
+  createdAt: string;
+  incident: {
+    id: string;
+    trackingNumber: string;
+  } | null;
 }
 
 export default function CaseTrackingPage() {
@@ -51,7 +57,7 @@ export default function CaseTrackingPage() {
   };
 
   useEffect(() => {
-    const fetchCases = async () => {
+    const fetchData = async () => {
       const token = Cookies.get("token");
       if (!token) {
         setError("No authentication token found.");
@@ -61,7 +67,8 @@ export default function CaseTrackingPage() {
       }
 
       try {
-        const response = await fetch(
+        // Fetch incidents
+        const incidentsResponse = await fetch(
           "http://localhost:8080/api/incidents/my-incidents",
           {
             headers: {
@@ -71,66 +78,37 @@ export default function CaseTrackingPage() {
           }
         );
 
-        if (!response.ok)
-          throw new Error(`HTTP error! status: ${response.status}`);
+        if (!incidentsResponse.ok)
+          throw new Error(`HTTP error! status: ${incidentsResponse.status}`);
 
-        const data = (await response.json()) as Incident[];
-        setIncidents(data);
+        const incidentsData = await incidentsResponse.json();
+        setIncidents(incidentsData);
 
-        // Generate recent activities based on incident data
-        const recentActivities: Activity[] = [];
-
-        // Only show new submissions that are pending approval
-        const pendingIncidents = data.filter((inc) => inc.status === "Pending");
-        pendingIncidents.forEach((inc) => {
-          recentActivities.push({
-            type: "New Report Created",
-            message: `You submitted a new incident report for ${inc.incidentType}`,
-            time: formatDate(inc.dateOfIncident),
-            color: "red",
-          });
-        });
-
-        // Only show status updates for incidents in progress
-        const inProgressIncidents = data.filter(
-          (inc) => inc.status === "In Progress"
+        // Fetch activity logs
+        const activitiesResponse = await fetch(
+          "http://localhost:8080/api/activity-logs",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
         );
-        inProgressIncidents.forEach((inc) => {
-          recentActivities.push({
-            type: "Status Update",
-            message: `Case ${
-              inc.caseNumber || formatCaseNumber(data.indexOf(inc))
-            } status changed from "Pending" to "In Progress"`,
-            time: formatDate(inc.dateOfIncident),
-            color: "blue",
-          });
-        });
 
-        // Only show resolved incidents
-        const resolvedIncidents = data.filter(
-          (inc) => inc.status === "Resolved"
-        );
-        resolvedIncidents.forEach((inc) => {
-          recentActivities.push({
-            type: "Case Resolved",
-            message: `Case ${
-              inc.caseNumber || formatCaseNumber(data.indexOf(inc))
-            } (${inc.incidentType}) has been resolved`,
-            time: formatDate(inc.dateOfIncident),
-            color: "green",
-          });
-        });
+        if (!activitiesResponse.ok)
+          throw new Error(`HTTP error! status: ${activitiesResponse.status}`);
 
-        setActivities(recentActivities);
+        const activitiesData = await activitiesResponse.json();
+        setActivities(activitiesData.content);
       } catch (error: any) {
-        console.error("Error fetching incidents:", error);
-        setError(error.message || "Failed to load cases.");
+        console.error("Error fetching data:", error);
+        setError(error.message || "Failed to load data.");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchCases();
+    fetchData();
   }, [router]);
 
   // Helper function to format dates for activities
@@ -162,6 +140,36 @@ export default function CaseTrackingPage() {
     }
   };
 
+  const getActivityIcon = (activityType: string) => {
+    switch (activityType) {
+      case "NEW_REPORT":
+        return <AlertTriangle size={18} />;
+      case "STATUS_CHANGE":
+        return <Clock size={18} />;
+      case "UPDATE":
+        return <RefreshCw size={18} />;
+      case "CASE_RESOLVED":
+        return <CheckCircle size={18} />;
+      default:
+        return <FileText size={18} />;
+    }
+  };
+
+  const getActivityColor = (activityType: string) => {
+    switch (activityType) {
+      case "NEW_REPORT":
+        return "bg-red-500";
+      case "STATUS_CHANGE":
+        return "bg-blue-500";
+      case "UPDATE":
+        return "bg-yellow-500";
+      case "CASE_RESOLVED":
+        return "bg-green-500";
+      default:
+        return "bg-gray-500";
+    }
+  };
+
   const filteredCases =
     selectedStatus === "All"
       ? incidents
@@ -169,10 +177,13 @@ export default function CaseTrackingPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#8B0000] mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading incidents...</p>
+      <div className="min-h-screen flex bg-[#f5f5f5]">
+        <Sidebar />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#8B0000] mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading incidents...</p>
+          </div>
         </div>
       </div>
     );
@@ -349,56 +360,43 @@ export default function CaseTrackingPage() {
             </div>
           ) : (
             <>
-              {/* Show only first 3 activities or all if showAllActivities is true */}
               {(showAllActivities ? activities : activities.slice(0, 3)).map(
-                (activity, index) => (
-                  <div key={index} className="flex items-start mb-5 last:mb-2">
+                (activity) => (
+                  <div key={activity.id} className="flex items-start mb-5 last:mb-2">
                     <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center text-white mr-4 ${
-                        activity.color === "blue"
-                          ? "bg-blue-500"
-                          : activity.color === "red"
-                          ? "bg-red-500"
-                          : "bg-green-500"
-                      }`}
+                      className={`w-10 h-10 rounded-full flex items-center justify-center text-white mr-4 ${getActivityColor(
+                        activity.activityType
+                      )}`}
                     >
-                      {activity.color === "blue" ? (
-                        <Clock size={18} />
-                      ) : activity.color === "red" ? (
-                        <AlertTriangle size={18} />
-                      ) : (
-                        <CheckCircle size={18} />
-                      )}
+                      {getActivityIcon(activity.activityType)}
                     </div>
                     <div className="flex-1">
                       <div className="font-semibold text-gray-800">
-                        {activity.type}
+                        {activity.activityType.replace(/_/g, " ")}
                       </div>
-                      <div className="text-gray-600">{activity.message}</div>
+                      <div className="text-gray-600">{activity.description}</div>
                       <div className="text-xs text-gray-400 mt-1">
-                        {activity.time}
+                        {formatDate(activity.createdAt)}
                       </div>
                     </div>
                   </div>
                 )
               )}
-              <div className="text-right mt-4">
-                {activities.length > 3 && !showAllActivities ? (
-                  <button
-                    onClick={() => setShowAllActivities(true)}
-                    className="text-[#800000] hover:underline text-sm font-medium"
-                  >
-                    View All Activity ({activities.length})
-                  </button>
-                ) : showAllActivities ? (
-                  <button
-                    onClick={() => setShowAllActivities(false)}
-                    className="text-[#800000] hover:underline text-sm font-medium"
-                  >
-                    Show Less
-                  </button>
-                ) : null}
-              </div>
+              {activities.length > 3 && !showAllActivities ? (
+                <button
+                  onClick={() => setShowAllActivities(true)}
+                  className="text-[#800000] hover:underline text-sm font-medium"
+                >
+                  View All Activity ({activities.length})
+                </button>
+              ) : showAllActivities ? (
+                <button
+                  onClick={() => setShowAllActivities(false)}
+                  className="text-[#800000] hover:underline text-sm font-medium"
+                >
+                  Show Less
+                </button>
+              ) : null}
             </>
           )}
         </div>

@@ -47,7 +47,7 @@ public class IncidentResponse {
         private String id;
         private String name;
         private String contactInformation;
-        private String statement;
+        private String additionalNotes;
     }
 
     public static IncidentResponse fromIncident(Incident incident) {

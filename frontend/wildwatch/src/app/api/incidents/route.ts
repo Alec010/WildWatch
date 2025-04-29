@@ -24,22 +24,18 @@ export async function POST(request: Request) {
 
     const formData = await request.formData();
     const incidentData = JSON.parse(formData.get('incidentData') as string);
-    const witnesses = JSON.parse(formData.get('witnesses') as string);
     const files = formData.getAll('files');
 
     // Debug log
     console.log('Received data:', {
       hasIncidentData: !!incidentData,
-      witnessCount: witnesses?.length || 0,
+      witnessCount: incidentData.witnesses?.length || 0,
       fileCount: files.length
     });
 
     // Create a new FormData instance for the backend request
     const backendFormData = new FormData();
-    backendFormData.append('incidentData', JSON.stringify({
-      ...incidentData,
-      witnesses: witnesses
-    }));
+    backendFormData.append('incidentData', JSON.stringify(incidentData));
 
     // Append each file
     files.forEach((file) => {

@@ -28,6 +28,7 @@ interface IncidentUpdate {
   message: string
   status: string
   updatedByFullName: string
+  updatedByName?: string
   updatedAt: string
   visibleToReporter: boolean
 }
@@ -637,7 +638,7 @@ export default function UpdateApprovedCasePage({ params }: { params: Promise<{ i
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="text-sm font-medium text-gray-900">
-                            {update.updatedByFullName}
+                            {update.updatedByName || update.updatedByFullName}
                           </div>
                           <div className="mt-0.5 text-sm text-gray-500">
                             {formatDateTime(update.updatedAt)}

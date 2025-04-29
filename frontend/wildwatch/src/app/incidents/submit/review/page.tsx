@@ -239,9 +239,9 @@ export default function ReviewSubmissionPage() {
                             />
                           </div>
                           <div className="mt-2">
-                            <p className="text-xs text-gray-500">Statement</p>
+                            <p className="text-xs text-gray-500">Additional Notes</p>
                             <p className="mt-1 text-sm">
-                              {witness.statement || "No statement provided"}
+                              {witness.additionalNotes || "No additional notes provided"}
                             </p>
                           </div>
                         </Card>

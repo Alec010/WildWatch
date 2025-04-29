@@ -30,7 +30,7 @@ public class IncidentService {
     private final WitnessRepository witnessRepository;
     private final EvidenceRepository evidenceRepository;
     private final UserService userService;
-    private final FileStorageService fileStorageService;
+    private final SupabaseStorageService storageService;
     private final OfficeAdminService officeAdminService;
     private final ActivityLogService activityLogService;
     private final IncidentUpdateRepository incidentUpdateRepository;
@@ -87,19 +87,19 @@ public class IncidentService {
         witness.setIncident(incident);
         witness.setName(witnessDTO.getName());
         witness.setContactInformation(witnessDTO.getContactInformation());
-        witness.setStatement(witnessDTO.getStatement());
+        witness.setAdditionalNotes(witnessDTO.getAdditionalNotes());
         return witness;
     }
 
     private Evidence createEvidence(MultipartFile file, Incident incident) {
-        String storedFileName = fileStorageService.storeFile(file);
+        String fileUrl = storageService.storeFile(file);
         
         Evidence evidence = new Evidence();
         evidence.setIncident(incident);
         evidence.setFileName(file.getOriginalFilename());
         evidence.setFileType(file.getContentType());
         evidence.setFileSize(file.getSize());
-        evidence.setFileUrl("/uploads/" + storedFileName);
+        evidence.setFileUrl(fileUrl);
         
         return evidence;
     }
@@ -165,7 +165,7 @@ public class IncidentService {
                 dto.setId(w.getId());
                 dto.setName(w.getName());
                 dto.setContactInformation(w.getContactInformation());
-                dto.setStatement(w.getStatement());
+                dto.setAdditionalNotes(w.getAdditionalNotes());
                 return dto;
             })
             .collect(Collectors.toList()));
@@ -223,6 +223,7 @@ public class IncidentService {
             update.setStatus(updatedIncident.getStatus());
             update.setUpdatedBy(user);
             update.setVisibleToReporter(request.isVisibleToReporter());
+            update.setUpdatedByName(request.getUpdatedBy());
             
             // Add the updatedBy information to the activity log
             String updateInfo = request.getUpdatedBy() != null ? 
@@ -232,7 +233,7 @@ public class IncidentService {
                 "UPDATE",
                 "Update provided" + updateInfo + ": " + request.getUpdateMessage(),
                 updatedIncident,
-                user
+                incident.getSubmittedBy()
             );
             
             incidentUpdateRepository.save(update);
@@ -277,6 +278,7 @@ public class IncidentService {
                 response.setMessage(update.getMessage());
                 response.setStatus(update.getStatus());
                 response.setUpdatedByFullName(update.getUpdatedBy().getFullName());
+                response.setUpdatedByName(update.getUpdatedByName());
                 response.setUpdatedAt(update.getUpdatedAt());
                 response.setVisibleToReporter(update.isVisibleToReporter());
                 return response;
