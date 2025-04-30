@@ -1,6 +1,7 @@
 package com.teamhyungie.WildWatch.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.teamhyungie.WildWatch.config.FrontendConfig;
 import com.teamhyungie.WildWatch.model.Role;
 import com.teamhyungie.WildWatch.model.User;
 import com.teamhyungie.WildWatch.service.UserService;
@@ -28,15 +29,19 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
     private final UserService userService;
     private final JwtUtil jwtUtil;
     private final ObjectMapper objectMapper;
+    private final FrontendConfig frontendConfig;
 
-    public OAuth2SuccessHandler(@Lazy UserService userService, JwtUtil jwtUtil, ObjectMapper objectMapper) {
+    public OAuth2SuccessHandler(@Lazy UserService userService, JwtUtil jwtUtil, ObjectMapper objectMapper,
+            FrontendConfig frontendConfig) {
         this.userService = userService;
         this.jwtUtil = jwtUtil;
         this.objectMapper = objectMapper;
+        this.frontendConfig = frontendConfig;
     }
 
     @Override
-    public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
+    public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
+            Authentication authentication) throws IOException, ServletException {
         OAuth2AuthenticationToken oauthToken = (OAuth2AuthenticationToken) authentication;
         OAuth2User oauthUser = oauthToken.getPrincipal();
         Map<String, Object> attributes = oauthUser.getAttributes();
@@ -62,9 +67,9 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         String givenName = (String) attributes.get("given_name");
         String schoolIdNumber = null;
         String firstName = null;
-        
+
         System.out.println("Given name from Microsoft: " + givenName);
-        
+
         if (givenName != null && givenName.matches("\\d{2}-\\d{4}-\\d{3}\\s+.*")) {
             String[] parts = givenName.split("\\s+", 2);
             schoolIdNumber = parts[0];
@@ -89,23 +94,23 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
                 user.setRole(Role.REGULAR_USER);
                 user.setEnabled(true);
                 user.setTermsAccepted(false); // Ensure new OAuth users must accept terms
-                
+
                 // Generate a secure random password for OAuth users
                 String randomPassword = UUID.randomUUID().toString().replace("-", "") + "Aa1!";
                 user.setPassword(randomPassword);
-                
+
                 user.setSchoolIdNumber(schoolIdNumber);
                 user.setContactNumber("+639000000000"); // Default contact number
                 user.setMiddleInitial(""); // Empty middle initial is allowed
                 user.setAuthProvider("microsoft");
-                
+
                 // Save the new user
                 user = userService.save(user);
-                
+
                 if (user == null) {
                     throw new RuntimeException("Failed to create new user");
                 }
-                
+
                 System.out.println("=== Created new user from OAuth ===");
                 System.out.println("Email: " + user.getEmail());
                 System.out.println("School ID: " + user.getSchoolIdNumber());
@@ -116,8 +121,9 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
                 System.err.println("Error creating new user: " + e.getMessage());
                 e.printStackTrace();
                 // Redirect to frontend error page with error message
-                String errorMessage = URLEncoder.encode("Failed to create user account: " + e.getMessage(), StandardCharsets.UTF_8);
-                String redirectUrl = "http://localhost:3000/auth/error?message=" + errorMessage;
+                String errorMessage = URLEncoder.encode("Failed to create user account: " + e.getMessage(),
+                        StandardCharsets.UTF_8);
+                String redirectUrl = frontendConfig.getActiveUrl() + "/auth/error?message=" + errorMessage;
                 getRedirectStrategy().sendRedirect(request, response, redirectUrl);
                 return;
             }
@@ -133,45 +139,44 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         try {
             // Create UserDetails for JWT
             UserDetails userDetails = org.springframework.security.core.userdetails.User
-                .withUsername(user.getEmail())
-                .password(user.getPassword() != null ? user.getPassword() : "")
-                .authorities(user.getRole().name())
-                .build();
+                    .withUsername(user.getEmail())
+                    .password(user.getPassword() != null ? user.getPassword() : "")
+                    .authorities(user.getRole().name())
+                    .build();
 
             // Generate JWT token
             String token = jwtUtil.generateToken(userDetails);
 
             // Create response object
             Map<String, Object> responseData = Map.of(
-                "user", Map.of(
-                    "id", user.getId(),
-                    "email", user.getEmail(),
-                    "firstName", user.getFirstName(),
-                    "lastName", user.getLastName(),
-                    "middleInitial", user.getMiddleInitial(),
-                    "schoolIdNumber", user.getSchoolIdNumber(),
-                    "contactNumber", user.getContactNumber(),
-                    "termsAccepted", user.isTermsAccepted(),
-                    "role", user.getRole().name(),
-                    "enabled", user.isEnabled()
-                ),
-                "token", token
-            );
+                    "user", Map.of(
+                            "id", user.getId(),
+                            "email", user.getEmail(),
+                            "firstName", user.getFirstName(),
+                            "lastName", user.getLastName(),
+                            "middleInitial", user.getMiddleInitial(),
+                            "schoolIdNumber", user.getSchoolIdNumber(),
+                            "contactNumber", user.getContactNumber(),
+                            "termsAccepted", user.isTermsAccepted(),
+                            "role", user.getRole().name(),
+                            "enabled", user.isEnabled()),
+                    "token", token);
 
             // Convert to JSON and URL encode
             String jsonResponse = objectMapper.writeValueAsString(responseData);
             String encodedResponse = URLEncoder.encode(jsonResponse, StandardCharsets.UTF_8);
 
             // Redirect to frontend with the encoded data
-            String redirectUrl = "http://localhost:3000/auth/oauth2/redirect?data=" + encodedResponse;
+            String redirectUrl = frontendConfig.getActiveUrl() + "/auth/oauth2/redirect?data=" + encodedResponse;
             getRedirectStrategy().sendRedirect(request, response, redirectUrl);
         } catch (Exception e) {
             System.err.println("Error processing OAuth login: " + e.getMessage());
             e.printStackTrace();
             // Redirect to frontend error page with error message
-            String errorMessage = URLEncoder.encode("Failed to process OAuth login: " + e.getMessage(), StandardCharsets.UTF_8);
-            String redirectUrl = "http://localhost:3000/auth/error?message=" + errorMessage;
+            String errorMessage = URLEncoder.encode("Failed to process OAuth login: " + e.getMessage(),
+                    StandardCharsets.UTF_8);
+            String redirectUrl = frontendConfig.getActiveUrl() + "/auth/error?message=" + errorMessage;
             getRedirectStrategy().sendRedirect(request, response, redirectUrl);
         }
     }
-} 
+}

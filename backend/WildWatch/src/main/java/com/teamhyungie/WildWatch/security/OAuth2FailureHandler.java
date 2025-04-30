@@ -1,5 +1,6 @@
 package com.teamhyungie.WildWatch.security;
 
+import com.teamhyungie.WildWatch.config.FrontendConfig;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -14,10 +15,16 @@ import java.nio.charset.StandardCharsets;
 @Component
 public class OAuth2FailureHandler extends SimpleUrlAuthenticationFailureHandler {
 
+    private final FrontendConfig frontendConfig;
+
+    public OAuth2FailureHandler(FrontendConfig frontendConfig) {
+        this.frontendConfig = frontendConfig;
+    }
+
     @Override
     public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response, AuthenticationException exception) throws IOException, ServletException {
-        String errorMessage = URLEncoder.encode(exception.getMessage(), StandardCharsets.UTF_8);
-        String redirectUrl = "http://localhost:3000/auth/error?message=" + errorMessage;
-        getRedirectStrategy().sendRedirect(request, response, redirectUrl);
+        String errorUrl = frontendConfig.getActiveUrl() + "/auth/error?error=" + 
+            URLEncoder.encode(exception.getMessage(), StandardCharsets.UTF_8);
+        getRedirectStrategy().sendRedirect(request, response, errorUrl);
     }
 } 
