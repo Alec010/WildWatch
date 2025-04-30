@@ -22,6 +22,7 @@ interface Incident {
   status: string
   description: string
   submittedAt: string
+  verified: boolean
 }
 
 export default function OfficeAdminDashboard() {
@@ -245,7 +246,7 @@ export default function OfficeAdminDashboard() {
               <Button
                 variant="link"
                 className="text-[#800000] p-0 h-auto text-sm hover:underline"
-                onClick={() => router.push("/office-admin/incidents")}
+                onClick={() => router.push("/office-admin/approved-cases")}
               >
                 View All
               </Button>
@@ -307,9 +308,12 @@ export default function OfficeAdminDashboard() {
                           variant="outline"
                           size="sm"
                           className="text-xs border-[#800000] text-[#800000] hover:bg-[#fff9f9]"
-                          onClick={() =>
-                            router.push(`/office-admin/incidents/${incident.id}`)
-                          }
+                          onClick={() => {
+                            console.log("Verified:", incident.verified);
+                            incident.verified
+                              ? router.push(`/office-admin/approved-cases/${incident.id}/update`)
+                              : router.push(`/office-admin/incidents/${incident.id}`);
+                          }}
                         >
                           View Details
                         </Button>

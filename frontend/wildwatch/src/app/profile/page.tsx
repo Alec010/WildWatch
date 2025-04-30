@@ -363,8 +363,8 @@ function ProfileContent({ user }: { user: UserProfile }) {
                 <div className="flex items-center gap-2 w-full sm:w-auto">
                   <Button className="bg-[#8B0000] hover:bg-[#6B0000] w-full sm:w-auto">+ Report New Incident</Button>
                   <Button variant="outline" size="icon" className="flex-shrink-0">
-                    <Bell size={20} />
-                  </Button>
+                  <Bell size={20} />
+                </Button>
                 </div>
               </div>
             </div>
@@ -383,7 +383,7 @@ function ProfileContent({ user }: { user: UserProfile }) {
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold">
-                    {user.firstName} {user.lastName}
+                  {user.firstName} {user.lastName} 
                   </h2>
                   <p className="text-sm opacity-90 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
                     <span>{user.email}</span>
@@ -395,8 +395,8 @@ function ProfileContent({ user }: { user: UserProfile }) {
                             .map((word) => word.toLowerCase())
                             .join(" ")
                         : "regular user"}
-                    </span>
-                  </p>
+                  </span>
+                </p>
                   <p className="text-xs mt-1 opacity-75">ID: {user.schoolIdNumber}</p>
                 </div>
               </div>
@@ -522,7 +522,7 @@ function ProfileContent({ user }: { user: UserProfile }) {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700">Role</label>
-                      <Input
+                      <Input 
                         value={
                           user.role
                             ? user.role
@@ -531,7 +531,7 @@ function ProfileContent({ user }: { user: UserProfile }) {
                                 .join(" ")
                             : "regular user"
                         }
-                        disabled
+                        disabled 
                         className="mt-1 bg-white border-gray-200"
                       />
                       <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
@@ -641,4 +641,4 @@ export default function ProfilePage() {
   }
 
   return <ProfileContent user={user} />
-}
+} 

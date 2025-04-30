@@ -12,6 +12,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import Cookies from "js-cookie";
 
 interface ActivityLog {
   id: string;
@@ -253,6 +254,34 @@ export default function NotificationDropdown({
     }
   };
 
+  const handleViewAllNotifications = async () => {
+    try {
+      const token = Cookies.get("token");
+      if (!token) {
+        router.push("/login");
+        return;
+      }
+      const response = await fetch("http://localhost:8080/api/auth/profile", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+      if (!response.ok) {
+        router.push("/login");
+        return;
+      }
+      const user = await response.json();
+      if (user.role === "OFFICE_ADMIN") {
+        router.push("/office-admin/notifications");
+      } else {
+        router.push("/notifications");
+      }
+    } catch {
+      router.push("/notifications");
+    }
+  };
+
   return (
     <div className={`relative ${className}`} ref={notificationRef}>
       <Button
@@ -338,7 +367,7 @@ export default function NotificationDropdown({
             <Button
               variant="link"
               className="text-[#800000] text-xs hover:underline"
-              onClick={() => router.push("/notifications")}
+              onClick={handleViewAllNotifications}
             >
               View All Notifications
             </Button>
