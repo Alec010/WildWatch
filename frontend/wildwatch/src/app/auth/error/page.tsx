@@ -3,8 +3,9 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
+import { Suspense } from 'react';
 
-export default function AuthErrorPage() {
+function AuthErrorContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const errorMessage = searchParams.get('message') || 'An error occurred during authentication';
@@ -46,5 +47,17 @@ export default function AuthErrorPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function AuthErrorPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-[#f5f5f5] flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#8B0000]"></div>
+            </div>
+        }>
+            <AuthErrorContent />
+        </Suspense>
     );
 } 
