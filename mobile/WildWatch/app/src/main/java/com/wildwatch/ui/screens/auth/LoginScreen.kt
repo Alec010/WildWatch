@@ -42,7 +42,7 @@ fun LoginScreen(
         loginResult?.let { result ->
             result.onSuccess { response ->
                 // ✅ Save the token to DataStore
-                tokenManager.saveToken(response.token)
+                TokenManager.saveToken(context, response.token)
 
                 Toast.makeText(context, "Login successful!", Toast.LENGTH_SHORT).show()
                 if (response.termsAccepted) {

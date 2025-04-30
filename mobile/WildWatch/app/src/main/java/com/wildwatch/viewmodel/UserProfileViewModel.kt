@@ -18,7 +18,7 @@ class UserProfileViewModel : ViewModel() {
 
     fun fetchProfile(context: Context) {
         viewModelScope.launch {
-            val token = TokenManager(context).getToken()
+            val token = TokenManager.getToken(context) // Static call
             if (token != null) {
                 val response = RetrofitClient.authApi.getProfile("Bearer $token")
                 if (response.isSuccessful) {
@@ -35,7 +35,7 @@ class UserProfileViewModel : ViewModel() {
         onError: (String) -> Unit
     ) {
         viewModelScope.launch {
-            val token = TokenManager(context).getToken()
+            val token = TokenManager.getToken(context) // Static call
             if (token != null) {
                 try {
                     val response = RetrofitClient.authApi.updateUser("Bearer $token", updated)

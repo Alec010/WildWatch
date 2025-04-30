@@ -1,12 +1,16 @@
 package com.wildwatch.ui.screens.report
 
+import android.util.Log
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -17,29 +21,55 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import com.wildwatch.ui.theme.WildWatchRed
 import java.text.SimpleDateFormat
 import java.util.*
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.platform.LocalContext
 import com.wildwatch.model.IncidentFormState
+import com.wildwatch.repository.OfficeRepository
 import com.wildwatch.viewmodel.IncidentFormViewModel
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 import com.wildwatch.ui.components.*
+import com.wildwatch.utils.TokenManager
+import com.wildwatch.viewmodel.OfficeViewModel
+import com.wildwatch.viewmodel.OfficeViewModelFactory
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReportIncidentScreen(
     onBackClick: () -> Unit = {},
     onContinueClick: () -> Unit = {},
-    formViewModel: IncidentFormViewModel
+    formViewModel: IncidentFormViewModel,
+    officeViewModel: OfficeViewModel = viewModel(factory = OfficeViewModelFactory(OfficeRepository())) // Pass repository to factory
 ) {
     val darkRed = WildWatchRed
     val backgroundColor = Color(0xFFF5F5F5)
+
+    val context = LocalContext.current
+
+    // Fetch the list of offices when the screen is loaded
+    LaunchedEffect(context) {
+        val token = TokenManager.getToken(context)
+        Log.d("TokenManager", "Token: $token") // Add this log to see if the token is being retrieved
+        if (token != null) {
+            officeViewModel.fetchOffices(token) // Fetch offices from the backend
+        } else {
+            Toast.makeText(context, "Token is missing or expired", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // Observe the offices, loading, and error states from the ViewModel
+    val offices by officeViewModel.offices.collectAsState()
+    val loading by officeViewModel.loading.collectAsState()
+    val error by officeViewModel.error.collectAsState()
+
+    // State for showing office description dialog
+    var showOfficeDescription by remember { mutableStateOf(false) }
+    var selectedOfficeDetails by remember { mutableStateOf<Pair<String, String>?>(null) }
 
     // Date picker state
     var showDatePicker by remember { mutableStateOf(false) }
@@ -56,8 +86,6 @@ fun ReportIncidentScreen(
     // Time picker state
     var showTimePicker by remember { mutableStateOf(false) }
     val timePickerState = rememberTimePickerState()
-
-    val context = LocalContext.current
 
     // After collecting formState properly:
     val formState by formViewModel.formState.collectAsState()
@@ -118,6 +146,50 @@ fun ReportIncidentScreen(
             }
         ) {
             TimePicker(state = timePickerState)
+        }
+    }
+
+    // Office description dialog
+    if (showOfficeDescription && selectedOfficeDetails != null) {
+        Dialog(onDismissRequest = { showOfficeDescription = false }) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color.White
+                )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Text(
+                        text = selectedOfficeDetails!!.first,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = darkRed
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = selectedOfficeDetails!!.second,
+                        fontSize = 14.sp,
+                        color = Color.DarkGray
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = { showOfficeDescription = false },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = darkRed
+                        ),
+                        modifier = Modifier.align(Alignment.End)
+                    ) {
+                        Text("Close")
+                    }
+                }
+            }
         }
     }
 
@@ -349,86 +421,104 @@ fun ReportIncidentScreen(
                                 .fillMaxWidth()
                                 .padding(bottom = 20.dp)
                         ) {
-                            // Report to what Office header with gray background
-                            Surface(
-                                color = Color(0xFFF5F5F5),
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.fillMaxWidth()
+                            // Report to what Office header with label and asterisk
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
                                     text = "Report to what Office",
                                     fontSize = 16.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    modifier = Modifier.padding(vertical = 12.dp, horizontal = 16.dp),
-                                    softWrap = true,
-                                    lineHeight = 20.sp
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Text(
+                                    text = " *",
+                                    color = darkRed,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp
                                 )
                             }
 
-                            Spacer(modifier = Modifier.height(12.dp))
+                            // Office selection chips in a horizontal scrollable row
+                            val officeList by officeViewModel.offices.collectAsState() // Get the list of offices dynamically
 
-                            // Office selection chips in a grid layout
-                            val offices = listOf("TSG", "OPC", "MSDO", "Security", "PE", "IT", "HR", "Admin")
-
-                            // First row
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                offices.take(4).forEach { office ->
-                                    FilterChip(
-                                        selected = selectedOffice == office,
-                                        onClick = { selectedOffice = office },
-                                        label = {
-                                            Text(
-                                                text = office,
-                                                textAlign = TextAlign.Center,
-                                                fontSize = 12.sp,
-                                                maxLines = 1,
-                                                modifier = Modifier.fillMaxWidth()
-                                            )
-                                        },
-                                        colors = FilterChipDefaults.filterChipColors(
-                                            selectedContainerColor = darkRed,
-                                            selectedLabelColor = Color.White
-                                        ),
-                                        modifier = Modifier.weight(1f),
-                                        shape = RoundedCornerShape(16.dp)
-                                    )
+                            // Handle loading and error states
+                            if (loading) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(60.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(color = darkRed)
                                 }
-                            }
+                            } else if (error != null) {
+                                Text(
+                                    "Error loading offices: $error",
+                                    color = Color.Red,
+                                    modifier = Modifier.padding(vertical = 16.dp)
+                                )
+                            } else {
+                                // Horizontal scrollable row of office chips
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .horizontalScroll(rememberScrollState()),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    officeList.forEach { office ->
+                                        // Office chip with info button
+                                        OutlinedButton(
+                                            onClick = { selectedOffice = office.code },
+                                            shape = RoundedCornerShape(8.dp),
+                                            colors = ButtonDefaults.outlinedButtonColors(
+                                                containerColor = if (selectedOffice == office.code) darkRed else Color.White,
+                                                contentColor = if (selectedOffice == office.code) Color.White else Color.Black
+                                            ),
+                                            border = BorderStroke(1.dp, color = Color.Gray.copy(alpha = 0.2f)),
+                                            modifier = Modifier.height(36.dp)
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                // Text for office code
+                                                Text(
+                                                    text = office.code,
+                                                    fontSize = 14.sp
+                                                )
+                                                Spacer(modifier = Modifier.weight(5f))  // This will push the icon to the right
 
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            // Second row
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                offices.drop(4).take(4).forEach { office ->
-                                    FilterChip(
-                                        selected = selectedOffice == office,
-                                        onClick = { selectedOffice = office },
-                                        label = {
-                                            Text(
-                                                text = office,
-                                                textAlign = TextAlign.Center,
-                                                fontSize = 12.sp,
-                                                maxLines = 1,
-                                                modifier = Modifier.fillMaxWidth()
-                                            )
-                                        },
-                                        colors = FilterChipDefaults.filterChipColors(
-                                            selectedContainerColor = darkRed,
-                                            selectedLabelColor = Color.White
-                                        ),
-                                        modifier = Modifier.weight(1f),
-                                        shape = RoundedCornerShape(16.dp)
-                                    )
-                                }
-                                // Add empty spaces if needed to maintain alignment
-                                repeat(4 - minOf(4, offices.size - 4)) {
-                                    Spacer(modifier = Modifier.weight(1f))
+                                                // Info icon button with Spacer between text and icon
+                                                IconButton(
+                                                    onClick = {
+                                                        selectedOfficeDetails = Pair(office.fullName, office.description)
+                                                        showOfficeDescription = true
+                                                    },
+                                                    modifier = Modifier.size(20.dp)
+                                                ) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(16.dp)
+                                                            .background(
+                                                                color = if (selectedOffice == office.code) Color.White.copy(alpha = 0.2f) else Color.Gray.copy(alpha = 0.2f),
+                                                                shape = CircleShape
+                                                            ),
+                                                        contentAlignment = Alignment.Center
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = Icons.Outlined.Info,
+                                                            contentDescription = "Office information",
+                                                            tint = if (selectedOffice == office.code) Color.White else Color.Gray,
+                                                            modifier = Modifier.size(12.dp)
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }

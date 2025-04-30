@@ -28,11 +28,9 @@ object RetrofitClient {
 
     // ✅ SECURE incidentApi using JWT
     fun getIncidentApi(context: Context): IncidentApi {
-        val tokenManager = TokenManager(context)
-
         val client = OkHttpClient.Builder()
             .addInterceptor { chain ->
-                val token = runBlocking { tokenManager.getToken() } // ✅ Fix here
+                val token = runBlocking { TokenManager.getToken(context) } // Static call
                 val requestBuilder = chain.request().newBuilder()
                 if (token != null) {
                     requestBuilder.addHeader("Authorization", "Bearer $token")
@@ -49,12 +47,13 @@ object RetrofitClient {
             .create(IncidentApi::class.java)
     }
 
+
     fun getCaseApi(context: Context): CaseApi {
         val tokenManager = TokenManager(context)
 
         val client = OkHttpClient.Builder()
             .addInterceptor { chain ->
-                val token = runBlocking { tokenManager.getToken() }
+                val token = runBlocking { TokenManager.getToken(context) }
                 val requestBuilder = chain.request().newBuilder()
                 if (token != null) {
                     requestBuilder.addHeader("Authorization", "Bearer $token")
@@ -71,4 +70,11 @@ object RetrofitClient {
             .create(CaseApi::class.java)
     }
 
+    val officeApi: OfficeService by lazy {
+        Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(OfficeService::class.java)
+    }
 }

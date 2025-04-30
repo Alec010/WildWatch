@@ -12,17 +12,17 @@ private val Context.dataStore by preferencesDataStore(name = "user_prefs")
 class TokenManager(private val context: Context) {
     companion object {
         private val TOKEN_KEY = stringPreferencesKey("jwt_token")
-    }
 
-    suspend fun saveToken(token: String) {
-        context.dataStore.edit { it[TOKEN_KEY] = token }
-    }
+        suspend fun getToken(context: Context): String? {
+            return context.dataStore.data.map { it[TOKEN_KEY] }.first()
+        }
 
-    suspend fun getToken(): String? {
-        return context.dataStore.data.map { it[TOKEN_KEY] }.first()
-    }
+        suspend fun saveToken(context: Context, token: String) {
+            context.dataStore.edit { it[TOKEN_KEY] = token }
+        }
 
-    suspend fun clearToken() {
-        context.dataStore.edit { it.remove(TOKEN_KEY) }
+        suspend fun clearToken(context: Context) {
+            context.dataStore.edit { it.remove(TOKEN_KEY) }
+        }
     }
 }
