@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Sidebar } from "@/components/Sidebar"
+import { OfficeAdminSidebar } from "@/components/OfficeAdminSidebar"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -30,16 +30,7 @@ interface Incident {
   updates?: any[]
 }
 
-interface EvidenceFile {
-  id: string
-  fileName: string
-  fileType: string
-  fileUrl: string
-  fileSize: number
-  uploadedAt: string
-}
-
-export default function IncidentHistoryPage() {
+export default function OfficeAdminIncidentHistoryPage() {
   const [incidents, setIncidents] = useState<Incident[]>([])
   const [search, setSearch] = useState("")
   const [page, setPage] = useState(1)
@@ -61,7 +52,7 @@ export default function IncidentHistoryPage() {
           .find((row) => row.startsWith("token="))
           ?.split("=")[1]
         if (!token) return
-        const res = await fetch("http://localhost:8080/api/incidents/my-incidents", {
+        const res = await fetch("http://localhost:8080/api/incidents/office", {
           headers: { Authorization: `Bearer ${token}` },
         })
         const data = await res.json()
@@ -85,7 +76,7 @@ export default function IncidentHistoryPage() {
         i.incidentType.toLowerCase().includes(search.toLowerCase()) ||
         i.location.toLowerCase().includes(search.toLowerCase()) ||
         i.status.toLowerCase().includes(search.toLowerCase())),
-      )
+  )
 
   const paginatedIncidents = filteredIncidents.slice((page - 1) * incidentsPerPage, page * incidentsPerPage)
 
@@ -127,7 +118,7 @@ export default function IncidentHistoryPage() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
     a.href = url
-    a.download = "incident_history.csv"
+    a.download = "office_incident_history.csv"
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -144,7 +135,6 @@ export default function IncidentHistoryPage() {
     })
   }
 
-  // Function to download incident details as PDF (all fields, styled)
   const handleDownloadPDF = async (incident: any) => {
     setIsDownloading(true)
     try {
@@ -171,102 +161,66 @@ export default function IncidentHistoryPage() {
       doc.setFontSize(11)
 
       // Helper function to add a section title with modern styling
-    const addSectionTitle = (title: string) => {
-        // Add a gradient-like header
+      const addSectionTitle = (title: string) => {
         doc.setFillColor(128, 0, 0) // Maroon background
         doc.rect(margin - 2, y - 2, contentWidth + 4, 10, "F")
-
         doc.setFont("helvetica", "bold")
         doc.setFontSize(12)
         doc.setTextColor(255, 255, 255) // White text
         doc.text(title, margin + 2, y + 5)
         y += 14
-
-        // Reset text color and font
         doc.setTextColor(0, 0, 0)
         doc.setFont("helvetica", "normal")
         doc.setFontSize(11)
       }
 
-    // Helper function to add text with proper wrapping
       const addWrappedText = (text: string, indent = 0, isBold = false) => {
-        if (isBold) {
-          doc.setFont("helvetica", "bold")
-        }
+        if (isBold) doc.setFont("helvetica", "bold")
         const lines = doc.splitTextToSize(text, contentWidth - indent)
         doc.text(lines, margin + indent, y)
         y += lines.length * lineHeight
-        if (isBold) {
-          doc.setFont("helvetica", "normal")
-        }
+        if (isBold) doc.setFont("helvetica", "normal")
       }
 
-      // Helper function to add a field with label and value in a two-column layout
       const addField = (label: string, value: string, isLeft = true) => {
         doc.setFont("helvetica", "bold")
         doc.text(label + ":", isLeft ? margin : margin + 85, y)
         doc.setFont("helvetica", "normal")
-
-        // Calculate available width for value
         const valueWidth = isLeft ? 75 : 85
         const valueX = isLeft ? margin + 30 : margin + 85 + 30
-
         const lines = doc.splitTextToSize(value, valueWidth)
         doc.text(lines, valueX, y)
-
         return lines.length * lineHeight
       }
 
-      // Helper function to add a row with two fields
       const addFieldRow = (leftLabel: string, leftValue: string, rightLabel: string, rightValue: string) => {
         const leftHeight = addField(leftLabel, leftValue, true)
         const rightHeight = addField(rightLabel, rightValue, false)
         y += Math.max(leftHeight, rightHeight)
       }
 
-      // Helper function to add a horizontal line
-      const addHorizontalLine = () => {
-        doc.setDrawColor(200, 200, 200)
-        doc.line(margin, y, margin + contentWidth, y)
-        y += 5
-      }
-
-      // Helper function to add footer to current page
       const addFooter = (pageNum: number, totalPages: number) => {
-        // Footer background
         doc.setFillColor(245, 245, 245)
         doc.rect(0, 280, 210, 17, "F")
-
-        // Add horizontal line
         doc.setDrawColor(128, 0, 0)
         doc.setLineWidth(0.5)
         doc.line(margin, 280, margin + contentWidth, 280)
-
-        // Add page number
         doc.setFontSize(9)
         doc.setTextColor(100, 100, 100)
         doc.text(`Page ${pageNum} of ${totalPages}`, margin, 287)
-
-        // Add generation date
         doc.text(
           `Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`,
           margin + contentWidth,
           287,
           { align: "right" },
         )
-
-        // Add case ID reference
         doc.setTextColor(128, 0, 0)
         doc.text(`Case ID: ${incident.trackingNumber}`, 105, 287, { align: "center" })
       }
 
-      // Helper function to check and add new page if needed
       const checkNewPage = (requiredSpace: number) => {
         if (y + requiredSpace > pageHeight) {
-          // Add footer to current page before adding a new one
           addFooter(currentPage, pageCount)
-
-          // Add new page
           doc.addPage()
           currentPage++
           pageCount = Math.max(pageCount, currentPage)
@@ -276,156 +230,105 @@ export default function IncidentHistoryPage() {
         return false
       }
 
-      // Add a professional header with logo placeholder
       // Header background
       doc.setFillColor(245, 245, 245)
       doc.rect(0, 0, 210, 40, "F")
-
-      // Logo placeholder (could be replaced with actual logo)
-      // doc.setFillColor(128, 0, 0)
-      // doc.circle(30, 20, 10, "F")
-
-      // Add the WildWatch logo
+      // Logo placeholder (replace with actual logo if available)
       try {
         const logoImg = new Image()
         logoImg.crossOrigin = "anonymous"
         logoImg.src = "/logo2.png"
-
-        // Wait for the image to load
         await new Promise((resolve, reject) => {
           logoImg.onload = resolve
           logoImg.onerror = reject
         })
-
-        // Calculate logo dimensions (maintain aspect ratio, height of ~25mm)
         const logoHeight = 25
         const logoWidth = (logoImg.width / logoImg.height) * logoHeight
-
-        // Position the logo on the left side of the header
         doc.addImage(logoImg, "PNG", 20, 8, logoWidth, logoHeight)
       } catch (error) {
-        console.error("Error loading logo:", error)
-        // Fallback to a colored circle if logo fails to load
         doc.setFillColor(128, 0, 0)
         doc.circle(30, 20, 10, "F")
       }
-
-      // Title with better typography
       doc.setFontSize(24)
       doc.setFont("helvetica", "bold")
-      doc.setTextColor(128, 0, 0) // Maroon color
+      doc.setTextColor(128, 0, 0)
       doc.text("WildWatch", 105, 20, { align: "center" })
-
       doc.setFontSize(16)
-      doc.setTextColor(80, 80, 80) // Dark gray
+      doc.setTextColor(80, 80, 80)
       doc.text("Incident Report", 105, 30, { align: "center" })
-
-      y = 50 // Start content after header
-
-      // Reset text color and font
+      y = 50
       doc.setTextColor(0, 0, 0)
       doc.setFontSize(11)
       doc.setFont("helvetica", "normal")
-
-      // Add a visual separator
       doc.setDrawColor(128, 0, 0)
       doc.setLineWidth(0.5)
       doc.line(margin, 45, margin + contentWidth, 45)
 
-      // Case Information Section with two-column layout
+      // Case Information Section
       addSectionTitle("Case Information")
-
-      // Add case ID and status in first row
       addFieldRow("Case ID", incident.trackingNumber, "Status", incident.status)
-
-      // Add priority and department in second row
       addFieldRow("Priority", incident.priorityLevel || "-", "Department", incident.officeAdminName || "-")
-
-      // Add dates in third row
       addFieldRow(
         "Submitted",
         new Date(incident.submittedAt).toLocaleDateString(),
         "Finished Date",
         incident.finishedDate ? new Date(incident.finishedDate).toLocaleDateString() : "-",
       )
-
       y += sectionSpacing
 
-    // Incident Details Section
+      // Incident Details Section
       addSectionTitle("Incident Details")
-
-      // Add incident type and location in first row
       addFieldRow("Incident Type", incident.incidentType, "Location", incident.location)
-
-      // Add date reported in second row
       addFieldRow("Date Reported", new Date(incident.dateOfIncident).toLocaleDateString(), "", "")
-
-      // Add description with full width
       doc.setFont("helvetica", "bold")
       doc.text("Description:", margin, y)
       doc.setFont("helvetica", "normal")
       y += lineHeight
-
-      // Add description text in a box with light background
       const descriptionText = incident.description || "-"
       const descLines = doc.splitTextToSize(descriptionText, contentWidth - 4)
-
-      // Add light gray background for description
       doc.setFillColor(248, 248, 248)
       doc.roundedRect(margin, y - 4, contentWidth, descLines.length * lineHeight + 8, 2, 2, "F")
-
       doc.text(descLines, margin + 2, y + 2)
       y += descLines.length * lineHeight + 10
 
-    // Reporter Information Section
+      // Reporter Information Section
       addSectionTitle("Reporter Information")
-
-      // Add reporter name and email in first row
       addFieldRow("Reporter", incident.submittedByFullName, "Email", incident.submittedByEmail || "-")
-
-      // Add phone in second row if available
-    if (incident.submittedByPhone) {
+      if (incident.submittedByPhone) {
         addFieldRow("Phone", incident.submittedByPhone, "", "")
-    }
-
+      }
       y += sectionSpacing
 
-      // Evidence Section with improved layout
-    if (incident.evidence && Array.isArray(incident.evidence) && incident.evidence.length > 0) {
-        checkNewPage(40) // Check if we need a new page
+      // Evidence Section
+      if (incident.evidence && Array.isArray(incident.evidence) && incident.evidence.length > 0) {
+        checkNewPage(40)
         addSectionTitle("Evidence")
-
-        // Process images in parallel
+        // Process images in parallel (user-side logic)
         const imagePromises = incident.evidence
-          .filter((file: EvidenceFile) => file.fileType.startsWith("image/"))
-          .map(async (file: EvidenceFile) => {
+          .filter((file: any) => file.fileType?.startsWith("image/"))
+          .map(async (file: any) => {
             try {
               const img = new Image()
               img.crossOrigin = "anonymous"
-
-            await new Promise((resolve, reject) => {
+              await new Promise((resolve, reject) => {
                 img.onload = resolve
                 img.onerror = reject
                 img.src = `${file.fileUrl}?t=${new Date().getTime()}`
               })
-
               const maxWidth = 75
               const maxHeight = 75
               let imgWidth = img.width
               let imgHeight = img.height
-
-            if (imgWidth > maxWidth) {
+              if (imgWidth > maxWidth) {
                 const ratio = maxWidth / imgWidth
                 imgWidth = maxWidth
                 imgHeight *= ratio
-            }
-
-            if (imgHeight > maxHeight) {
+              }
+              if (imgHeight > maxHeight) {
                 const ratio = maxHeight / imgHeight
                 imgWidth *= ratio
                 imgHeight = maxHeight
               }
-
               return {
                 img,
                 imgWidth,
@@ -437,130 +340,49 @@ export default function IncidentHistoryPage() {
               return null
             }
           })
-
         const loadedImages = await Promise.all(imagePromises)
-
-        // Add non-image files first
-        const nonImageFiles = incident.evidence.filter((file: EvidenceFile) => !file.fileType.startsWith("image/"))
-
-        if (nonImageFiles.length > 0) {
-          addWrappedText("Documents:", 0, true)
-          y += 5
-
-          // Create a manual table header
-          doc.setFillColor(240, 240, 240)
-          doc.rect(margin, y, contentWidth, 10, "F")
-          doc.setFont("helvetica", "bold")
-          doc.text("File Name", margin + 5, y + 7)
-          doc.text("Type", margin + 85, y + 7)
-          doc.text("Size", margin + 140, y + 7)
-          doc.setFont("helvetica", "normal")
-          y += 15
-
-          // Add table rows manually
-          nonImageFiles.forEach((file: EvidenceFile) => {
-            const fileName = file.fileName
-            const fileType = file.fileType
-            const fileSize = `${(file.fileSize / 1024).toFixed(1)} KB`
-
-            // Truncate filename if too long
-            const truncatedName = fileName.length > 40 ? fileName.substring(0, 37) + "..." : fileName
-
-            doc.text(truncatedName, margin + 5, y)
-            doc.text(fileType, margin + 85, y)
-            doc.text(fileSize, margin + 140, y)
-
-            // Add a light separator line
-            doc.setDrawColor(230, 230, 230)
-            doc.line(margin, y + 5, margin + contentWidth, y + 5)
-
-            y += 10
-          })
-
-          y += 10
-        }
-
-        // Add loaded images in a grid layout
+        // Add loaded images in a grid layout (2 per row)
         if (loadedImages.some((img) => img !== null)) {
           addWrappedText("Images:", 0, true)
           y += 5
-
-          // Calculate optimal image display size and layout
-          const imageGap = 15 // Gap between images
-          const imageContainerPadding = 10 // Padding inside each image container
-          const captionHeight = 15 // Height for the caption
-
-          // Calculate available width for the grid
+          const imageGap = 15
+          const imageContainerPadding = 10
+          const captionHeight = 15
           const availableWidth = contentWidth
-
-          // Determine optimal image size
           const optimalImageWidth = (availableWidth - imageGap) / 2 - imageContainerPadding * 2
-          const maxImageHeight = 100 // Maximum height for any image
-
-          // Process images in rows of 2
+          const maxImageHeight = 100
           let currentRow = []
-
-          // Group images into rows of 2
           for (let i = 0; i < loadedImages.length; i++) {
             if (!loadedImages[i]) continue
-
             currentRow.push(loadedImages[i])
-
-            // Process row when we have 2 images or it's the last image
             if (currentRow.length === 2 || i === loadedImages.length - 1) {
-              // Calculate row height based on the tallest image in the row
               let rowImageHeight = 0
-
-              // First pass: determine scaled heights
               currentRow.forEach((imageData) => {
-                // Calculate scaled height while maintaining aspect ratio
                 let scaledHeight = (imageData.imgHeight / imageData.imgWidth) * optimalImageWidth
-
-                // Cap height if needed
                 if (scaledHeight > maxImageHeight) {
                   scaledHeight = maxImageHeight
                 }
-
                 rowImageHeight = Math.max(rowImageHeight, scaledHeight)
               })
-
-              // Calculate total row height including container and caption
               const totalRowHeight = rowImageHeight + imageContainerPadding * 2 + captionHeight + 10
-
-              // Check if we need a new page
               if (y + totalRowHeight > pageHeight - 20) {
-                // Add footer to current page
                 addFooter(currentPage, pageCount)
-
-                // Add new page
                 doc.addPage()
                 currentPage++
                 pageCount = Math.max(pageCount, currentPage)
                 y = 20
-
-                // Add section header on new page
                 addWrappedText("Images (continued):", 0, true)
                 y += 5
               }
-
-              // Second pass: render the images in the row
               let xPosition = margin
-
               currentRow.forEach((imageData) => {
-                // Calculate scaled dimensions while maintaining aspect ratio
                 let scaledWidth = optimalImageWidth
                 let scaledHeight = (imageData.imgHeight / imageData.imgWidth) * optimalImageWidth
-
-                // Cap height if needed
                 if (scaledHeight > maxImageHeight) {
                   scaledHeight = maxImageHeight
                   scaledWidth = (imageData.imgWidth / imageData.imgHeight) * maxImageHeight
                 }
-
-                // Center the image horizontally within its container
                 const xOffset = (optimalImageWidth - scaledWidth) / 2
-
-                // Add shadow effect (light gray rectangle offset slightly)
                 doc.setFillColor(220, 220, 220)
                 doc.roundedRect(
                   xPosition + 2,
@@ -571,8 +393,6 @@ export default function IncidentHistoryPage() {
                   3,
                   "F",
                 )
-
-                // Image container
                 doc.setFillColor(255, 255, 255)
                 doc.setDrawColor(200, 200, 200)
                 doc.roundedRect(
@@ -584,8 +404,6 @@ export default function IncidentHistoryPage() {
                   3,
                   "FD",
                 )
-
-                // Add the image centered in the container
                 doc.addImage(
                   imageData.img,
                   "JPEG",
@@ -596,8 +414,6 @@ export default function IncidentHistoryPage() {
                   undefined,
                   "FAST",
                 )
-
-                // Add filename below image
                 doc.setFontSize(8)
                 const filenameLines = doc.splitTextToSize(imageData.fileName, optimalImageWidth)
                 doc.text(
@@ -606,130 +422,82 @@ export default function IncidentHistoryPage() {
                   y + imageContainerPadding + rowImageHeight + 10,
                 )
                 doc.setFontSize(11)
-
-                // Move to next position
                 xPosition += optimalImageWidth + imageContainerPadding * 2 + imageGap
               })
-
-              // Move to next row
               y += rowImageHeight + imageContainerPadding * 2 + captionHeight + 15
-
-              // Clear current row
               currentRow = []
             }
           }
-
-          // Add some space after the images
           y += 5
         }
       }
 
-      // Witnesses Section with table layout
+      // Witnesses Section
       if (incident.witnesses && Array.isArray(incident.witnesses) && incident.witnesses.length > 0) {
         checkNewPage(40)
         addSectionTitle("Witnesses")
-
-        // Create a manual table header
-        doc.setFillColor(128, 0, 0)
-        doc.rect(margin, y, contentWidth, 10, "F")
         doc.setFont("helvetica", "bold")
-        doc.setTextColor(255, 255, 255)
         doc.text("#", margin + 5, y + 7)
         doc.text("Name", margin + 20, y + 7)
         doc.text("Notes", margin + 85, y + 7)
-        doc.setTextColor(0, 0, 0)
         doc.setFont("helvetica", "normal")
         y += 15
-
-        // Add table rows manually
         incident.witnesses.forEach((witness: any, idx: number) => {
           const witnessNum = (idx + 1).toString()
           const witnessName = witness.name || "(witness)"
           const witnessNotes = witness.additionalNotes || "-"
-
-          // Alternate row background for better readability
           if (idx % 2 === 0) {
             doc.setFillColor(248, 248, 248)
             doc.rect(margin, y - 5, contentWidth, 12, "F")
           }
-
           doc.text(witnessNum, margin + 5, y)
           doc.text(witnessName, margin + 20, y)
-
-          // Handle notes that might be long
           const noteLines = doc.splitTextToSize(witnessNotes, 85)
           doc.text(noteLines, margin + 85, y)
-
-          // Adjust y position based on number of lines in notes
           const lineHeight = Math.max(noteLines.length * 7, 12)
           y += lineHeight + 5
         })
-
         y += 10
       }
 
-      // Updates Section with timeline style
+      // Updates Section
       if (incident.updates && Array.isArray(incident.updates) && incident.updates.length > 0) {
         checkNewPage(40)
         addSectionTitle("Case Updates")
-
-        // Create a timeline-style layout for updates
         incident.updates.forEach((update: any, idx: number) => {
-          // Check if we need a new page
-          if (checkNewPage(30)) {
-            addSectionTitle("Case Updates (continued)")
-          }
-
-          // Timeline dot
+          if (checkNewPage(30)) addSectionTitle("Case Updates (continued)")
           doc.setFillColor(128, 0, 0)
           doc.circle(margin + 4, y + 4, 3, "F")
-
-          // Timeline line
           if (idx < incident.updates.length - 1) {
             doc.setDrawColor(200, 200, 200)
             doc.setLineWidth(0.5)
             doc.line(margin + 4, y + 8, margin + 4, y + 30)
           }
-
-          // Update content box
           doc.setFillColor(248, 248, 248)
           doc.roundedRect(margin + 10, y - 2, contentWidth - 10, 24, 2, 2, "F")
-
-          // Update title
           doc.setFont("helvetica", "bold")
           doc.text(update.title || update.status || `Update ${idx + 1}`, margin + 15, y + 5)
-
-          // Update date and author
           doc.setFont("helvetica", "normal")
           doc.setFontSize(9)
           const updateDate = update.updatedAt ? new Date(update.updatedAt).toLocaleDateString() : "-"
           const updateAuthor = update.updatedByName || update.updatedByFullName || update.author || "-"
           doc.text(`${updateDate} by ${updateAuthor}`, margin + 15, y + 13)
-
-          // Update message
           if (update.message || update.description) {
             const updateMsg = update.message || update.description
             const msgLines = doc.splitTextToSize(updateMsg, contentWidth - 20)
             doc.text(msgLines, margin + 15, y + 20)
           }
-
-          // Move to next update
           y += 30
           doc.setFontSize(11)
         })
       }
 
-      // Add footer to the last page
       addFooter(currentPage, pageCount)
-
-      // Go back to each page and add the footer with the correct total page count
       for (let i = 1; i < currentPage; i++) {
         doc.setPage(i)
         addFooter(i, pageCount)
       }
-
-      // Save the document
-      doc.save(`Incident_Report_${incident.trackingNumber}.pdf`)
+      doc.save(`Office_Incident_Report_${incident.trackingNumber}.pdf`)
     } catch (error) {
       console.error("Error generating PDF:", error)
     } finally {
@@ -739,7 +507,7 @@ export default function IncidentHistoryPage() {
 
   return (
     <div className="flex min-h-screen bg-[#f5f5f5]">
-      <Sidebar />
+      <OfficeAdminSidebar />
       <div className="flex-1 p-8 max-w-[1700px] mx-auto">
         {/* Loading Modal */}
         {isDownloading && (
@@ -754,9 +522,9 @@ export default function IncidentHistoryPage() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold text-[#800000] mb-1 flex items-center gap-2">
-              <History className="h-7 w-7 mr-2 text-[#800000]" /> Incident History
+              <History className="h-7 w-7 mr-2 text-[#800000]" /> Office Incident History
             </h1>
-            <p className="text-gray-600">View and access your past incident reports</p>
+            <p className="text-gray-600">View and access past incident reports for your office</p>
           </div>
           <div className="flex gap-2">
             <Input
@@ -874,12 +642,12 @@ export default function IncidentHistoryPage() {
                             incident.incidentType === "Suspicious Activity"
                               ? "bg-red-100 text-red-700"
                               : incident.incidentType === "Theft"
-                              ? "bg-yellow-100 text-yellow-700"
-                              : incident.incidentType === "Vandalism"
-                              ? "bg-green-100 text-green-700"
-                              : incident.incidentType === "Harassment"
-                              ? "bg-pink-100 text-pink-700"
-                              : "bg-gray-100 text-gray-700"
+                                ? "bg-yellow-100 text-yellow-700"
+                                : incident.incidentType === "Vandalism"
+                                  ? "bg-green-100 text-green-700"
+                                  : incident.incidentType === "Harassment"
+                                    ? "bg-pink-100 text-pink-700"
+                                    : "bg-gray-100 text-gray-700"
                           }
                         >
                           {incident.incidentType}
@@ -893,10 +661,10 @@ export default function IncidentHistoryPage() {
                             incident.priorityLevel === "HIGH"
                               ? "bg-red-100 text-red-700"
                               : incident.priorityLevel === "MEDIUM"
-                              ? "bg-yellow-100 text-yellow-700"
-                              : incident.priorityLevel === "LOW"
-                              ? "bg-green-100 text-green-700"
-                              : "bg-gray-100 text-gray-700"
+                                ? "bg-yellow-100 text-yellow-700"
+                                : incident.priorityLevel === "LOW"
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-gray-100 text-gray-700"
                           }
                         >
                           {incident.priorityLevel}
@@ -908,8 +676,8 @@ export default function IncidentHistoryPage() {
                             incident.status.toLowerCase() === "resolved"
                               ? "bg-green-100 text-green-700"
                               : incident.status.toLowerCase() === "dismissed"
-                              ? "bg-gray-100 text-gray-700"
-                              : "bg-gray-100 text-gray-700"
+                                ? "bg-gray-100 text-gray-700"
+                                : "bg-gray-100 text-gray-700"
                           }
                         >
                           {incident.status.toLowerCase() === "dismissed" ? "Dismissed" : incident.status}
@@ -924,7 +692,7 @@ export default function IncidentHistoryPage() {
                           variant="outline"
                           size="icon"
                           className="mr-2"
-                          onClick={() => router.push(`/incidents/tracking/${incident.trackingNumber}`)}
+                          onClick={() => router.push(`/office-admin/incidents/${incident.id}`)}
                         >
                           <Eye className="h-4 w-4" />
                         </Button>

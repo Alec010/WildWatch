@@ -10,6 +10,7 @@ public class ActivityLogResponse {
     private String activityType;
     private String description;
     private LocalDateTime createdAt;
+    private Boolean isRead;
     private IncidentInfo incident;
 
     @Data
@@ -24,6 +25,7 @@ public class ActivityLogResponse {
         response.setActivityType(activityLog.getActivityType());
         response.setDescription(activityLog.getDescription());
         response.setCreatedAt(activityLog.getCreatedAt());
+        response.setIsRead(activityLog.getIsRead());
 
         if (activityLog.getIncident() != null) {
             IncidentInfo incidentInfo = new IncidentInfo();

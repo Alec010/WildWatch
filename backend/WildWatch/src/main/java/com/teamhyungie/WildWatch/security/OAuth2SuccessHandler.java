@@ -97,6 +97,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
                 user.setSchoolIdNumber(schoolIdNumber);
                 user.setContactNumber("+639000000000"); // Default contact number
                 user.setMiddleInitial(""); // Empty middle initial is allowed
+                user.setAuthProvider("microsoft");
                 
                 // Save the new user
                 user = userService.save(user);

@@ -646,6 +646,7 @@ export default function IncidentDetailsPage({ params }: PageProps) {
                   </div>
 
                   {/* Update Button */}
+                  {/*
                   <Button
                     onClick={handleStatusUpdate}
                     disabled={isProcessing}
@@ -653,6 +654,7 @@ export default function IncidentDetailsPage({ params }: PageProps) {
                   >
                     {isProcessing ? "Updating..." : "Update Status"}
                   </Button>
+                  */}
                 </CardContent>
               </Card>
 

@@ -41,7 +41,7 @@ public class UserService {
         user.setEnabled(true);
         user.setRole(Role.REGULAR_USER);
         user.setTermsAccepted(false);
-
+        user.setAuthProvider("local");
         System.out.println("Creating new user with role: " + Role.REGULAR_USER);
         System.out.println("Terms accepted set to: false");
         return userRepository.save(user);
@@ -79,5 +79,19 @@ public class UserService {
 
     public boolean existsByEmail(String email) {
         return userRepository.existsByEmail(email);
+    }
+
+    public void changePassword(String email, String currentPassword, String newPassword) {
+        User user = getUserByEmail(email);
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            throw new RuntimeException("Current password is incorrect");
+        }
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+    }
+
+    public User createMicrosoftOAuthUser(User user) {
+        user.setAuthProvider("microsoft");
+        return userRepository.save(user);
     }
 } 

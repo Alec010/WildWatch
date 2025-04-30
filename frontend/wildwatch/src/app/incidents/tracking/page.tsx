@@ -86,7 +86,10 @@ export default function CaseTrackingPage() {
           throw new Error(`HTTP error! status: ${incidentsResponse.status}`);
 
         const incidentsData = await incidentsResponse.json();
-        setIncidents(incidentsData);
+        // Only show PENDING and IN PROGRESS status (case-insensitive, with space)
+        setIncidents(incidentsData.filter((i: Incident) => 
+          ["pending", "in progress"].includes(i.status.toLowerCase())
+        ));
 
         // Fetch activity logs
         const activitiesResponse = await fetch(

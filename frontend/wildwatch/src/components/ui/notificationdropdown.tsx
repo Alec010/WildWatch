@@ -69,8 +69,21 @@ export default function NotificationDropdown({
     
     ws.onmessage = (event) => {
       const newActivity = JSON.parse(event.data);
-      setNotifications(prev => [newActivity, ...prev]);
-      setUnreadCount(prev => prev + 1);
+      setNotifications(prev => {
+        // Check if notification already exists
+        const exists = prev.some(n => n.id === newActivity.id);
+        if (exists) {
+          // Update existing notification
+          return prev.map(n => n.id === newActivity.id ? newActivity : n);
+        } else {
+          // Add new notification
+          return [newActivity, ...prev];
+        }
+      });
+      // Only increment unread count if the new notification is unread
+      if (!newActivity.isRead) {
+        setUnreadCount(prev => prev + 1);
+      }
     };
 
     return () => {
@@ -101,13 +114,11 @@ export default function NotificationDropdown({
       }
 
       const data = await response.json();
-      // Initialize notifications with isRead status
-      const notificationsWithReadStatus = data.content.map((notification: ActivityLog) => ({
-        ...notification,
-        isRead: false
-      }));
-      setNotifications(notificationsWithReadStatus);
-      setUnreadCount(notificationsWithReadStatus.length);
+      
+      // Update notifications and calculate unread count
+      setNotifications(data.content);
+      const unreadCount = data.content.filter((notification: ActivityLog) => !notification.isRead).length;
+      setUnreadCount(unreadCount);
     } catch (error) {
       console.error("Error fetching notifications:", error);
     }
@@ -134,18 +145,89 @@ export default function NotificationDropdown({
     setShowNotifications(!showNotifications);
   };
 
-  const markAllAsRead = () => {
-    setNotifications(prev => prev.map(notification => ({ ...notification, isRead: true })));
-    setUnreadCount(0);
+  const handleNotificationItemClick = async (notification: ActivityLog) => {
+    try {
+      // Mark as read first
+      if (!notification.isRead) {
+        await markAsRead(notification.id);
+      }
+
+      // Redirect to the tracking page if there's an incident
+      if (notification.incident) {
+        router.push(`/incidents/tracking/${notification.incident.trackingNumber}`);
+      }
+    } catch (error) {
+      console.error("Error handling notification click:", error);
+    }
   };
 
-  const markAsRead = (id: string) => {
-    setNotifications(prev => 
-      prev.map(notification => 
-        notification.id === id ? { ...notification, isRead: true } : notification
-      )
-    );
-    setUnreadCount(prev => Math.max(0, prev - 1));
+  const markAllAsRead = async () => {
+    try {
+      const token = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("token="))
+        ?.split("=")[1];
+
+      if (!token) {
+        throw new Error("No authentication token found");
+      }
+
+      const response = await fetch("http://localhost:8080/api/activity-logs/read-all", {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // Update local state after successful API call
+      setNotifications(prev => prev.map(notification => ({ ...notification, isRead: true })));
+      setUnreadCount(0);
+      
+      // Fetch notifications again to ensure sync with backend
+      await fetchNotifications();
+    } catch (error) {
+      console.error("Error marking all notifications as read:", error);
+    }
+  };
+
+  const markAsRead = async (id: string) => {
+    try {
+      const token = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("token="))
+        ?.split("=")[1];
+
+      if (!token) {
+        throw new Error("No authentication token found");
+      }
+
+      const response = await fetch(`http://localhost:8080/api/activity-logs/${id}/read`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // Update local state after successful API call
+      setNotifications(prev => 
+        prev.map(notification => 
+          notification.id === id ? { ...notification, isRead: true } : notification
+        )
+      );
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+    }
   };
 
   const refreshNotifications = () => {
@@ -168,15 +250,6 @@ export default function NotificationDropdown({
         return <CheckCircle className="h-5 w-5 text-green-500" />;
       default:
         return <Bell className="h-5 w-5 text-gray-500" />;
-    }
-  };
-
-  const handleNotificationItemClick = (notification: ActivityLog) => {
-    if (!notification.isRead) {
-      markAsRead(notification.id);
-    }
-    if (notification.incident) {
-      router.push(`/incidents/${notification.incident.id}`);
     }
   };
 

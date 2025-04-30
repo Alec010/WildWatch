@@ -190,9 +190,7 @@ export default function CaseDetailsPage() {
 
   return (
     <div className="min-h-screen flex">
-      <div className="w-[240px] bg-[#8B0000] flex-shrink-0">
-        <Sidebar />
-      </div>
+      <Sidebar />
       <div className="flex-1 bg-[#f5f5f5]">
         <div className="p-6 max-w-[1200px] mx-auto">
           {/* Header Section */}
@@ -277,8 +275,8 @@ export default function CaseDetailsPage() {
                             : isCompleted || (isCurrent && step.key === "Resolved")
                             ? "border-green-500 bg-green-50 text-green-600"
                             : isCurrent
-                            ? "border-[#8B0000] bg-red-50 text-[#8B0000]"
-                            : "border-gray-200 bg-gray-50 text-gray-400"
+                              ? "border-[#8B0000] bg-red-50 text-[#8B0000]"
+                              : "border-gray-200 bg-gray-50 text-gray-400"
                         }`}
                       >
                         {isDismissedStep ? (
@@ -506,52 +504,52 @@ export default function CaseDetailsPage() {
                     <span className="text-gray-700 font-medium">This case has been dismissed. No further action will be taken.</span>
                   </div>
                 ) : (
-                  <ul className="space-y-4">
-                    <li className="flex items-start gap-3">
-                      <div className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
-                        <CheckCircle className="w-3 h-3 text-green-600" />
-                      </div>
-                      <div>
-                        <span className="font-medium text-sm">Initial Review</span>
-                        <div className="text-xs text-gray-500">Case reviewed by security team</div>
-                      </div>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <div className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
-                        <CheckCircle className="w-3 h-3 text-green-600" />
-                      </div>
-                      <div>
-                        <span className="font-medium text-sm">Incident Updates</span>
-                        <div className="text-xs text-gray-500">Gathering security footage and witness statements</div>
-                      </div>
-                    </li>
-                    <li className="flex items-start gap-3">
+                <ul className="space-y-4">
+                  <li className="flex items-start gap-3">
+                    <div className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
+                      <CheckCircle className="w-3 h-3 text-green-600" />
+                    </div>
+                    <div>
+                      <span className="font-medium text-sm">Initial Review</span>
+                      <div className="text-xs text-gray-500">Case reviewed by security team</div>
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <div className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
+                      <CheckCircle className="w-3 h-3 text-green-600" />
+                    </div>
+                    <div>
+                      <span className="font-medium text-sm">Incident Updates</span>
+                      <div className="text-xs text-gray-500">Gathering security footage and witness statements</div>
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-3">
                       <div className={`mt-0.5 flex-shrink-0 w-5 h-5 rounded-full ${currentStep >= 2 ? "bg-green-100" : "bg-gray-100"} flex items-center justify-center`}>
-                        {currentStep >= 2 ? (
-                          <CheckCircle className="w-3 h-3 text-green-600" />
-                        ) : (
-                          <div className="w-2 h-2 rounded-full bg-gray-300" />
-                        )}
-                      </div>
-                      <div>
-                        <span className="font-medium text-sm">In Progress</span>
-                        <div className="text-xs text-gray-500">Implementing security measures based on findings</div>
-                      </div>
-                    </li>
-                    <li className="flex items-start gap-3">
+                      {currentStep >= 2 ? (
+                        <CheckCircle className="w-3 h-3 text-green-600" />
+                      ) : (
+                        <div className="w-2 h-2 rounded-full bg-gray-300" />
+                      )}
+                    </div>
+                    <div>
+                      <span className="font-medium text-sm">In Progress</span>
+                      <div className="text-xs text-gray-500">Implementing security measures based on findings</div>
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-3">
                       <div className={`mt-0.5 flex-shrink-0 w-5 h-5 rounded-full ${currentStep >= 3 ? "bg-green-100" : "bg-gray-100"} flex items-center justify-center`}>
-                        {currentStep >= 3 ? (
-                          <CheckCircle className="w-3 h-3 text-green-600" />
-                        ) : (
-                          <div className="w-2 h-2 rounded-full bg-gray-300" />
-                        )}
-                      </div>
-                      <div>
-                        <span className="font-medium text-sm">Case Resolution</span>
-                        <div className="text-xs text-gray-500">Final report and case closure</div>
-                      </div>
-                    </li>
-                  </ul>
+                      {currentStep >= 3 ? (
+                        <CheckCircle className="w-3 h-3 text-green-600" />
+                      ) : (
+                        <div className="w-2 h-2 rounded-full bg-gray-300" />
+                      )}
+                    </div>
+                    <div>
+                      <span className="font-medium text-sm">Case Resolution</span>
+                      <div className="text-xs text-gray-500">Final report and case closure</div>
+                    </div>
+                  </li>
+                </ul>
                 )}
               </div>
             </div>
