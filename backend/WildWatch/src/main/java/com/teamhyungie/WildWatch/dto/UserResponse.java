@@ -14,6 +14,7 @@ public class UserResponse {
     private String schoolIdNumber;
     private String contactNumber;
     private Role role;
+    private String authProvider;
 
     public static UserResponse fromUser(User user) {
         UserResponse response = new UserResponse();
@@ -25,6 +26,7 @@ public class UserResponse {
         response.setSchoolIdNumber(user.getSchoolIdNumber());
         response.setContactNumber(user.getContactNumber());
         response.setRole(user.getRole());
+        response.setAuthProvider(user.getAuthProvider());
         return response;
     }
 } 

@@ -325,15 +325,6 @@ export default function EvidenceSubmissionPage() {
                 )}
               </div>
 
-              {/* Additional Notes */}
-              <div className="space-y-2">
-                <Label className="text-sm">Additional Notes (optional)</Label>
-                <Textarea
-                  placeholder="Add any other relevant information about the incident"
-                  className="min-h-[80px] border-gray-300 resize-none"
-                />
-              </div>
-
               {/* Navigation Buttons */}
               <div className="flex justify-between pt-4 border-t">
                 <Button

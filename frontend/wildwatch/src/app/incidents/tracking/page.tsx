@@ -22,11 +22,13 @@ const inter = Inter({ subsets: ["latin"] });
 
 interface Incident {
   id: string; // UUID from backend
+  trackingNumber?: string; // Add this field for backend tracking number
   caseNumber?: string; // Case number like INC-2025-0001
   incidentType: string;
   location: string;
   dateOfIncident: string;
   status: string;
+  priorityLevel?: "HIGH" | "MEDIUM" | "LOW" | null;
 }
 
 interface Activity {
@@ -47,7 +49,9 @@ export default function CaseTrackingPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<string>("All");
+  const [selectedPriority, setSelectedPriority] = useState<string>("All");
   const [showAllActivities, setShowAllActivities] = useState(false);
+  const [search, setSearch] = useState("");
 
   // ✅ Proper formatter for missing case numbers
   const formatCaseNumber = (index: number): string => {
@@ -82,7 +86,10 @@ export default function CaseTrackingPage() {
           throw new Error(`HTTP error! status: ${incidentsResponse.status}`);
 
         const incidentsData = await incidentsResponse.json();
-        setIncidents(incidentsData);
+        // Only show PENDING and IN PROGRESS status (case-insensitive, with space)
+        setIncidents(incidentsData.filter((i: Incident) => 
+          ["pending", "in progress"].includes(i.status.toLowerCase())
+        ));
 
         // Fetch activity logs
         const activitiesResponse = await fetch(
@@ -170,10 +177,19 @@ export default function CaseTrackingPage() {
     }
   };
 
-  const filteredCases =
-    selectedStatus === "All"
-      ? incidents
-      : incidents.filter((item) => item.status === selectedStatus);
+  // Only show incidents matching selected status and priority, and filter by search
+  const filteredCases = incidents.filter(
+    (item) =>
+      (selectedStatus === "All" || item.status === selectedStatus) &&
+      (selectedPriority === "All" || (item.priorityLevel && item.priorityLevel.toLowerCase() === selectedPriority.toLowerCase())) &&
+      (
+        (item.trackingNumber || "").toLowerCase().includes(search.toLowerCase()) ||
+        (item.caseNumber || "").toLowerCase().includes(search.toLowerCase()) ||
+        item.incidentType.toLowerCase().includes(search.toLowerCase()) ||
+        item.location.toLowerCase().includes(search.toLowerCase()) ||
+        item.status.toLowerCase().includes(search.toLowerCase())
+      )
+  );
 
   if (loading) {
     return (
@@ -223,6 +239,8 @@ export default function CaseTrackingPage() {
                 type="text"
                 placeholder="Search incidents..."
                 className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg w-64 focus:outline-none focus:ring-1 focus:ring-[#800000] focus:border-[#800000] shadow-sm"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
               />
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
             </div>
@@ -237,46 +255,41 @@ export default function CaseTrackingPage() {
           </div>
         </div>
 
+        {/* Priority Filter Buttons */}
+        <div className="flex gap-2 mb-6">
+          {['All', 'HIGH', 'MEDIUM', 'LOW'].map((priority) => (
+            <Button
+              key={priority}
+              variant={selectedPriority === priority ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedPriority(priority)}
+            >
+              {priority.charAt(0) + priority.slice(1).toLowerCase()}
+            </Button>
+          ))}
+        </div>
         {/* Filter Buttons */}
         <div className="grid grid-cols-3 gap-4 mb-6">
-          {["Pending", "In Progress", "All"].map((status) => (
+          {['Pending', 'In Progress', 'All'].map((status) => (
             <button
               key={status}
               onClick={() => setSelectedStatus(status)}
               className={`bg-white p-4 rounded-lg shadow-md text-center transition-all duration-200 hover:bg-gray-50 ${
                 selectedStatus === status
-                  ? "border-l-4 border-[#800000] bg-[#fff9f9]"
-                  : ""
+                  ? 'border-l-4 border-[#800000] bg-[#fff9f9]'
+                  : ''
               }`}
             >
               <div className="text-2xl font-bold text-[#800000]">
-                {status === "All"
+                {status === 'All'
                   ? incidents.length
                   : incidents.filter((item) => item.status === status).length}
               </div>
               <div className="text-gray-600 font-medium">
-                {status === "All" ? "All Cases" : status}
+                {status === 'All' ? 'All Cases' : status}
               </div>
             </button>
           ))}
-        </div>
-
-        {/* Search Bar */}
-        <div className="flex justify-between items-center mb-6">
-          <Button
-            variant="outline"
-            className="border-[#800000] text-[#800000] hover:bg-[#fff9f9] hover:text-[#800000]"
-          >
-            All Cases
-          </Button>
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Search incidents..."
-              className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg w-72 focus:outline-none focus:ring-1 focus:ring-[#800000] focus:border-[#800000] shadow-sm"
-            />
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-          </div>
         </div>
 
         {/* Incident Table */}
@@ -289,13 +302,14 @@ export default function CaseTrackingPage() {
                 <th className="p-4 text-center font-semibold">LOCATION</th>
                 <th className="p-4 text-center font-semibold">REPORTED DATE</th>
                 <th className="p-4 text-center font-semibold">STATUS</th>
+                <th className="p-4 text-center font-semibold">PRIORITY</th>
                 <th className="p-4 text-center font-semibold">ACTIONS</th>
               </tr>
             </thead>
             <tbody>
               {filteredCases.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="p-6 text-center text-[#374151]">
+                  <td colSpan={7} className="p-6 text-center text-[#374151]">
                     No reports found for "{selectedStatus}".
                   </td>
                 </tr>
@@ -306,7 +320,9 @@ export default function CaseTrackingPage() {
                     className="border-t hover:bg-[#fff9f9] transition-colors duration-150"
                   >
                     <td className="p-3 text-[#800000] font-medium text-center">
-                      {item.caseNumber
+                      {item.trackingNumber
+                        ? item.trackingNumber
+                        : item.caseNumber
                         ? item.caseNumber
                         : formatCaseNumber(index)}
                     </td>
@@ -333,9 +349,28 @@ export default function CaseTrackingPage() {
                       </span>
                     </td>
                     <td className="p-3 text-center font-medium">
+                      {item.priorityLevel ? (
+                        <span
+                          className={`px-3 py-1 text-xs rounded-full ${
+                            item.priorityLevel === "HIGH"
+                              ? "bg-red-100 text-red-800"
+                              : item.priorityLevel === "MEDIUM"
+                              ? "bg-orange-100 text-orange-800"
+                              : item.priorityLevel === "LOW"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-gray-100 text-gray-800"
+                          }`}
+                        >
+                          {item.priorityLevel.charAt(0) + item.priorityLevel.slice(1).toLowerCase()}
+                        </span>
+                      ) : (
+                        <span className="px-3 py-1 text-xs rounded-full bg-gray-100 text-gray-800">N/A</span>
+                      )}
+                    </td>
+                    <td className="p-3 text-center font-medium">
                       <button
                         onClick={() =>
-                          router.push(`/incidents/tracking/${item.id}`)
+                          router.push(`/incidents/tracking/${item.trackingNumber ? item.trackingNumber : item.id}`)
                         }
                         className="text-[#800000] hover:text-[#5B0000]"
                       >

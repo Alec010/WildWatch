@@ -61,6 +61,7 @@ public class OAuth2Controller {
                 user.setTermsAccepted(false);
                 user.setSchoolIdNumber(UUID.randomUUID().toString()); // Generate temporary school ID
                 user.setContactNumber("Not provided"); // Set default contact number
+                user.setAuthProvider("microsoft");
                 
                 try {
                     user = userService.save(user);

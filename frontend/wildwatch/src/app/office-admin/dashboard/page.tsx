@@ -172,14 +172,7 @@ export default function OfficeAdminDashboard() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-              <Button
-                className="bg-[#800000] hover:bg-[#700000] text-white flex items-center gap-2"
-                onClick={() => router.push("/office-admin/incidents/new")}
-              >
-                <Plus className="h-4 w-4" />
-                Report New Incident
-              </Button>
-
+              {/* Removed Report New Incident button for office admins */}
               {/* Using the NotificationDropdown component */}
               <NotificationDropdown />
             </div>

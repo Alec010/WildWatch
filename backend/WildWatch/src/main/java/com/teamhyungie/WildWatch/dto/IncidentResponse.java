@@ -32,6 +32,10 @@ public class IncidentResponse {
     private List<EvidenceDTO> evidence;
     private List<WitnessDTO> witnesses;
 
+    // New fields for frontend display
+    private String officeAdminName;
+    private LocalDateTime finishedDate;
+
     @Data
     public static class EvidenceDTO {
         private String id;
@@ -68,7 +72,37 @@ public class IncidentResponse {
         response.setSubmittedByEmail(incident.getSubmittedBy().getEmail());
         response.setSubmittedByPhone(incident.getSubmittedBy().getContactNumber());
         response.setSubmittedAt(incident.getSubmittedAt());
-        
+
+        // Map evidence
+        if (incident.getEvidence() != null) {
+            response.setEvidence(
+                incident.getEvidence().stream().map(e -> {
+                    EvidenceDTO dto = new EvidenceDTO();
+                    dto.setId(e.getId());
+                    dto.setFileUrl(e.getFileUrl());
+                    dto.setFileName(e.getFileName());
+                    dto.setFileType(e.getFileType());
+                    dto.setFileSize(e.getFileSize());
+                    dto.setUploadedAt(e.getUploadedAt());
+                    return dto;
+                }).collect(Collectors.toList())
+            );
+        }
+
+        // Map witnesses
+        if (incident.getWitnesses() != null) {
+            response.setWitnesses(
+                incident.getWitnesses().stream().map(w -> {
+                    WitnessDTO dto = new WitnessDTO();
+                    dto.setId(w.getId());
+                    dto.setName(w.getName());
+                    dto.setContactInformation(w.getContactInformation());
+                    dto.setAdditionalNotes(w.getAdditionalNotes());
+                    return dto;
+                }).collect(Collectors.toList())
+            );
+        }
+
         return response;
     }
 } 

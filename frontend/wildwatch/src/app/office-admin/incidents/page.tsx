@@ -52,8 +52,8 @@ export default function IncidentManagementPage() {
         }
 
         const data = await response.json();
-        // Filter out incidents that are "In Progress"
-        const filteredData = data.filter((incident: Incident) => incident.status !== "In Progress");
+        // Filter to only show pending incidents
+        const filteredData = data.filter((incident: Incident) => incident.status.toLowerCase() === "pending");
         setIncidents(filteredData);
       } catch (error) {
         console.error('Error fetching incidents:', error);

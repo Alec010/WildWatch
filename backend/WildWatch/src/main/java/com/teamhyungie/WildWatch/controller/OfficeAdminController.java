@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import com.teamhyungie.WildWatch.dto.OfficeAdminUserResponse;
 
 @RestController
 @RequestMapping("/api/setup")
@@ -57,6 +58,21 @@ public class OfficeAdminController {
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Failed to create office admin account: " + e.getMessage());
         }
+    }
+
+    @GetMapping("/by-office/{officeCode}")
+    public ResponseEntity<OfficeAdminUserResponse> getOfficeAdminByOfficeCode(@PathVariable String officeCode) {
+        return officeAdminService.findByOfficeCode(officeCode)
+            .map(officeAdmin -> {
+                User user = officeAdmin.getUser();
+                OfficeAdminUserResponse dto = new OfficeAdminUserResponse();
+                dto.setFirstName(user.getFirstName());
+                dto.setLastName(user.getLastName());
+                dto.setEmail(user.getEmail());
+                dto.setContactNumber(user.getContactNumber());
+                return ResponseEntity.ok(dto);
+            })
+            .orElse(ResponseEntity.notFound().build());
     }
 
     // Request DTO class

@@ -11,6 +11,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -42,5 +44,22 @@ public class ActivityLogController {
         logger.info("Activities content size: {}", logs.getContent().size());
         
         return ResponseEntity.ok(logs);
+    }
+
+    @PutMapping("/{id}/read")
+    public ResponseEntity<Void> markAsRead(
+            @PathVariable String id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        User user = userService.getUserByEmail(userDetails.getUsername());
+        activityLogService.markAsRead(id, user);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/read-all")
+    public ResponseEntity<Void> markAllAsRead(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        User user = userService.getUserByEmail(userDetails.getUsername());
+        activityLogService.markAllAsRead(user);
+        return ResponseEntity.ok().build();
     }
 } 

@@ -59,6 +59,9 @@ public class User {
     @OneToOne(mappedBy = "user", fetch = FetchType.LAZY)
     private OfficeAdmin officeAdmin;
 
+    @Column(name = "auth_provider")
+    private String authProvider = "local";
+
     // Getters and Setters
     public Long getId() {
         return id;
@@ -173,5 +176,13 @@ public class User {
 
     public Office getOffice() {
         return officeAdmin != null ? Office.valueOf(officeAdmin.getOfficeCode()) : null;
+    }
+
+    public String getAuthProvider() {
+        return authProvider;
+    }
+
+    public void setAuthProvider(String authProvider) {
+        this.authProvider = authProvider;
     }
 } 
