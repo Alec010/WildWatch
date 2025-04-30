@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
+import { API_BASE_URL } from "@/utils/api"
 
 interface ActivityLog {
   id: string
@@ -35,7 +36,7 @@ export default function NotificationsPage() {
           .find((row) => row.startsWith("token="))
           ?.split("=")[1]
         if (!token) throw new Error("No authentication token found")
-        const res = await fetch("http://localhost:8080/api/activity-logs?page=0&size=50", {
+        const res = await fetch(`${API_BASE_URL}/api/activity-logs?page=0&size=50`, {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
@@ -60,7 +61,7 @@ export default function NotificationsPage() {
           .split("; ")
           .find((row) => row.startsWith("token="))
           ?.split("=")[1]
-        await fetch(`http://localhost:8080/api/activity-logs/${log.id}/read`, {
+        await fetch(`${API_BASE_URL}/api/activity-logs/${log.id}/read`, {
           method: "PUT",
           headers: {
             Authorization: `Bearer ${token}`,

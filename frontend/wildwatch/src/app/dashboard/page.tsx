@@ -17,6 +17,7 @@ import {
 import { Sidebar } from "@/components/Sidebar";
 import NotificationDropdown from "@/components/ui/notificationdropdown";
 import { Inter } from "next/font/google";
+import { API_BASE_URL } from "@/utils/api";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -58,15 +59,12 @@ export default function DashboardPage() {
         }
 
         // Fetch user's incidents
-        const response = await fetch(
-          "http://localhost:8080/api/incidents/my-incidents",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
+        const response = await fetch(`${API_BASE_URL}/api/incidents/my-incidents`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
 
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);

@@ -9,6 +9,7 @@ import { History, Download, Eye, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import jsPDF from "jspdf"
 import "jspdf-autotable"
+import { API_BASE_URL } from "@/utils/api"
 
 interface Incident {
   id: string
@@ -61,7 +62,7 @@ export default function IncidentHistoryPage() {
           .find((row) => row.startsWith("token="))
           ?.split("=")[1]
         if (!token) return
-        const res = await fetch("http://localhost:8080/api/incidents/my-incidents", {
+        const res = await fetch(`${API_BASE_URL}/api/incidents/my-incidents`, {
           headers: { Authorization: `Bearer ${token}` },
         })
         const data = await res.json()

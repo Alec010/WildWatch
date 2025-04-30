@@ -21,6 +21,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { handleAuthRedirect } from "@/utils/auth";
+import { API_BASE_URL } from "@/utils/api";
 
 const formSchema = z.object({
   email: z.string()
@@ -45,7 +46,7 @@ export function LoginForm() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       setIsLoading(true);
-      const response = await fetch("http://localhost:8080/api/auth/login", {
+      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -184,7 +185,7 @@ export function LoginForm() {
           variant="outline" 
           className="w-full flex items-center justify-center gap-2"
           onClick={() => {
-            window.location.href = "http://localhost:8080/oauth2/authorization/microsoft";
+            window.location.href = `${API_BASE_URL}/oauth2/authorization/microsoft`;
           }}
         >
           <MicrosoftLogo />

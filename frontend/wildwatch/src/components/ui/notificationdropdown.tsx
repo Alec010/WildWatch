@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
+import { API_BASE_URL, WS_BASE_URL } from "@/utils/api";
 
 interface ActivityLog {
   id: string;
@@ -66,7 +67,7 @@ export default function NotificationDropdown({
 
   // Setup WebSocket for real-time notifications
   useEffect(() => {
-    const ws = new WebSocket('ws://localhost:8080/ws/notifications');
+    const ws = new WebSocket(`${WS_BASE_URL}/ws/notifications`);
     
     ws.onmessage = (event) => {
       const newActivity = JSON.parse(event.data);
@@ -103,7 +104,7 @@ export default function NotificationDropdown({
         throw new Error("No authentication token found");
       }
 
-      const response = await fetch("http://localhost:8080/api/activity-logs", {
+      const response = await fetch(`${API_BASE_URL}/api/activity-logs`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -173,7 +174,7 @@ export default function NotificationDropdown({
         throw new Error("No authentication token found");
       }
 
-      const response = await fetch("http://localhost:8080/api/activity-logs/read-all", {
+      const response = await fetch(`${API_BASE_URL}/api/activity-logs/read-all`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -207,7 +208,7 @@ export default function NotificationDropdown({
         throw new Error("No authentication token found");
       }
 
-      const response = await fetch(`http://localhost:8080/api/activity-logs/${id}/read`, {
+      const response = await fetch(`${API_BASE_URL}/api/activity-logs/${id}/read`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -261,7 +262,7 @@ export default function NotificationDropdown({
         router.push("/login");
         return;
       }
-      const response = await fetch("http://localhost:8080/api/auth/profile", {
+      const response = await fetch(`${API_BASE_URL}/api/auth/profile`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",

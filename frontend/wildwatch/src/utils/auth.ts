@@ -1,4 +1,5 @@
 import Cookies from 'js-cookie';
+import { API_BASE_URL } from "./api";
 
 interface AuthResponse {
   isAuthenticated: boolean;
@@ -13,7 +14,7 @@ export const checkAuth = async (): Promise<AuthResponse> => {
   console.log('Starting authentication check...');
   try {
     console.log('Making request to /api/auth/profile...');
-    const response = await fetch('http://localhost:8080/api/auth/profile', {
+    const response = await fetch(`${API_BASE_URL}/api/auth/profile`, {
       method: 'GET',
       credentials: 'include',
       headers: {
@@ -42,7 +43,7 @@ export const checkAuth = async (): Promise<AuthResponse> => {
 
 export const getCurrentUser = async () => {
   try {
-    const response = await fetch('http://localhost:8080/api/users/me', {
+    const response = await fetch(`${API_BASE_URL}/api/users/me`, {
       method: 'GET',
       headers: {
         'Accept': 'application/json',

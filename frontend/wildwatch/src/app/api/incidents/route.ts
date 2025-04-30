@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
-
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
+import { API_BASE_URL } from "@/utils/api";
 
 export async function POST(request: Request) {
   try {
@@ -43,16 +42,16 @@ export async function POST(request: Request) {
     });
 
     try {
-      console.log('Sending request to:', `${BACKEND_URL}/api/incidents`); // Debug log
+      console.log('Sending request to:', `${API_BASE_URL}/api/incidents`); // Debug log
       console.log('Using token:', token.substring(0, 10) + '...'); // Debug log (only show first 10 chars)
 
       // Forward the request to the backend
-      const response = await fetch(`${BACKEND_URL}/api/incidents`, {
+      const response = await fetch(`${API_BASE_URL}/api/incidents`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Accept': 'application/json',
-          'Origin': request.headers.get('origin') || 'http://localhost:3000'
+          'Origin': request.headers.get('origin') || process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000'
         },
         body: backendFormData
       });

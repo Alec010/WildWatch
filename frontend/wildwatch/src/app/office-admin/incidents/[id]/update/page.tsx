@@ -6,6 +6,7 @@ import Link from "next/link"
 import { ChevronRight } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { OfficeAdminSidebar } from "@/components/OfficeAdminSidebar"
+import { API_BASE_URL } from "@/utils/api"
 
 interface Incident {
   id: string
@@ -36,7 +37,7 @@ export default function UpdateIncidentPage({ params }: { params: { id: string } 
           throw new Error("No authentication token found")
         }
 
-        const response = await fetch(`http://localhost:8080/api/incidents/${params.id}`, {
+        const response = await fetch(`${API_BASE_URL}/api/incidents/${params.id}`, {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",

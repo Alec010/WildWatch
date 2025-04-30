@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import Cookies from "js-cookie";
 import { useEffect, useState } from "react";
+import { API_BASE_URL } from "@/utils/api";
 
 interface User {
   firstName: string;
@@ -36,7 +37,7 @@ export function Sidebar() {
       }
 
       try {
-        const response = await fetch("http://localhost:8080/api/auth/profile", {
+        const response = await fetch(`${API_BASE_URL}/api/auth/profile`, {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",

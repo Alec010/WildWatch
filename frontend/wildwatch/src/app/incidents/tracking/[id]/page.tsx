@@ -6,6 +6,7 @@ import { Sidebar } from "@/components/Sidebar"
 import { CheckCircle, Clock, ChevronLeft, FileText, AlertCircle, Loader2 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
+import { API_BASE_URL } from "@/utils/api"
 
 interface IncidentDetails {
   id: string
@@ -99,7 +100,7 @@ export default function CaseDetailsPage() {
           return
         }
         // Fetch incident details
-        const response = await fetch(`http://localhost:8080/api/incidents/track/${id}`, {
+        const response = await fetch(`${API_BASE_URL}/api/incidents/track/${id}`, {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
@@ -110,7 +111,7 @@ export default function CaseDetailsPage() {
         setIncident(data)
         // Fetch updates for last updated
         if (data.id) {
-          const updatesRes = await fetch(`http://localhost:8080/api/incidents/${data.id}/updates`, {
+          const updatesRes = await fetch(`${API_BASE_URL}/api/incidents/${data.id}/updates`, {
             headers: {
               Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
@@ -126,7 +127,7 @@ export default function CaseDetailsPage() {
         }
         // Fetch office admin info
         if (data.assignedOffice) {
-          const officeAdminRes = await fetch(`http://localhost:8080/api/setup/by-office/${data.assignedOffice}`)
+          const officeAdminRes = await fetch(`${API_BASE_URL}/api/setup/by-office/${data.assignedOffice}`)
           if (officeAdminRes.ok) {
             const admin: OfficeAdminUser = await officeAdminRes.json()
             setOfficeAdmin(admin)

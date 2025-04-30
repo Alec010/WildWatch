@@ -19,6 +19,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import Cookies from "js-cookie";
+import { API_BASE_URL } from "@/utils/api";
 
 interface Office {
   code: string;
@@ -51,7 +52,7 @@ export default function IncidentSubmissionPage() {
         const token = Cookies.get("token");
         if (!token) throw new Error("No authentication token found");
 
-        const response = await fetch("http://localhost:8080/api/offices", {
+        const response = await fetch(`${API_BASE_URL}/api/offices`, {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",

@@ -41,6 +41,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { API_BASE_URL } from "@/utils/api"
 
 interface IncidentUpdate {
   id: number
@@ -104,7 +105,7 @@ export default function UpdateApprovedCasePage({ params }: { params: Promise<{ i
         throw new Error("No authentication token found")
       }
 
-      const response = await fetch(`http://localhost:8080/api/incidents/${resolvedParams.id}/updates`, {
+      const response = await fetch(`${API_BASE_URL}/api/incidents/${resolvedParams.id}/updates`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -149,7 +150,7 @@ export default function UpdateApprovedCasePage({ params }: { params: Promise<{ i
         }
 
         // Fetch incident details
-        const incidentResponse = await fetch(`http://localhost:8080/api/incidents/${resolvedParams.id}`, {
+        const incidentResponse = await fetch(`${API_BASE_URL}/api/incidents/${resolvedParams.id}`, {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
@@ -216,7 +217,7 @@ export default function UpdateApprovedCasePage({ params }: { params: Promise<{ i
         priorityLevel,
       }
 
-      const response = await fetch(`http://localhost:8080/api/incidents/${resolvedParams.id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/incidents/${resolvedParams.id}`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -271,7 +272,7 @@ export default function UpdateApprovedCasePage({ params }: { params: Promise<{ i
         priorityLevel,
       }
 
-      const response = await fetch(`http://localhost:8080/api/incidents/${resolvedParams.id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/incidents/${resolvedParams.id}`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -323,7 +324,7 @@ export default function UpdateApprovedCasePage({ params }: { params: Promise<{ i
         priorityLevel,
       }
 
-      const response = await fetch(`http://localhost:8080/api/incidents/${resolvedParams.id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/incidents/${resolvedParams.id}`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,

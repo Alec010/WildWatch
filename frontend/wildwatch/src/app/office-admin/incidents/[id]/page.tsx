@@ -28,6 +28,7 @@ import Image from "next/image"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { API_BASE_URL } from "@/utils/api"
 
 interface Witness {
   id: string
@@ -108,7 +109,7 @@ export default function IncidentDetailsPage({ params }: PageProps) {
           throw new Error("No authentication token found")
         }
 
-        const response = await fetch(`http://localhost:8080/api/incidents/${id}`, {
+        const response = await fetch(`${API_BASE_URL}/api/incidents/${id}`, {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
@@ -149,7 +150,7 @@ export default function IncidentDetailsPage({ params }: PageProps) {
         throw new Error("No authentication token found")
       }
 
-      const response = await fetch(`http://localhost:8080/api/incidents/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/incidents/${id}`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -221,7 +222,7 @@ export default function IncidentDetailsPage({ params }: PageProps) {
         throw new Error("No authentication token found")
       }
 
-      const response = await fetch(`http://localhost:8080/api/incidents/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/incidents/${id}`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -282,7 +283,7 @@ export default function IncidentDetailsPage({ params }: PageProps) {
         throw new Error("No authentication token found")
       }
 
-      const response = await fetch(`http://localhost:8080/api/incidents/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/incidents/${id}`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,

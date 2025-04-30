@@ -22,6 +22,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { API_BASE_URL } from "@/utils/api"
 
 interface UserProfile {
   firstName: string
@@ -110,7 +111,7 @@ function ResetPasswordSection({ authProvider }: { authProvider?: string }) {
     setError("")
     try {
       const token = Cookies.get("token")
-      const res = await fetch("http://localhost:8080/api/users/me/change-password", {
+      const res = await fetch(`${API_BASE_URL}/api/users/me/change-password`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -319,7 +320,7 @@ function ProfileContent({ user }: { user: UserProfile }) {
     try {
       setIsSubmitting(true)
       const token = Cookies.get("token")
-      const response = await fetch("http://localhost:8080/api/users/me", {
+      const response = await fetch(`${API_BASE_URL}/api/users/me`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -604,7 +605,7 @@ export default function ProfilePage() {
 
   const fetchUserProfile = async (token: string) => {
     try {
-      const response = await fetch("http://localhost:8080/api/auth/profile", {
+      const response = await fetch(`${API_BASE_URL}/api/auth/profile`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",

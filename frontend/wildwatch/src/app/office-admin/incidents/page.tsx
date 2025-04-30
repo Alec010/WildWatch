@@ -6,6 +6,7 @@ import { OfficeAdminSidebar } from '@/components/OfficeAdminSidebar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Pencil, Trash2, AlertCircle } from 'lucide-react';
+import { API_BASE_URL } from "@/utils/api";
 
 interface Incident {
   id: string;
@@ -40,7 +41,7 @@ export default function IncidentManagementPage() {
           throw new Error('No authentication token found');
         }
 
-        const response = await fetch('http://localhost:8080/api/incidents/office', {
+        const response = await fetch(`${API_BASE_URL}/api/incidents/office`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',

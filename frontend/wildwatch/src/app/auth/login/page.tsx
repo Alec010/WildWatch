@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
+import { API_BASE_URL } from "@/utils/api";
 
 const LoginPage: React.FC = () => {
   const router = useRouter();
@@ -19,7 +20,7 @@ const LoginPage: React.FC = () => {
     setError(null);
 
     try {
-      const response = await fetch('http://localhost:8080/api/auth/login', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

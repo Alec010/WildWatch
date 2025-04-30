@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight, Search, FileEdit } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { API_BASE_URL } from "@/utils/api"
 
 interface Incident {
   id: string
@@ -48,7 +49,7 @@ export default function ApprovedCaseTracker() {
           throw new Error("No authentication token found")
         }
 
-        const response = await fetch("http://localhost:8080/api/incidents/in-progress", {
+        const response = await fetch(`${API_BASE_URL}/api/incidents/in-progress`, {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",

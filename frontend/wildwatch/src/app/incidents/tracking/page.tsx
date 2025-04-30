@@ -17,6 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import NotificationDropdown from "@/components/ui/notificationdropdown";
 import { Inter } from "next/font/google";
+import { API_BASE_URL } from "@/utils/api";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -72,15 +73,12 @@ export default function CaseTrackingPage() {
 
       try {
         // Fetch incidents
-        const incidentsResponse = await fetch(
-          "http://localhost:8080/api/incidents/my-incidents",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
+        const incidentsResponse = await fetch(`${API_BASE_URL}/api/incidents/my-incidents`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
 
         if (!incidentsResponse.ok)
           throw new Error(`HTTP error! status: ${incidentsResponse.status}`);
@@ -92,15 +90,12 @@ export default function CaseTrackingPage() {
         ));
 
         // Fetch activity logs
-        const activitiesResponse = await fetch(
-          "http://localhost:8080/api/activity-logs",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
+        const activitiesResponse = await fetch(`${API_BASE_URL}/api/activity-logs`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
 
         if (!activitiesResponse.ok)
           throw new Error(`HTTP error! status: ${activitiesResponse.status}`);

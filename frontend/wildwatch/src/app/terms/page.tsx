@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import Image from "next/image";
 import { handleAuthRedirect } from "@/utils/auth";
 import Cookies from "js-cookie";
+import { API_BASE_URL } from "@/utils/api";
 
 export default function TermsPage() {
   const router = useRouter();
@@ -32,7 +33,7 @@ export default function TermsPage() {
         throw new Error('No authentication token found');
       }
       
-      const response = await fetch('http://localhost:8080/api/terms/accept', {
+      const response = await fetch(`${API_BASE_URL}/api/terms/accept`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -66,7 +67,7 @@ export default function TermsPage() {
         router.push(redirectPath);
       } else {
         // For regular users, fetch the user profile to get the role
-        const profileResponse = await fetch('http://localhost:8080/api/auth/profile', {
+        const profileResponse = await fetch(`${API_BASE_URL}/api/auth/profile`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
