@@ -1,0 +1,1 @@
+ALTER TABLE incident_updates ADD COLUMN updated_by_name VARCHAR(255); 
