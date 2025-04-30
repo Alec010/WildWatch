@@ -112,7 +112,9 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOriginPatterns(Arrays.asList(
             "http://localhost:3000",
-            "https://jcldwuryjuqtrbsqlgoi.supabase.co"
+            "https://jcldwuryjuqtrbsqlgoi.supabase.co",
+            "https://*.onrender.com",
+            "https://wildwatch.onrender.com"
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList(

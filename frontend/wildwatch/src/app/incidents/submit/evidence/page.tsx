@@ -259,8 +259,21 @@ export default function EvidenceSubmissionPage() {
                   formData.witnesses.map((witness, index) => (
                     <Card
                       key={index}
-                      className="p-4 space-y-4 mb-4 border-gray-200"
+                      className="p-4 space-y-4 mb-4 border-gray-200 relative"
                     >
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          const updatedWitnesses = formData.witnesses.filter((_, i) => i !== index);
+                          setFormData((prev) => ({ ...prev, witnesses: updatedWitnesses }));
+                        }}
+                        className="absolute top-3 right-3 text-gray-500 hover:text-[#8B0000]"
+                        aria-label="Remove witness"
+                      >
+                        <X size={16} />
+                      </Button>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label className="text-sm">Name</Label>

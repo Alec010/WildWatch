@@ -35,6 +35,7 @@ public class IncidentResponse {
     // New fields for frontend display
     private String officeAdminName;
     private LocalDateTime finishedDate;
+    private Boolean verified;
 
     @Data
     public static class EvidenceDTO {
@@ -72,6 +73,7 @@ public class IncidentResponse {
         response.setSubmittedByEmail(incident.getSubmittedBy().getEmail());
         response.setSubmittedByPhone(incident.getSubmittedBy().getContactNumber());
         response.setSubmittedAt(incident.getSubmittedAt());
+        response.setVerified(incident.getVerified());
 
         // Map evidence
         if (incident.getEvidence() != null) {

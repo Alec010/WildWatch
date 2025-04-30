@@ -15,7 +15,9 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addMapping("/**")
                 .allowedOriginPatterns(
                     "http://localhost:3000",
-                    "https://jcldwuryjuqtrbsqlgoi.supabase.co"
+                    "https://jcldwuryjuqtrbsqlgoi.supabase.co",
+                    "https://*.onrender.com",
+                    "https://wildwatch.onrender.com"
                 )
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")

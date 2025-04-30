@@ -83,7 +83,9 @@ export default function CaseDetailsPage() {
   const isDismissed = normalizedStatus === "dismissed"
   const currentStep = isDismissed
     ? statusOrder.indexOf("Dismissed")
-    : statusOrder.findIndex((s) => normalizedStatus.includes(s.toLowerCase()))
+    : normalizedStatus === "pending"
+      ? 0
+      : statusOrder.findIndex((s) => normalizedStatus.includes(s.toLowerCase()))
 
   useEffect(() => {
     const fetchIncidentDetails = async () => {
@@ -504,52 +506,43 @@ export default function CaseDetailsPage() {
                     <span className="text-gray-700 font-medium">This case has been dismissed. No further action will be taken.</span>
                   </div>
                 ) : (
-                <ul className="space-y-4">
-                  <li className="flex items-start gap-3">
-                    <div className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
-                      <CheckCircle className="w-3 h-3 text-green-600" />
-                    </div>
-                    <div>
-                      <span className="font-medium text-sm">Initial Review</span>
-                      <div className="text-xs text-gray-500">Case reviewed by security team</div>
-                    </div>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <div className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
-                      <CheckCircle className="w-3 h-3 text-green-600" />
-                    </div>
-                    <div>
-                      <span className="font-medium text-sm">Incident Updates</span>
-                      <div className="text-xs text-gray-500">Gathering security footage and witness statements</div>
-                    </div>
-                  </li>
-                  <li className="flex items-start gap-3">
-                      <div className={`mt-0.5 flex-shrink-0 w-5 h-5 rounded-full ${currentStep >= 2 ? "bg-green-100" : "bg-gray-100"} flex items-center justify-center`}>
-                      {currentStep >= 2 ? (
-                        <CheckCircle className="w-3 h-3 text-green-600" />
-                      ) : (
-                        <div className="w-2 h-2 rounded-full bg-gray-300" />
-                      )}
-                    </div>
-                    <div>
-                      <span className="font-medium text-sm">In Progress</span>
-                      <div className="text-xs text-gray-500">Implementing security measures based on findings</div>
-                    </div>
-                  </li>
-                  <li className="flex items-start gap-3">
-                      <div className={`mt-0.5 flex-shrink-0 w-5 h-5 rounded-full ${currentStep >= 3 ? "bg-green-100" : "bg-gray-100"} flex items-center justify-center`}>
-                      {currentStep >= 3 ? (
-                        <CheckCircle className="w-3 h-3 text-green-600" />
-                      ) : (
-                        <div className="w-2 h-2 rounded-full bg-gray-300" />
-                      )}
-                    </div>
-                    <div>
-                      <span className="font-medium text-sm">Case Resolution</span>
-                      <div className="text-xs text-gray-500">Final report and case closure</div>
-                    </div>
-                  </li>
-                </ul>
+                  (() => {
+                    const steps = [
+                      { label: "Initial Review", desc: "Case reviewed by security team" },
+                      { label: "Incident Updates", desc: "Gathering security footage and witness statements" },
+                      { label: "In Progress", desc: "Implementing security measures based on findings" },
+                      { label: "Case Resolution", desc: "Final report and case closure" },
+                    ];
+                    // Map status to step index
+                    const statusMap: Record<string, number> = {
+                      pending: 0,
+                      "initial review": 0,
+                      "incident updates": 1,
+                      "in progress": 2,
+                      resolved: 3,
+                      "case resolution": 3,
+                    };
+                    const currentStepIdx = statusMap[normalizedStatus] ?? 0;
+                    return (
+                      <ul className="space-y-4">
+                        {steps.map((step, idx) => (
+                          <li key={step.label} className="flex items-start gap-3">
+                            <div className={`mt-0.5 flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${idx <= currentStepIdx ? "bg-green-100" : "bg-gray-100"}`}>
+                              {idx <= currentStepIdx ? (
+                                <CheckCircle className="w-3 h-3 text-green-600" />
+                              ) : (
+                                <div className="w-2 h-2 rounded-full bg-gray-300" />
+                              )}
+                            </div>
+                            <div>
+                              <span className="font-medium text-sm">{step.label}</span>
+                              <div className="text-xs text-gray-500">{step.desc}</div>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    );
+                  })()
                 )}
               </div>
             </div>

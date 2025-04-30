@@ -93,6 +93,7 @@ export default function IncidentDetailsPage({ params }: PageProps) {
     icon: JSX.Element
     color: string
   } | null>(null)
+  const [countdown, setCountdown] = useState(3)
   const { id } = use(params)
 
   useEffect(() => {
@@ -178,11 +179,22 @@ export default function IncidentDetailsPage({ params }: PageProps) {
         color: "bg-green-50 border-green-200",
       })
       setShowModal(true)
+      setCountdown(3)
 
-      // Redirect after 3 seconds
-      setTimeout(() => {
-        router.push("/office-admin/dashboard")
-      }, 3000)
+      // Start countdown
+      const countdownInterval = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(countdownInterval)
+            router.push("/office-admin/dashboard")
+            return 0
+          }
+          return prev - 1
+        })
+      }, 1000)
+
+      // Cleanup interval on unmount
+      return () => clearInterval(countdownInterval)
     } catch (error) {
       console.error("Error approving incident:", error)
       setModalContent({
@@ -776,8 +788,8 @@ export default function IncidentDetailsPage({ params }: PageProps) {
 
         {/* Modal */}
         {showModal && modalContent && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className={`bg-white rounded-lg shadow-xl max-w-md w-full mx-4 ${modalContent.color}`}>
+          <div className="fixed inset-0 backdrop-blur-sm bg-black/30 flex items-center justify-center z-50">
+            <div className={`bg-white rounded-lg shadow-xl max-w-md w-full mx-4 ${modalContent.color} animate-in fade-in zoom-in duration-300`}>
               <div className="p-6">
                 <div className="flex flex-col items-center text-center">
                   {modalContent.icon}
@@ -788,7 +800,7 @@ export default function IncidentDetailsPage({ params }: PageProps) {
                     {modalContent.message}
                   </p>
                   <div className="mt-4 text-sm text-gray-500">
-                    Redirecting to dashboard in 3 seconds...
+                    Redirecting to dashboard in <span className="font-bold text-[#8B0000]">{countdown}</span> seconds...
                   </div>
                 </div>
               </div>

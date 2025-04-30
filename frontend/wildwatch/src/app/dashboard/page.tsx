@@ -338,7 +338,7 @@ export default function DashboardPage() {
                           size="sm"
                           className="text-xs border-[#800000] text-[#800000] hover:bg-[#fff9f9]"
                           onClick={() =>
-                            router.push(`/incidents/${incident.id}`)
+                            router.push(`/incidents/tracking/${incident.trackingNumber}`)
                           }
                         >
                           View Details
