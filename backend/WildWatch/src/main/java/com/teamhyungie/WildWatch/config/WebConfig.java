@@ -17,7 +17,9 @@ public class WebConfig implements WebMvcConfigurer {
                     "http://localhost:3000",
                     "https://jcldwuryjuqtrbsqlgoi.supabase.co",
                     "https://*.onrender.com",
-                    "https://wildwatch.onrender.com"
+                    "https://wildwatch.onrender.com",
+                    "https://*.vercel.app",
+                    "https://wild-watch-cca16hidi-alec010s-projects.vercel.app"
                 )
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")

@@ -114,7 +114,9 @@ public class SecurityConfig {
             "http://localhost:3000",
             "https://jcldwuryjuqtrbsqlgoi.supabase.co",
             "https://*.onrender.com",
-            "https://wildwatch.onrender.com"
+            "https://wildwatch.onrender.com",
+            "https://*.vercel.app",
+            "https://wild-watch-cca16hidi-alec010s-projects.vercel.app"
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList(
