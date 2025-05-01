@@ -26,8 +26,6 @@ public class AuthService {
 
     public AuthResponse register(RegisterRequest request) {
         User user = userService.registerUser(request);
-        // Ensure terms_accepted is false for new users
-        user.setTermsAccepted(false);
         user = userService.save(user);
         
         String token = jwtUtil.generateToken(userDetailsService.loadUserByUsername(user.getEmail()));

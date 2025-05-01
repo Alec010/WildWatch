@@ -33,4 +33,6 @@ public class RegisterRequest {
     @NotBlank(message = "Contact number is required")
     @Pattern(regexp = "^\\+?[0-9]{10,15}$", message = "Please provide a valid contact number")
     private String contactNumber;
+
+    private boolean termsAccepted;
 } 
