@@ -244,7 +244,7 @@ public class IncidentService {
                 "UPDATE",
                 "Update provided" + updateInfo + ": " + request.getUpdateMessage(),
                 updatedIncident,
-                incident.getSubmittedBy()
+                user
             );
             
             incidentUpdateRepository.save(update);
@@ -259,7 +259,7 @@ public class IncidentService {
                 "STATUS_CHANGE",
                 "Case #" + incident.getTrackingNumber() + " status changed from '" + oldStatus + "' to '" + request.getStatus() + "'" + updateInfo,
                 updatedIncident,
-                incident.getSubmittedBy()
+                user
             );
         }
 
