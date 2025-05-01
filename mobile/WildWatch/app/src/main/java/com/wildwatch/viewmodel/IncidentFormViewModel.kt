@@ -21,11 +21,12 @@ class IncidentFormViewModel(
 ) : ViewModel() {
 
     private val _formState = MutableStateFlow(IncidentFormState())
-    private var isSubmitting = false  // ✅ Add this at the top of your ViewModel
     val formState: StateFlow<IncidentFormState> = _formState
 
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage
+
+    private var isSubmitting = false
 
     fun clearError() {
         _errorMessage.value = null
@@ -36,9 +37,8 @@ class IncidentFormViewModel(
     }
 
     fun updateFormState(update: IncidentFormState) {
-        println("🔥 [UPDATE] State = $update")
+        Log.d("IncidentFormViewModel", "🔥 [UPDATE] State = $update")
         _formState.value = update
-
     }
 
     fun addWitness(witness: WitnessDTO) {
@@ -59,11 +59,64 @@ class IncidentFormViewModel(
         _formState.value = IncidentFormState()
     }
 
-    fun submitIncident(
-        evidenceFiles: List<File> = emptyList(),
-        onSuccess: () -> Unit,
-        onError: (String) -> Unit
-    ) {
+    fun addEvidence(uri: String, file: File) {
+        if (file.exists()) {
+            _formState.value = _formState.value.copy(
+                evidenceUris = _formState.value.evidenceUris + uri,
+                evidenceFiles = _formState.value.evidenceFiles + file
+            )
+            Log.d("IncidentFormViewModel", "Added evidence: ${file.name}")
+        } else {
+            Log.e("IncidentFormViewModel", "Failed to add evidence: File doesn't exist - ${file.absolutePath}")
+        }
+    }
+
+    fun removeEvidence(index: Int) {
+        val currentUris = _formState.value.evidenceUris.toMutableList()
+        val currentFiles = _formState.value.evidenceFiles.toMutableList()
+        if (index in currentUris.indices) {
+            try {
+                val file = currentFiles[index]
+                if (file.exists()) {
+                    file.delete()
+                }
+            } catch (e: Exception) {
+                Log.e("IncidentFormViewModel", "Error deleting file: ${e.message}")
+            }
+            
+            currentUris.removeAt(index)
+            currentFiles.removeAt(index)
+            _formState.value = _formState.value.copy(
+                evidenceUris = currentUris,
+                evidenceFiles = currentFiles
+            )
+            Log.d("IncidentFormViewModel", "Removed evidence at index $index")
+        }
+    }
+
+    fun clearEvidence() {
+        _formState.value.evidenceFiles.forEach { file ->
+            try {
+                if (file.exists()) {
+                    file.delete()
+                }
+            } catch (e: Exception) {
+                Log.e("IncidentFormViewModel", "Error deleting file: ${e.message}")
+            }
+        }
+        
+        _formState.value = _formState.value.copy(
+            evidenceUris = emptyList(),
+            evidenceFiles = emptyList()
+        )
+        Log.d("IncidentFormViewModel", "Cleared all evidence")
+    }
+
+    fun updateAdditionalNotes(notes: String) {
+        _formState.value = _formState.value.copy(additionalNotes = notes)
+    }
+
+    fun submitIncident(onSuccess: () -> Unit, onError: (String) -> Unit) {
         if (isSubmitting) {
             Log.w("DEBUG", "🚫 submitIncident() blocked: already submitting!")
             return
@@ -73,6 +126,7 @@ class IncidentFormViewModel(
 
         val form = formState.value
         try {
+            // Prepare the IncidentRequest with all necessary fields
             val request = IncidentRequest(
                 incidentType = form.incidentType,
                 dateOfIncident = LocalDate.parse(
@@ -86,14 +140,17 @@ class IncidentFormViewModel(
                 location = form.location,
                 description = form.description,
                 assignedOffice = form.assignedOffice,
-                witnesses = form.witnesses
+                witnesses = form.witnesses,
+                additionalNotes = form.additionalNotes,
+                evidenceUris = form.evidenceUris,
+                evidenceFiles = form.evidenceFiles
             )
 
             viewModelScope.launch {
                 try {
-                    val response = repository.createIncident(request, evidenceFiles)
-                    val responseBody = response.body()
-                    if (response.isSuccessful && responseBody != null) {
+                    // Submit the incident to the repository with the evidence files
+                    val response = repository.createIncident(request, form.evidenceFiles)
+                    if (response.isSuccessful) {
                         Log.d("DEBUG", "✅ submitIncident(): Success! Calling onSuccess()")
                         onSuccess()
                     } else {
@@ -114,6 +171,8 @@ class IncidentFormViewModel(
             Log.d("DEBUG", "🔓 submitIncident(): isSubmitting unlocked (parsing error)")
         }
     }
+
+    // Methods for updating fields
     fun updateIncidentType(incidentType: String) {
         _formState.value = _formState.value.copy(incidentType = incidentType)
     }
@@ -137,33 +196,4 @@ class IncidentFormViewModel(
     fun updateTimeOfIncident(time: String) {
         _formState.value = _formState.value.copy(timeOfIncident = time)
     }
-
-    fun updateAdditionalNotes(notes: String) {
-        _formState.value = _formState.value.copy(additionalNotes = notes)
-    }
-
-    fun updateWitness(index: Int, witness: WitnessDTO) {
-        val current = _formState.value.witnesses.toMutableList()
-        if (index in current.indices) {
-            current[index] = witness
-            _formState.value = _formState.value.copy(witnesses = current)
-        }
-    }
-    fun addEvidence(uri: String) {
-        if (!_formState.value.evidenceUris.contains(uri)) {
-            _formState.value = _formState.value.copy(
-                evidenceUris = _formState.value.evidenceUris + uri
-            )
-        }
-    }
-
-
-    fun removeEvidence(index: Int) {
-        val current = _formState.value.evidenceUris.toMutableList()
-        if (index in current.indices) {
-            current.removeAt(index)
-            _formState.value = _formState.value.copy(evidenceUris = current)
-        }
-    }
-
 }

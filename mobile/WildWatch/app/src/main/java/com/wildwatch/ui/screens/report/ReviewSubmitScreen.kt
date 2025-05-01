@@ -2,15 +2,14 @@ package com.wildwatch.ui.screens.report
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -19,13 +18,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.wildwatch.model.IncidentFormState
 import com.wildwatch.viewmodel.IncidentFormViewModel
 import com.wildwatch.ui.components.*
 import com.wildwatch.ui.theme.WildWatchRed
@@ -43,13 +41,15 @@ fun ReviewSubmitScreen(
 ) {
     val darkRed = WildWatchRed
     val backgroundColor = Color(0xFFF5F5F5)
-    val sectionBlue = darkRed // Use darkRed for section headers instead of blue
 
     val context = LocalContext.current
     val formState by formViewModel.formState.collectAsState()
-    var isEditingIncidentDetails by remember { mutableStateOf(false) }
-    var isEditingEvidenceWitnesses by remember { mutableStateOf(false) }
+    val errorMessage by formViewModel.errorMessage.collectAsState()
 
+    // Editing states
+    var isEditingIncidentDetails by remember { mutableStateOf(false) }
+
+    // Editable fields
     var editableIncidentType by remember { mutableStateOf(formState.incidentType) }
     var editableDateOfIncident by remember { mutableStateOf(formState.dateOfIncident) }
     var editableTimeOfIncident by remember { mutableStateOf(formState.timeOfIncident) }
@@ -57,9 +57,11 @@ fun ReviewSubmitScreen(
     var editableDescription by remember { mutableStateOf(formState.description) }
     var editableAssignedOffice by remember { mutableStateOf(formState.assignedOffice) }
 
+    // Confirmation checkboxes
     var confirmAccurate by remember { mutableStateOf(false) }
     var confirmContact by remember { mutableStateOf(false) }
 
+    // Date and time pickers
     var showDatePicker by remember { mutableStateOf(false) }
     val datePickerState = rememberDatePickerState(
         initialSelectedDateMillis = System.currentTimeMillis(),
@@ -73,6 +75,45 @@ fun ReviewSubmitScreen(
 
     var showTimePicker by remember { mutableStateOf(false) }
     val timePickerState = rememberTimePickerState()
+
+    // Error dialog state
+    var showErrorDialog by remember { mutableStateOf(false) }
+    var errorDialogMessage by remember { mutableStateOf("") }
+
+    // Update editable fields when formState changes
+    LaunchedEffect(formState) {
+        editableIncidentType = formState.incidentType
+        editableDateOfIncident = formState.dateOfIncident
+        editableTimeOfIncident = formState.timeOfIncident
+        editableLocation = formState.location
+        editableDescription = formState.description
+        editableAssignedOffice = formState.assignedOffice
+    }
+
+    // Handle error messages from ViewModel
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let {
+            errorDialogMessage = it
+            showErrorDialog = true
+            formViewModel.clearError()
+        }
+    }
+
+    // Error dialog
+    if (showErrorDialog) {
+        AlertDialog(
+            onDismissRequest = { showErrorDialog = false },
+            title = { Text("Error") },
+            text = { Text(errorDialogMessage) },
+            confirmButton = {
+                TextButton(onClick = { showErrorDialog = false }) {
+                    Text("OK")
+                }
+            },
+            containerColor = Color.White,
+            titleContentColor = darkRed
+        )
+    }
 
     Scaffold(
         containerColor = backgroundColor,
@@ -152,6 +193,38 @@ fun ReviewSubmitScreen(
                 }
             }
 
+            // Red header section
+            Surface(
+                color = darkRed,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = "Review & Submit",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                        Text(
+                            text = "Review your report details before submission",
+                            color = Color.White.copy(alpha = 0.8f),
+                            fontSize = 14.sp
+                        )
+                    }
+                }
+            }
+
             // Main content
             Column(
                 modifier = Modifier
@@ -199,6 +272,26 @@ fun ReviewSubmitScreen(
                             modifier = Modifier.padding(bottom = 12.dp)
                         )
 
+                        // Incident Summary Card
+                        Surface(
+                            color = Color(0xFFF9F9F9),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 16.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp)
+                            ) {
+                                Text(
+                                    text = formState.description,
+                                    fontSize = 14.sp,
+                                    color = Color.DarkGray
+                                )
+                            }
+                        }
+
                         // Incident Details Section
                         if (isEditingIncidentDetails) {
                             // Editable fields
@@ -219,7 +312,16 @@ fun ReviewSubmitScreen(
                                     )
 
                                     TextButton(
-                                        onClick = { isEditingIncidentDetails = false },
+                                        onClick = {
+                                            // Reset to original values
+                                            editableIncidentType = formState.incidentType
+                                            editableDateOfIncident = formState.dateOfIncident
+                                            editableTimeOfIncident = formState.timeOfIncident
+                                            editableLocation = formState.location
+                                            editableDescription = formState.description
+                                            editableAssignedOffice = formState.assignedOffice
+                                            isEditingIncidentDetails = false
+                                        },
                                         colors = ButtonDefaults.textButtonColors(
                                             contentColor = Color.Gray
                                         )
@@ -344,6 +446,18 @@ fun ReviewSubmitScreen(
 
                                 Button(
                                     onClick = {
+                                        // Validate inputs
+                                        if (editableIncidentType.isBlank() ||
+                                            editableDateOfIncident.isBlank() ||
+                                            editableTimeOfIncident.isBlank() ||
+                                            editableLocation.isBlank() ||
+                                            editableDescription.isBlank() ||
+                                            editableAssignedOffice.isBlank()) {
+
+                                            Toast.makeText(context, "All fields are required", Toast.LENGTH_SHORT).show()
+                                            return@Button
+                                        }
+
                                         try {
                                             // Update the form state
                                             formViewModel.updateFormState(
@@ -357,8 +471,12 @@ fun ReviewSubmitScreen(
                                                 )
                                             )
                                             isEditingIncidentDetails = false
+
+                                            // Log the update
+                                            Log.d("ReviewSubmitScreen", "Updated incident details")
                                         } catch (e: Exception) {
                                             Toast.makeText(context, "Invalid input. Please check your entries.", Toast.LENGTH_SHORT).show()
+                                            Log.e("ReviewSubmitScreen", "Error updating incident details", e)
                                         }
                                     },
                                     colors = ButtonDefaults.buttonColors(
@@ -376,7 +494,7 @@ fun ReviewSubmitScreen(
                                 }
                             }
                         } else {
-                            // Read-only incident details - blue section header with edit button
+                            // Read-only incident details - section header with edit button
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -405,6 +523,7 @@ fun ReviewSubmitScreen(
 
                                 IconButton(
                                     onClick = {
+                                        // Initialize editable fields with current values
                                         editableIncidentType = formState.incidentType
                                         editableDateOfIncident = formState.dateOfIncident
                                         editableTimeOfIncident = formState.timeOfIncident
@@ -441,7 +560,7 @@ fun ReviewSubmitScreen(
                             }
                         }
 
-                        // Evidence & Witnesses Section - blue section header with edit button
+                        // Evidence & Witnesses Section - section header with edit button
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -671,7 +790,15 @@ fun ReviewSubmitScreen(
                                 Spacer(modifier = Modifier.width(16.dp))
 
                                 Button(
-                                    onClick = onSubmitClick,
+                                    onClick = {
+                                        // Validate form before submission
+                                        if (!validateForm(formState, confirmAccurate, confirmContact, context)) {
+                                            return@Button
+                                        }
+
+                                        // Call the onSubmitClick callback provided by ReportFlowHost
+                                        onSubmitClick()
+                                    },
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = darkRed
                                     ),
@@ -711,4 +838,34 @@ fun ReviewSubmitScreen(
             }
         }
     }
+}
+
+/**
+ * Validates the form before submission
+ */
+private fun validateForm(
+    formState: IncidentFormState,
+    confirmAccurate: Boolean,
+    confirmContact: Boolean,
+    context: Context
+): Boolean {
+    // Check if all required fields are filled
+    if (formState.incidentType.isBlank() ||
+        formState.dateOfIncident.isBlank() ||
+        formState.timeOfIncident.isBlank() ||
+        formState.location.isBlank() ||
+        formState.description.isBlank() ||
+        formState.assignedOffice.isBlank()) {
+
+        Toast.makeText(context, "Please fill in all required incident details", Toast.LENGTH_SHORT).show()
+        return false
+    }
+
+    // Check if confirmation checkboxes are checked
+    if (!confirmAccurate || !confirmContact) {
+        Toast.makeText(context, "Please confirm both statements before submitting", Toast.LENGTH_SHORT).show()
+        return false
+    }
+
+    return true
 }
