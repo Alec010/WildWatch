@@ -13,6 +13,7 @@ import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Save
+import androidx.compose.material.icons.outlined.Logout
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -38,7 +39,7 @@ fun ProfileScreen(
     onBackClick: () -> Unit = {},
     onEditProfileClick: () -> Unit = {},
     onUpdateAccountClick: () -> Unit = {},
-    onDeleteAccountClick: () -> Unit = {}
+    onLogoutClick: () -> Unit = {}
 ) {
     // Define colors
     val primaryColor = Color(0xFF8B0000) // Original WildWatchRed
@@ -537,29 +538,31 @@ fun ProfileScreen(
                         }
                     }
 
-                    // Delete Account Button (only show when not editing)
+                    // Logout Button (only show when not editing)
                     AnimatedVisibility(
                         visible = !isEditing,
                         enter = fadeIn() + expandVertically(),
                         exit = fadeOut() + shrinkVertically()
                     ) {
                         OutlinedButton(
-                            onClick = onDeleteAccountClick,
+                            onClick = {
+                                onLogoutClick() // This will now handle logout
+                            },
                             colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = Color(0xFFE63946)
+                                contentColor = Color(0xFF8B0000)
                             ),
-                            border = BorderStroke(1.dp, Color(0xFFE63946)),
+                            border = BorderStroke(1.dp, Color(0xFF8B0000)),
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
                             contentPadding = PaddingValues(vertical = 12.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Outlined.Delete,
-                                contentDescription = "Delete",
+                                imageVector = Icons.Outlined.Logout,
+                                contentDescription = "Logout",
                                 modifier = Modifier.padding(end = 8.dp)
                             )
                             Text(
-                                text = "Delete Account",
+                                text = "Logout",
                                 fontWeight = FontWeight.Medium
                             )
                         }

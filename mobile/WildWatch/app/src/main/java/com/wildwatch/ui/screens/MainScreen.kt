@@ -1,5 +1,6 @@
 package com.wildwatch.ui.screens
 
+import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -20,6 +21,9 @@ import com.wildwatch.ui.screens.history.HistoryScreen
 import com.wildwatch.ui.screens.profile.ProfileScreen
 import com.wildwatch.viewmodel.CaseTrackingViewModel
 import com.wildwatch.viewmodel.CaseTrackingViewModelFactory
+import com.wildwatch.utils.TokenManager
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
 
 @Composable
 fun MainScreen(
@@ -56,6 +60,22 @@ fun MainScreen(
         )
     )
 
+    val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
+    var shouldNavigateToLogin by remember { mutableStateOf(false) }
+
+    // Handle navigation when shouldNavigateToLogin becomes true
+    LaunchedEffect(shouldNavigateToLogin) {
+        if (shouldNavigateToLogin) {
+            Log.d("WildWatch", "🔄 Navigating to login screen...")
+            navController.navigate(Screen.Login.route) {
+                popUpTo(Screen.Main.route) { inclusive = true }
+            }
+            Log.d("WildWatch", "✅ Navigation to login screen completed")
+            shouldNavigateToLogin = false
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         Box(
             modifier = Modifier
@@ -66,13 +86,22 @@ fun MainScreen(
                 "dashboard" -> DashboardScreen()
                 "history" -> HistoryScreen()
                 "cases" -> {
-                    val context = LocalContext.current
                     val caseTrackingViewModel: CaseTrackingViewModel = viewModel(
                         factory = CaseTrackingViewModelFactory(context)
                     )
                     CaseTrackingScreen(viewModel = caseTrackingViewModel)
                 }
-                "settings" -> ProfileScreen()
+                "settings" -> ProfileScreen(
+                    onLogoutClick = {
+                        Log.d("WildWatch", "🔄 Logout button clicked")
+                        coroutineScope.launch {
+                            Log.d("WildWatch", "🗑️ Clearing authentication token...")
+                            TokenManager.clearToken(context)
+                            Log.d("WildWatch", "✅ Token cleared successfully")
+                            shouldNavigateToLogin = true
+                        }
+                    }
+                )
             }
         }
 
