@@ -1,6 +1,7 @@
 package com.wildwatch.model
 
 import android.net.Uri
+import java.io.File
 
 data class IncidentFormState(
     val incidentType: String = "",
@@ -11,5 +12,6 @@ data class IncidentFormState(
     val description: String = "",
     val witnesses: List<WitnessDTO> = emptyList(),
     val evidenceUris: List<String> = emptyList(),
+    val evidenceFiles: List<File> = emptyList(),
     val additionalNotes: String = ""
 )

@@ -9,6 +9,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.MultipartBody
 import retrofit2.Response
 import java.io.File
+import android.webkit.MimeTypeMap
 
 class IncidentRepository(private val api: IncidentApi) {
 
@@ -16,21 +17,48 @@ class IncidentRepository(private val api: IncidentApi) {
         request: IncidentRequest,
         files: List<File>? = null
     ): Response<IncidentResponse> {
+        // Convert the IncidentRequest object to JSON
         val gson = Gson()
         val json = gson.toJson(request)
         println("📤 Sending JSON: $json")
-        val incidentData = json.toRequestBody("text/plain".toMediaTypeOrNull())
 
-        val fileParts = files?.map { file ->
-            val requestFile = file.readBytes().toRequestBody("multipart/form-data".toMediaTypeOrNull())
-            MultipartBody.Part.createFormData("files", file.name, requestFile)
+        // Prepare the JSON data as a RequestBody
+        val incidentData = json.toRequestBody("application/json".toMediaTypeOrNull())
+
+        // Prepare the file parts if there are files to be uploaded
+        val fileParts = files?.mapNotNull { file ->
+            try {
+                // Get file extension and MIME type
+                val extension = file.extension
+                val mimeType = MimeTypeMap.getSingleton()
+                    .getMimeTypeFromExtension(extension)
+                    ?: "application/octet-stream"
+
+                // Create RequestBody from file
+                val requestFile = file.readBytes()
+                    .toRequestBody(mimeType.toMediaTypeOrNull(), 0, file.length().toInt())
+
+
+                // Create MultipartBody.Part
+                MultipartBody.Part.createFormData(
+                    "files",
+                    file.name,
+                    requestFile
+                )
+            } catch (e: Exception) {
+                println("❌ Error processing file ${file.name}: ${e.message}")
+                null
+            }
         }
 
-        // ✅ Call ONCE and store the response
+        // Make the network request by sending both JSON data and file parts
         val response = api.createIncident(incidentData, fileParts)
+
         if (!response.isSuccessful) {
             println("❌ ${response.code()}: ${response.errorBody()?.string()}")
         }
-        return response  // ✅ Return the same response, not call again!
+
+        // Return the response
+        return response
     }
 }

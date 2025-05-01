@@ -3,7 +3,6 @@ package com.wildwatch.ui.screens.report
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.util.Log
-import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -11,14 +10,11 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -28,24 +24,21 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.wildwatch.model.WitnessDTO
-import com.wildwatch.ui.theme.WildWatchRed
-import com.wildwatch.viewmodel.IncidentFormViewModel
-import com.wildwatch.ui.components.*
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.platform.LocalContext
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import com.wildwatch.model.WitnessDTO
+import com.wildwatch.ui.components.*
+import com.wildwatch.ui.theme.WildWatchRed
+import com.wildwatch.viewmodel.IncidentFormViewModel
 import java.io.File
 import android.Manifest
-
+import android.widget.Toast
+import androidx.compose.ui.graphics.Color
+import android.webkit.MimeTypeMap
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,87 +47,183 @@ fun EvidenceWitnessScreen(
     onContinueClick: () -> Unit = {},
     formViewModel: IncidentFormViewModel
 ) {
-    // Define the request code for camera permission
-    val REQUEST_CAMERA_PERMISSION: Int = 1001  // Specify the type explicitly
-
     val darkRed = WildWatchRed
     val backgroundColor = Color(0xFFF5F5F5)
     val context = LocalContext.current
 
     // Colors for the upload section
-    val mintGreen = Color(0xFFB2EBE0)
-    val lightRed  = Color(0xFFFFCDD2)
+    val lightRed = Color(0xFFFFCDD2)
 
-    // Form state
+    // Form state from ViewModel
+    val formState by formViewModel.formState.collectAsState()
+
+    // Local state for form fields
     var witnessName by remember { mutableStateOf("") }
     var witnessContact by remember { mutableStateOf("") }
     var witnessStatement by remember { mutableStateOf("") }
-    var additionalNotes by remember { mutableStateOf("") }
+    var additionalNotes by remember { mutableStateOf(formState.additionalNotes) }
 
-    // Witness list state
-    val witnesses = remember { mutableStateListOf<WitnessDTO>() }
-
-    // Show add witness form
+    // Local state for UI
     var showWitnessForm by remember { mutableStateOf(false) }
 
-    val formState by formViewModel.formState.collectAsState()
-
-    // Evidence URIs
+    // Mutable state lists that sync with ViewModel
+    val witnesses = remember { mutableStateListOf<WitnessDTO>() }
     val evidenceUris = remember { mutableStateListOf<Uri>() }
+    val evidenceFiles = remember { mutableStateListOf<File>() }
 
-    // Sync values from ViewModel when formState changes
+    // Sync local state with ViewModel when formState changes
     LaunchedEffect(formState) {
         additionalNotes = formState.additionalNotes
         witnesses.clear()
         witnesses.addAll(formState.witnesses)
         evidenceUris.clear()
         evidenceUris.addAll(formState.evidenceUris.map { Uri.parse(it) })
+        evidenceFiles.clear()
+        // Only add files that exist in the cache directory
+        formState.evidenceFiles.forEach { file ->
+            try {
+                val cacheFile = File(context.cacheDir, file.name)
+                if (cacheFile.exists()) {
+                    evidenceFiles.add(cacheFile)
+                } else if (file.exists()) {
+                    // If the original file exists but not in cache, copy it
+                    file.copyTo(cacheFile, overwrite = true)
+                    evidenceFiles.add(cacheFile)
+                }
+            } catch (e: Exception) {
+                Log.e("EvidenceWitnessScreen", "Error handling file: ${e.message}")
+            }
+        }
     }
 
-    // Permissions for camera and storage
-    val permissions = arrayOf(
-        Manifest.permission.CAMERA,
-        Manifest.permission.READ_EXTERNAL_STORAGE,
-        Manifest.permission.WRITE_EXTERNAL_STORAGE
-    )
+    // Permission for camera only
+    val cameraPermission = Manifest.permission.CAMERA
 
-    // Permission request launcher
+    // Permission request launcher for camera
     val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissionsResult ->
-        if (permissionsResult.values.all { it }) {
-            // Permissions granted, proceed with camera functionality
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            Log.d("Permissions", "Camera permission granted")
         } else {
-            // Handle permission denial (optional: show rationale or disable camera feature)
+            Toast.makeText(
+                context,
+                "Camera permission is required to take photos",
+                Toast.LENGTH_LONG
+            ).show()
         }
     }
 
-    // Request permissions if not granted
+    // Check and request camera permission on initial load
     LaunchedEffect(Unit) {
-        val hasPermissions = permissions.all {
-            ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+        val hasCameraPermission = ContextCompat.checkSelfPermission(
+            context,
+            cameraPermission
+        ) == PackageManager.PERMISSION_GRANTED
+        if (!hasCameraPermission) {
+            permissionLauncher.launch(cameraPermission)
         }
-        if (!hasPermissions) {
-            permissionLauncher.launch(permissions) // Request permissions
-        }
-    }
-
-    // Image picker for uploading images
-    val imagePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetMultipleContents()
-    ) { uris: List<Uri> ->
-        evidenceUris.addAll(uris)
     }
 
     // Temporary URI for saving the photo
     var currentPhotoUri by remember { mutableStateOf<Uri?>(null) }
 
-    // Camera picker launcher for taking photos
+    // Clear all button handler
+    TextButton(
+        onClick = {
+            evidenceUris.clear()
+            evidenceFiles.clear()
+            formViewModel.clearEvidence()
+        },
+        colors = ButtonDefaults.textButtonColors(contentColor = darkRed)
+    ) {
+        Icon(
+            imageVector = Icons.Default.Delete,
+            contentDescription = "Clear all",
+            modifier = Modifier.padding(end = 4.dp)
+        )
+        Text("Clear All")
+    }
+
+    // Image picker launcher
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetMultipleContents()
+    ) { uris: List<Uri> ->
+        if (uris.isNotEmpty()) {
+            try {
+                uris.forEach { uri ->
+                    try {
+                        val inputStream = context.contentResolver.openInputStream(uri)
+                        val mimeType = context.contentResolver.getType(uri) ?: "image/jpeg"
+                        val extension = MimeTypeMap.getSingleton()
+                            .getExtensionFromMimeType(mimeType) ?: "jpg"
+                        
+                        // Create a unique filename with timestamp and proper extension
+                        val fileName = "evidence_${System.currentTimeMillis()}_${uri.lastPathSegment?.substringAfterLast('/')?.substringBeforeLast('.')}.$extension"
+                        val file = File(context.cacheDir, fileName)
+                        
+                        inputStream?.use { input ->
+                            file.outputStream().use { output ->
+                                input.copyTo(output)
+                            }
+                        }
+                        
+                        if (file.exists()) {
+                            evidenceUris.add(uri)
+                            evidenceFiles.add(file)
+                            formViewModel.addEvidence(uri.toString(), file)
+                            Log.d("EvidenceWitnessScreen", "Added file: $fileName (${file.length()} bytes)")
+                        } else {
+                            Log.e("EvidenceWitnessScreen", "File creation failed: $fileName")
+                            Toast.makeText(context, "Error saving file: $fileName", Toast.LENGTH_SHORT).show()
+                        }
+                    } catch (e: Exception) {
+                        Log.e("EvidenceWitnessScreen", "Error processing file: ${e.message}")
+                        Toast.makeText(context, "Error processing file: ${uri.lastPathSegment}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                Log.d("EvidenceWitnessScreen", "Added ${uris.size} images, total: ${evidenceUris.size}")
+            } catch (e: Exception) {
+                Log.e("EvidenceWitnessScreen", "Error handling files: ${e.message}")
+                Toast.makeText(context, "Error processing files", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    // Camera launcher
     val takePhotoLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
     ) { success: Boolean ->
         if (success && currentPhotoUri != null) {
-            evidenceUris.add(currentPhotoUri!!)
+            try {
+                val inputStream = context.contentResolver.openInputStream(currentPhotoUri!!)
+                val mimeType = context.contentResolver.getType(currentPhotoUri!!) ?: "image/jpeg"
+                val extension = MimeTypeMap.getSingleton()
+                    .getExtensionFromMimeType(mimeType) ?: "jpg"
+                
+                // Create a unique filename with timestamp and proper extension
+                val fileName = "photo_${System.currentTimeMillis()}.$extension"
+                val file = File(context.cacheDir, fileName)
+                
+                inputStream?.use { input ->
+                    file.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                
+                if (file.exists()) {
+                    evidenceUris.add(currentPhotoUri!!)
+                    evidenceFiles.add(file)
+                    formViewModel.addEvidence(currentPhotoUri.toString(), file)
+                    Log.d("EvidenceWitnessScreen", "Added photo: $fileName (${file.length()} bytes)")
+                } else {
+                    Log.e("EvidenceWitnessScreen", "File creation failed: $fileName")
+                    Toast.makeText(context, "Error saving photo", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Log.e("EvidenceWitnessScreen", "Error processing camera photo: ${e.message}")
+                Toast.makeText(context, "Error processing photo", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -143,7 +232,7 @@ fun EvidenceWitnessScreen(
         FileProvider.getUriForFile(
             context,
             "com.wildwatch.fileprovider",
-            File(context.cacheDir, "photo.jpg")
+            File(context.cacheDir, "photo_${System.currentTimeMillis()}.jpg")
         )
     }
 
@@ -159,7 +248,10 @@ fun EvidenceWitnessScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) {
+                    IconButton(onClick = {
+                        updateFormStateBeforeNavigation(formViewModel, witnesses, evidenceUris, additionalNotes)
+                        onBackClick()
+                    }) {
                         Icon(
                             imageVector = Icons.Default.ArrowBack,
                             contentDescription = "Back",
@@ -200,8 +292,6 @@ fun EvidenceWitnessScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     ProgressStep(number = 1, title = "Incident Details", isActive = false, isCompleted = true)
-
-                    // Line between steps 1 and 2
                     HorizontalDivider(
                         modifier = Modifier
                             .weight(1f)
@@ -209,10 +299,7 @@ fun EvidenceWitnessScreen(
                         color = darkRed,
                         thickness = 1.dp
                     )
-
                     ProgressStep(number = 2, title = "Evidence & Witnesses", isActive = true, isCompleted = false)
-
-                    // Line between steps 2 and 3
                     HorizontalDivider(
                         modifier = Modifier
                             .weight(1f)
@@ -220,7 +307,6 @@ fun EvidenceWitnessScreen(
                         color = Color.Gray,
                         thickness = 1.dp
                     )
-
                     ProgressStep(number = 3, title = "Review & Submit", isActive = false, isCompleted = false)
                 }
             }
@@ -272,7 +358,7 @@ fun EvidenceWitnessScreen(
                             modifier = Modifier.padding(bottom = 12.dp)
                         )
 
-                        // Upload area - new design with camera icon and two buttons side by side
+                        // Upload area
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -289,7 +375,6 @@ fun EvidenceWitnessScreen(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.Center
                             ) {
-                                // Camera icon in mint green
                                 Icon(
                                     imageVector = Icons.Default.CameraAlt,
                                     contentDescription = null,
@@ -299,7 +384,6 @@ fun EvidenceWitnessScreen(
                                         .padding(bottom = 16.dp)
                                 )
 
-                                // Two buttons side by side
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -307,8 +391,16 @@ fun EvidenceWitnessScreen(
                                     // Take Photo button
                                     Button(
                                         onClick = {
-                                            currentPhotoUri = photoUri
-                                            takePhotoLauncher.launch(photoUri)
+                                            val hasCameraPermission = ContextCompat.checkSelfPermission(
+                                                context,
+                                                cameraPermission
+                                            ) == PackageManager.PERMISSION_GRANTED
+                                            if (hasCameraPermission) {
+                                                currentPhotoUri = photoUri
+                                                takePhotoLauncher.launch(photoUri)
+                                            } else {
+                                                permissionLauncher.launch(cameraPermission)
+                                            }
                                         },
                                         colors = ButtonDefaults.buttonColors(
                                             containerColor = lightRed
@@ -334,7 +426,9 @@ fun EvidenceWitnessScreen(
 
                                     // Upload button
                                     Button(
-                                        onClick = { imagePickerLauncher.launch("image/*") },
+                                        onClick = {
+                                            imagePickerLauncher.launch("image/*")
+                                        },
                                         colors = ButtonDefaults.buttonColors(
                                             containerColor = lightRed
                                         ),
@@ -360,9 +454,8 @@ fun EvidenceWitnessScreen(
 
                                 Spacer(modifier = Modifier.height(16.dp))
 
-                                // Maximum images text
                                 Text(
-                                    text = "Maximum upto 5 images",
+                                    text = "Maximum up to 5 images",
                                     color = Color.Gray,
                                     fontSize = 12.sp
                                 )
@@ -376,25 +469,28 @@ fun EvidenceWitnessScreen(
                                 if (evidenceUris.isNotEmpty()) {
                                     TextButton(
                                         onClick = {
-                                            evidenceUris.clear() // Clear all uploaded images
+                                            evidenceUris.clear()
+                                            evidenceFiles.clear()
+                                            formViewModel.clearEvidence()
                                         },
                                         colors = ButtonDefaults.textButtonColors(contentColor = darkRed)
                                     ) {
-                                        Icon(imageVector = Icons.Default.Delete, contentDescription = "Clear all", modifier = Modifier.padding(end = 4.dp))
+                                        Icon(
+                                            imageVector = Icons.Default.Delete,
+                                            contentDescription = "Clear all",
+                                            modifier = Modifier.padding(end = 4.dp)
+                                        )
                                         Text("Clear All")
                                     }
                                 }
                             }
                         )
 
-                        // Check if there are any uploaded images
                         if (evidenceUris.isEmpty()) {
-                            // No images uploaded yet
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(80.dp)
-                                    .clip(RoundedCornerShape(12.dp))
                                     .border(width = 1.dp, color = Color.LightGray, shape = RoundedCornerShape(12.dp)),
                                 contentAlignment = Alignment.Center
                             ) {
@@ -405,7 +501,6 @@ fun EvidenceWitnessScreen(
                                 }
                             }
                         } else {
-                            // Display uploaded images as thumbnails
                             LazyRow(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -413,11 +508,32 @@ fun EvidenceWitnessScreen(
                                     .padding(vertical = 8.dp),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                items(evidenceUris) { uri ->
-                                    ImageThumbnail(
-                                        filename = uri.lastPathSegment ?: "image.jpg",
-                                        imageUri = uri,
-                                    )
+                                itemsIndexed(evidenceUris.toList()) { index, uri ->
+                                    Box(modifier = Modifier.padding(4.dp)) {
+                                        ImageThumbnail(
+                                            filename = uri.lastPathSegment ?: "image.jpg",
+                                            imageUri = uri
+                                        )
+
+                                        IconButton(
+                                            onClick = {
+                                                evidenceUris.removeAt(index)
+                                                evidenceFiles.removeAt(index)
+                                                formViewModel.removeEvidence(index)
+                                            },
+                                            modifier = Modifier
+                                                .size(20.dp)
+                                                .align(Alignment.TopEnd)
+                                                .padding(2.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Close,
+                                                contentDescription = "Remove image",
+                                                tint = darkRed,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -435,16 +551,21 @@ fun EvidenceWitnessScreen(
                             modifier = Modifier.padding(bottom = 16.dp)
                         )
 
-                        // Display added witnesses
                         witnesses.forEachIndexed { index, witness ->
                             WitnessCard(
                                 witness = witness,
-                                onRemove = { witnesses.removeAt(index) },
+                                onRemove = {
+                                    witnesses.removeAt(index)
+                                    formViewModel.updateFormState(
+                                        formState.copy(
+                                            witnesses = witnesses.toList()
+                                        )
+                                    )
+                                },
                                 modifier = Modifier.padding(bottom = 16.dp)
                             )
                         }
 
-                        // Add witness button (when no form is shown)
                         if (!showWitnessForm && witnesses.isEmpty()) {
                             Button(
                                 onClick = { showWitnessForm = true },
@@ -463,7 +584,6 @@ fun EvidenceWitnessScreen(
                             }
                         }
 
-                        // Witness form
                         AnimatedVisibility(
                             visible = showWitnessForm,
                             enter = fadeIn() + expandVertically(),
@@ -483,7 +603,6 @@ fun EvidenceWitnessScreen(
                                         .fillMaxWidth()
                                         .padding(16.dp)
                                 ) {
-                                    // Form title
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -508,7 +627,6 @@ fun EvidenceWitnessScreen(
 
                                     Spacer(modifier = Modifier.height(8.dp))
 
-                                    // Name
                                     OutlinedTextField(
                                         value = witnessName,
                                         onValueChange = { witnessName = it },
@@ -521,7 +639,6 @@ fun EvidenceWitnessScreen(
                                         shape = RoundedCornerShape(8.dp)
                                     )
 
-                                    // Contact Information
                                     OutlinedTextField(
                                         value = witnessContact,
                                         onValueChange = { witnessContact = it },
@@ -534,7 +651,6 @@ fun EvidenceWitnessScreen(
                                         shape = RoundedCornerShape(8.dp)
                                     )
 
-                                    // Statement
                                     OutlinedTextField(
                                         value = witnessStatement,
                                         onValueChange = { witnessStatement = it },
@@ -547,7 +663,6 @@ fun EvidenceWitnessScreen(
                                         shape = RoundedCornerShape(8.dp)
                                     )
 
-                                    // Add witness button
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.End
@@ -564,20 +679,34 @@ fun EvidenceWitnessScreen(
 
                                         Button(
                                             onClick = {
-                                                if (witnessName.isNotBlank()) {
-                                                    witnesses.add(
-                                                        WitnessDTO(
-                                                            name = witnessName,
-                                                            contactInformation = witnessContact,
-                                                            statement = witnessStatement
-                                                        )
-                                                    )
-                                                    // Clear form
-                                                    witnessName = ""
-                                                    witnessContact = ""
-                                                    witnessStatement = ""
-                                                    showWitnessForm = false // Hide form
+                                                if (witnessName.isBlank()) {
+                                                    Toast.makeText(
+                                                        context,
+                                                        "Witness name is required",
+                                                        Toast.LENGTH_SHORT
+                                                    ).show()
+                                                    return@Button
                                                 }
+
+                                                val newWitness = WitnessDTO(
+                                                    name = witnessName,
+                                                    contactInformation = witnessContact,
+                                                    statement = witnessStatement
+                                                )
+
+                                                witnesses.add(newWitness)
+                                                formViewModel.updateFormState(
+                                                    formState.copy(
+                                                        witnesses = witnesses.toList()
+                                                    )
+                                                )
+
+                                                witnessName = ""
+                                                witnessContact = ""
+                                                witnessStatement = ""
+                                                showWitnessForm = false
+
+                                                Log.d("EvidenceWitnessScreen", "Added witness, total: ${witnesses.size}")
                                             },
                                             colors = ButtonDefaults.buttonColors(
                                                 containerColor = darkRed
@@ -596,7 +725,6 @@ fun EvidenceWitnessScreen(
                             }
                         }
 
-                        // Add another witness button (only show when form is hidden and there's at least one witness)
                         if (!showWitnessForm && witnesses.isNotEmpty()) {
                             TextButton(
                                 onClick = { showWitnessForm = true },
@@ -629,7 +757,10 @@ fun EvidenceWitnessScreen(
 
                         OutlinedTextField(
                             value = additionalNotes,
-                            onValueChange = { additionalNotes = it },
+                            onValueChange = {
+                                additionalNotes = it
+                                formViewModel.updateAdditionalNotes(it)
+                            },
                             placeholder = { Text("Add any other relevant information about the incident") },
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -641,25 +772,11 @@ fun EvidenceWitnessScreen(
                         // Navigation buttons
                         FormNavigationButtons(
                             onBackClick = {
-                                // Save form state before navigating back
-                                formViewModel.updateFormState(
-                                    formViewModel.formState.value.copy(
-                                        witnesses = witnesses.toList(),
-                                        evidenceUris = evidenceUris.map { it.toString() },
-                                        additionalNotes = additionalNotes
-                                    )
-                                )
+                                updateFormStateBeforeNavigation(formViewModel, witnesses, evidenceUris, additionalNotes)
                                 onBackClick()
                             },
                             onNextClick = {
-                                // Save form state and continue
-                                formViewModel.updateFormState(
-                                    formViewModel.formState.value.copy(
-                                        witnesses = witnesses.toList(),
-                                        evidenceUris = evidenceUris.map { it.toString() },
-                                        additionalNotes = additionalNotes
-                                    )
-                                )
+                                updateFormStateBeforeNavigation(formViewModel, witnesses, evidenceUris, additionalNotes)
                                 onContinueClick()
                             },
                             darkRed = darkRed
@@ -677,4 +794,24 @@ fun EvidenceWitnessScreen(
             }
         }
     }
+}
+
+/**
+ * Helper function to update the form state in the ViewModel before navigation
+ */
+private fun updateFormStateBeforeNavigation(
+    formViewModel: IncidentFormViewModel,
+    witnesses: List<WitnessDTO>,
+    evidenceUris: List<Uri>,
+    additionalNotes: String
+) {
+    formViewModel.updateFormState(
+        formViewModel.formState.value.copy(
+            witnesses = witnesses.toList(),
+            evidenceUris = evidenceUris.map { it.toString() },
+            additionalNotes = additionalNotes
+        )
+    )
+    Log.d("EvidenceWitnessScreen", "Form state updated before navigation: " +
+            "witnesses=${witnesses.size}, evidence=${evidenceUris.size}, notes=${additionalNotes.length} chars")
 }
