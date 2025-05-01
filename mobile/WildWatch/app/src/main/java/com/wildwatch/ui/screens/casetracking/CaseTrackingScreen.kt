@@ -22,6 +22,7 @@ import com.wildwatch.ui.components.dashboard.StatCard
 import com.wildwatch.viewmodel.CaseTrackingViewModel
 import com.wildwatch.ui.components.casetracking.ActivityCard
 import com.wildwatch.ui.components.casetracking.CaseCard
+import kotlinx.coroutines.delay
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -59,6 +60,14 @@ fun CaseTrackingScreen(
     LaunchedEffect(Unit) {
         viewModel.fetchUserIncidents()
         viewModel.fetchActivities()
+    }
+
+    // Add periodic refresh of activities
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(30000) // Refresh every 30 seconds
+            viewModel.fetchActivities()
+        }
     }
 
     Scaffold(
@@ -221,20 +230,43 @@ fun CaseTrackingScreen(
                                 // Recent Activity Tab
                                 Spacer(modifier = Modifier.height(16.dp))
 
-                                // Display Activities
-                                if (activities.isEmpty()) {
-                                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                        Text("No recent activities found", color = Color.Gray)
+                                val activitiesLoading by viewModel.activitiesLoading.collectAsState()
+                                val activitiesError by viewModel.activitiesError.collectAsState()
+
+                                when {
+                                    activitiesLoading -> {
+                                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                            CircularProgressIndicator()
+                                        }
                                     }
-                                } else {
-                                    LazyColumn(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                                    ) {
-                                        items(activities) { activity ->
-                                            ActivityCard(activity)
+                                    activitiesError != null -> {
+                                        Column(
+                                            modifier = Modifier.fillMaxSize(),
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.Center
+                                        ) {
+                                            Text(activitiesError!!, color = MaterialTheme.colorScheme.error)
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            Button(onClick = { viewModel.fetchActivities() }) {
+                                                Text("Retry")
+                                            }
+                                        }
+                                    }
+                                    activities.isEmpty() -> {
+                                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                            Text("No recent activities found", color = Color.Gray)
+                                        }
+                                    }
+                                    else -> {
+                                        LazyColumn(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                                        ) {
+                                            items(activities) { activity ->
+                                                ActivityCard(activity)
+                                            }
                                         }
                                     }
                                 }

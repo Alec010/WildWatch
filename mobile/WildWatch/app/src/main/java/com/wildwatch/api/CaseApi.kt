@@ -13,7 +13,7 @@ interface CaseApi {
     @GET("incidents/{id}")
     suspend fun getIncidentById(@Path("id") id: String): IncidentResponse
 
-    @GET("activities/my-activities")
+    @GET("activity-logs")
     suspend fun getUserActivities(
         @Query("page") page: Int,
         @Query("size") size: Int

@@ -28,6 +28,12 @@ class CaseTrackingViewModel(context: Context) : ViewModel() {
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
 
+    private val _activitiesLoading = MutableStateFlow(false)
+    val activitiesLoading: StateFlow<Boolean> = _activitiesLoading
+
+    private val _activitiesError = MutableStateFlow<String?>(null)
+    val activitiesError: StateFlow<String?> = _activitiesError
+
     private val _recentActivities = MutableStateFlow<List<Activity>>(emptyList())
     val recentActivities: StateFlow<List<Activity>> = _recentActivities
 
@@ -88,16 +94,26 @@ class CaseTrackingViewModel(context: Context) : ViewModel() {
 
     fun fetchActivities(page: Int = _currentPage.value) {
         viewModelScope.launch {
+            _activitiesLoading.value = true
+            _activitiesError.value = null
             try {
                 val response = repository.getUserActivities(page, size = 10)
                 _recentActivities.value = response.content
                 _totalPages.value = response.totalPages
                 _totalActivities.value = response.totalElements
                 _currentPage.value = page
-
                 Log.d("CaseTracking", "Fetched ${response.content.size} activities")
+            } catch (e: IOException) {
+                _activitiesError.value = "Network error: Please check your connection."
+                Log.e("CaseTracking", "Network error fetching activities: ${e.localizedMessage}")
+            } catch (e: HttpException) {
+                _activitiesError.value = "Server error: ${e.code()} ${e.message()}"
+                Log.e("CaseTracking", "Server error fetching activities: ${e.localizedMessage}")
             } catch (e: Exception) {
+                _activitiesError.value = "Unexpected error: ${e.localizedMessage}"
                 Log.e("CaseTracking", "Error fetching activities: ${e.localizedMessage}")
+            } finally {
+                _activitiesLoading.value = false
             }
         }
     }
