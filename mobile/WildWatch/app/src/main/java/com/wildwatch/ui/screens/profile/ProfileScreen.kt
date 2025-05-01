@@ -88,30 +88,6 @@ fun ProfileScreen(
     }
 
     Scaffold(
-        containerColor = backgroundColor,
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Profile",
-                        fontWeight = FontWeight.SemiBold,
-                        color = textPrimaryColor
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            imageVector = Icons.Rounded.ArrowBack,
-                            contentDescription = "Back",
-                            tint = primaryColor
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = cardColor
-                )
-            )
-        }
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -226,23 +202,6 @@ fun ProfileScreen(
                                 modifier = Modifier.size(50.dp)
                             )
                         }
-                    }
-
-                    // Edit Button
-                    FloatingActionButton(
-                        onClick = onEditProfileClick,
-                        modifier = Modifier
-                            .size(32.dp)
-                            .align(Alignment.BottomEnd),
-                        containerColor = accentColor,
-                        contentColor = Color.White,
-                        elevation = FloatingActionButtonDefaults.elevation(4.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Edit,
-                            contentDescription = "Edit Profile Picture",
-                            modifier = Modifier.size(16.dp)
-                        )
                     }
                 }
             }

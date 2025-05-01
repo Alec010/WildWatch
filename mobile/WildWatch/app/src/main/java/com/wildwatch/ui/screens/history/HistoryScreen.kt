@@ -64,24 +64,6 @@ fun HistoryScreen(
     )
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Incident History") },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = WildWatchRed,
-                    titleContentColor = Color.White
-                ),
-                actions = {
-                    IconButton(onClick = { /* TODO: Export functionality */ }) {
-                        Icon(
-                            imageVector = Icons.Default.FileDownload,
-                            contentDescription = "Export",
-                            tint = Color.White
-                        )
-                    }
-                }
-            )
-        }
     ) { paddingValues ->
         Box(
             modifier = modifier
