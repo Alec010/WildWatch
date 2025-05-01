@@ -63,46 +63,44 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .csrf(csrf -> csrf.disable())
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/uploads/**").permitAll()
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                .requestMatchers(
-                    "/api/auth/**",
-                    "/login/**",
-                    "/oauth2/**",
-                    "/error",
-                    "/favicon.ico",
-                    "/api/setup/by-office/**"
-                ).permitAll()
-                .requestMatchers("/api/terms/**").authenticated()
-                .anyRequest().authenticated()
-            )
-            .oauth2Login(oauth2 -> oauth2
-                .userInfoEndpoint(userInfo -> userInfo
-                    .userService(customOAuth2UserService)
-                )
-                .successHandler(oAuth2SuccessHandler)
-                .failureHandler(oAuth2FailureHandler)
-            )
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
-            .exceptionHandling(exception -> exception
-                .authenticationEntryPoint((request, response, authException) -> {
-                    // Check if it's an API request
-                    if (request.getHeader("Accept") != null && 
-                        request.getHeader("Accept").contains("application/json")) {
-                        response.setStatus(401);
-                        response.setContentType("application/json");
-                        response.getWriter().write("{\"error\":\"Unauthorized\"}");
-                    } else {
-                        // For non-API requests, redirect to frontend error page
-                        String errorMessage = URLEncoder.encode(authException.getMessage(), StandardCharsets.UTF_8);
-                        response.sendRedirect("http://localhost:3000/auth/error?message=" + errorMessage);
-                    }
-                })
-            );
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .csrf(csrf -> csrf.disable())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/uploads/**").permitAll()
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers(
+                                "/api/auth/**",
+                                "/login/**",
+                                "/oauth2/**",
+                                "/error",
+                                "/favicon.ico",
+                                "/api/setup/by-office/**",
+                                "/api/setup/**"
+                        ).permitAll()
+                        .requestMatchers("/api/terms/**").authenticated()
+                        .anyRequest().authenticated())
+                .oauth2Login(oauth2 -> oauth2
+                        .userInfoEndpoint(userInfo -> userInfo
+                                .userService(customOAuth2UserService))
+                        .successHandler(oAuth2SuccessHandler)
+                        .failureHandler(oAuth2FailureHandler))
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            // Check if it's an API request
+                            if (request.getHeader("Accept") != null &&
+                                    request.getHeader("Accept").contains("application/json")) {
+                                response.setStatus(401);
+                                response.setContentType("application/json");
+                                response.getWriter().write("{\"error\":\"Unauthorized\"}");
+                            } else {
+                                // For non-API requests, redirect to frontend error page
+                                String errorMessage = URLEncoder.encode(authException.getMessage(),
+                                        StandardCharsets.UTF_8);
+                                response.sendRedirect("http://localhost:3000/auth/error?message=" + errorMessage);
+                            }
+                        }));
 
         return http.build();
     }
@@ -111,34 +109,31 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOriginPatterns(Arrays.asList(
-            "http://localhost:3000",
-            "https://jcldwuryjuqtrbsqlgoi.supabase.co",
-            "https://*.onrender.com",
-            "https://wildwatch.onrender.com",
-            "https://*.vercel.app",
-            "https://wild-watch-cca16hidi-alec010s-projects.vercel.app"
-        ));
+                "http://localhost:3000",
+                "https://jcldwuryjuqtrbsqlgoi.supabase.co",
+                "https://*.onrender.com",
+                "https://wildwatch.onrender.com",
+                "https://*.vercel.app",
+                "https://wild-watch-cca16hidi-alec010s-projects.vercel.app"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList(
-            "Authorization",
-            "Content-Type",
-            "X-Requested-With",
-            "Accept",
-            "Origin",
-            "Access-Control-Request-Method",
-            "Access-Control-Request-Headers"
-        ));
+                "Authorization",
+                "Content-Type",
+                "X-Requested-With",
+                "Accept",
+                "Origin",
+                "Access-Control-Request-Method",
+                "Access-Control-Request-Headers"));
         configuration.setAllowCredentials(true);
         configuration.setExposedHeaders(Arrays.asList(
-            "Set-Cookie",
-            "Authorization",
-            "Access-Control-Allow-Origin",
-            "Access-Control-Allow-Credentials"
-        ));
+                "Set-Cookie",
+                "Authorization",
+                "Access-Control-Allow-Origin",
+                "Access-Control-Allow-Credentials"));
         configuration.setMaxAge(3600L);
-        
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }
-} 
+}
