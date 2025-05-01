@@ -75,7 +75,9 @@ public class SecurityConfig {
                     "/oauth2/**",
                     "/error",
                     "/favicon.ico",
-                    "/api/setup/by-office/**"
+                    "/api/setup/by-office/**",
+                    "/api/setup/**",
+                    "/api/ping"
                 ).permitAll()
                 .requestMatchers("/api/terms/**").authenticated()
                 .anyRequest().authenticated()
