@@ -36,6 +36,9 @@ class DashboardViewModel(context: Context) : ViewModel() {
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
 
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing
+
     fun fetchDashboardData() {
         viewModelScope.launch {
             _loading.value = true
@@ -58,6 +61,17 @@ class DashboardViewModel(context: Context) : ViewModel() {
                 _error.value = "Unexpected error: ${e.localizedMessage}"
             } finally {
                 _loading.value = false
+            }
+        }
+    }
+
+    fun refresh() {
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            try {
+                fetchDashboardData()
+            } finally {
+                _isRefreshing.value = false
             }
         }
     }
