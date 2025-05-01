@@ -13,4 +13,7 @@ interface IncidentApi {
         @Part("incidentData") incidentData: RequestBody,
         @Part files: List<MultipartBody.Part>? = null
     ): Response<IncidentResponse>
+
+    @GET("/api/incidents/my-incidents")
+    suspend fun getUserIncidents(): Response<List<IncidentResponse>>
 }

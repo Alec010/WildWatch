@@ -8,12 +8,14 @@ import androidx.navigation.compose.composable
 import com.wildwatch.ui.screens.LoginScreen
 import com.wildwatch.ui.screens.MainScreen
 import com.wildwatch.ui.screens.SignUpScreen
+import com.wildwatch.ui.screens.history.HistoryScreen
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
     object SignUp : Screen("signup")
     object Main : Screen("main")
     object ReportFlow : Screen("reportFlow")
+    object History : Screen("history")
 }
 
 private fun navigateBackToMain(
@@ -75,6 +77,10 @@ fun NavGraph(navController: NavHostController) {
                     Log.d("ReportFlow", "✅ onExit called!")
                 }
             )
+        }
+
+        composable(Screen.History.route) {
+            HistoryScreen()
         }
     }
 }
