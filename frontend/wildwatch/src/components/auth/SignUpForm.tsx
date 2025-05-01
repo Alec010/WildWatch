@@ -96,12 +96,19 @@ export function SignUpForm() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       setIsLoading(true);
+      // Map acceptTerms to termsAccepted for backend
+      const payload = {
+        ...values,
+        termsAccepted: values.acceptTerms,
+      } as any;
+      delete payload.acceptTerms;
+
       const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(values),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {

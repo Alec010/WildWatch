@@ -40,10 +40,10 @@ public class UserService {
         user.setContactNumber(request.getContactNumber());
         user.setEnabled(true);
         user.setRole(Role.REGULAR_USER);
-        user.setTermsAccepted(false);
+        user.setTermsAccepted(request.isTermsAccepted());
         user.setAuthProvider("local");
         System.out.println("Creating new user with role: " + Role.REGULAR_USER);
-        System.out.println("Terms accepted set to: false");
+        System.out.println("Terms accepted set to: " + request.isTermsAccepted());
         return userRepository.save(user);
     }
 

@@ -1,9 +1,5 @@
 package com.wildwatch.model
 
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.LocalTime
-
 data class IncidentResponse(
     val id: String,
     val trackingNumber: String,
@@ -16,5 +12,22 @@ data class IncidentResponse(
     val priorityLevel: String?,
     val status: String,
     val submittedBy: String,
-    val submittedAt: String
+    val submittedAt: String,
+    val submittedByFullName: String? = null,
+    val submittedByEmail: String? = null,
+    val submittedByPhone: String? = null,
+    val officeAdminName: String? = null,
+    val finishedDate: String? = null,
+    val verified: Boolean? = null,
+    val evidence: List<EvidenceDTO>? = null,
+    val witnesses: List<WitnessDTO>? = null
+)
+
+data class EvidenceDTO(
+    val id: String,
+    val fileUrl: String,
+    val fileName: String,
+    val fileType: String,
+    val fileSize: Long,
+    val uploadedAt: String
 )

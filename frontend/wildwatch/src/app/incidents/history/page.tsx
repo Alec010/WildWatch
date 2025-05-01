@@ -5,7 +5,7 @@ import { Sidebar } from "@/components/Sidebar"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { History, Download, Eye, Trash2 } from "lucide-react"
+import { History, Download, Eye } from "lucide-react"
 import { useRouter } from "next/navigation"
 import jsPDF from "jspdf"
 import "jspdf-autotable"
@@ -49,33 +49,41 @@ export default function IncidentHistoryPage() {
   const [statusFilter, setStatusFilter] = useState<string>("All")
   const [priorityFilter, setPriorityFilter] = useState<string>("All")
   const [isDownloading, setIsDownloading] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   const incidentsPerPage = 5
   const router = useRouter()
 
-  useEffect(() => {
-    const fetchIncidents = async () => {
-      setLoading(true)
-      try {
-        const token = document.cookie
-          .split("; ")
-          .find((row) => row.startsWith("token="))
-          ?.split("=")[1]
-        if (!token) return
-        const res = await fetch(`${API_BASE_URL}/api/incidents/my-incidents`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        const data = await res.json()
-        // Only show Resolved or Dismissed (case-insensitive)
-        setIncidents(data.filter((i: Incident) => ["resolved", "dismissed"].includes(i.status.toLowerCase())))
-      } catch (e) {
-        setIncidents([])
-      } finally {
-        setLoading(false)
-      }
+  const fetchIncidents = async () => {
+    try {
+      const token = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("token="))
+        ?.split("=")[1]
+      if (!token) return
+      const res = await fetch(`${API_BASE_URL}/api/incidents/my-incidents`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await res.json()
+      // Only show Resolved or Dismissed (case-insensitive)
+      setIncidents(data.filter((i: Incident) => ["resolved", "dismissed"].includes(i.status.toLowerCase())))
+    } catch (e) {
+      setIncidents([])
+    } finally {
+      setLoading(false)
+      setIsRefreshing(false)
     }
+  }
+
+  useEffect(() => {
+    setLoading(true)
     fetchIncidents()
   }, [])
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true)
+    await fetchIncidents()
+  }
 
   const filteredIncidents = incidents.filter(
     (i) =>
@@ -812,18 +820,14 @@ export default function IncidentHistoryPage() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={selected.length === 0}
-                className="text-red-700 border-red-200"
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className={`bg-[#800000] text-white transition-all duration-200 ${isRefreshing ? 'opacity-50' : 'hover:opacity-80'}`} 
+                onClick={handleRefresh}
+                disabled={isRefreshing}
               >
-                Delete Selected
-              </Button>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="icon" className="bg-[#800000] text-white" disabled>
-                <History className="h-5 w-5" />
+                <History className={`h-5 w-5 ${isRefreshing ? 'animate-spin' : ''}`} />
               </Button>
             </div>
           </div>
@@ -860,12 +864,6 @@ export default function IncidentHistoryPage() {
                   paginatedIncidents.map((incident) => (
                     <tr key={incident.id} className="border-t hover:bg-[#fff9f9] transition-colors">
                       <td className="p-3 font-mono">
-                        <input
-                          type="checkbox"
-                          checked={selected.includes(incident.id)}
-                          onChange={() => handleSelect(incident.id)}
-                          className="mr-2"
-                        />
                         {incident.trackingNumber}
                       </td>
                       <td className="p-3">{new Date(incident.submittedAt).toLocaleDateString()}</td>
@@ -936,9 +934,6 @@ export default function IncidentHistoryPage() {
                           onClick={() => handleDownloadPDF(incident)}
                         >
                           <Download className="h-4 w-4" />
-                        </Button>
-                        <Button variant="outline" size="icon" className="text-red-700 border-red-200" disabled>
-                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </td>
                     </tr>
