@@ -39,6 +39,7 @@ export default function NotificationDropdown({
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [hasNewNotification, setHasNewNotification] = useState(false);
   const notificationRef = useRef<HTMLDivElement>(null);
 
   // Close notifications when clicking outside
@@ -76,16 +77,23 @@ export default function NotificationDropdown({
         const exists = prev.some(n => n.id === newActivity.id);
         if (exists) {
           // Update existing notification
-          return prev.map(n => n.id === newActivity.id ? newActivity : n);
+          const updatedNotifications = prev.map(n => n.id === newActivity.id ? newActivity : n);
+          // Recalculate unread count
+          const newUnreadCount = updatedNotifications.filter(n => !n.isRead).length;
+          setUnreadCount(newUnreadCount);
+          return updatedNotifications;
         } else {
-          // Add new notification
-          return [newActivity, ...prev];
+          // Add new notification at the beginning
+          const updatedNotifications = [newActivity, ...prev];
+          // Recalculate unread count
+          const newUnreadCount = updatedNotifications.filter(n => !n.isRead).length;
+          setUnreadCount(newUnreadCount);
+          // Show pulse animation for new notification
+          setHasNewNotification(true);
+          setTimeout(() => setHasNewNotification(false), 3000);
+          return updatedNotifications;
         }
       });
-      // Only increment unread count if the new notification is unread
-      if (!newActivity.isRead) {
-        setUnreadCount(prev => prev + 1);
-      }
     };
 
     return () => {
@@ -126,23 +134,55 @@ export default function NotificationDropdown({
     }
   };
 
-  const formatNotificationTime = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    // Convert both to Asia/Manila time
-    const datePH = new Date(date.toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
-    const nowPH = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
-    const diffMs = nowPH.getTime() - datePH.getTime();
-    const diffMins = Math.round(diffMs / 60000);
-    const diffHours = Math.round(diffMs / 3600000);
-    const diffDays = Math.round(diffMs / 86400000);
+  // Add polling for notifications
+  useEffect(() => {
+    // Initial fetch
+    fetchNotifications();
 
-    if (diffMins < 60) {
-      return `${diffMins} min${diffMins !== 1 ? "s" : ""} ago`;
-    } else if (diffHours < 24) {
-      return `${diffHours} hour${diffHours !== 1 ? "s" : ""} ago`;
-    } else {
-      return `${diffDays} day${diffDays !== 1 ? "s" : ""} ago`;
+    // Set up polling interval
+    const pollInterval = setInterval(() => {
+      fetchNotifications();
+    }, 5000); // Poll every 5 seconds
+
+    return () => {
+      clearInterval(pollInterval);
+    };
+  }, []);
+
+  const formatNotificationTime = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      const now = new Date();
+      
+      // Get the time difference in milliseconds
+      const diffMs = now.getTime() - date.getTime();
+      
+      // Convert to minutes, hours, and days
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+
+      if (diffMins < 1) {
+        return "Just now";
+      } else if (diffMins < 60) {
+        return `${diffMins} min${diffMins !== 1 ? "s" : ""} ago`;
+      } else if (diffHours < 24) {
+        return `${diffHours} hour${diffHours !== 1 ? "s" : ""} ago`;
+      } else if (diffDays < 7) {
+        return `${diffDays} day${diffDays !== 1 ? "s" : ""} ago`;
+      } else {
+        // For older notifications, show the actual date
+        return date.toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      }
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Invalid date';
     }
   };
 
@@ -155,6 +195,8 @@ export default function NotificationDropdown({
       // Mark as read first
       if (!notification.isRead) {
         await markAsRead(notification.id);
+        // Immediately update the unread count
+        setUnreadCount(prev => Math.max(0, prev - 1));
       }
 
       // Redirect to the tracking page if there's an incident
@@ -168,6 +210,10 @@ export default function NotificationDropdown({
 
   const markAllAsRead = async () => {
     try {
+      // Immediately update local state
+      setNotifications(prev => prev.map(notification => ({ ...notification, isRead: true })));
+      setUnreadCount(0);
+
       const token = document.cookie
         .split("; ")
         .find((row) => row.startsWith("token="))
@@ -186,15 +232,11 @@ export default function NotificationDropdown({
       });
 
       if (!response.ok) {
+        // If the API call fails, revert the local state
+        setNotifications(prev => prev.map(notification => ({ ...notification, isRead: false })));
+        setUnreadCount(prev => prev + notifications.filter(n => !n.isRead).length);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-
-      // Update local state after successful API call
-      setNotifications(prev => prev.map(notification => ({ ...notification, isRead: true })));
-      setUnreadCount(0);
-      
-      // Fetch notifications again to ensure sync with backend
-      await fetchNotifications();
     } catch (error) {
       console.error("Error marking all notifications as read:", error);
     }
@@ -253,8 +295,27 @@ export default function NotificationDropdown({
         return <FileText className="h-5 w-5 text-red-500" />;
       case "CASE_RESOLVED":
         return <CheckCircle className="h-5 w-5 text-green-500" />;
+      case "VERIFICATION":
+        return <CheckCircle className="h-5 w-5 text-green-500" />;
       default:
         return <Bell className="h-5 w-5 text-gray-500" />;
+    }
+  };
+
+  const formatActivityType = (type: string) => {
+    switch (type) {
+      case "STATUS_CHANGE":
+        return "Status Update";
+      case "UPDATE":
+        return "Case Update";
+      case "NEW_REPORT":
+        return "New Report";
+      case "CASE_RESOLVED":
+        return "Case Resolved";
+      case "VERIFICATION":
+        return "Case Verified";
+      default:
+        return type.replace(/_/g, ' ');
     }
   };
 
@@ -294,9 +355,9 @@ export default function NotificationDropdown({
         className="relative"
         onClick={handleNotificationClick}
       >
-        <Bell className="h-5 w-5 text-gray-600" />
+        <Bell className={`h-5 w-5 text-gray-600 ${hasNewNotification ? 'animate-pulse' : ''}`} />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+          <span className={`absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center ${unreadCount > 0 ? 'animate-bounce' : ''}`}>
             {unreadCount}
           </span>
         )}
@@ -352,7 +413,7 @@ export default function NotificationDropdown({
                     <div className="flex-1">
                       <div className="flex justify-between items-start">
                         <h4 className="font-medium text-sm text-gray-900">
-                          {notification.activityType.replace(/_/g, ' ')}
+                          {formatActivityType(notification.activityType)}
                         </h4>
                         <span className="text-xs text-gray-500">
                           {formatNotificationTime(notification.createdAt)}

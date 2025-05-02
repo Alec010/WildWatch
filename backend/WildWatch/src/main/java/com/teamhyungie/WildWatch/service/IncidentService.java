@@ -213,6 +213,7 @@ public class IncidentService {
 
         // Store old status for comparison
         String oldStatus = incident.getStatus();
+        boolean wasVerified = incident.getVerified();
 
         // Update incident fields
         if (request.getStatus() != null) {
@@ -225,6 +226,31 @@ public class IncidentService {
         
         // Save the updated incident
         Incident updatedIncident = incidentRepository.save(incident);
+
+        // Log verification activity if verification status changed
+        if (request.isVerified() && !wasVerified) {
+            String updateInfo = request.getUpdatedBy() != null ? 
+                " by " + request.getUpdatedBy() : "";
+            
+            // Log verification activity
+            activityLogService.logActivity(
+                "VERIFICATION",
+                "Case #" + incident.getTrackingNumber() + " has been verified" + updateInfo,
+                updatedIncident,
+                user
+            );
+
+            // Create an incident update for verification
+            IncidentUpdate verificationUpdate = new IncidentUpdate();
+            verificationUpdate.setIncident(updatedIncident);
+            verificationUpdate.setMessage("Case has been verified" + updateInfo);
+            verificationUpdate.setStatus(updatedIncident.getStatus());
+            verificationUpdate.setUpdatedBy(user);
+            verificationUpdate.setVisibleToReporter(true);
+            verificationUpdate.setUpdatedByName(request.getUpdatedBy());
+            
+            incidentUpdateRepository.save(verificationUpdate);
+        }
 
         // Create an incident update if a message is provided
         if (request.getUpdateMessage() != null && !request.getUpdateMessage().trim().isEmpty()) {

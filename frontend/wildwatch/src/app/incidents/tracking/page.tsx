@@ -359,7 +359,7 @@ export default function CaseTrackingPage() {
                           {item.priorityLevel.charAt(0) + item.priorityLevel.slice(1).toLowerCase()}
                         </span>
                       ) : (
-                        <span className="px-3 py-1 text-xs rounded-full bg-gray-100 text-gray-800">N/A</span>
+                        <span className="px-3 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">To be assigned</span>
                       )}
                     </td>
                     <td className="p-3 text-center font-medium">
