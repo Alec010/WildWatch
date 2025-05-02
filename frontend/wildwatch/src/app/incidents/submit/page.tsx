@@ -91,6 +91,19 @@ export default function IncidentSubmissionPage() {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
+    
+    // Add validation for date of incident
+    if (name === "dateOfIncident") {
+      const selectedDate = new Date(value);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Reset time to start of day
+      
+      if (selectedDate > today) {
+        alert("Please select a date that is not in the future");
+        return;
+      }
+    }
+    
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -213,6 +226,7 @@ export default function IncidentSubmissionPage() {
                     value={formData.dateOfIncident}
                     onChange={handleInputChange}
                     required
+                    max={new Date().toISOString().split('T')[0]}
                     className="border-gray-300"
                   />
                 </div>

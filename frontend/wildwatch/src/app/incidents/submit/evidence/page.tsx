@@ -117,6 +117,35 @@ export default function EvidenceSubmissionPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check if there is any evidence (files or witnesses)
+    if (formData.fileInfos.length === 0 && formData.witnesses.length === 0) {
+      // Show error message
+      const errorMessage = document.createElement('div');
+      errorMessage.className = 'fixed top-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded z-50';
+      errorMessage.innerHTML = `
+        <div class="flex items-center">
+          <div class="py-1">
+            <svg class="h-6 w-6 text-red-500 mr-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <div>
+            <p class="font-bold">Evidence Required</p>
+            <p class="text-sm">Please provide at least one piece of evidence (files or witness information) before proceeding.</p>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(errorMessage);
+      
+      // Remove the error message after 5 seconds
+      setTimeout(() => {
+        document.body.removeChild(errorMessage);
+      }, 5000);
+      
+      return;
+    }
+    
     router.push("/incidents/submit/review");
   };
 

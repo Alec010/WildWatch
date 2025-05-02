@@ -235,7 +235,7 @@ export default function CaseDetailsPage() {
               <div className="flex gap-6 text-sm">
                 <div>
                   <div className="text-xs text-gray-500">Submitted</div>
-                  <div className="font-medium">{formatDate(incident.dateOfIncident)}</div>
+                  <div className="font-medium">{incident.submittedAt ? formatDate(incident.submittedAt) : "-"}</div>
                 </div>
                 <div>
                   <div className="text-xs text-gray-500">Last Updated</div>
