@@ -7,6 +7,7 @@ import lombok.Data;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 
 @Entity
 @Table(name = "incidents")
@@ -67,10 +68,10 @@ public class Incident {
 
     @PrePersist
     protected void onCreate() {
-        submittedAt = LocalDateTime.now();
+        submittedAt = LocalDateTime.now(ZoneOffset.UTC);
         if (trackingNumber == null) {
             // Generate a tracking number: INC-YYYYMMDD-XXXX (X = random alphanumeric)
-            String datePart = LocalDate.now().toString().replace("-", "");
+            String datePart = LocalDate.now(ZoneOffset.UTC).toString().replace("-", "");
             String randomPart = String.format("%04d", (int) (Math.random() * 10000));
             trackingNumber = "INC-" + datePart + "-" + randomPart;
         }

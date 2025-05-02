@@ -96,7 +96,7 @@ export default function IncidentSubmissionPage() {
     if (name === "dateOfIncident") {
       const selectedDate = new Date(value);
       const today = new Date();
-      today.setHours(0, 0, 0, 0); // Reset time to start of day
+      today.setHours(23, 59, 59, 999); // Set to end of today
       
       if (selectedDate > today) {
         alert("Please select a date that is not in the future");

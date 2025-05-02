@@ -232,12 +232,20 @@ public class IncidentService {
             String updateInfo = request.getUpdatedBy() != null ? 
                 " by " + request.getUpdatedBy() : "";
             
-            // Log verification activity
+            // Log verification activity for admin
             activityLogService.logActivity(
                 "VERIFICATION",
                 "Case #" + incident.getTrackingNumber() + " has been verified" + updateInfo,
                 updatedIncident,
                 user
+            );
+
+            // Log verification activity for the submitter
+            activityLogService.logActivity(
+                "VERIFICATION",
+                "Your case #" + incident.getTrackingNumber() + " has been verified" + updateInfo,
+                updatedIncident,
+                incident.getSubmittedBy()
             );
 
             // Create an incident update for verification
@@ -262,7 +270,7 @@ public class IncidentService {
             update.setVisibleToReporter(request.isVisibleToReporter());
             update.setUpdatedByName(request.getUpdatedBy());
             
-            // Add the updatedBy information to the activity log
+            // Add the updatedBy information to the activity log for admin
             String updateInfo = request.getUpdatedBy() != null ? 
                 " (Updated by: " + request.getUpdatedBy() + ")" : "";
             
@@ -272,6 +280,16 @@ public class IncidentService {
                 updatedIncident,
                 user
             );
+
+            // Log update activity for the submitter if visible to reporter
+            if (request.isVisibleToReporter()) {
+                activityLogService.logActivity(
+                    "UPDATE",
+                    "New update for case #" + incident.getTrackingNumber() + updateInfo + ": " + request.getUpdateMessage(),
+                    updatedIncident,
+                    incident.getSubmittedBy()
+                );
+            }
             
             incidentUpdateRepository.save(update);
         }
@@ -281,11 +299,20 @@ public class IncidentService {
             String updateInfo = request.getUpdatedBy() != null ? 
                 " by " + request.getUpdatedBy() : "";
             
+            // Log status change for admin
             activityLogService.logActivity(
                 "STATUS_CHANGE",
                 "Case #" + incident.getTrackingNumber() + " status changed from '" + oldStatus + "' to '" + request.getStatus() + "'" + updateInfo,
                 updatedIncident,
                 user
+            );
+
+            // Log status change for the submitter
+            activityLogService.logActivity(
+                "STATUS_CHANGE",
+                "Your case #" + incident.getTrackingNumber() + " status has been updated to '" + request.getStatus() + "'" + updateInfo,
+                updatedIncident,
+                incident.getSubmittedBy()
             );
         }
 
