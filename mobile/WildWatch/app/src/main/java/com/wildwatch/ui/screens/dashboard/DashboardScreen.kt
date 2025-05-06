@@ -37,17 +37,23 @@ import com.wildwatch.ui.theme.*
 import com.wildwatch.viewmodel.DashboardViewModel
 import com.wildwatch.viewmodel.DashboardViewModelFactory
 import com.wildwatch.utils.toIncidentInfo
+import com.wildwatch.ui.components.NotificationDropdown
+import com.wildwatch.ui.components.NotificationItem
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
 fun DashboardScreen(
     onIncidentClick: (String) -> Unit = {},
-    onViewAllClick: () -> Unit = {}
+    onViewAllClick: () -> Unit = {},
+    onViewAllNotifications: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val viewModel: DashboardViewModel = viewModel(
         factory = DashboardViewModelFactory(context)
     )
+
+    var showNotifications by remember { mutableStateOf(false) }
+    var hasUnreadNotifications by remember { mutableStateOf(true) }
 
     val total by viewModel.totalReports.collectAsState()
     val pending by viewModel.pendingReports.collectAsState()
@@ -82,14 +88,46 @@ fun DashboardScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = {}) {
-                        Icon(
-                            imageVector = Icons.Default.Notifications,
-                            contentDescription = "Notifications",
-                            tint = WildWatchRed
+                    Box {
+                        IconButton(onClick = { showNotifications = true }) {
+                            BadgedBox(
+                                badge = {
+                                    if (hasUnreadNotifications) {
+                                        Badge(
+                                            containerColor = Color(0xFFE53935)
+                                        )
+                                    }
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Notifications,
+                                    contentDescription = "Notifications",
+                                    tint = WildWatchRed
+                                )
+                            }
+                        }
+
+                        NotificationDropdown(
+                            showDropdown = showNotifications,
+                            onDismiss = { showNotifications = false },
+                            onRefresh = {
+                                // Refresh notifications
+                                viewModel.refresh()
+                            },
+                            onMarkAllAsRead = {
+                                // Mark all notifications as read
+                                hasUnreadNotifications = false
+                            },
+                            onViewAll = {
+                                showNotifications = false
+                                onViewAllNotifications()
+                            },
+                            onNotificationClick = { notificationId ->
+                                // Handle notification click
+                                showNotifications = false
+                            }
                         )
                     }
-                    // Profile icon removed as requested
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color.White
@@ -149,7 +187,7 @@ fun DashboardScreen(
 
                             Spacer(modifier = Modifier.width(8.dp))
 
-                            Divider(
+                            HorizontalDivider(
                                 modifier = Modifier
                                     .weight(1f)
                                     .padding(vertical = 8.dp),
@@ -222,7 +260,7 @@ fun DashboardScreen(
 
                         Spacer(modifier = Modifier.width(8.dp))
 
-                        Divider(
+                        HorizontalDivider(
                             modifier = Modifier
                                 .weight(1f)
                                 .padding(vertical = 8.dp),
