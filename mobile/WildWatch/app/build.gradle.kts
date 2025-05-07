@@ -18,13 +18,17 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    buildTypes {
-        release {
-            isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
+    android {
+        // Other configurations...
+        buildTypes {
+            debug {
+                buildConfigField ("String", "API_BASE_URL", "\"http://10.0.2.2:8080/\"")
+                buildConfigField ("String", "WS_BASE_URL", "\"ws://10.0.2.2:8080\"")
+            }
+            release {
+                buildConfigField ("String", "API_BASE_URL", "\"https://wildwatch-9djc.onrender.com/api/\"")
+                buildConfigField ("String", "WS_BASE_URL", "\"wss://wildwatch-9djc.onrender.com\"")
+            }
         }
     }
     compileOptions {
@@ -37,6 +41,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -84,4 +89,6 @@ dependencies {
     implementation ("io.coil-kt:coil-compose:2.2.2")
 
     implementation ("androidx.compose.material3:material3:1.0.0")
+
+    implementation ("com.squareup.okhttp3:logging-interceptor:4.10.0")
 }

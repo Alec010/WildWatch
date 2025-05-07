@@ -17,23 +17,36 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.wildwatch.model.ActivityLog
 import com.wildwatch.ui.theme.WildWatchRed
+import com.wildwatch.viewmodel.NotificationViewModel
+import java.text.SimpleDateFormat
+import java.util.*
 
 @Composable
 fun NotificationDropdown(
     showDropdown: Boolean,
     onDismiss: () -> Unit,
-    notifications: List<NotificationItem> = sampleNotifications,
-    onRefresh: () -> Unit = {},
-    onMarkAllAsRead: () -> Unit = {},
     onViewAll: () -> Unit = {},
-    onNotificationClick: (String) -> Unit = {}
+    onNotificationClick: (ActivityLog) -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val viewModel: NotificationViewModel = viewModel(
+        factory = NotificationViewModel.Factory(context)
+    )
+
+    val notifications by viewModel.notifications.collectAsState()
+    val unreadCount by viewModel.unreadCount.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val error by viewModel.error.collectAsState()
+
     if (showDropdown) {
         Popup(
             onDismissRequest = onDismiss,
@@ -75,7 +88,7 @@ fun NotificationDropdown(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             IconButton(
-                                onClick = onRefresh,
+                                onClick = { viewModel.fetchNotifications() },
                                 modifier = Modifier.size(32.dp)
                             ) {
                                 Icon(
@@ -87,7 +100,7 @@ fun NotificationDropdown(
                             }
 
                             TextButton(
-                                onClick = onMarkAllAsRead,
+                                onClick = { viewModel.markAllAsRead() },
                                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
                             ) {
                                 Text(
@@ -102,16 +115,56 @@ fun NotificationDropdown(
                     HorizontalDivider(color = Color(0xFFEEEEEE))
 
                     // Notifications List
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(max = 400.dp)
-                    ) {
-                        items(notifications) { notification ->
-                            NotificationItemRow(
-                                notification = notification,
-                                onClick = { onNotificationClick(notification.id) }
+                    if (isLoading) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(200.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(color = WildWatchRed)
+                        }
+                    } else if (error != null) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = error ?: "An error occurred",
+                                color = WildWatchRed,
+                                fontSize = 14.sp
                             )
+                        }
+                    } else if (notifications.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "No notifications",
+                                color = Color.Gray,
+                                fontSize = 14.sp
+                            )
+                        }
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 400.dp)
+                        ) {
+                            items(notifications) { notification ->
+                                NotificationItemRow(
+                                    notification = notification,
+                                    onClick = {
+                                        viewModel.markAsRead(notification.id)
+                                        onNotificationClick(notification)
+                                    }
+                                )
+                            }
                         }
                     }
 
@@ -140,7 +193,7 @@ fun NotificationDropdown(
 
 @Composable
 private fun NotificationItemRow(
-    notification: NotificationItem,
+    notification: ActivityLog,
     onClick: () -> Unit
 ) {
     Row(
@@ -157,13 +210,13 @@ private fun NotificationItemRow(
             modifier = Modifier
                 .size(36.dp)
                 .clip(CircleShape)
-                .background(notification.iconBackground),
+                .background(getIconBackground(notification.activityType)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = notification.icon,
+                imageVector = getIcon(notification.activityType),
                 contentDescription = null,
-                tint = notification.iconColor,
+                tint = Color.White,
                 modifier = Modifier.size(20.dp)
             )
         }
@@ -179,14 +232,14 @@ private fun NotificationItemRow(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = notification.title,
+                    text = formatActivityType(notification.activityType),
                     fontWeight = FontWeight.Medium,
                     fontSize = 14.sp,
                     color = Color(0xFF333333)
                 )
 
                 Text(
-                    text = notification.timestamp,
+                    text = formatTimestamp(notification.createdAt),
                     fontSize = 12.sp,
                     color = Color.Gray
                 )
@@ -202,68 +255,48 @@ private fun NotificationItemRow(
     }
 }
 
-// Data class for notifications
-data class NotificationItem(
-    val id: String,
-    val title: String,
-    val description: String,
-    val timestamp: String,
-    val isRead: Boolean,
-    val icon: ImageVector,
-    val iconColor: Color,
-    val iconBackground: Color
-)
+private fun getIcon(activityType: String): ImageVector {
+    return when (activityType) {
+        "STATUS_CHANGE" -> Icons.Default.Schedule
+        "UPDATE" -> Icons.Default.Info
+        "NEW_REPORT" -> Icons.Default.Description
+        "CASE_RESOLVED" -> Icons.Default.CheckCircle
+        "VERIFICATION" -> Icons.Default.Verified
+        else -> Icons.Default.Notifications
+    }
+}
 
-// Sample notifications for preview
-val sampleNotifications = listOf(
-    NotificationItem(
-        id = "1",
-        title = "New Report",
-        description = "You submitted a new incident report for test6",
-        timestamp = "4 days ago",
-        isRead = false,
-        icon = Icons.Default.Description,
-        iconColor = Color.White,
-        iconBackground = Color(0xFFE53935) // Red
-    ),
-    NotificationItem(
-        id = "2",
-        title = "New Report",
-        description = "You submitted a new incident report for test5",
-        timestamp = "4 days ago",
-        isRead = false,
-        icon = Icons.Default.Description,
-        iconColor = Color.White,
-        iconBackground = Color(0xFFE53935) // Red
-    ),
-    NotificationItem(
-        id = "3",
-        title = "New Report",
-        description = "You submitted a new incident report for test4",
-        timestamp = "5 days ago",
-        isRead = true,
-        icon = Icons.Default.Description,
-        iconColor = Color.White,
-        iconBackground = Color(0xFFE53935) // Red
-    ),
-    NotificationItem(
-        id = "4",
-        title = "New Report",
-        description = "You submitted a new incident report for test6",
-        timestamp = "5 days ago",
-        isRead = true,
-        icon = Icons.Default.Description,
-        iconColor = Color.White,
-        iconBackground = Color(0xFFE53935) // Red
-    ),
-    NotificationItem(
-        id = "5",
-        title = "Case Update",
-        description = "Update provided (Updated by: TSG Head)",
-        timestamp = "5 days ago",
-        isRead = true,
-        icon = Icons.Default.Schedule,
-        iconColor = Color.White,
-        iconBackground = Color(0xFF9C27B0) // Purple
-    )
-)
+private fun getIconBackground(activityType: String): Color {
+    return when (activityType) {
+        "STATUS_CHANGE" -> Color(0xFF1976D2) // Blue
+        "UPDATE" -> Color(0xFF9C27B0) // Purple
+        "NEW_REPORT" -> Color(0xFFE53935) // Red
+        "CASE_RESOLVED" -> Color(0xFF4CAF50) // Green
+        "VERIFICATION" -> Color(0xFF4CAF50) // Green
+        else -> Color(0xFF757575) // Gray
+    }
+}
+
+private fun formatActivityType(type: String): String {
+    return when (type) {
+        "STATUS_CHANGE" -> "Status Update"
+        "UPDATE" -> "Case Update"
+        "NEW_REPORT" -> "New Report"
+        "CASE_RESOLVED" -> "Case Resolved"
+        "VERIFICATION" -> "Case Verified"
+        else -> type.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() }
+    }
+}
+
+private fun formatTimestamp(date: Date): String {
+    val now = Date()
+    val diff = now.time - date.time
+    
+    return when {
+        diff < 60000 -> "Just now"
+        diff < 3600000 -> "${diff / 60000}m ago"
+        diff < 86400000 -> "${diff / 3600000}h ago"
+        diff < 604800000 -> "${diff / 86400000}d ago"
+        else -> SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(date)
+    }
+}

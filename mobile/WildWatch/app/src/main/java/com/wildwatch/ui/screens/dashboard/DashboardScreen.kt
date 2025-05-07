@@ -38,7 +38,6 @@ import com.wildwatch.viewmodel.DashboardViewModel
 import com.wildwatch.viewmodel.DashboardViewModelFactory
 import com.wildwatch.utils.toIncidentInfo
 import com.wildwatch.ui.components.NotificationDropdown
-import com.wildwatch.ui.components.NotificationItem
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
@@ -110,19 +109,11 @@ fun DashboardScreen(
                         NotificationDropdown(
                             showDropdown = showNotifications,
                             onDismiss = { showNotifications = false },
-                            onRefresh = {
-                                // Refresh notifications
-                                viewModel.refresh()
-                            },
-                            onMarkAllAsRead = {
-                                // Mark all notifications as read
-                                hasUnreadNotifications = false
-                            },
                             onViewAll = {
                                 showNotifications = false
                                 onViewAllNotifications()
                             },
-                            onNotificationClick = { notificationId ->
+                            onNotificationClick = { notification ->
                                 // Handle notification click
                                 showNotifications = false
                             }
