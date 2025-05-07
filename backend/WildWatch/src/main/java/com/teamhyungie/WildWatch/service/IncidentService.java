@@ -4,6 +4,7 @@ import com.teamhyungie.WildWatch.dto.IncidentRequest;
 import com.teamhyungie.WildWatch.dto.IncidentResponse;
 import com.teamhyungie.WildWatch.dto.IncidentUpdateRequest;
 import com.teamhyungie.WildWatch.dto.IncidentUpdateResponse;
+import com.teamhyungie.WildWatch.dto.IncidentTransferRequest;
 import com.teamhyungie.WildWatch.model.Evidence;
 import com.teamhyungie.WildWatch.model.Incident;
 import com.teamhyungie.WildWatch.model.User;
@@ -11,18 +12,22 @@ import com.teamhyungie.WildWatch.model.Witness;
 import com.teamhyungie.WildWatch.model.Office;
 import com.teamhyungie.WildWatch.model.OfficeAdmin;
 import com.teamhyungie.WildWatch.model.IncidentUpdate;
+import com.teamhyungie.WildWatch.model.IncidentUpvote;
 import com.teamhyungie.WildWatch.repository.EvidenceRepository;
 import com.teamhyungie.WildWatch.repository.IncidentRepository;
 import com.teamhyungie.WildWatch.repository.WitnessRepository;
 import com.teamhyungie.WildWatch.repository.IncidentUpdateRepository;
+import com.teamhyungie.WildWatch.repository.IncidentUpvoteRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.Arrays;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -35,6 +40,8 @@ public class IncidentService {
     private final OfficeAdminService officeAdminService;
     private final ActivityLogService activityLogService;
     private final IncidentUpdateRepository incidentUpdateRepository;
+    private final IncidentUpvoteRepository incidentUpvoteRepository;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Transactional
     public IncidentResponse createIncident(IncidentRequest request, String userEmail, List<MultipartFile> files) {
@@ -67,6 +74,22 @@ public class IncidentService {
             user
         );
 
+        // Notify all admins of the assigned office
+        if (request.getAssignedOffice() != null) {
+            List<OfficeAdmin> officeAdmins = officeAdminService.findAllActive().stream()
+                .filter(admin -> admin.getOfficeCode().equals(request.getAssignedOffice().name()))
+                .collect(Collectors.toList());
+            for (OfficeAdmin admin : officeAdmins) {
+                User adminUser = admin.getUser();
+                activityLogService.logActivity(
+                    "NEW_CASE_ASSIGNED",
+                    "A new case has been reported and assigned to your office.",
+                    savedIncident,
+                    adminUser
+                );
+            }
+        }
+
         return IncidentResponse.fromIncident(savedIncident);
     }
 
@@ -79,7 +102,7 @@ public class IncidentService {
         incident.setDescription(request.getDescription());
         incident.setAssignedOffice(request.getAssignedOffice());
         incident.setSubmittedBy(user);
-        
+        incident.setPreferAnonymous(request.getPreferAnonymous());
         return incidentRepository.save(incident);
     }
 
@@ -123,6 +146,19 @@ public class IncidentService {
         if (finishedUpdate != null) {
             response.setFinishedDate(finishedUpdate.getUpdatedAt());
         }
+
+        // Set transfer information
+        List<IncidentUpdate> updates = incidentUpdateRepository.findByIncidentOrderByUpdatedAtDesc(incident);
+        for (IncidentUpdate update : updates) {
+            if (update.getMessage().startsWith("Case transferred from")) {
+                String[] parts = update.getMessage().split(" from ")[1].split(" to ");
+                if (parts.length >= 1) {
+                    response.setTransferredFrom(parts[0]);
+                }
+                break;
+            }
+        }
+
         return response;
     }
 
@@ -130,6 +166,14 @@ public class IncidentService {
         User user = userService.getUserByEmail(userEmail);
         return incidentRepository.findBySubmittedByOrderBySubmittedAtDesc(user)
             .stream()
+            .map(this::mapToIncidentResponseWithExtras)
+            .collect(Collectors.toList());
+    }
+
+    public List<IncidentResponse> getPublicIncidents() {
+        return incidentRepository.findAll()
+            .stream()
+            .filter(incident -> incident.getIsAnonymous() == null || !incident.getIsAnonymous())
             .map(this::mapToIncidentResponseWithExtras)
             .collect(Collectors.toList());
     }
@@ -232,6 +276,9 @@ public class IncidentService {
             String updateInfo = request.getUpdatedBy() != null ? 
                 " by " + request.getUpdatedBy() : "";
             
+            // Get the office name
+            String officeName = incident.getAssignedOffice().name();
+
             // Log verification activity for admin
             activityLogService.logActivity(
                 "VERIFICATION",
@@ -243,10 +290,35 @@ public class IncidentService {
             // Log verification activity for the submitter
             activityLogService.logActivity(
                 "VERIFICATION",
-                "Your case #" + incident.getTrackingNumber() + " has been verified" + updateInfo,
+                "Your case #" + incident.getTrackingNumber() + " has been verified by " + officeName + " and is back to pending",
                 updatedIncident,
                 incident.getSubmittedBy()
             );
+
+            // If this was a transferred case, notify the transferring office
+            if (incident.getTransferredFrom() != null) {
+                String fromOffice = incident.getTransferredFrom();
+                String toOffice = incident.getAssignedOffice().name();
+                String fromOfficeFull = Office.valueOf(fromOffice).getFullName();
+                String toOfficeFull = Office.valueOf(toOffice).getFullName();
+
+                List<OfficeAdmin> transferringAdmins = officeAdminService.findAllActive().stream()
+                    .filter(admin -> admin.getOfficeCode().equals(fromOffice))
+                    .collect(Collectors.toList());
+
+                for (OfficeAdmin admin : transferringAdmins) {
+                    User adminUser = admin.getUser();
+                    activityLogService.logActivity(
+                        "TRANSFER_APPROVED",
+                        "Case #" + incident.getTrackingNumber() + " which was transferred from " + fromOfficeFull + " to " + toOfficeFull + " has been approved and verified by " + toOfficeFull + ".",
+                        updatedIncident,
+                        adminUser
+                    );
+                }
+                // Clear transferredFrom so the previous office is not notified again
+                incident.setTransferredFrom(null);
+                incidentRepository.save(incident);
+            }
 
             // Create an incident update for verification
             IncidentUpdate verificationUpdate = new IncidentUpdate();
@@ -314,6 +386,13 @@ public class IncidentService {
                 updatedIncident,
                 incident.getSubmittedBy()
             );
+
+            // Clear lastTransferredTo if resolved or closed
+            if (request.getStatus() != null && 
+                (request.getStatus().equalsIgnoreCase("resolved") || request.getStatus().equalsIgnoreCase("closed"))) {
+                incident.setLastTransferredTo(null);
+                incidentRepository.save(incident);
+            }
         }
 
         return IncidentResponse.fromIncident(updatedIncident);
@@ -391,5 +470,142 @@ public class IncidentService {
         // Update incident status
         incident.setStatus(status);
         incidentRepository.save(incident);
+    }
+
+    @Transactional
+    public IncidentResponse transferIncident(String id, String userEmail, IncidentTransferRequest request) {
+        User user = userService.getUserByEmail(userEmail);
+        
+        // Get the incident
+        Incident incident = incidentRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Incident not found"));
+
+        // Check if user is authorized to transfer this incident
+        boolean isOfficeAdmin = officeAdminService.findByUserEmail(userEmail).isPresent();
+        if (!isOfficeAdmin) {
+            throw new RuntimeException("Not authorized to transfer this incident");
+        }
+
+        // Store old office for comparison
+        Office oldOffice = incident.getAssignedOffice();
+
+        // Update incident office
+        incident.setAssignedOffice(request.getNewOffice());
+        // Set transferredFrom to the old office code
+        incident.setTransferredFrom(oldOffice != null ? oldOffice.name() : null);
+        // Set lastTransferredTo to the new office code
+        incident.setLastTransferredTo(request.getNewOffice().name());
+        // Set lastTransferNotes to the transfer notes
+        incident.setLastTransferNotes(request.getTransferNotes());
+        Incident updatedIncident = incidentRepository.save(incident);
+
+        // Create an incident update for the transfer
+        IncidentUpdate transferUpdate = new IncidentUpdate();
+        transferUpdate.setIncident(updatedIncident);
+        transferUpdate.setMessage(
+            "Case #" + incident.getTrackingNumber() + " transferred from " + oldOffice + " to " + request.getNewOffice() +
+            (request.getTransferNotes() != null && !request.getTransferNotes().trim().isEmpty()
+                ? ". Notes: " + request.getTransferNotes()
+                : "")
+        );
+        transferUpdate.setStatus(updatedIncident.getStatus());
+        transferUpdate.setUpdatedBy(user);
+        transferUpdate.setVisibleToReporter(true);
+        transferUpdate.setUpdatedByName(user.getFirstName() + " " + user.getLastName());
+        
+        IncidentUpdate savedUpdate = incidentUpdateRepository.save(transferUpdate);
+        System.out.println("Saved transfer update: " + savedUpdate.getMessage() + " for incident " + updatedIncident.getId());
+
+        // Log transfer activity for admin
+        activityLogService.logActivity(
+            "TRANSFER",
+            "Case #" + incident.getTrackingNumber() + " transferred from " + oldOffice + " to " + request.getNewOffice(),
+            updatedIncident,
+            user
+        );
+
+        // Log transfer activity for the submitter
+        activityLogService.logActivity(
+            "TRANSFER",
+            "Your case #" + incident.getTrackingNumber() + " has been transferred to " + request.getNewOffice(),
+            updatedIncident,
+            incident.getSubmittedBy()
+        );
+
+        // Log transfer activity for all admins of the receiving office
+        List<OfficeAdmin> receivingAdmins = officeAdminService.findAllActive().stream()
+            .filter(admin -> admin.getOfficeCode().equals(request.getNewOffice().name()))
+            .collect(Collectors.toList());
+        for (OfficeAdmin admin : receivingAdmins) {
+            User adminUser = admin.getUser();
+            activityLogService.logActivity(
+                "TRANSFER_RECEIVED",
+                "A case #" + incident.getTrackingNumber() + " has been transferred to your office (" + request.getNewOffice() + ")" +
+                (request.getTransferNotes() != null && !request.getTransferNotes().trim().isEmpty()
+                    ? ". Notes: " + request.getTransferNotes()
+                    : ""),
+                updatedIncident,
+                adminUser
+            );
+        }
+
+        return IncidentResponse.fromIncident(updatedIncident);
+    }
+
+    public boolean toggleUpvote(String incidentId, String userEmail) {
+        User user = userService.getUserByEmail(userEmail);
+        Incident incident = incidentRepository.findById(incidentId)
+            .orElseThrow(() -> new RuntimeException("Incident not found"));
+
+        // Defensive: always default upvoteCount to 0 if null
+        if (incident.getUpvoteCount() == null) {
+            incident.setUpvoteCount(0);
+        }
+
+        Optional<IncidentUpvote> existingUpvote = incidentUpvoteRepository.findByIncidentAndUser(incident, user);
+
+        if (existingUpvote.isPresent()) {
+            // Remove upvote
+            incidentUpvoteRepository.delete(existingUpvote.get());
+            incident.setUpvoteCount(incident.getUpvoteCount() - 1);
+            incidentRepository.save(incident);
+            // Broadcast new count
+            messagingTemplate.convertAndSend(
+                "/topic/upvotes/" + incident.getId(),
+                incident.getUpvoteCount()
+            );
+            return false;
+        } else {
+            // Add upvote
+            IncidentUpvote upvote = new IncidentUpvote();
+            upvote.setIncident(incident);
+            upvote.setUser(user);
+            incidentUpvoteRepository.save(upvote);
+            incident.setUpvoteCount(incident.getUpvoteCount() + 1);
+            incidentRepository.save(incident);
+            // Broadcast new count
+            messagingTemplate.convertAndSend(
+                "/topic/upvotes/" + incident.getId(),
+                incident.getUpvoteCount()
+            );
+
+            // Create notification for the incident creator
+            if (!user.getId().equals(incident.getSubmittedBy().getId())) {
+                activityLogService.logActivity(
+                    "UPVOTE",
+                    "Your incident #" + incident.getTrackingNumber() + " received an upvote",
+                    incident,
+                    incident.getSubmittedBy()
+                );
+            }
+            return true;
+        }
+    }
+
+    public boolean hasUserUpvoted(String incidentId, String userEmail) {
+        User user = userService.getUserByEmail(userEmail);
+        Incident incident = incidentRepository.findById(incidentId)
+            .orElseThrow(() -> new RuntimeException("Incident not found"));
+        return incidentUpvoteRepository.existsByIncidentAndUser(incident, user);
     }
 } 

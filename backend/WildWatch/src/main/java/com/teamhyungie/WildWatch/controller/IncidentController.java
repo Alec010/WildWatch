@@ -5,6 +5,7 @@ import com.teamhyungie.WildWatch.dto.IncidentRequest;
 import com.teamhyungie.WildWatch.dto.IncidentResponse;
 import com.teamhyungie.WildWatch.dto.IncidentUpdateRequest;
 import com.teamhyungie.WildWatch.dto.IncidentUpdateResponse;
+import com.teamhyungie.WildWatch.dto.IncidentTransferRequest;
 import com.teamhyungie.WildWatch.service.IncidentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -43,6 +44,12 @@ public class IncidentController {
     public ResponseEntity<List<IncidentResponse>> getUserIncidents(
             @AuthenticationPrincipal UserDetails userDetails) {
         List<IncidentResponse> incidents = incidentService.getUserIncidents(userDetails.getUsername());
+        return ResponseEntity.ok(incidents);
+    }
+
+    @GetMapping("/public")
+    public ResponseEntity<List<IncidentResponse>> getPublicIncidents() {
+        List<IncidentResponse> incidents = incidentService.getPublicIncidents();
         return ResponseEntity.ok(incidents);
     }
 
@@ -95,5 +102,31 @@ public class IncidentController {
             @AuthenticationPrincipal UserDetails userDetails) {
         List<IncidentUpdateResponse> updates = incidentService.getIncidentUpdates(id, userDetails.getUsername());
         return ResponseEntity.ok(updates);
+    }
+
+    @PostMapping("/{id}/transfer")
+    public ResponseEntity<IncidentResponse> transferIncident(
+            @PathVariable String id,
+            @RequestBody IncidentTransferRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        try {
+            IncidentResponse response = incidentService.transferIncident(id, userDetails.getUsername(), request);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @PostMapping("/{id}/upvote")
+    public ResponseEntity<Boolean> toggleUpvote(@PathVariable String id, @AuthenticationPrincipal UserDetails userDetails) {
+        boolean isUpvoted = incidentService.toggleUpvote(id, userDetails.getUsername());
+        return ResponseEntity.ok(isUpvoted);
+    }
+
+    @GetMapping("/{id}/upvote-status")
+    public ResponseEntity<Boolean> getUpvoteStatus(@PathVariable String id, @AuthenticationPrincipal UserDetails userDetails) {
+        boolean hasUpvoted = incidentService.hasUserUpvoted(id, userDetails.getUsername());
+        return ResponseEntity.ok(hasUpvoted);
     }
 } 

@@ -19,6 +19,11 @@ import {
   Eye,
   EyeOff,
   Loader2,
+  CheckCircle,
+  ChevronLeft,
+  AlertCircle,
+  ArrowRightLeft,
+  Info,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { OfficeAdminSidebar } from "@/components/OfficeAdminSidebar"
@@ -78,6 +83,11 @@ interface UpdateRequest {
   priorityLevel: "HIGH" | "MEDIUM" | "LOW"
 }
 
+interface TransferRequest {
+  newOffice: string
+  transferNotes: string
+}
+
 export default function UpdateApprovedCasePage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params)
   const router = useRouter()
@@ -93,6 +103,59 @@ export default function UpdateApprovedCasePage({ params }: { params: Promise<{ i
   const [isSending, setIsSending] = useState(false)
   const [isResolveDialogOpen, setIsResolveDialogOpen] = useState(false)
   const [isCloseDialogOpen, setIsCloseDialogOpen] = useState(false)
+  const [showTransferModal, setShowTransferModal] = useState(false)
+  const [transferNotes, setTransferNotes] = useState("")
+  const [selectedOffice, setSelectedOffice] = useState("")
+  const [isTransferring, setIsTransferring] = useState(false)
+  const [offices, setOffices] = useState<{ code: string; fullName: string; description: string }[]>([])
+  const [officesLoading, setOfficesLoading] = useState(false)
+  const [officesError, setOfficesError] = useState<string | null>(null)
+  const [officeName, setOfficeName] = useState<string>("")
+
+  // Fetch user's office name when component mounts
+  useEffect(() => {
+    const fetchOfficeName = async () => {
+      try {
+        const token = document.cookie
+          .split("; ")
+          .find((row) => row.startsWith("token="))
+          ?.split("=")[1]
+
+        if (!token) {
+          throw new Error("No authentication token found")
+        }
+
+        const response = await fetch(`${API_BASE_URL}/api/auth/profile`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        })
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const profile = await response.json()
+        if (profile.officeCode) {
+          // Fetch office details to get the full name
+          const officeResponse = await fetch(`${API_BASE_URL}/api/offices`)
+          if (officeResponse.ok) {
+            const offices = await officeResponse.json()
+            const office = offices.find((o: any) => o.code === profile.officeCode)
+            if (office) {
+              setOfficeName(office.fullName)
+              setUpdatedBy(office.fullName) // Set the initial value
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching office name:", error)
+      }
+    }
+
+    fetchOfficeName()
+  }, [])
 
   const fetchUpdates = async () => {
     try {
@@ -356,6 +419,77 @@ export default function UpdateApprovedCasePage({ params }: { params: Promise<{ i
     }
   }
 
+  const handleTransfer = async () => {
+    if (!selectedOffice) {
+      toast.error("Please select an office to transfer to")
+      return
+    }
+
+    try {
+      setIsTransferring(true)
+      const token = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("token="))
+        ?.split("=")[1]
+
+      if (!token) {
+        throw new Error("No authentication token found")
+      }
+
+      const transferRequest: TransferRequest = {
+        newOffice: selectedOffice,
+        transferNotes: transferNotes
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/incidents/${resolvedParams.id}/transfer`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(transferRequest),
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      toast.success("Case transferred successfully", {
+        description: "The incident has been transferred to the selected office.",
+        duration: 5000,
+      })
+
+      // Refresh the incident data
+      await fetchUpdates()
+      setShowTransferModal(false)
+    } catch (error) {
+      console.error("Error transferring case:", error)
+      toast.error("Failed to transfer case", {
+        description: "There was an error transferring the case. Please try again.",
+        duration: 5000,
+      })
+    } finally {
+      setIsTransferring(false)
+    }
+  }
+
+  // Fetch offices when transfer modal is opened
+  useEffect(() => {
+    if (showTransferModal) {
+      setOfficesLoading(true);
+      fetch(`${API_BASE_URL}/api/offices`)
+        .then(res => res.json())
+        .then(data => {
+          setOffices(data);
+          setOfficesLoading(false);
+        })
+        .catch(err => {
+          setOfficesError('Failed to load offices');
+          setOfficesLoading(false);
+        });
+    }
+  }, [showTransferModal]);
+
   if (loading) {
     return (
       <div className="flex h-screen">
@@ -460,7 +594,15 @@ export default function UpdateApprovedCasePage({ params }: { params: Promise<{ i
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 mt-4 md:mt-0">
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      className="border-[#8B0000] text-[#8B0000] hover:bg-[#8B0000] hover:text-white"
+                      onClick={() => setShowTransferModal(true)}
+                    >
+                      <ArrowRightLeft className="h-4 w-4 mr-2" />
+                      Transfer Case
+                    </Button>
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -556,8 +698,9 @@ export default function UpdateApprovedCasePage({ params }: { params: Promise<{ i
                           <label className="text-sm font-medium text-muted-foreground">Updated By</label>
                           <Input
                             value={updatedBy}
-                            onChange={(e) => setUpdatedBy(e.target.value)}
-                            placeholder="Position of staff who performed the update"
+                            disabled
+                            className="bg-gray-100"
+                            placeholder="Office name"
                           />
                         </div>
 
@@ -843,6 +986,83 @@ export default function UpdateApprovedCasePage({ params }: { params: Promise<{ i
                 </>
               ) : (
                 "Close Case"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Transfer Modal */}
+      <AlertDialog open={showTransferModal} onOpenChange={setShowTransferModal}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Transfer Case</AlertDialogTitle>
+            <AlertDialogDescription>
+              Transfer this case to another office. This will notify both the new office and the case reporter.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-muted-foreground">Transfer To</label>
+              <Select value={selectedOffice} onValueChange={setSelectedOffice}>
+                <SelectTrigger>
+                  <SelectValue placeholder={officesLoading ? 'Loading offices...' : 'Select office'} />
+                </SelectTrigger>
+                <SelectContent>
+                  {officesLoading ? (
+                    <div className="px-4 py-2 text-gray-500">Loading...</div>
+                  ) : officesError ? (
+                    <div className="px-4 py-2 text-red-500">{officesError}</div>
+                  ) : (
+                    offices.map((office) => (
+                      <SelectItem key={office.code} value={office.code} className="flex items-center justify-between gap-2">
+                        <span>{office.fullName}</span>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="ml-2 cursor-pointer">
+                                <Info className="h-4 w-4 text-gray-400 hover:text-primary" />
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <div className="font-semibold">{office.fullName}</div>
+                              <div className="text-xs text-gray-500 max-w-xs whitespace-pre-line">{office.description}</div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-muted-foreground">Transfer Notes</label>
+              <Textarea
+                value={transferNotes}
+                onChange={(e) => setTransferNotes(e.target.value)}
+                placeholder="Provide a reason for transferring this case..."
+                className="min-h-[100px] resize-none"
+              />
+            </div>
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isTransferring}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleTransfer}
+              disabled={isTransferring}
+              className="bg-[#8B0000] hover:bg-[#700000] text-white"
+            >
+              {isTransferring ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Transferring...
+                </>
+              ) : (
+                "Transfer Case"
               )}
             </AlertDialogAction>
           </AlertDialogFooter>

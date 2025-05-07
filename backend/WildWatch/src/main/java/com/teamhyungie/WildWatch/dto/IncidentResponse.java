@@ -36,6 +36,10 @@ public class IncidentResponse {
     private String officeAdminName;
     private LocalDateTime finishedDate;
     private Boolean verified;
+    private String transferredFrom;
+    private String lastTransferredTo;
+    private String lastTransferNotes;
+    private Integer upvoteCount;
 
     @Data
     public static class EvidenceDTO {
@@ -74,6 +78,10 @@ public class IncidentResponse {
         response.setSubmittedByPhone(incident.getSubmittedBy().getContactNumber());
         response.setSubmittedAt(incident.getSubmittedAt());
         response.setVerified(incident.getVerified());
+        response.setTransferredFrom(incident.getTransferredFrom());
+        response.setLastTransferredTo(incident.getLastTransferredTo());
+        response.setLastTransferNotes(incident.getLastTransferNotes());
+        response.setUpvoteCount(incident.getUpvoteCount());
 
         // Map evidence
         if (incident.getEvidence() != null) {

@@ -23,12 +23,18 @@ import {
   Tag,
   CheckCircle,
   XCircleIcon,
+  ArrowRightLeft,
+  Info,
 } from "lucide-react"
 import Image from "next/image"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { API_BASE_URL } from "@/utils/api"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
+import { Switch } from '@/components/ui/switch'
 
 interface Witness {
   id: string
@@ -95,6 +101,16 @@ export default function IncidentDetailsPage({ params }: PageProps) {
     color: string
   } | null>(null)
   const [countdown, setCountdown] = useState(3)
+  const [showTransferModal, setShowTransferModal] = useState(false)
+  const [transferNotes, setTransferNotes] = useState("")
+  const [selectedOffice, setSelectedOffice] = useState("")
+  const [isTransferring, setIsTransferring] = useState(false)
+  const [offices, setOffices] = useState<{ code: string; fullName: string; description: string }[]>([])
+  const [officesLoading, setOfficesLoading] = useState(false)
+  const [officesError, setOfficesError] = useState<string | null>(null)
+  const [priorityError, setPriorityError] = useState("")
+  const [isAnonymous, setIsAnonymous] = useState<boolean>(false)
+  const [verifyError, setVerifyError] = useState("")
   const { id } = use(params)
 
   useEffect(() => {
@@ -138,7 +154,33 @@ export default function IncidentDetailsPage({ params }: PageProps) {
     fetchIncident()
   }, [id])
 
+  useEffect(() => {
+    if (showTransferModal) {
+      setOfficesLoading(true)
+      fetch(`${API_BASE_URL}/api/offices`)
+        .then(res => res.json())
+        .then(data => {
+          setOffices(data)
+          setOfficesLoading(false)
+        })
+        .catch(err => {
+          setOfficesError('Failed to load offices')
+          setOfficesLoading(false)
+        })
+    }
+  }, [showTransferModal])
+
   const handleApproveIncident = async () => {
+    if (!isVerified) {
+      setVerifyError("You must confirm this incident has been verified.");
+      return;
+    }
+    setVerifyError("");
+    if (!priorityLevel) {
+      setPriorityError("Please select a priority before approving.");
+      return;
+    }
+    setPriorityError("");
     setIsProcessing(true)
     try {
       const token = document.cookie
@@ -162,6 +204,7 @@ export default function IncidentDetailsPage({ params }: PageProps) {
           verificationNotes,
           status: "In Progress",
           priorityLevel,
+          isAnonymous,
         }),
       })
 
@@ -234,6 +277,7 @@ export default function IncidentDetailsPage({ params }: PageProps) {
           verificationNotes,
           status: "Dismissed",
           priorityLevel: null,
+          isAnonymous,
         }),
       })
 
@@ -295,6 +339,7 @@ export default function IncidentDetailsPage({ params }: PageProps) {
           verificationNotes,
           status,
           priorityLevel,
+          isAnonymous,
         }),
       })
 
@@ -329,6 +374,89 @@ export default function IncidentDetailsPage({ params }: PageProps) {
       setShowModal(true)
     } finally {
       setIsProcessing(false)
+    }
+  }
+
+  const handleTransfer = async () => {
+    if (!selectedOffice) {
+      setModalContent({
+        title: "Error",
+        message: "Please select an office to transfer to.",
+        icon: <AlertTriangle className="h-12 w-12 text-red-500" />,
+        color: "bg-red-50 border-red-200",
+      })
+      setShowModal(true)
+      return
+    }
+
+    setIsTransferring(true)
+    try {
+      const token = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("token="))
+        ?.split("=")[1]
+
+      if (!token) {
+        throw new Error("No authentication token found")
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/incidents/${id}/transfer`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          newOffice: selectedOffice,
+          transferNotes: transferNotes,
+          isAnonymous,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
+      setIncident(data)
+      setShowTransferModal(false)
+      setTransferNotes("")
+      setSelectedOffice("")
+      
+      setModalContent({
+        title: "Success",
+        message: "Incident has been transferred successfully.",
+        icon: <CheckCircle className="h-12 w-12 text-green-500" />,
+        color: "bg-green-50 border-green-200",
+      })
+      setShowModal(true)
+      setCountdown(3)
+
+      // Start countdown
+      const countdownInterval = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(countdownInterval)
+            router.push("/office-admin/dashboard")
+            return 0
+          }
+          return prev - 1
+        })
+      }, 1000)
+
+      // Cleanup interval on unmount
+      return () => clearInterval(countdownInterval)
+    } catch (error) {
+      console.error("Error transferring incident:", error)
+      setModalContent({
+        title: "Error",
+        message: "Failed to transfer incident. Please try again.",
+        icon: <AlertTriangle className="h-12 w-12 text-red-500" />,
+        color: "bg-red-50 border-red-200",
+      })
+      setShowModal(true)
+    } finally {
+      setIsTransferring(false)
     }
   }
 
@@ -450,10 +578,20 @@ export default function IncidentDetailsPage({ params }: PageProps) {
                 Case #{incident.trackingNumber} • {incident.incidentType}
               </p>
             </div>
-            <Button variant="outline" onClick={() => router.back()} className="flex items-center gap-2 self-start">
-              <ArrowLeft className="h-4 w-4" />
-              Back to Incidents
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowTransferModal(true)}
+                className="flex items-center gap-2"
+              >
+                <ArrowRightLeft className="h-4 w-4" />
+                Transfer Case
+              </Button>
+              <Button variant="outline" onClick={() => router.back()} className="flex items-center gap-2">
+                <ArrowLeft className="h-4 w-4" />
+                Back to Incidents
+              </Button>
+            </div>
           </div>
 
           {/* Two-column layout */}
@@ -634,17 +772,22 @@ export default function IncidentDetailsPage({ params }: PageProps) {
 
                   {/* Priority Level */}
                   <div className="mb-4">
-                    <Label className="text-sm font-medium">Set Priority</Label>
+                    <Label className="text-sm font-medium">
+                      Set Priority <span className="text-red-600">*</span>
+                    </Label>
                     <select
                       value={priorityLevel || ""}
-                      onChange={(e) => setPriorityLevel(e.target.value || null)}
-                      className="w-full mt-1 px-3 py-2 border rounded-md bg-white focus:ring-2 focus:ring-[#8B0000]/20 focus:border-[#8B0000] transition-all"
+                      onChange={(e) => { setPriorityLevel(e.target.value || null); setPriorityError(""); }}
+                      className={`w-full mt-1 px-3 py-2 border rounded-md bg-white focus:ring-2 focus:ring-[#8B0000]/20 focus:border-[#8B0000] transition-all ${priorityError ? 'border-red-500' : ''}`}
                     >
                       <option value="">Select Priority</option>
                       <option value="LOW">Low</option>
                       <option value="MEDIUM">Medium</option>
                       <option value="HIGH">High</option>
                     </select>
+                    {priorityError && (
+                      <div className="text-red-600 text-xs mt-1">{priorityError}</div>
+                    )}
                   </div>
 
                   {/* Administrative Notes */}
@@ -656,6 +799,23 @@ export default function IncidentDetailsPage({ params }: PageProps) {
                       placeholder="Add your notes about this incident..."
                       className="mt-1 min-h-[100px] focus:ring-2 focus:ring-[#8B0000]/20 focus:border-[#8B0000] transition-all"
                     />
+                  </div>
+
+                  {/* Anonymous */}
+                  <div className="mb-4">
+                    <label htmlFor="is-anonymous" className="flex items-center gap-3 cursor-pointer">
+                      <Switch
+                        id="is-anonymous"
+                        checked={isAnonymous}
+                        onCheckedChange={checked => setIsAnonymous(checked)}
+                      />
+                      <span className="text-sm font-medium text-gray-900">
+                        Mark this report as anonymous
+                      </span>
+                    </label>
+                    <p className="text-xs text-gray-500 ml-9">
+                      If enabled, this report will not be displayed in public listings.
+                    </p>
                   </div>
 
                   {/* Update Button */}
@@ -734,13 +894,16 @@ export default function IncidentDetailsPage({ params }: PageProps) {
                       type="checkbox"
                       id="verified"
                       checked={isVerified}
-                      onChange={(e) => setIsVerified(e.target.checked)}
+                      onChange={(e) => { setIsVerified(e.target.checked); setVerifyError(""); }}
                       className="h-4 w-4 rounded border-gray-300 text-[#8B0000] focus:ring-[#8B0000]"
                     />
                     <Label htmlFor="verified" className="text-sm font-medium cursor-pointer">
-                      I confirm this incident has been verified
+                      I confirm this incident has been verified <span className="text-red-600">*</span>
                     </Label>
                   </div>
+                  {verifyError && (
+                    <div className="text-red-600 text-xs mb-2 ml-1">{verifyError}</div>
+                  )}
 
                   <div className="mb-4">
                     <Label className="text-sm font-medium">Verification Notes</Label>
@@ -768,7 +931,7 @@ export default function IncidentDetailsPage({ params }: PageProps) {
                 <Button
                   className="bg-[#8B0000] hover:bg-[#8B0000]/90 text-white flex items-center gap-2"
                   onClick={handleApproveIncident}
-                  disabled={isProcessing}
+                  disabled={isProcessing || !priorityLevel || !isVerified}
                 >
                   <CheckCircle2 className="h-4 w-4" />
                   {isProcessing ? "Processing..." : "Approve"}
@@ -785,6 +948,72 @@ export default function IncidentDetailsPage({ params }: PageProps) {
               </div>
             </div>
           </div>
+
+          {/* Transfer Modal */}
+          <Dialog open={showTransferModal} onOpenChange={setShowTransferModal}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Transfer Incident</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Transfer to Office</label>
+                  <Select value={selectedOffice} onValueChange={setSelectedOffice}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={officesLoading ? 'Loading offices...' : 'Select an office'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {officesLoading ? (
+                        <div className="px-4 py-2 text-gray-500">Loading...</div>
+                      ) : officesError ? (
+                        <div className="px-4 py-2 text-red-500">{officesError}</div>
+                      ) : (
+                        offices.map((office) => (
+                          <SelectItem key={office.code} value={office.code} className="flex items-center justify-between gap-2">
+                            <span>{office.fullName}</span>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="ml-2 cursor-pointer">
+                                    <Info className="h-4 w-4 text-gray-400 hover:text-primary" />
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <div className="font-semibold">{office.fullName}</div>
+                                  <div className="text-xs text-gray-500 max-w-xs whitespace-pre-line">{office.description}</div>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Transfer Notes</label>
+                  <Textarea
+                    placeholder="Enter reason for transfer..."
+                    value={transferNotes}
+                    onChange={(e) => setTransferNotes(e.target.value)}
+                    rows={4}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowTransferModal(false)}>
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleTransfer} 
+                  disabled={isTransferring}
+                  className="bg-[#8B0000] hover:bg-[#700000]"
+                >
+                  {isTransferring ? "Transferring..." : "Transfer"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
 
         {/* Modal */}

@@ -76,7 +76,8 @@ public class SecurityConfig {
                                 "/error",
                                 "/favicon.ico",
                                 "/api/setup/by-office/**",
-                                "/api/ping")
+                                "/api/ping",
+                                "/api/offices")
                         .permitAll()
                         .requestMatchers("/api/terms/**").authenticated()
                         .anyRequest().authenticated())

@@ -66,6 +66,24 @@ public class Incident {
     @OneToMany(mappedBy = "incident", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private java.util.List<Witness> witnesses;
 
+    @Column(name = "transferred_from")
+    private String transferredFrom; // stores the office code of the previous office
+
+    @Column(name = "last_transferred_to")
+    private String lastTransferredTo; // stores the office code of the most recent transfer destination
+
+    @Column(name = "last_transfer_notes", length = 1000)
+    private String lastTransferNotes;
+
+    @Column(name = "is_anonymous")
+    private Boolean isAnonymous;
+
+    @Column(name = "prefer_anonymous")
+    private Boolean preferAnonymous;
+
+    @Column(name = "upvote_count")
+    private Integer upvoteCount = 0;
+
     @PrePersist
     protected void onCreate() {
         submittedAt = LocalDateTime.now(ZoneOffset.UTC);
@@ -74,6 +92,9 @@ public class Incident {
             String datePart = LocalDate.now(ZoneOffset.UTC).toString().replace("-", "");
             String randomPart = String.format("%04d", (int) (Math.random() * 10000));
             trackingNumber = "INC-" + datePart + "-" + randomPart;
+        }
+        if (upvoteCount == null) {
+            upvoteCount = 0;
         }
     }
 } 

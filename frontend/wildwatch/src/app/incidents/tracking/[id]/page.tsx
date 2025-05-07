@@ -3,10 +3,13 @@
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Sidebar } from "@/components/Sidebar"
-import { CheckCircle, Clock, ChevronLeft, FileText, AlertCircle, Loader2 } from "lucide-react"
+import { OfficeAdminSidebar } from "@/components/OfficeAdminSidebar"
+import { CheckCircle, Clock, ChevronLeft, FileText, AlertCircle, Loader2, ArrowRightLeft } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { API_BASE_URL } from "@/utils/api"
+import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 
 interface IncidentDetails {
   id: string
@@ -71,6 +74,12 @@ export default function CaseDetailsPage() {
   const [officeAdmin, setOfficeAdmin] = useState<OfficeAdminUser | null>(null)
   const [evidenceModal, setEvidenceModal] = useState<{ open: boolean; fileUrl: string; fileName: string } | null>(null)
   const [updates, setUpdates] = useState<IncidentUpdate[]>([])
+  const [showTransferModal, setShowTransferModal] = useState(false)
+  const [selectedImage, setSelectedImage] = useState<{ fileUrl: string; fileName: string } | null>(null)
+  const [userRole, setUserRole] = useState<string | null>(null)
+  const [showApproveModal, setShowApproveModal] = useState(false)
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [isApproving, setIsApproving] = useState(false)
 
   const statusSteps = [
     { key: "Submitted", label: "Submitted" },
@@ -88,6 +97,8 @@ export default function CaseDetailsPage() {
       ? 0
       : statusOrder.findIndex((s) => normalizedStatus.includes(s.toLowerCase()))
 
+  const isOfficeAdmin = userRole === 'OFFICE_ADMIN'
+
   useEffect(() => {
     const fetchIncidentDetails = async () => {
       try {
@@ -99,6 +110,19 @@ export default function CaseDetailsPage() {
           router.push("/login")
           return
         }
+
+        // Fetch user profile to get role
+        const profileResponse = await fetch(`${API_BASE_URL}/api/auth/profile`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        })
+        if (profileResponse.ok) {
+          const profileData = await profileResponse.json()
+          setUserRole(profileData.role)
+        }
+
         // Fetch incident details
         const response = await fetch(`${API_BASE_URL}/api/incidents/track/${id}`, {
           headers: {
@@ -142,10 +166,46 @@ export default function CaseDetailsPage() {
     if (id) fetchIncidentDetails()
   }, [id, router])
 
+  const handleApprove = async () => {
+    try {
+      if (!incident) throw new Error('No incident data found');
+      
+      setIsApproving(true)
+      const token = document.cookie
+        .split('; ')
+        .find((row) => row.startsWith('token='))
+        ?.split('=')[1];
+      if (!token) throw new Error('No authentication token found');
+      
+      const response = await fetch(`${API_BASE_URL}/api/incidents/${incident.id}`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: 'Pending' }),
+      });
+      
+      if (!response.ok) throw new Error('Failed to approve case');
+      
+      setShowApproveModal(false)
+      setShowSuccessModal(true)
+      
+      // Redirect after 2 seconds
+      setTimeout(() => {
+        router.push('/office-admin/incidents');
+      }, 2000);
+    } catch (err) {
+      alert('Failed to approve case.');
+    } finally {
+      setIsApproving(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex">
-        <Sidebar />
+        {userRole === 'OFFICE_ADMIN' ? <OfficeAdminSidebar /> : <Sidebar />}
         <div className="flex-1 flex items-center justify-center">
           <div className="flex flex-col items-center gap-3">
             <Loader2 className="h-10 w-10 text-[#8B0000] animate-spin" />
@@ -159,7 +219,7 @@ export default function CaseDetailsPage() {
   if (error || !incident) {
     return (
       <div className="min-h-screen flex">
-        <Sidebar />
+        {userRole === 'OFFICE_ADMIN' ? <OfficeAdminSidebar /> : <Sidebar />}
         <div className="flex-1 p-8">
           <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-8 flex flex-col items-center">
             <AlertCircle className="h-16 w-16 text-red-500 mb-4" />
@@ -193,7 +253,7 @@ export default function CaseDetailsPage() {
 
   return (
     <div className="min-h-screen flex">
-      <Sidebar />
+      {userRole === 'OFFICE_ADMIN' ? <OfficeAdminSidebar /> : <Sidebar />}
       <div className="flex-1 bg-[#f5f5f5]">
         <div className="p-6 max-w-[1200px] mx-auto">
           {/* Header Section */}
@@ -312,6 +372,27 @@ export default function CaseDetailsPage() {
                 })}
               </div>
             </div>
+
+            {isOfficeAdmin && normalizedStatus !== "pending" && (
+              <div className="flex gap-4 mb-6">
+                <Button
+                  variant="default"
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                  onClick={() => setShowApproveModal(true)}
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Approve
+                </Button>
+                <Button
+                  variant="outline"
+                  className="border-[#8B0000] text-[#8B0000] hover:bg-[#8B0000] hover:text-white"
+                  onClick={() => setShowTransferModal(true)}
+                >
+                  <ArrowRightLeft className="h-4 w-4 mr-2" />
+                  Transfer to another office
+                </Button>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -355,10 +436,11 @@ export default function CaseDetailsPage() {
                       <div
                         key={file.id}
                         className="flex items-center gap-3 p-2 hover:bg-gray-50 transition-colors cursor-pointer"
-                        onClick={() =>
-                          file.fileType.startsWith("image/") &&
-                          setEvidenceModal({ open: true, fileUrl: file.fileUrl, fileName: file.fileName })
-                        }
+                        onClick={() => {
+                          if (file.fileType.startsWith("image/")) {
+                            setSelectedImage({ fileUrl: file.fileUrl, fileName: file.fileName });
+                          }
+                        }}
                       >
                         <div className="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-sm overflow-hidden flex-shrink-0">
                           {file.fileType.startsWith("image/") ? (
@@ -427,19 +509,34 @@ export default function CaseDetailsPage() {
                     {updates.map((update, idx) => {
                       let iconColor = "text-blue-500"
                       let iconBg = "bg-blue-50"
+                      let Icon = Clock
 
-                      const title = update.title?.toLowerCase() || ""
+                      const message = update.message?.toLowerCase() || ""
                       const status = update.status?.toLowerCase() || ""
 
-                      if (title.includes("security") || title.includes("team")) {
-                        iconColor = "text-yellow-500"
-                        iconBg = "bg-yellow-50"
-                      } else if (title.includes("priority") || title.includes("changed")) {
-                        iconColor = "text-blue-500"
-                        iconBg = "bg-blue-50"
-                      } else if (title.includes("closed") || title.includes("resolved")) {
+                      // Check for verification updates
+                      if (message.includes("verified") || message.includes("verification")) {
                         iconColor = "text-green-500"
                         iconBg = "bg-green-50"
+                        Icon = CheckCircle
+                      }
+                      // Check for transfer updates
+                      else if (message.includes("transferred") || message.includes("transfer")) {
+                        iconColor = "text-purple-500"
+                        iconBg = "bg-purple-50"
+                        Icon = ArrowRightLeft
+                      }
+                      // Check for status changes
+                      else if (status.includes("resolved") || status.includes("closed")) {
+                        iconColor = "text-green-500"
+                        iconBg = "bg-green-50"
+                        Icon = CheckCircle
+                      }
+                      // Check for priority changes
+                      else if (message.includes("priority") || message.includes("changed")) {
+                        iconColor = "text-blue-500"
+                        iconBg = "bg-blue-50"
+                        Icon = AlertCircle
                       }
 
                       return (
@@ -447,11 +544,15 @@ export default function CaseDetailsPage() {
                           <div
                             className={`flex-shrink-0 w-8 h-8 rounded-full ${iconBg} flex items-center justify-center ${iconColor}`}
                           >
-                            <Clock className="w-4 h-4" />
+                            <Icon className="w-4 h-4" />
                           </div>
                           <div className="flex-1">
                             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-1">
-                              <span className="font-medium text-sm">{update.title || update.status || "Update"}</span>
+                              <span className="font-medium text-sm">
+                                {message.includes("verified") ? "Verification" :
+                                 message.includes("transferred") ? "Case Transfer" :
+                                 update.title || update.status || "Update"}
+                              </span>
                               <span className="text-xs text-gray-500">
                                 {update.updatedAt ? formatDate(update.updatedAt) : ""} •{" "}
                                 {update.updatedAt
@@ -494,6 +595,31 @@ export default function CaseDetailsPage() {
                   <div>
                     <div className="text-sm font-medium text-gray-500">Contact number</div>
                     <p className="text-sm">{officeAdmin ? officeAdmin.contactNumber : "-"}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Reporter Information */}
+              <div className="bg-white rounded-md shadow-sm p-6 mb-6">
+                <h2 className="text-base font-semibold mb-4 text-gray-800">Reporter Information</h2>
+                <div className="space-y-3">
+                  <div>
+                    <div className="text-sm font-medium text-gray-500">Name</div>
+                    <p className="text-sm font-medium">
+                      {incident.submittedByFullName ? incident.submittedByFullName : <span className="italic text-gray-400">Anonymous</span>}
+                    </p>
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-gray-500">Email</div>
+                    <p className="text-sm font-medium">
+                      {incident.submittedByEmail ? incident.submittedByEmail : <span className="italic text-gray-400">Not provided</span>}
+                    </p>
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-gray-500">Phone</div>
+                    <p className="text-sm font-medium">
+                      {incident.submittedByPhone ? incident.submittedByPhone : <span className="italic text-gray-400">Not provided</span>}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -550,6 +676,97 @@ export default function CaseDetailsPage() {
           </div>
         </div>
       </div>
+      {/* Modal for full-size image preview */}
+      <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
+        <DialogContent className="max-w-2xl p-0 bg-transparent shadow-none border-none flex flex-col items-center justify-center">
+          {selectedImage && (
+            <>
+              <button
+                onClick={() => setSelectedImage(null)}
+                className="absolute top-2 right-2 p-2 rounded-full bg-black/50 hover:bg-black/70 text-white transition-colors"
+                aria-label="Close preview"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+              <Image
+                src={selectedImage.fileUrl}
+                alt={selectedImage.fileName}
+                width={600}
+                height={600}
+                className="object-contain max-h-[80vh] max-w-full rounded-lg"
+              />
+              <div className="mt-2 text-center text-sm text-gray-700">{selectedImage.fileName}</div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Approve Confirmation Modal */}
+      <Dialog open={showApproveModal} onOpenChange={setShowApproveModal}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Confirm Case Approval</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to approve this case? This will move it back to the pending list for further review.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2 justify-end mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setShowApproveModal(false)}
+              disabled={isApproving}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="default"
+              className="bg-green-600 hover:bg-green-700 text-white"
+              onClick={handleApprove}
+              disabled={isApproving}
+            >
+              {isApproving ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Approving...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Confirm Approval
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Success Modal */}
+      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-green-600">
+              <CheckCircle className="h-5 w-5" />
+              Case Approved Successfully
+            </DialogTitle>
+            <DialogDescription>
+              The case has been approved and moved to the pending list. You will be redirected to the incidents page.
+            </DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

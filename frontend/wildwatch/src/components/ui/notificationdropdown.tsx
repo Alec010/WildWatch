@@ -10,6 +10,8 @@ import {
   CheckCircle,
   FileText,
   RefreshCw,
+  ArrowRightLeft,
+  ThumbsUp,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
@@ -201,9 +203,13 @@ export default function NotificationDropdown({
         setUnreadCount(prev => Math.max(0, prev - 1));
       }
 
-      // Redirect to the tracking page if there's an incident
+      // Redirect to the correct page if there's an incident
       if (notification.incident) {
-        router.push(`/incidents/tracking/${notification.incident.trackingNumber}`);
+        if (notification.activityType === "NEW_CASE_ASSIGNED") {
+          router.push(`/office-admin/incidents/${notification.incident.id}`);
+        } else {
+          router.push(`/incidents/tracking/${notification.incident.trackingNumber}`);
+        }
       }
     } catch (error) {
       console.error("Error handling notification click:", error);
@@ -299,6 +305,14 @@ export default function NotificationDropdown({
         return <CheckCircle className="h-5 w-5 text-green-500" />;
       case "VERIFICATION":
         return <CheckCircle className="h-5 w-5 text-green-500" />;
+      case "TRANSFER":
+        return <ArrowRightLeft className="h-5 w-5 text-orange-500" />;
+      case "TRANSFER_RECEIVED":
+        return <ArrowRightLeft className="h-5 w-5 text-orange-500" />;
+      case "TRANSFER_APPROVED":
+        return <CheckCircle className="h-5 w-5 text-green-500" />;
+      case "UPVOTE":
+        return <ThumbsUp className="h-5 w-5 text-[#800000]" />;
       default:
         return <Bell className="h-5 w-5 text-gray-500" />;
     }
@@ -316,6 +330,14 @@ export default function NotificationDropdown({
         return "Case Resolved";
       case "VERIFICATION":
         return "Case Verified";
+      case "TRANSFER":
+        return "Case Transferred";
+      case "TRANSFER_RECEIVED":
+        return "Case Received";
+      case "TRANSFER_APPROVED":
+        return "Transfer Approved";
+      case "UPVOTE":
+        return "New Upvote";
       default:
         return type.replace(/_/g, ' ');
     }

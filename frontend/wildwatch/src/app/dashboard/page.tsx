@@ -13,11 +13,15 @@ import {
   Search,
   Plus,
   FileText,
+  ThumbsUp,
+  Frown,
 } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import NotificationDropdown from "@/components/ui/notificationdropdown";
 import { Inter } from "next/font/google";
 import { API_BASE_URL } from "@/utils/api";
+import { Input } from '@/components/ui/input';
+import { UpvoteModal } from '@/components/ui/upvote-modal';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -31,6 +35,9 @@ interface Incident {
   status: string;
   description: string;
   submittedAt: string;
+  isAnonymous: boolean;
+  submittedBy: string;
+  upvoteCount?: number;
 }
 
 export default function DashboardPage() {
@@ -41,11 +48,19 @@ export default function DashboardPage() {
     inProgress: 0,
     resolved: 0,
   });
-  const [recentIncidents, setRecentIncidents] = useState<Incident[]>([]);
+  const [allIncidents, setAllIncidents] = useState<Incident[]>([]);
+  const [myIncidents, setMyIncidents] = useState<Incident[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filteredIncidents, setFilteredIncidents] = useState<Incident[]>([]);
+  const [filteredAllIncidents, setFilteredAllIncidents] = useState<Incident[]>([]);
+  const [filteredMyIncidents, setFilteredMyIncidents] = useState<Incident[]>([]);
+  const [upvotedIncidents, setUpvotedIncidents] = useState<Set<string>>(new Set());
+  const [upvoteModalOpen, setUpvoteModalOpen] = useState(false);
+  const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
+  const [isUpvotedModal, setIsUpvotedModal] = useState(false);
+  const [pendingUpvote, setPendingUpvote] = useState<{ [id: string]: boolean | undefined }>({});
+
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
@@ -58,50 +73,69 @@ export default function DashboardPage() {
           throw new Error("No authentication token found");
         }
 
-        // Fetch user's incidents
-        const response = await fetch(`${API_BASE_URL}/api/incidents/my-incidents`, {
+        // Fetch all incidents
+        const allResponse = await fetch(`${API_BASE_URL}/api/incidents/public`, {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
         });
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+        if (!allResponse.ok) {
+          throw new Error(`HTTP error! status: ${allResponse.status}`);
         }
 
-        const incidents = await response.json();
+        const allIncidentsData = await allResponse.json();
+        // Filter out anonymous incidents
+        const filteredAllIncidents = allIncidentsData.filter((inc: Incident) => !inc.isAnonymous);
+        setAllIncidents(filteredAllIncidents);
 
-        // Calculate statistics
+        // Fetch upvote status for each incident
+        const upvotePromises = filteredAllIncidents.map((incident: Incident) =>
+          fetch(`${API_BASE_URL}/api/incidents/${incident.id}/upvote-status`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }).then(res => res.json())
+        );
+
+        const upvoteResults = await Promise.all(upvotePromises);
+        const upvoted = new Set<string>();
+        filteredAllIncidents.forEach((incident: Incident, index: number) => {
+          if (upvoteResults[index] === true) {
+            upvoted.add(incident.id);
+          }
+        });
+        setUpvotedIncidents(upvoted);
+
+        // Fetch user's incidents
+        const myResponse = await fetch(`${API_BASE_URL}/api/incidents/my-incidents`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!myResponse.ok) {
+          throw new Error(`HTTP error! status: ${myResponse.status}`);
+        }
+
+        const myIncidentsData = await myResponse.json();
+        setMyIncidents(myIncidentsData);
+
+        // Calculate statistics from user's incidents
         const stats = {
-          total: incidents.length,
-          pending: incidents.filter((inc: Incident) => inc.status === "Pending")
-            .length,
-          inProgress: incidents.filter(
-            (inc: Incident) => inc.status === "In Progress"
-          ).length,
-          resolved: incidents.filter(
-            (inc: Incident) => inc.status === "Resolved"
-          ).length,
+          total: myIncidentsData.length,
+          pending: myIncidentsData.filter((inc: Incident) => inc.status === "Pending").length,
+          inProgress: myIncidentsData.filter((inc: Incident) => inc.status === "In Progress").length,
+          resolved: myIncidentsData.filter((inc: Incident) => inc.status === "Resolved").length,
         };
 
         setStats(stats);
-        // Sort incidents by submission date and get the 5 most recent
-        const sortedIncidents = incidents
-          .sort(
-            (a: Incident, b: Incident) =>
-              new Date(b.submittedAt).getTime() -
-              new Date(a.submittedAt).getTime()
-          )
-          .slice(0, 5);
-        setRecentIncidents(sortedIncidents);
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
-        setError(
-          error instanceof Error
-            ? error.message
-            : "Failed to load dashboard data"
-        );
+        setError(error instanceof Error ? error.message : "Failed to load dashboard data");
       } finally {
         setLoading(false);
       }
@@ -112,15 +146,26 @@ export default function DashboardPage() {
 
   useEffect(() => {
     // Filter incidents based on search query
-    const filtered = recentIncidents.filter((incident) => {
+    const filteredAll = allIncidents.filter((incident) => {
       const searchLower = searchQuery.toLowerCase();
       return (
         incident.incidentType.toLowerCase().includes(searchLower) ||
-        incident.trackingNumber.toLowerCase().includes(searchLower)
+        incident.trackingNumber.toLowerCase().includes(searchLower) ||
+        incident.location.toLowerCase().includes(searchLower)
       );
     });
-    setFilteredIncidents(filtered);
-  }, [searchQuery, recentIncidents]);
+    setFilteredAllIncidents(filteredAll);
+
+    const filteredMy = myIncidents.filter((incident) => {
+      const searchLower = searchQuery.toLowerCase();
+      return (
+        incident.incidentType.toLowerCase().includes(searchLower) ||
+        incident.trackingNumber.toLowerCase().includes(searchLower) ||
+        incident.location.toLowerCase().includes(searchLower)
+      );
+    });
+    setFilteredMyIncidents(filteredMy);
+  }, [searchQuery, allIncidents, myIncidents]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -131,6 +176,124 @@ export default function DashboardPage() {
       minute: "numeric",
       hour12: true,
     });
+  };
+
+  const handleUpvote = async (incidentId: string, wasUpvoted?: boolean) => {
+    try {
+      const token = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("token="))
+        ?.split("=")[1];
+
+      if (!token) {
+        throw new Error("No authentication token found");
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/incidents/${incidentId}/upvote`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const isUpvoted = await response.json();
+
+      // Always fetch the updated incident from the backend and update the local state
+      const incidentRes = await fetch(`${API_BASE_URL}/api/incidents/${incidentId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+      if (incidentRes.ok) {
+        const updatedIncident = await incidentRes.json();
+        setAllIncidents(prevIncidents =>
+          prevIncidents.map(incident =>
+            incident.id === incidentId
+              ? { ...incident, upvoteCount: typeof updatedIncident.upvoteCount === 'number' ? updatedIncident.upvoteCount : 0 }
+              : incident
+          )
+        );
+      }
+      // Update upvotedIncidents set based on backend response
+      setUpvotedIncidents(prev => {
+        const newSet = new Set(prev);
+        if (isUpvoted) {
+          newSet.add(incidentId);
+        } else {
+          newSet.delete(incidentId);
+        }
+        return newSet;
+      });
+    } catch (error) {
+      // Revert optimistic update if backend fails
+      if (selectedIncident && wasUpvoted !== undefined) {
+        setAllIncidents(prevIncidents =>
+          prevIncidents.map(incident => {
+            if (incident.id === incidentId) {
+              const safeCount = typeof incident.upvoteCount === 'number' ? incident.upvoteCount : 0;
+              return {
+                ...incident,
+                upvoteCount: wasUpvoted ? safeCount + 1 : safeCount - 1
+              };
+            }
+            return incident;
+          })
+        );
+        setUpvotedIncidents(prev => {
+          const newSet = new Set(prev);
+          if (wasUpvoted) {
+            newSet.add(incidentId);
+          } else {
+            newSet.delete(incidentId);
+          }
+          return newSet;
+        });
+      }
+      console.error("Error toggling upvote:", error);
+    }
+  };
+
+  const handleUpvoteClick = (incident: Incident) => {
+    setSelectedIncident(incident);
+    setIsUpvotedModal(upvotedIncidents.has(incident.id));
+    setUpvoteModalOpen(true);
+  };
+
+  const handleUpvoteConfirm = async () => {
+    if (selectedIncident) {
+      const isCurrentlyUpvoted = upvotedIncidents.has(selectedIncident.id);
+      // Optimistically update UI
+      setAllIncidents(prevIncidents =>
+        prevIncidents.map(incident => {
+          if (incident.id === selectedIncident.id) {
+            const safeCount = typeof incident.upvoteCount === 'number' ? incident.upvoteCount : 0;
+            return {
+              ...incident,
+              upvoteCount: isCurrentlyUpvoted ? safeCount - 1 : safeCount + 1
+            };
+          }
+          return incident;
+        })
+      );
+      setUpvotedIncidents(prev => {
+        const newSet = new Set(prev);
+        if (isCurrentlyUpvoted) {
+          newSet.delete(selectedIncident.id);
+        } else {
+          newSet.add(selectedIncident.id);
+        }
+        return newSet;
+      });
+      // Set pending state for this incident to the new upvote state
+      setPendingUpvote(prev => ({ ...prev, [selectedIncident.id]: !isCurrentlyUpvoted }));
+      await handleUpvote(selectedIncident.id, isCurrentlyUpvoted);
+    }
   };
 
   if (loading) {
@@ -175,12 +338,8 @@ export default function DashboardPage() {
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
             <div>
-              <h1 className="text-2xl font-bold text-[#800000]">
-                Incident Dashboard
-              </h1>
-              <p className="text-sm text-gray-600">
-                View and manage your reported incidents
-              </p>
+              <h1 className="text-2xl font-bold text-[#800000]">Incident Dashboard</h1>
+              <p className="text-sm text-gray-600">View and manage reported incidents</p>
             </div>
             <div className="flex items-center gap-4">
               <div className="relative">
@@ -194,93 +353,83 @@ export default function DashboardPage() {
                 />
               </div>
               <Button
-                className="bg-[#800000] hover:bg-[#700000] text-white flex items-center gap-2"
-                onClick={() => router.push("/incidents/submit")}
+                variant="default"
+                className="bg-[#800000] hover:bg-[#600000] text-white"
+                onClick={() => router.push("/incidents/new")}
               >
-                <Plus className="h-4 w-4" />
+                <Plus className="h-4 w-4 mr-2" />
                 Report New Incident
               </Button>
-
-              {/* Using the NotificationDropdown component */}
               <NotificationDropdown />
             </div>
           </div>
 
-          {/* Overview Section with Tab-like Underline */}
-          <div className="mb-8">
-            <div className="border-b border-gray-200 mb-4">
-              <h2 className="text-lg font-medium text-[#800000] pb-2 border-b-2 border-[#800000] inline-block">
-                Overview
-              </h2>
-            </div>
-            <div className="grid grid-cols-4 gap-4">
-              <Card className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
-                <div className="p-4 flex items-center">
-                  <div className="mr-4 bg-red-50 p-3 rounded-full">
-                    <FileText className="h-6 w-6 text-[#800000]" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500 mb-1">Total Reports</p>
-                    <p className="text-2xl font-bold">{stats.total}</p>
-                  </div>
+          {/* Stats Section */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <Card className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+              <div className="p-4 flex items-center">
+                <div className="mr-4 bg-[#800000] p-3 rounded-full">
+                  <FileText className="h-6 w-6 text-white" />
                 </div>
-              </Card>
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">Total Reports</p>
+                  <p className="text-2xl font-bold">{stats.total}</p>
+                </div>
+              </div>
+            </Card>
 
-              <Card className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
-                <div className="p-4 flex items-center">
-                  <div className="mr-4 bg-yellow-50 p-3 rounded-full">
-                    <Clock className="h-6 w-6 text-yellow-500" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500 mb-1">Pending</p>
-                    <p className="text-2xl font-bold">{stats.pending}</p>
-                  </div>
+            <Card className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+              <div className="p-4 flex items-center">
+                <div className="mr-4 bg-yellow-50 p-3 rounded-full">
+                  <AlertTriangle className="h-6 w-6 text-yellow-500" />
                 </div>
-              </Card>
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">Pending</p>
+                  <p className="text-2xl font-bold">{stats.pending}</p>
+                </div>
+              </div>
+            </Card>
 
-              <Card className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
-                <div className="p-4 flex items-center">
-                  <div className="mr-4 bg-gray-50 p-3 rounded-full">
-                    <AlertCircle className="h-6 w-6 text-gray-500" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500 mb-1">In Progress</p>
-                    <p className="text-2xl font-bold">{stats.inProgress}</p>
-                  </div>
+            <Card className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+              <div className="p-4 flex items-center">
+                <div className="mr-4 bg-gray-50 p-3 rounded-full">
+                  <AlertCircle className="h-6 w-6 text-gray-500" />
                 </div>
-              </Card>
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">In Progress</p>
+                  <p className="text-2xl font-bold">{stats.inProgress}</p>
+                </div>
+              </div>
+            </Card>
 
-              <Card className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
-                <div className="p-4 flex items-center">
-                  <div className="mr-4 bg-green-50 p-3 rounded-full">
-                    <CheckCircle className="h-6 w-6 text-green-500" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500 mb-1">Resolved</p>
-                    <p className="text-2xl font-bold">{stats.resolved}</p>
-                  </div>
+            <Card className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+              <div className="p-4 flex items-center">
+                <div className="mr-4 bg-green-50 p-3 rounded-full">
+                  <CheckCircle className="h-6 w-6 text-green-500" />
                 </div>
-              </Card>
-            </div>
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">Resolved</p>
+                  <p className="text-2xl font-bold">{stats.resolved}</p>
+                </div>
+              </div>
+            </Card>
           </div>
 
-          {/* Recent Incidents */}
-          <div className="mb-6">
+          {/* All Incidents Section */}
+          <div className="mb-8">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-medium text-[#800000]">
-                Recent Incidents
-              </h2>
+              <h2 className="text-lg font-medium text-[#800000]">All Incidents</h2>
               <Button
                 variant="link"
                 className="text-[#800000] p-0 h-auto text-sm hover:underline"
-                onClick={() => router.push("/incidents/tracking")}
+                onClick={() => router.push("/incidents/public")}
               >
                 View All
               </Button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {(searchQuery ? filteredIncidents : recentIncidents).length > 0 ? (
-                (searchQuery ? filteredIncidents : recentIncidents).slice(0, 3).map((incident) => (
+              {(searchQuery ? filteredAllIncidents : allIncidents).length > 0 ? (
+                (searchQuery ? filteredAllIncidents : allIncidents).slice(0, 3).map((incident) => (
                   <Card
                     key={incident.id}
                     className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden"
@@ -319,18 +468,143 @@ export default function DashboardPage() {
                       </div>
 
                       <div className="flex justify-between items-center">
-                        <span
-                          className={`px-2 py-1 rounded-md text-xs font-medium
-                          ${
-                            incident.status === "Pending"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : incident.status === "In Progress"
-                              ? "bg-blue-100 text-blue-800"
-                              : "bg-green-100 text-green-800"
-                          }`}
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`px-2 py-1 rounded-md text-xs font-medium
+                            ${
+                              incident.status === "Pending"
+                                ? "bg-yellow-100 text-yellow-800"
+                                : incident.status === "In Progress"
+                                ? "bg-blue-100 text-blue-800"
+                                : "bg-green-100 text-green-800"
+                            }`}
+                          >
+                            {incident.status}
+                          </span>
+                          <button
+                            onClick={() => handleUpvoteClick(incident)}
+                            className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+                              pendingUpvote[incident.id] !== undefined
+                                ? pendingUpvote[incident.id]
+                                  ? "text-[#800000]"
+                                  : "text-gray-400"
+                                : upvotedIncidents.has(incident.id)
+                                ? "text-[#800000]"
+                                : "text-gray-400 hover:text-[#800000]"
+                            }`}
+                          >
+                            <ThumbsUp
+                              className={`h-5 w-5 ${
+                                pendingUpvote[incident.id] !== undefined
+                                  ? pendingUpvote[incident.id]
+                                    ? "fill-[#800000]"
+                                    : "fill-none"
+                                  : upvotedIncidents.has(incident.id)
+                                  ? "fill-[#800000]"
+                                  : "fill-none"
+                              }`}
+                              strokeWidth={1.5}
+                            />
+                            <span className={`text-xs font-medium ${
+                              pendingUpvote[incident.id] !== undefined
+                                ? pendingUpvote[incident.id]
+                                  ? "text-[#800000]"
+                                  : "text-gray-500"
+                                : upvotedIncidents.has(incident.id)
+                                ? "text-[#800000]"
+                                : "text-gray-500"
+                            }`}>{typeof incident.upvoteCount === 'number' ? incident.upvoteCount : 0}</span>
+                          </button>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-xs border-[#800000] text-[#800000] hover:bg-[#fff9f9]"
+                          onClick={() =>
+                            router.push(`/incidents/tracking/${incident.trackingNumber}`)
+                          }
                         >
-                          {incident.status}
-                        </span>
+                          View Details
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                ))
+              ) : (
+                <div className="col-span-3 p-8 text-center text-gray-500 bg-white rounded-lg border border-gray-200">
+                  No incidents found
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* My Incidents Section */}
+          <div className="mb-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-medium text-[#800000]">My Incidents</h2>
+              <Button
+                variant="link"
+                className="text-[#800000] p-0 h-auto text-sm hover:underline"
+                onClick={() => router.push("/incidents/tracking")}
+              >
+                View All
+              </Button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {(searchQuery ? filteredMyIncidents : myIncidents).length > 0 ? (
+                (searchQuery ? filteredMyIncidents : myIncidents).slice(0, 3).map((incident) => (
+                  <Card
+                    key={incident.id}
+                    className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden"
+                  >
+                    <div
+                      className={`p-4 border-l-4 ${
+                        incident.status === "Pending"
+                          ? "border-l-yellow-400"
+                          : incident.status === "In Progress"
+                          ? "border-l-blue-400"
+                          : "border-l-green-400"
+                      }`}
+                    >
+                      <div className="mb-3">
+                        <h3 className="font-medium text-gray-900 mb-1">
+                          {incident.incidentType}
+                        </h3>
+                        <div className="flex items-center">
+                          <Clock className="h-4 w-4 text-gray-400 mr-1" />
+                          <p className="text-xs text-gray-500">
+                            {formatDate(incident.submittedAt)}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mb-3">
+                        <div className="flex items-start mb-1">
+                          <MapPin className="h-4 w-4 text-gray-400 mr-1 mt-0.5" />
+                          <p className="text-xs text-gray-700">
+                            {incident.location}
+                          </p>
+                        </div>
+                        <p className="text-sm text-gray-600 line-clamp-2 mt-1">
+                          {incident.description}
+                        </p>
+                      </div>
+
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`px-2 py-1 rounded-md text-xs font-medium
+                            ${
+                              incident.status === "Pending"
+                                ? "bg-yellow-100 text-yellow-800"
+                                : incident.status === "In Progress"
+                                ? "bg-blue-100 text-blue-800"
+                                : "bg-green-100 text-green-800"
+                            }`}
+                          >
+                            {incident.status}
+                          </span>
+                        </div>
                         <Button
                           variant="outline"
                           size="sm"
@@ -354,6 +628,14 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      <UpvoteModal
+        isOpen={upvoteModalOpen}
+        onClose={() => setUpvoteModalOpen(false)}
+        onConfirm={handleUpvoteConfirm}
+        incidentType={selectedIncident?.incidentType || ""}
+        isUpvoted={isUpvotedModal}
+      />
     </div>
   );
 }

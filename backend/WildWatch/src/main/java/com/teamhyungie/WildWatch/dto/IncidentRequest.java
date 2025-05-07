@@ -31,6 +31,8 @@ public class IncidentRequest {
 
     private List<WitnessDTO> witnesses;
 
+    private Boolean preferAnonymous;
+
     @Data
     public static class WitnessDTO {
         private String name;
