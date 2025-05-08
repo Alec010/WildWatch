@@ -91,7 +91,10 @@ public class AuthService {
         profile.put("role", user.getRole().toString());
         profile.put("termsAccepted", user.isTermsAccepted());
         profile.put("enabled", user.isEnabled());
-        
+        // Add office code for office admins
+        if (user.getRole().toString().equals("OFFICE_ADMIN") && user.getOfficeAdmin() != null) {
+            profile.put("officeCode", user.getOfficeAdmin().getOfficeCode());
+        }
         return profile;
     }
 } 

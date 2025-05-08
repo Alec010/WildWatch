@@ -15,6 +15,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { Switch } from '@/components/ui/switch';
 
 export default function ReviewSubmissionPage() {
   const router = useRouter();
@@ -27,6 +28,7 @@ export default function ReviewSubmissionPage() {
   });
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [trackingNumber, setTrackingNumber] = useState("");
+  const [preferAnonymous, setPreferAnonymous] = useState<boolean>(false);
 
   useEffect(() => {
     const storedIncidentData = sessionStorage.getItem("incidentSubmissionData");
@@ -52,7 +54,7 @@ export default function ReviewSubmissionPage() {
       const formData = new FormData();
       formData.append(
         "incidentData",
-        JSON.stringify({ ...incidentData, witnesses: evidenceData.witnesses })
+        JSON.stringify({ ...incidentData, witnesses: evidenceData.witnesses, preferAnonymous: !!preferAnonymous })
       );
       for (const fileInfo of evidenceData.fileInfos) {
         const response = await fetch(fileInfo.data);
@@ -252,6 +254,23 @@ export default function ReviewSubmissionPage() {
               ) : (
                 <p className="text-sm text-gray-500">No witnesses added</p>
               )}
+            </div>
+
+            {/* Prefer Anonymous Toggle */}
+            <div className="mb-6">
+              <label htmlFor="prefer-anonymous" className="flex items-center gap-3 cursor-pointer">
+                <Switch
+                  id="prefer-anonymous"
+                  checked={preferAnonymous}
+                  onCheckedChange={checked => setPreferAnonymous(checked)}
+                />
+                <span className="text-sm font-medium text-gray-900">
+                  Prefer to remain anonymous?
+                </span>
+              </label>
+              <p className="text-xs text-gray-500 ml-9">
+                If enabled, your identity will be hidden from office admins. This is just a preference and may be reviewed by the admin.
+              </p>
             </div>
 
             {/* Confirmations */}

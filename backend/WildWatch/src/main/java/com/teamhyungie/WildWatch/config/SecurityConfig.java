@@ -80,8 +80,7 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
                         .sessionFixation().migrateSession()
                         .maximumSessions(1)
-                        .expiredUrl("/login?expired")
-                )
+                        .expiredUrl("/login?expired"))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/uploads/**").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
@@ -93,6 +92,7 @@ public class SecurityConfig {
                                 "/favicon.ico",
                                 "/api/setup/by-office/**",
                                 "/api/ping",
+                                "/api/offices",
                                 "/login/oauth2/code/microsoft")
                         .permitAll()
                         .requestMatchers("/api/terms/**").authenticated()
@@ -120,7 +120,8 @@ public class SecurityConfig {
                                 String state = request.getParameter("state");
                                 if (state != null && !state.isEmpty()) {
                                     try {
-                                        String decoded = new String(Base64.getDecoder().decode(state), StandardCharsets.UTF_8);
+                                        String decoded = new String(Base64.getDecoder().decode(state),
+                                                StandardCharsets.UTF_8);
                                         if (decoded.contains("mobile_redirect_uri")) {
                                             int start = decoded.indexOf("mobile_redirect_uri") + 21;
                                             int end = decoded.indexOf('"', start);
@@ -133,7 +134,8 @@ public class SecurityConfig {
                                 if (mobileRedirectUri != null && !mobileRedirectUri.isEmpty()) {
                                     response.sendRedirect(mobileRedirectUri + "?error=" + errorMessage);
                                 } else {
-                                    response.sendRedirect(frontendConfig.getActiveUrl() + "/auth/error?message=" + errorMessage);
+                                    response.sendRedirect(
+                                            frontendConfig.getActiveUrl() + "/auth/error?message=" + errorMessage);
                                 }
                             }
                         }));
