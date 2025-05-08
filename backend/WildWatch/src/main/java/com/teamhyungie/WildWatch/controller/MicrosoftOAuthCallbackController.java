@@ -144,17 +144,22 @@ public class MicrosoftOAuthCallbackController {
         String token = jwtUtil.generateToken(userDetails);
         logger.info("Generated JWT token successfully");
 
-        // 6. Redirect to mobile app with token
+        // 6. Redirect to mobile app or web frontend with token
         String redirectUrl;
         if (mobileRedirectUri != null && !mobileRedirectUri.isEmpty()) {
-            // Use the custom scheme for mobile app redirect
-            redirectUrl = String.format("wildwatch://oauth2redirect?token=%s&termsAccepted=%s",
+            // Mobile: use the custom scheme for mobile app redirect
+            redirectUrl = String.format("%s?token=%s&termsAccepted=%s",
+                    mobileRedirectUri,
                     URLEncoder.encode(token, StandardCharsets.UTF_8),
                     user.isTermsAccepted());
             logger.info("Redirecting to mobile app URL: {}", redirectUrl);
         } else {
-            redirectUrl = frontendConfig.getActiveUrl() + "/auth/error?message=No+mobile+redirect+URI";
-            logger.warn("No mobile redirect URI found, redirecting to error page: {}", redirectUrl);
+            // Web: redirect to frontend with token
+            redirectUrl = String.format("%s/auth/oauth2/redirect?token=%s&termsAccepted=%s",
+                    frontendConfig.getActiveUrl(),
+                    URLEncoder.encode(token, StandardCharsets.UTF_8),
+                    user.isTermsAccepted());
+            logger.info("Redirecting to web frontend: {}", redirectUrl);
         }
         response.sendRedirect(redirectUrl);
         logger.info("Redirect response sent");
