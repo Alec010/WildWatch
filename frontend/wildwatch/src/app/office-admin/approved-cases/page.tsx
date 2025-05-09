@@ -134,7 +134,7 @@ export default function ApprovedCaseTracker() {
   return (
     <div className="flex h-screen">
       <OfficeAdminSidebar />
-      <div className="flex-1 overflow-auto bg-gray-50">
+      <div className="flex-1 overflow-auto bg-gray-50 ml-64">
         <div className="p-8">
           <div className="max-w-7xl mx-auto">
             <div className="mb-6">

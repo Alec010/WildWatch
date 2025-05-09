@@ -749,7 +749,7 @@ export default function IncidentHistoryPage() {
   return (
     <div className="flex min-h-screen bg-[#f5f5f5]">
       <Sidebar />
-      <div className="flex-1 p-8 max-w-[1700px] mx-auto">
+      <div className="flex-1 p-8 max-w-[1700px] mx-auto ml-64">
         {/* Loading Modal */}
         {isDownloading && (
           <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center">

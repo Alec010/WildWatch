@@ -463,7 +463,7 @@ export default function OfficeAdminIncidentHistoryPage() {
   return (
     <div className="flex min-h-screen bg-[#f5f5f5]">
       <OfficeAdminSidebar />
-      <div className="flex-1 p-8 max-w-[1700px] mx-auto">
+      <div className="flex-1 p-8 max-w-[1700px] mx-auto ml-64">
         {/* Loading Modal */}
         {isDownloading && (
           <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center">
@@ -634,7 +634,7 @@ export default function OfficeAdminIncidentHistoryPage() {
                           variant="outline"
                           size="icon"
                           className="mr-2"
-                          onClick={() => router.push(`/office-admin/incidents/${incident.id}`)}
+                          onClick={() => router.push(`/incidents/tracking/${incident.trackingNumber}`)}
                         >
                           <Eye className="h-4 w-4" />
                         </Button>

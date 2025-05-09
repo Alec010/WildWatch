@@ -217,7 +217,7 @@ export default function CaseTrackingPage() {
   return (
     <div className={`min-h-screen flex bg-[#f8f5f5] ${inter.className}`}>
       <Sidebar />
-      <div className="flex-1 p-8">
+      <div className="flex-1 p-8 ml-64">
         {/* Header with notification icon on the right */}
         <div className="flex justify-between items-center mb-6">
           <div>

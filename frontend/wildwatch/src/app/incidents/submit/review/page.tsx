@@ -94,7 +94,7 @@ export default function ReviewSubmissionPage() {
   return (
     <div className="flex min-h-screen bg-[#f5f5f5]">
       <Sidebar />
-      <div className="flex-1 p-6 max-w-[1200px] mx-auto">
+      <div className="flex-1 p-6 max-w-[1200px] mx-auto ml-64">
         <h1 className="text-2xl font-bold text-[#8B0000] mb-2">
           Report an Incident
         </h1>

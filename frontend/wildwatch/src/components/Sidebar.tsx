@@ -10,6 +10,7 @@ import {
   ClipboardList,
   User2,
   LogOut,
+  Trophy,
 } from "lucide-react";
 import Cookies from "js-cookie";
 import { useEffect, useState } from "react";
@@ -78,7 +79,7 @@ export function Sidebar() {
   };
 
   return (
-    <div className="w-64 bg-[#800000] text-white flex flex-col min-h-screen">
+    <div className="fixed top-0 left-0 h-screen z-30 w-64 bg-[#800000] text-white flex flex-col">
       <div className="p-6">
         <Image
           src="/logo2.png"
@@ -132,6 +133,17 @@ export function Sidebar() {
           >
             <History size={20} />
             <span>Incident History</span>
+          </Link>
+          <Link
+            href="/leaderboard"
+            className={`flex items-center space-x-3 p-3 rounded-lg transition-colors ${
+              pathname === "/leaderboard"
+                ? "bg-[#6B0000] text-[#F0B429] border-l-4 border-[#F0B429]"
+                : "hover:bg-[#6B0000]"
+            }`}
+          >
+            <Trophy size={20} />
+            <span>Leaderboard</span>
           </Link>
         </nav>
       </div>

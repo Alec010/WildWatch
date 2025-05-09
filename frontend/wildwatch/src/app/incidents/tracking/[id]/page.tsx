@@ -4,12 +4,15 @@ import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Sidebar } from "@/components/Sidebar"
 import { OfficeAdminSidebar } from "@/components/OfficeAdminSidebar"
-import { CheckCircle, Clock, ChevronLeft, FileText, AlertCircle, Loader2, ArrowRightLeft } from "lucide-react"
+import { CheckCircle, Clock, ChevronLeft, FileText, AlertCircle, Loader2, ArrowRightLeft, Star } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { API_BASE_URL } from "@/utils/api"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import { RatingModal } from '@/components/RatingModal'
+import { toast } from "sonner"
+import { Toaster } from "sonner"
 
 interface IncidentDetails {
   id: string
@@ -80,6 +83,9 @@ export default function CaseDetailsPage() {
   const [showApproveModal, setShowApproveModal] = useState(false)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [isApproving, setIsApproving] = useState(false)
+  const [showRatingModal, setShowRatingModal] = useState(false)
+  const [incidentRating, setIncidentRating] = useState<any>(null)
+  const [userEmail, setUserEmail] = useState<string | null>(null)
 
   const statusSteps = [
     { key: "Submitted", label: "Submitted" },
@@ -111,7 +117,7 @@ export default function CaseDetailsPage() {
           return
         }
 
-        // Fetch user profile to get role
+        // Fetch user profile to get role and email
         const profileResponse = await fetch(`${API_BASE_URL}/api/auth/profile`, {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -121,6 +127,7 @@ export default function CaseDetailsPage() {
         if (profileResponse.ok) {
           const profileData = await profileResponse.json()
           setUserRole(profileData.role)
+          setUserEmail(profileData.email)
         }
 
         // Fetch incident details
@@ -148,6 +155,16 @@ export default function CaseDetailsPage() {
               setLastUpdated(updatesData[0].updatedAt)
             }
           }
+          // Fetch incident rating
+          const ratingRes = await fetch(`${API_BASE_URL}/api/ratings/incidents/${data.id}`, {
+            credentials: 'include',
+          })
+          if (ratingRes.ok) {
+            const ratingData = await ratingRes.json()
+            setIncidentRating(ratingData)
+          } else {
+            setIncidentRating(null)
+          }
         }
         // Fetch office admin info
         if (data.assignedOffice) {
@@ -165,6 +182,41 @@ export default function CaseDetailsPage() {
     }
     if (id) fetchIncidentDetails()
   }, [id, router])
+
+  // Show rating modal for regular user if eligible
+  useEffect(() => {
+    const checkRatingEligibility = async () => {
+      if (
+        incident &&
+        userRole === 'USER' &&
+        userEmail &&
+        incident.status?.toLowerCase() === 'resolved' &&
+        incident.submittedByEmail === userEmail
+      ) {
+        try {
+          // Check if user has already rated
+          const ratingRes = await fetch(`${API_BASE_URL}/api/ratings/incidents/${incident.id}`, {
+            credentials: 'include',
+          })
+          if (ratingRes.ok) {
+            const ratingData = await ratingRes.json()
+            setIncidentRating(ratingData)
+            // Only show modal if no rating exists
+            if (!ratingData.officeRating) {
+              setShowRatingModal(true)
+            }
+          }
+        } catch (error) {
+          console.error('Error checking rating:', error)
+          toast.error('Failed to check rating status')
+        }
+      } else {
+        setShowRatingModal(false)
+      }
+    }
+
+    checkRatingEligibility()
+  }, [incident, userRole, userEmail])
 
   const handleApprove = async () => {
     try {
@@ -199,6 +251,26 @@ export default function CaseDetailsPage() {
       alert('Failed to approve case.');
     } finally {
       setIsApproving(false)
+    }
+  }
+
+  const handleRatingSuccess = async () => {
+    try {
+      if (incident?.id) {
+        const ratingRes = await fetch(`${API_BASE_URL}/api/ratings/incidents/${incident.id}`, {
+          credentials: 'include',
+        })
+        if (ratingRes.ok) {
+          const ratingData = await ratingRes.json()
+          setIncidentRating(ratingData)
+          toast.success("Thank you for your rating!")
+        } else {
+          throw new Error('Failed to fetch updated rating')
+        }
+      }
+    } catch (error) {
+      console.error('Error updating rating:', error)
+      toast.error('Failed to update rating')
     }
   }
 
@@ -254,7 +326,7 @@ export default function CaseDetailsPage() {
   return (
     <div className="min-h-screen flex">
       {userRole === 'OFFICE_ADMIN' ? <OfficeAdminSidebar /> : <Sidebar />}
-      <div className="flex-1 bg-[#f5f5f5]">
+      <div className="flex-1 bg-[#f5f5f5] ml-64">
         <div className="p-6 max-w-[1200px] mx-auto">
           {/* Header Section */}
           <div className="mb-6">
@@ -373,7 +445,7 @@ export default function CaseDetailsPage() {
               </div>
             </div>
 
-            {isOfficeAdmin && normalizedStatus !== "pending" && (
+            {isOfficeAdmin && normalizedStatus !== "pending" && normalizedStatus !== "resolved" && normalizedStatus !== "dismissed" && (
               <div className="flex gap-4 mb-6">
                 <Button
                   variant="default"
@@ -596,6 +668,30 @@ export default function CaseDetailsPage() {
                     <div className="text-sm font-medium text-gray-500">Contact number</div>
                     <p className="text-sm">{officeAdmin ? officeAdmin.contactNumber : "-"}</p>
                   </div>
+
+                  {/* Display previous rating if exists */}
+                  {incidentRating?.officeRating && (
+                    <div>
+                      <div className="text-sm font-medium text-gray-500">Your Rating</div>
+                      <div className="flex items-center gap-1 mt-1">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <Star
+                            key={star}
+                            className={`w-4 h-4 ${
+                              star <= incidentRating.officeRating
+                                ? "fill-yellow-400 text-yellow-400"
+                                : "text-gray-300"
+                            }`}
+                          />
+                        ))}
+                        {incidentRating.officeFeedback && (
+                          <span className="text-xs text-gray-500 ml-2">
+                            "{incidentRating.officeFeedback}"
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -767,6 +863,18 @@ export default function CaseDetailsPage() {
           </DialogHeader>
         </DialogContent>
       </Dialog>
+
+      {/* Rating Modal for regular user to rate office */}
+      <RatingModal
+        isOpen={showRatingModal}
+        onClose={() => setShowRatingModal(false)}
+        incidentId={incident?.id || ''}
+        type="office"
+        onSuccess={handleRatingSuccess}
+      />
+
+      {/* Add Toaster for notifications */}
+      <Toaster position="top-right" />
     </div>
   )
 }

@@ -143,7 +143,7 @@ export default function IncidentSubmissionPage() {
   return (
     <div className="flex min-h-screen bg-[#f5f5f5]">
       <Sidebar />
-      <div className="flex-1 p-8 max-w-[1700px] mx-auto">
+      <div className="flex-1 p-8 max-w-[1700px] mx-auto ml-64">
         <h1 className="text-2xl font-bold text-[#8B0000] mb-1">
           Report an Incident
         </h1>

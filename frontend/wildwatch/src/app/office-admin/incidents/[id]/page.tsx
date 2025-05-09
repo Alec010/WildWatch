@@ -565,7 +565,7 @@ export default function IncidentDetailsPage({ params }: PageProps) {
   return (
     <div className="flex min-h-screen bg-gray-50">
       <OfficeAdminSidebar />
-      <div className="flex-1 p-6 overflow-auto">
+      <div className="flex-1 p-6 overflow-auto ml-64">
         <div className="max-w-[1200px] mx-auto">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
             <div>

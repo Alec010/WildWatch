@@ -115,7 +115,7 @@ export default function OfficeAdminNotificationsPage() {
   return (
     <div className="min-h-screen flex bg-gray-50 dark:bg-gray-900">
       <OfficeAdminSidebar />
-      <main className="flex-1 p-4 md:p-8 max-w-5xl mx-auto w-full">
+      <main className="flex-1 p-4 md:p-8 max-w-5xl mx-auto w-full ml-64">
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
             <Bell className="h-6 w-6 text-[#8B0000] dark:text-red-400" />

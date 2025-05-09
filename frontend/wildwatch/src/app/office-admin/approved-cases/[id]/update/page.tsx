@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useEffect, useState, useRef } from "react"
+import { useRouter, useParams } from "next/navigation"
 import Link from "next/link"
 import {
   ChevronRight,
@@ -47,6 +47,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { API_BASE_URL } from "@/utils/api"
+import { RatingModal } from "@/components/RatingModal"
 
 interface IncidentUpdate {
   id: number
@@ -88,8 +89,8 @@ interface TransferRequest {
   transferNotes: string
 }
 
-export default function UpdateApprovedCasePage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = use(params)
+export default function UpdateApprovedCasePage() {
+  const params = useParams()
   const router = useRouter()
   const [incident, setIncident] = useState<Incident | null>(null)
   const [updates, setUpdates] = useState<IncidentUpdate[]>([])
@@ -111,6 +112,8 @@ export default function UpdateApprovedCasePage({ params }: { params: Promise<{ i
   const [officesLoading, setOfficesLoading] = useState(false)
   const [officesError, setOfficesError] = useState<string | null>(null)
   const [officeName, setOfficeName] = useState<string>("")
+  const [showRatingModal, setShowRatingModal] = useState(false)
+  const prevStatusRef = useRef<string>("")
 
   // Fetch user's office name when component mounts
   useEffect(() => {
@@ -168,7 +171,7 @@ export default function UpdateApprovedCasePage({ params }: { params: Promise<{ i
         throw new Error("No authentication token found")
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/incidents/${resolvedParams.id}/updates`, {
+      const response = await fetch(`${API_BASE_URL}/api/incidents/${params.id}/updates`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -213,7 +216,7 @@ export default function UpdateApprovedCasePage({ params }: { params: Promise<{ i
         }
 
         // Fetch incident details
-        const incidentResponse = await fetch(`${API_BASE_URL}/api/incidents/${resolvedParams.id}`, {
+        const incidentResponse = await fetch(`${API_BASE_URL}/api/incidents/${params.id}`, {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
@@ -238,12 +241,13 @@ export default function UpdateApprovedCasePage({ params }: { params: Promise<{ i
     }
 
     fetchData()
-  }, [resolvedParams.id])
+  }, [params.id])
 
   useEffect(() => {
     if (incident) {
       setStatus(incident.status)
       setPriorityLevel(incident.priorityLevel)
+      prevStatusRef.current = incident.status
     }
   }, [incident])
 
@@ -280,7 +284,7 @@ export default function UpdateApprovedCasePage({ params }: { params: Promise<{ i
         priorityLevel,
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/incidents/${resolvedParams.id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/incidents/${params.id}`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -335,7 +339,7 @@ export default function UpdateApprovedCasePage({ params }: { params: Promise<{ i
         priorityLevel,
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/incidents/${resolvedParams.id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/incidents/${params.id}`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -355,6 +359,7 @@ export default function UpdateApprovedCasePage({ params }: { params: Promise<{ i
 
       setStatus("Resolved")
       await fetchUpdates()
+      setShowRatingModal(true)
     } catch (error) {
       console.error("Error resolving case:", error)
       toast.error("Failed to resolve case", {
@@ -387,7 +392,7 @@ export default function UpdateApprovedCasePage({ params }: { params: Promise<{ i
         priorityLevel,
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/incidents/${resolvedParams.id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/incidents/${params.id}`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -441,7 +446,7 @@ export default function UpdateApprovedCasePage({ params }: { params: Promise<{ i
         transferNotes: transferNotes
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/incidents/${resolvedParams.id}/transfer`, {
+      const response = await fetch(`${API_BASE_URL}/api/incidents/${params.id}/transfer`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -489,6 +494,22 @@ export default function UpdateApprovedCasePage({ params }: { params: Promise<{ i
         });
     }
   }, [showTransferModal]);
+
+  const handleRatingSuccess = () => {
+    router.refresh()
+  }
+
+  // Efficiently handle status change
+  const handleStatusChange = async (newStatus: string) => {
+    // Only trigger if status is changed to Resolved from a different status
+    if (newStatus === "Resolved" && prevStatusRef.current !== "Resolved") {
+      // Call the resolve logic (reuse handleResolveCase logic, but without double modal)
+      await handleResolveCase()
+    } else {
+      setStatus(newStatus)
+    }
+    prevStatusRef.current = newStatus
+  }
 
   if (loading) {
     return (
@@ -706,7 +727,7 @@ export default function UpdateApprovedCasePage({ params }: { params: Promise<{ i
 
                         <div className="space-y-2">
                           <label className="text-sm font-medium text-muted-foreground">Status</label>
-                          <Select value={status} onValueChange={setStatus}>
+                          <Select value={status} onValueChange={handleStatusChange}>
                             <SelectTrigger>
                               <SelectValue placeholder="Select status" />
                             </SelectTrigger>
@@ -1068,6 +1089,15 @@ export default function UpdateApprovedCasePage({ params }: { params: Promise<{ i
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Rating Modal */}
+      <RatingModal
+        isOpen={showRatingModal}
+        onClose={() => setShowRatingModal(false)}
+        incidentId={params.id as string}
+        type="reporter"
+        onSuccess={handleRatingSuccess}
+      />
     </>
   )
 }
