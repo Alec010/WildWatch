@@ -355,7 +355,7 @@ export default function DashboardPage() {
               <Button
                 variant="default"
                 className="bg-[#800000] hover:bg-[#600000] text-white"
-                onClick={() => router.push("/incidents/new")}
+                onClick={() => router.push("/incidents/submit")}
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Report New Incident
