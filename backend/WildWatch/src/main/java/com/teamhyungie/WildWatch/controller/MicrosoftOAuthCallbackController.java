@@ -57,27 +57,34 @@ public class MicrosoftOAuthCallbackController {
             @RequestParam("state") String state,
             HttpServletResponse response
     ) throws Exception {
-        logger.info("Received Microsoft OAuth callback with state: {}", state);
+        logger.info("[OAuthCallback] Received Microsoft OAuth callback with state: {}", state);
         
         // 1. Decode state and extract mobile_redirect_uri
-        String decodedState = new String(Base64.getDecoder().decode(state), StandardCharsets.UTF_8);
-        logger.info("Decoded state: {}", decodedState);
+        String decodedState = null;
+        try {
+            decodedState = new String(Base64.getDecoder().decode(state), StandardCharsets.UTF_8);
+            logger.info("[OAuthCallback] Decoded state: {}", decodedState);
+        } catch (Exception e) {
+            logger.error("[OAuthCallback] Failed to decode state: {}", e.getMessage());
+        }
         
         String mobileRedirectUri = null;
         try {
-            JsonNode stateJson = objectMapper.readTree(decodedState);
-            if (stateJson.has("mobile_redirect_uri")) {
-                mobileRedirectUri = stateJson.get("mobile_redirect_uri").asText();
-                logger.info("Extracted mobile_redirect_uri: {}", mobileRedirectUri);
-            } else {
-                logger.warn("No mobile_redirect_uri found in state JSON");
+            if (decodedState != null) {
+                JsonNode stateJson = objectMapper.readTree(decodedState);
+                if (stateJson.has("mobile_redirect_uri")) {
+                    mobileRedirectUri = stateJson.get("mobile_redirect_uri").asText();
+                    logger.info("[OAuthCallback] Extracted mobile_redirect_uri: {}", mobileRedirectUri);
+                } else {
+                    logger.warn("[OAuthCallback] No mobile_redirect_uri found in state JSON");
+                }
             }
         } catch (Exception e) {
-            logger.error("Error parsing state JSON", e);
+            logger.error("[OAuthCallback] Error parsing state JSON: {}", e.getMessage());
         }
 
         // 2. Exchange code for tokens
-        logger.info("Exchanging code for tokens with Microsoft");
+        logger.info("[OAuthCallback] Exchanging code for tokens with Microsoft");
         RestTemplate restTemplate = new RestTemplate();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
@@ -97,7 +104,7 @@ public class MicrosoftOAuthCallbackController {
         logger.info("Successfully extracted access token");
 
         // 3. Get user info from Microsoft
-        logger.info("Fetching user info from Microsoft");
+        logger.info("[OAuthCallback] Fetching user info from Microsoft");
         HttpHeaders userInfoHeaders = new HttpHeaders();
         userInfoHeaders.setBearerAuth(accessToken);
         HttpEntity<Void> userInfoRequest = new HttpEntity<>(userInfoHeaders);
@@ -111,7 +118,7 @@ public class MicrosoftOAuthCallbackController {
         logger.info("Extracted user info - email: {}, firstName: {}, lastName: {}", email, firstName, lastName);
 
         // 4. Find or create user in your DB
-        logger.info("Looking up user in database");
+        logger.info("[OAuthCallback] Looking up user in database");
         User user = userService.findByUsername(email);
         if (user == null) {
             logger.info("User not found, creating new user");
@@ -134,7 +141,7 @@ public class MicrosoftOAuthCallbackController {
         }
 
         // 5. Generate JWT
-        logger.info("Generating JWT token");
+        logger.info("[OAuthCallback] Generating JWT token");
         org.springframework.security.core.userdetails.UserDetails userDetails =
                 org.springframework.security.core.userdetails.User
                         .withUsername(user.getEmail())
@@ -147,21 +154,19 @@ public class MicrosoftOAuthCallbackController {
         // 6. Redirect to mobile app or web frontend with token
         String redirectUrl;
         if (mobileRedirectUri != null && !mobileRedirectUri.isEmpty()) {
-            // Mobile: use the custom scheme for mobile app redirect
             redirectUrl = String.format("%s?token=%s&termsAccepted=%s",
                     mobileRedirectUri,
                     URLEncoder.encode(token, StandardCharsets.UTF_8),
                     user.isTermsAccepted());
-            logger.info("Redirecting to mobile app URL: {}", redirectUrl);
+            logger.info("[OAuthCallback] Redirecting to mobile app URL: {}", redirectUrl);
         } else {
-            // Web: redirect to frontend with token
             redirectUrl = String.format("%s/auth/oauth2/redirect?token=%s&termsAccepted=%s",
                     frontendConfig.getActiveUrl(),
                     URLEncoder.encode(token, StandardCharsets.UTF_8),
                     user.isTermsAccepted());
-            logger.info("Redirecting to web frontend: {}", redirectUrl);
+            logger.info("[OAuthCallback] Redirecting to web frontend: {}", redirectUrl);
         }
         response.sendRedirect(redirectUrl);
-        logger.info("Redirect response sent");
+        logger.info("[OAuthCallback] Redirect response sent");
     }
 } 

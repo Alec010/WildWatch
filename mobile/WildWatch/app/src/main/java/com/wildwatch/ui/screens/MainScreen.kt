@@ -24,6 +24,8 @@ import com.wildwatch.viewmodel.CaseTrackingViewModelFactory
 import com.wildwatch.utils.TokenManager
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 fun MainScreen(
@@ -64,6 +66,14 @@ fun MainScreen(
     val context = LocalContext.current
     var shouldNavigateToLogin by remember { mutableStateOf(false) }
 
+    // Token check on entry
+    LaunchedEffect(Unit) {
+        val token = withContext(Dispatchers.IO) { TokenManager.getToken(context) }
+        if (token.isNullOrBlank()) {
+            shouldNavigateToLogin = true
+        }
+    }
+
     // Handle navigation when shouldNavigateToLogin becomes true
     LaunchedEffect(shouldNavigateToLogin) {
         if (shouldNavigateToLogin) {
@@ -83,13 +93,24 @@ fun MainScreen(
                 .padding(bottom = 52.dp) // leave space for bottom nav
         ) {
             when (currentTab) {
-                "dashboard" -> DashboardScreen()
-                "history" -> HistoryScreen()
+                "dashboard" -> DashboardScreen(
+                    onIncidentClick = { trackingNumber ->
+                        navController.navigate(Screen.CaseDetails.createRoute(trackingNumber))
+                    }
+                )
+                "history" -> HistoryScreen(
+                    onIncidentClick = { trackingNumber ->
+                        navController.navigate(Screen.CaseDetails.createRoute(trackingNumber))
+                    }
+                )
                 "cases" -> {
                     val caseTrackingViewModel: CaseTrackingViewModel = viewModel(
                         factory = CaseTrackingViewModelFactory(context)
                     )
-                    CaseTrackingScreen(viewModel = caseTrackingViewModel)
+                    CaseTrackingScreen(
+                        viewModel = caseTrackingViewModel,
+                        navController = navController
+                    )
                 }
                 "settings" -> ProfileScreen(
                     onLogoutClick = {

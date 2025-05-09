@@ -11,6 +11,7 @@ import retrofit2.http.GET
 import com.wildwatch.model.UserUpdateRequest
 import retrofit2.http.PUT
 import retrofit2.http.Header
+import retrofit2.http.Query
 
 interface AuthApiService {
     @POST("auth/login")
@@ -30,4 +31,10 @@ interface AuthApiService {
         @Body request: UserUpdateRequest
     ): Response<UserProfile>
 
+    @GET("/api/auth/mobile-microsoft-start")
+    suspend fun getMicrosoftOAuthUrl(
+        @Query("mobile_redirect_uri") mobileRedirectUri: String
+    ): MicrosoftOAuthUrlResponse
 }
+
+data class MicrosoftOAuthUrlResponse(val url: String)

@@ -130,5 +130,9 @@ class CaseTrackingViewModel(context: Context) : ViewModel() {
             fetchActivities(_currentPage.value - 1)
         }
     }
+
+    fun updateSearchQuery(query: String) {
+        _searchQuery.value = query
+    }
 }
 

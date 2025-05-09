@@ -37,6 +37,7 @@ import androidx.navigation.NavController
 import com.wildwatch.R
 import com.wildwatch.ui.components.auth.PasswordTextField
 import com.wildwatch.ui.theme.WildWatchRed
+import com.wildwatch.utils.MicrosoftAuth
 import com.wildwatch.utils.TokenManager
 import com.wildwatch.viewmodel.LoginViewModel
 
@@ -285,7 +286,7 @@ fun LoginScreen(
 
             // Enhanced Outlook sign in button
             OutlinedButton(
-                onClick = { onOutlookLoginClick() },
+                onClick = { MicrosoftAuth.startMicrosoftLogin(context) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
