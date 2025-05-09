@@ -16,9 +16,7 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
-    //private const val BASE_URL = "https://wildwatch-9djc.onrender.com/api/"
-    private const val BASE_URL = "http://10.0.2.2:8080/api/"
-
+    private const val BASE_URL = "https://wildwatch-9djc.onrender.com/api/"
 
     val authApi: AuthApiService by lazy {
         Retrofit.Builder()

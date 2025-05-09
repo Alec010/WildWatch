@@ -24,7 +24,9 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import com.wildwatch.model.ActivityLog
+import com.wildwatch.navigation.Screen
 import com.wildwatch.ui.theme.WildWatchRed
 import com.wildwatch.viewmodel.NotificationViewModel
 import java.text.SimpleDateFormat
@@ -34,7 +36,7 @@ import java.util.*
 fun NotificationDropdown(
     showDropdown: Boolean,
     onDismiss: () -> Unit,
-    onViewAll: () -> Unit = {},
+    navController: NavController,
     onNotificationClick: (ActivityLog) -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -162,6 +164,11 @@ fun NotificationDropdown(
                                     onClick = {
                                         viewModel.markAsRead(notification.id)
                                         onNotificationClick(notification)
+                                        // Navigate to case details
+                                        notification.incident?.id?.let { incidentId ->
+                                            navController.navigate(Screen.CaseDetails.createRoute(incidentId))
+                                            onDismiss() // Close the dropdown after navigation
+                                        }
                                     }
                                 )
                             }
@@ -174,7 +181,10 @@ fun NotificationDropdown(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable(onClick = onViewAll)
+                            .clickable(onClick = {
+                                navController.navigate(com.wildwatch.navigation.Screen.ViewAllNotifications.route)
+                                onDismiss()
+                            })
                             .padding(vertical = 12.dp),
                         contentAlignment = Alignment.Center
                     ) {
