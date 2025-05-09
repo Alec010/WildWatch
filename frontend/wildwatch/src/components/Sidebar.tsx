@@ -78,7 +78,7 @@ export function Sidebar() {
   };
 
   return (
-    <div className="w-64 bg-[#800000] text-white flex flex-col min-h-screen">
+    <div className="w-64 bg-[#800000] text-white flex flex-col fixed h-screen overflow-y-auto">
       <div className="p-6">
         <Image
           src="/logo2.png"

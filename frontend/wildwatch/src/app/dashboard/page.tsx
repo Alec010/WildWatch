@@ -333,7 +333,7 @@ export default function DashboardPage() {
       <Sidebar />
 
       {/* Main Content */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto ml-64">
         {/* Header */}
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
@@ -415,129 +415,6 @@ export default function DashboardPage() {
             </Card>
           </div>
 
-          {/* All Incidents Section */}
-          <div className="mb-8">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-medium text-[#800000]">All Incidents</h2>
-              <Button
-                variant="link"
-                className="text-[#800000] p-0 h-auto text-sm hover:underline"
-                onClick={() => router.push("/incidents/public")}
-              >
-                View All
-              </Button>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {(searchQuery ? filteredAllIncidents : allIncidents).length > 0 ? (
-                (searchQuery ? filteredAllIncidents : allIncidents).slice(0, 3).map((incident) => (
-                  <Card
-                    key={incident.id}
-                    className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden"
-                  >
-                    <div
-                      className={`p-4 border-l-4 ${
-                        incident.status === "Pending"
-                          ? "border-l-yellow-400"
-                          : incident.status === "In Progress"
-                          ? "border-l-blue-400"
-                          : "border-l-green-400"
-                      }`}
-                    >
-                      <div className="mb-3">
-                        <h3 className="font-medium text-gray-900 mb-1">
-                          {incident.incidentType}
-                        </h3>
-                        <div className="flex items-center">
-                          <Clock className="h-4 w-4 text-gray-400 mr-1" />
-                          <p className="text-xs text-gray-500">
-                            {formatDate(incident.submittedAt)}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="mb-3">
-                        <div className="flex items-start mb-1">
-                          <MapPin className="h-4 w-4 text-gray-400 mr-1 mt-0.5" />
-                          <p className="text-xs text-gray-700">
-                            {incident.location}
-                          </p>
-                        </div>
-                        <p className="text-sm text-gray-600 line-clamp-2 mt-1">
-                          {incident.description}
-                        </p>
-                      </div>
-
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`px-2 py-1 rounded-md text-xs font-medium
-                            ${
-                              incident.status === "Pending"
-                                ? "bg-yellow-100 text-yellow-800"
-                                : incident.status === "In Progress"
-                                ? "bg-blue-100 text-blue-800"
-                                : "bg-green-100 text-green-800"
-                            }`}
-                          >
-                            {incident.status}
-                          </span>
-                          <button
-                            onClick={() => handleUpvoteClick(incident)}
-                            className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-colors ${
-                              pendingUpvote[incident.id] !== undefined
-                                ? pendingUpvote[incident.id]
-                                  ? "text-[#800000]"
-                                  : "text-gray-400"
-                                : upvotedIncidents.has(incident.id)
-                                ? "text-[#800000]"
-                                : "text-gray-400 hover:text-[#800000]"
-                            }`}
-                          >
-                            <ThumbsUp
-                              className={`h-5 w-5 ${
-                                pendingUpvote[incident.id] !== undefined
-                                  ? pendingUpvote[incident.id]
-                                    ? "fill-[#800000]"
-                                    : "fill-none"
-                                  : upvotedIncidents.has(incident.id)
-                                  ? "fill-[#800000]"
-                                  : "fill-none"
-                              }`}
-                              strokeWidth={1.5}
-                            />
-                            <span className={`text-xs font-medium ${
-                              pendingUpvote[incident.id] !== undefined
-                                ? pendingUpvote[incident.id]
-                                  ? "text-[#800000]"
-                                  : "text-gray-500"
-                                : upvotedIncidents.has(incident.id)
-                                ? "text-[#800000]"
-                                : "text-gray-500"
-                            }`}>{typeof incident.upvoteCount === 'number' ? incident.upvoteCount : 0}</span>
-                          </button>
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-xs border-[#800000] text-[#800000] hover:bg-[#fff9f9]"
-                          onClick={() =>
-                            router.push(`/incidents/tracking/${incident.trackingNumber}`)
-                          }
-                        >
-                          View Details
-                        </Button>
-                      </div>
-                    </div>
-                  </Card>
-                ))
-              ) : (
-                <div className="col-span-3 p-8 text-center text-gray-500 bg-white rounded-lg border border-gray-200">
-                  No incidents found
-                </div>
-              )}
-            </div>
-          </div>
-
           {/* My Incidents Section */}
           <div className="mb-6">
             <div className="flex justify-between items-center mb-4">
@@ -591,20 +468,6 @@ export default function DashboardPage() {
                       </div>
 
                       <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`px-2 py-1 rounded-md text-xs font-medium
-                            ${
-                              incident.status === "Pending"
-                                ? "bg-yellow-100 text-yellow-800"
-                                : incident.status === "In Progress"
-                                ? "bg-blue-100 text-blue-800"
-                                : "bg-green-100 text-green-800"
-                            }`}
-                          >
-                            {incident.status}
-                          </span>
-                        </div>
                         <Button
                           variant="outline"
                           size="sm"

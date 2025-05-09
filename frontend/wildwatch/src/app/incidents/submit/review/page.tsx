@@ -28,7 +28,6 @@ export default function ReviewSubmissionPage() {
   });
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [trackingNumber, setTrackingNumber] = useState("");
-  const [preferAnonymous, setPreferAnonymous] = useState<boolean>(false);
 
   useEffect(() => {
     const storedIncidentData = sessionStorage.getItem("incidentSubmissionData");
@@ -54,7 +53,7 @@ export default function ReviewSubmissionPage() {
       const formData = new FormData();
       formData.append(
         "incidentData",
-        JSON.stringify({ ...incidentData, witnesses: evidenceData.witnesses, preferAnonymous: !!preferAnonymous })
+        JSON.stringify({ ...incidentData, witnesses: evidenceData.witnesses })
       );
       for (const fileInfo of evidenceData.fileInfos) {
         const response = await fetch(fileInfo.data);
@@ -94,7 +93,7 @@ export default function ReviewSubmissionPage() {
   return (
     <div className="flex min-h-screen bg-[#f5f5f5]">
       <Sidebar />
-      <div className="flex-1 p-6 max-w-[1200px] mx-auto">
+      <div className="flex-1 ml-64 p-8 max-w-[1700px] mx-auto">
         <h1 className="text-2xl font-bold text-[#8B0000] mb-2">
           Report an Incident
         </h1>
@@ -110,7 +109,7 @@ export default function ReviewSubmissionPage() {
         </div>
 
         {/* Incident Details */}
-        <Card className="p-6 bg-white shadow-sm border-0">
+        <Card className="p-6 bg-white shadow-sm border-0 w-full">
           <div className="flex items-center gap-3 border-b pb-5 mb-6">
             <div className="bg-[#8B0000] rounded-full w-10 h-10 flex items-center justify-center">
               <CheckCircle2 className="text-white w-5 h-5" />
@@ -256,21 +255,17 @@ export default function ReviewSubmissionPage() {
               )}
             </div>
 
-            {/* Prefer Anonymous Toggle */}
-            <div className="mb-6">
-              <label htmlFor="prefer-anonymous" className="flex items-center gap-3 cursor-pointer">
-                <Switch
-                  id="prefer-anonymous"
-                  checked={preferAnonymous}
-                  onCheckedChange={checked => setPreferAnonymous(checked)}
-                />
-                <span className="text-sm font-medium text-gray-900">
-                  Prefer to remain anonymous?
-                </span>
-              </label>
-              <p className="text-xs text-gray-500 ml-9">
-                If enabled, your identity will be hidden from office admins. This is just a preference and may be reviewed by the admin.
-              </p>
+            {/* Office Assignment Info */}
+            <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="flex items-start gap-3">
+                <Info className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm text-blue-700 font-medium mb-1">Office Assignment</p>
+                  <p className="text-sm text-blue-600">
+                    Your report will be reviewed by the Student Success Office, who will assign it to the appropriate office based on the incident type and location. You will be notified once the assignment is complete.
+                  </p>
+                </div>
+              </div>
             </div>
 
             {/* Confirmations */}

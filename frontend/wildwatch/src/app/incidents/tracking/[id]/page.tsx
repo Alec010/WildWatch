@@ -95,9 +95,12 @@ export default function CaseDetailsPage() {
     ? statusOrder.indexOf("Dismissed")
     : normalizedStatus === "pending"
       ? 0
-      : statusOrder.findIndex((s) => normalizedStatus.includes(s.toLowerCase()))
+      : normalizedStatus === "assigned"
+        ? 1
+        : statusOrder.findIndex((s) => normalizedStatus.includes(s.toLowerCase()))
 
   const isOfficeAdmin = userRole === 'OFFICE_ADMIN'
+  const isAssigned = incident?.status?.toLowerCase() === 'assigned'
 
   useEffect(() => {
     const fetchIncidentDetails = async () => {
@@ -254,7 +257,7 @@ export default function CaseDetailsPage() {
   return (
     <div className="min-h-screen flex">
       {userRole === 'OFFICE_ADMIN' ? <OfficeAdminSidebar /> : <Sidebar />}
-      <div className="flex-1 bg-[#f5f5f5]">
+      <div className="flex-1 bg-[#f5f5f5] ml-64">
         <div className="p-6 max-w-[1200px] mx-auto">
           {/* Header Section */}
           <div className="mb-6">
@@ -373,7 +376,7 @@ export default function CaseDetailsPage() {
               </div>
             </div>
 
-            {isOfficeAdmin && normalizedStatus !== "pending" && (
+            {isOfficeAdmin && !["resolved", "closed", "dismissed"].includes(normalizedStatus) && (
               <div className="flex gap-4 mb-6">
                 <Button
                   variant="default"
@@ -391,6 +394,16 @@ export default function CaseDetailsPage() {
                   <ArrowRightLeft className="h-4 w-4 mr-2" />
                   Transfer to another office
                 </Button>
+              </div>
+            )}
+
+            {isAssigned && !isOfficeAdmin && (
+              <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-3">
+                <CheckCircle className="h-6 w-6 text-blue-600" />
+                <div>
+                  <p className="text-blue-800 font-semibold">Your report has been assigned to an office.</p>
+                  <p className="text-blue-700 text-sm">You will be notified of further updates regarding your case. Please monitor your notifications for progress.</p>
+                </div>
               </div>
             )}
           </div>

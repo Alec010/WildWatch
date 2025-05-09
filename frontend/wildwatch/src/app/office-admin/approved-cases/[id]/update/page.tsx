@@ -565,7 +565,7 @@ export default function UpdateApprovedCasePage({ params }: { params: Promise<{ i
       <Toaster richColors position="top-center" />
       <div className="flex h-screen">
         <OfficeAdminSidebar />
-        <div className="flex-1 overflow-auto bg-gray-50">
+        <div className="flex-1 ml-64 overflow-auto bg-gray-50">
           <div className="p-4 md:p-8">
             <div className="max-w-7xl mx-auto">
               {/* Breadcrumb and Header */}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
@@ -10,76 +10,57 @@ import {
   ClipboardCheck,
   History,
   LogOut,
-  User2
+  User2,
+  Building2
 } from 'lucide-react';
 import Cookies from 'js-cookie';
-import { API_BASE_URL } from "@/utils/api";
-
-interface User {
-  firstName: string;
-  lastName: string;
-  schoolIdNumber: string;
-  email: string;
-  role: string;
-}
+import { useUser } from '@/contexts/UserContext';
 
 export function OfficeAdminSidebar() {
   const router = useRouter();
   const pathname = usePathname();
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchUserProfile = async () => {
-      const token = Cookies.get('token');
-      if (!token) {
-        router.push('/login');
-        return;
-      }
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/auth/profile`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (!response.ok) {
-          if (response.status === 401) {
-            Cookies.remove('token');
-            router.push('/login');
-            return;
-          }
-          throw new Error('Failed to fetch user profile');
-        }
-
-        const userData = await response.json();
-        setUser({
-          firstName: userData.firstName,
-          lastName: userData.lastName,
-          schoolIdNumber: userData.schoolIdNumber,
-          email: userData.email,
-          role: userData.role
-        });
-      } catch (error) {
-        console.error('Error fetching user profile:', error);
-        router.push('/login');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUserProfile();
-  }, [router]);
+  const { user, loading } = useUser();
 
   const handleSignOut = () => {
     Cookies.remove('token');
     router.push('/login');
   };
 
+  const navItems = useMemo(() => [
+    {
+      href: "/office-admin/dashboard",
+      icon: <LayoutDashboard size={20} />,
+      label: "Dashboard",
+      show: true
+    },
+    {
+      href: "/office-admin/incidents",
+      icon: <AlertTriangle size={20} />,
+      label: "Incident Management",
+      show: true
+    },
+    {
+      href: "/office-admin/approved-cases",
+      icon: <ClipboardCheck size={20} />,
+      label: "Approved Case Tracker",
+      show: true
+    },
+    {
+      href: "/office-admin/history",
+      icon: <History size={20} />,
+      label: "Incident History",
+      show: true
+    },
+    {
+      href: "/office-admin/office-assignment",
+      icon: <Building2 size={20} />,
+      label: "Office Assignment",
+      show: user?.officeCode === 'SSO'
+    }
+  ], [user?.officeCode]);
+
   return (
-    <div className="w-64 bg-[#800000] text-white flex flex-col min-h-screen">
+    <div className="w-64 bg-[#800000] text-white flex flex-col fixed h-screen overflow-y-auto">
       <div className="p-6">
         <Image
           src="/logo2.png"
@@ -87,52 +68,25 @@ export function OfficeAdminSidebar() {
           width={150}
           height={50}
           className="mb-8"
+          priority
         />
         <nav className="space-y-4">
-          <Link
-            href="/office-admin/dashboard"
-            className={`flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-              pathname === "/office-admin/dashboard"
-                ? "bg-[#6B0000] text-[#F0B429] border-l-4 border-[#F0B429]"
-                : "hover:bg-[#6B0000]"
-            }`}
-          >
-            <LayoutDashboard size={20} />
-            <span>Dashboard</span>
-          </Link>
-          <Link
-            href="/office-admin/incidents"
-            className={`flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-              pathname === "/office-admin/incidents"
-                ? "bg-[#6B0000] text-[#F0B429] border-l-4 border-[#F0B429]"
-                : "hover:bg-[#6B0000]"
-            }`}
-          >
-            <AlertTriangle size={20} />
-            <span>Incident Management</span>
-          </Link>
-          <Link
-            href="/office-admin/approved-cases"
-            className={`flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-              pathname === "/office-admin/approved-cases"
-                ? "bg-[#6B0000] text-[#F0B429] border-l-4 border-[#F0B429]"
-                : "hover:bg-[#6B0000]"
-            }`}
-          >
-            <ClipboardCheck size={20} />
-            <span>Approved Case Tracker</span>
-          </Link>
-          <Link
-            href="/office-admin/history"
-            className={`flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-              pathname === "/office-admin/history"
-                ? "bg-[#6B0000] text-[#F0B429] border-l-4 border-[#F0B429]"
-                : "hover:bg-[#6B0000]"
-            }`}
-          >
-            <History size={20} />
-            <span>Incident History</span>
-          </Link>
+          {navItems.map((item) => 
+            item.show && (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center space-x-3 p-3 rounded-lg transition-colors ${
+                  pathname === item.href
+                    ? "bg-[#6B0000] text-[#F0B429] border-l-4 border-[#F0B429]"
+                    : "hover:bg-[#6B0000]"
+                }`}
+              >
+                {item.icon}
+                <span>{item.label}</span>
+              </Link>
+            )
+          )}
         </nav>
       </div>
 

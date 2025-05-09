@@ -224,7 +224,7 @@ export default function IncidentManagementPage() {
   return (
     <div className="flex min-h-screen bg-[#f5f5f5]">
       <OfficeAdminSidebar />
-      <div className="flex-1 p-8">
+      <div className="flex-1 ml-64 p-8">
         <div className="max-w-7xl mx-auto">
           <div className="mb-6">
             <h1 className="text-2xl font-semibold text-[#8B0000]">Incident Management</h1>

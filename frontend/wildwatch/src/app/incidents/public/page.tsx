@@ -350,7 +350,7 @@ export default function PublicIncidentsPage() {
   return (
     <div className="min-h-screen flex bg-[#f5f5f5]">
       <Sidebar />
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto ml-64">
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
             <div>

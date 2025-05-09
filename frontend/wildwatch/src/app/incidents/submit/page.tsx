@@ -34,7 +34,6 @@ export default function IncidentSubmissionPage() {
     dateOfIncident: "",
     timeOfIncident: "",
     location: "",
-    assignedOffice: "",
     description: "",
   });
   const [offices, setOffices] = useState<Office[]>([]);
@@ -107,10 +106,6 @@ export default function IncidentSubmissionPage() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleOfficeSelect = (office: string) => {
-    setFormData((prev) => ({ ...prev, assignedOffice: office }));
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (
@@ -118,7 +113,6 @@ export default function IncidentSubmissionPage() {
       !formData.dateOfIncident ||
       !formData.timeOfIncident ||
       !formData.location ||
-      !formData.assignedOffice ||
       !formData.description
     ) {
       alert("Please fill in all required fields");
@@ -134,7 +128,6 @@ export default function IncidentSubmissionPage() {
       dateOfIncident: "",
       timeOfIncident: "",
       location: "",
-      assignedOffice: "",
       description: "",
     });
     sessionStorage.removeItem("incidentSubmissionData");
@@ -143,7 +136,7 @@ export default function IncidentSubmissionPage() {
   return (
     <div className="flex min-h-screen bg-[#f5f5f5]">
       <Sidebar />
-      <div className="flex-1 p-8 max-w-[1700px] mx-auto">
+      <div className="flex-1 ml-64 p-8 max-w-[1700px] mx-auto">
         <h1 className="text-2xl font-bold text-[#8B0000] mb-1">
           Report an Incident
         </h1>
@@ -262,50 +255,6 @@ export default function IncidentSubmissionPage() {
                   required
                   className="border-gray-300"
                 />
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">
-                  Report to what Office <span className="text-red-500">*</span>
-                </Label>
-                <div className="flex flex-wrap gap-2">
-                  {loading ? (
-                    <p className="text-sm text-gray-500">Loading offices...</p>
-                  ) : error ? (
-                    <p className="text-sm text-red-500">{error}</p>
-                  ) : (
-                    <TooltipProvider>
-                      {offices.map((office) => (
-                        <Tooltip key={office.code}>
-                          <TooltipTrigger asChild>
-                            <Button
-                              type="button"
-                              variant={
-                                formData.assignedOffice === office.code
-                                  ? "default"
-                                  : "outline"
-                              }
-                              className={`h-8 px-3 rounded-md ${
-                                formData.assignedOffice === office.code
-                                  ? "bg-[#8B0000] text-white hover:bg-[#8B0000]/90"
-                                  : "border-gray-300 hover:bg-gray-100"
-                              }`}
-                              onClick={() => handleOfficeSelect(office.code)}
-                            >
-                              {office.code} <Info className="h-4 w-4 ml-1" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p className="font-semibold">{office.fullName}</p>
-                            <p className="text-sm text-gray-500">
-                              {office.description}
-                            </p>
-                          </TooltipContent>
-                        </Tooltip>
-                      ))}
-                    </TooltipProvider>
-                  )}
-                </div>
               </div>
 
               <div className="space-y-2">

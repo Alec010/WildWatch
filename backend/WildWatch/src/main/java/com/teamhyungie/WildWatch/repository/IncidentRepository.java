@@ -21,4 +21,7 @@ public interface IncidentRepository extends JpaRepository<Incident, String> {
 
     @Query("SELECT i FROM Incident i WHERE i.assignedOffice = :office AND i.status = :status ORDER BY i.submittedAt DESC")
     List<Incident> findByAssignedOfficeAndStatusOrderBySubmittedAtDesc(@Param("office") Office office, @Param("status") String status);
+
+    @Query("SELECT i FROM Incident i WHERE i.assignedOffice IS NULL ORDER BY i.submittedAt DESC")
+    List<Incident> findUnassignedIncidents();
 } 

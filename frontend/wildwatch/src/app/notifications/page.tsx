@@ -115,99 +115,135 @@ export default function NotificationsPage() {
   return (
     <div className="min-h-screen flex bg-gray-50 dark:bg-gray-900">
       <Sidebar />
-      <main className="flex-1 p-4 md:p-8 max-w-5xl mx-auto w-full">
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <Bell className="h-6 w-6 text-[#8B0000] dark:text-red-400" />
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Notifications</h1>
-            {unreadCount > 0 && (
-              <Badge variant="destructive" className="bg-[#8B0000] hover:bg-[#8B0000]/90">
-                {unreadCount} new
-              </Badge>
+      <div className="flex flex-1 justify-center w-full">
+        <main className="flex flex-col md:flex-row gap-8 w-full max-w-7xl mx-auto p-2 md:p-6 min-h-[80vh]">
+          <div className="flex-1">
+            <div className="mb-8">
+              <div className="flex items-center gap-3 mb-2">
+                <Bell className="h-6 w-6 text-[#8B0000] dark:text-red-400" />
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Notifications</h1>
+                {unreadCount > 0 && (
+                  <Badge variant="destructive" className="bg-[#8B0000] hover:bg-[#8B0000]/90">
+                    {unreadCount} new
+                  </Badge>
+                )}
+              </div>
+              <p className="text-gray-500 dark:text-gray-400">Stay updated with the latest activity and incidents</p>
+            </div>
+
+            {loading ? (
+              <div className="space-y-3">
+                {[...Array(5)].map((_, i) => (
+                  <Card key={i} className="p-4">
+                    <div className="flex items-start gap-3">
+                      <Skeleton className="h-5 w-5 rounded-full" />
+                      <div className="space-y-2 flex-1">
+                        <Skeleton className="h-4 w-1/3" />
+                        <Skeleton className="h-3 w-full" />
+                        <Skeleton className="h-3 w-1/4" />
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            ) : error ? (
+              <Card className="p-6 flex flex-col items-center justify-center text-center">
+                <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
+                <h3 className="text-lg font-medium mb-2">Failed to load notifications</h3>
+                <p className="text-gray-500 dark:text-gray-400 mb-4">{error}</p>
+              </Card>
+            ) : logs.length === 0 ? (
+              <Card className="p-8 flex flex-col items-center justify-center text-center">
+                <BellOff className="h-12 w-12 text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium mb-2">No notifications</h3>
+                <p className="text-gray-500 dark:text-gray-400">You don't have any notifications at the moment</p>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {logs.map((log) => (
+                  <Card
+                    key={log.id}
+                    className={cn(
+                      "p-4 transition-all hover:shadow-md cursor-pointer group",
+                      log.isRead
+                        ? "bg-white dark:bg-gray-800"
+                        : "bg-[#fff7f7] dark:bg-[#2a1515] border-l-4 border-l-[#8B0000]",
+                    )}
+                    onClick={() => handleLogClick(log)}
+                  >
+                    <div className="flex items-start gap-3">
+                      {log.isRead ? (
+                        <CheckCircle className="h-5 w-5 text-gray-400 dark:text-gray-500 mt-0.5" />
+                      ) : (
+                        <div className="h-5 w-5 rounded-full bg-[#8B0000] flex items-center justify-center">
+                          <div className="h-2.5 w-2.5 rounded-full bg-white animate-pulse" />
+                        </div>
+                      )}
+
+                      <div className="flex-1">
+                        <div className="flex justify-between items-start mb-1">
+                          <h3
+                            className={cn(
+                              "font-medium text-sm",
+                              log.isRead ? "text-gray-700 dark:text-gray-300" : "text-gray-900 dark:text-gray-100",
+                            )}
+                          >
+                            {formatActivityType(log.activityType)}
+                          </h3>
+                          <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap ml-2">
+                            {formatDate(log.createdAt)}
+                          </span>
+                        </div>
+
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{log.description}</p>
+
+                        {log.incident && log.incident.trackingNumber && (
+                          <div className="flex items-center mt-2 text-xs font-medium text-[#8B0000] dark:text-red-400 group-hover:underline">
+                            View Incident Details
+                            <ChevronRight className="h-3 w-3 ml-1 transition-transform group-hover:translate-x-0.5" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
             )}
           </div>
-          <p className="text-gray-500 dark:text-gray-400">Stay updated with the latest activity and incidents</p>
-        </div>
-
-        {loading ? (
-          <div className="space-y-3">
-            {[...Array(5)].map((_, i) => (
-              <Card key={i} className="p-4">
-                <div className="flex items-start gap-3">
-                  <Skeleton className="h-5 w-5 rounded-full" />
-                  <div className="space-y-2 flex-1">
-                    <Skeleton className="h-4 w-1/3" />
-                    <Skeleton className="h-3 w-full" />
-                    <Skeleton className="h-3 w-1/4" />
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        ) : error ? (
-          <Card className="p-6 flex flex-col items-center justify-center text-center">
-            <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
-            <h3 className="text-lg font-medium mb-2">Failed to load notifications</h3>
-            <p className="text-gray-500 dark:text-gray-400 mb-4">{error}</p>
-          </Card>
-        ) : logs.length === 0 ? (
-          <Card className="p-8 flex flex-col items-center justify-center text-center">
-            <BellOff className="h-12 w-12 text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium mb-2">No notifications</h3>
-            <p className="text-gray-500 dark:text-gray-400">You don't have any notifications at the moment</p>
-          </Card>
-        ) : (
-          <div className="space-y-3">
-            {logs.map((log) => (
-              <Card
-                key={log.id}
-                className={cn(
-                  "p-4 transition-all hover:shadow-md cursor-pointer group",
-                  log.isRead
-                    ? "bg-white dark:bg-gray-800"
-                    : "bg-[#fff7f7] dark:bg-[#2a1515] border-l-4 border-l-[#8B0000]",
-                )}
-                onClick={() => handleLogClick(log)}
-              >
-                <div className="flex items-start gap-3">
-                  {log.isRead ? (
-                    <CheckCircle className="h-5 w-5 text-gray-400 dark:text-gray-500 mt-0.5" />
-                  ) : (
-                    <div className="h-5 w-5 rounded-full bg-[#8B0000] flex items-center justify-center">
-                      <div className="h-2.5 w-2.5 rounded-full bg-white animate-pulse" />
-                    </div>
-                  )}
-
-                  <div className="flex-1">
-                    <div className="flex justify-between items-start mb-1">
-                      <h3
-                        className={cn(
-                          "font-medium text-sm",
-                          log.isRead ? "text-gray-700 dark:text-gray-300" : "text-gray-900 dark:text-gray-100",
-                        )}
-                      >
-                        {formatActivityType(log.activityType)}
-                      </h3>
-                      <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap ml-2">
-                        {formatDate(log.createdAt)}
-                      </span>
-                    </div>
-
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{log.description}</p>
-
-                    {log.incident && log.incident.trackingNumber && (
-                      <div className="flex items-center mt-2 text-xs font-medium text-[#8B0000] dark:text-red-400 group-hover:underline">
-                        View Incident Details
-                        <ChevronRight className="h-3 w-3 ml-1 transition-transform group-hover:translate-x-0.5" />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        )}
-      </main>
+          {/* Right Sidebar */}
+          <aside className="w-full md:w-80 flex-shrink-0 flex flex-col gap-6 md:sticky md:top-0 h-fit">
+            {/* Quick Stats */}
+            <Card className="p-5 flex flex-col gap-2 bg-white dark:bg-gray-800 shadow-sm">
+              <h2 className="font-semibold text-lg mb-2 text-[#8B0000] dark:text-red-400 flex items-center gap-2">
+                <Bell className="h-5 w-5" /> Quick Stats
+              </h2>
+              <div className="flex flex-col gap-1 text-sm">
+                <span><span className="font-bold">{unreadCount}</span> Unread Notifications</span>
+                <span><span className="font-bold">{logs.length}</span> Total Notifications</span>
+                {/* You can add more stats here if available */}
+              </div>
+            </Card>
+            {/* Tips */}
+            <Card className="p-5 flex flex-col gap-2 bg-white dark:bg-gray-800 shadow-sm">
+              <h2 className="font-semibold text-lg mb-2 text-[#8B0000] dark:text-red-400 flex items-center gap-2">
+                <CheckCircle className="h-5 w-5" /> Tips
+              </h2>
+              <ul className="list-disc pl-5 text-sm text-gray-700 dark:text-gray-300 space-y-1">
+                <li>Click a notification to mark it as read and view details.</li>
+                <li>Stay updated by checking your notifications regularly.</li>
+                <li>Unread notifications are highlighted for your attention.</li>
+              </ul>
+            </Card>
+            {/* Announcements */}
+            <Card className="p-5 flex flex-col gap-2 bg-white dark:bg-gray-800 shadow-sm">
+              <h2 className="font-semibold text-lg mb-2 text-[#8B0000] dark:text-red-400 flex items-center gap-2">
+                <AlertCircle className="h-5 w-5" /> Announcements
+              </h2>
+              <div className="text-sm text-gray-700 dark:text-gray-300">No announcement yet</div>
+            </Card>
+          </aside>
+        </main>
+      </div>
     </div>
   )
 }

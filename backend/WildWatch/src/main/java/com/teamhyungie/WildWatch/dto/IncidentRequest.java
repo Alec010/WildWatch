@@ -26,7 +26,6 @@ public class IncidentRequest {
     @NotBlank(message = "Description is required")
     private String description;
 
-    @NotNull(message = "Assigned office is required")
     private Office assignedOffice;
 
     private List<WitnessDTO> witnesses;

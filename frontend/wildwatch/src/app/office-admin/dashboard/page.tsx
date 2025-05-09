@@ -151,7 +151,7 @@ export default function OfficeAdminDashboard() {
       <OfficeAdminSidebar />
 
       {/* Main Content */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto ml-64">
         {/* Header */}
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
