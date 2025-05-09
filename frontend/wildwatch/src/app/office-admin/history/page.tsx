@@ -477,9 +477,9 @@ export default function OfficeAdminIncidentHistoryPage() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold text-[#800000] mb-1 flex items-center gap-2">
-              <History className="h-7 w-7 mr-2 text-[#800000]" /> Office Incident History
+              <History className="h-7 w-7 mr-2 text-[#800000]" /> Resolved & Dismissed Cases
             </h1>
-            <p className="text-gray-600">View and access past incident reports for your office</p>
+            <p className="text-gray-600">View and access all resolved and dismissed incident reports for your office</p>
           </div>
           <div className="flex gap-2">
             <Input
