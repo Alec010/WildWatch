@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.Image
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import com.wildwatch.R
 import com.wildwatch.ui.components.dashboard.IncidentCard
 import com.wildwatch.ui.components.dashboard.IncidentInfo
@@ -38,10 +39,12 @@ import com.wildwatch.viewmodel.DashboardViewModel
 import com.wildwatch.viewmodel.DashboardViewModelFactory
 import com.wildwatch.utils.toIncidentInfo
 import com.wildwatch.ui.components.NotificationDropdown
+import com.wildwatch.navigation.Screen
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
 fun DashboardScreen(
+    navController: NavController,
     onIncidentClick: (String) -> Unit = {},
     onViewAllClick: () -> Unit = {},
     onViewAllNotifications: () -> Unit = {}
@@ -109,10 +112,7 @@ fun DashboardScreen(
                         NotificationDropdown(
                             showDropdown = showNotifications,
                             onDismiss = { showNotifications = false },
-                            onViewAll = {
-                                showNotifications = false
-                                onViewAllNotifications()
-                            },
+                            navController = navController,
                             onNotificationClick = { notification ->
                                 // Handle notification click
                                 showNotifications = false

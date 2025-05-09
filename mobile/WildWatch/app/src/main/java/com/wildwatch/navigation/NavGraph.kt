@@ -33,6 +33,7 @@ sealed class Screen(val route: String) {
     object CaseDetails : Screen("caseDetails/{trackingNumber}") {
         fun createRoute(trackingNumber: String) = "caseDetails/$trackingNumber"
     }
+    object ViewAllNotifications : Screen("viewAllNotifications")
 }
 
 private fun navigateBackToMain(
@@ -125,6 +126,14 @@ fun AppNavGraph(navController: NavHostController) {
                 CaseDetailsScreen(
                     viewModel = viewModel,
                     trackingNumber = trackingNumber,
+                    onBackClick = { navController.popBackStack() }
+                )
+            }
+
+            // Add the new route for viewing all notifications
+            composable(Screen.ViewAllNotifications.route) {
+                com.wildwatch.ui.screens.notification.ViewAllNotificationScreen(
+                    navController = navController,
                     onBackClick = { navController.popBackStack() }
                 )
             }

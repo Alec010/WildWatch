@@ -4,6 +4,8 @@ import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.ShowChart
+import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -37,7 +39,7 @@ fun MainScreen(
         BottomNavItem(
             route = "dashboard",
             title = "Dashboard",
-            icon = Icons.Default.ShowChart
+            icon = Icons.AutoMirrored.Filled.ShowChart
         ),
         BottomNavItem(
             route = "history",
@@ -53,7 +55,7 @@ fun MainScreen(
         BottomNavItem(
             route = "cases",
             title = "Case Tracking",
-            icon = Icons.Default.Assignment
+            icon = Icons.AutoMirrored.Filled.Assignment
         ),
         BottomNavItem(
             route = "settings",
@@ -94,6 +96,7 @@ fun MainScreen(
         ) {
             when (currentTab) {
                 "dashboard" -> DashboardScreen(
+                    navController = navController,
                     onIncidentClick = { trackingNumber ->
                         navController.navigate(Screen.CaseDetails.createRoute(trackingNumber))
                     }
