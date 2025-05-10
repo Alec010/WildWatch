@@ -134,12 +134,9 @@ export default function CaseDetailsPage() {
     ? statusOrder.indexOf("Dismissed")
     : normalizedStatus === "pending"
       ? 0
-      : normalizedStatus === "assigned"
-        ? 1
-        : statusOrder.findIndex((s) => normalizedStatus.includes(s.toLowerCase()))
+      : statusOrder.findIndex((s) => normalizedStatus.includes(s.toLowerCase()))
 
   const isOfficeAdmin = userRole === 'OFFICE_ADMIN'
-  const isAssigned = incident?.status?.toLowerCase() === 'assigned'
 
   useEffect(() => {
     const fetchIncidentDetails = async () => {
@@ -424,16 +421,6 @@ export default function CaseDetailsPage() {
                   <ArrowRightLeft className="h-4 w-4 mr-2" />
                   Transfer to another office
                 </Button>
-              </div>
-            )}
-
-            {isAssigned && !isOfficeAdmin && (
-              <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-3">
-                <CheckCircle className="h-6 w-6 text-blue-600" />
-                <div>
-                  <p className="text-blue-800 font-semibold">Your report has been assigned to an office.</p>
-                  <p className="text-blue-700 text-sm">You will be notified of further updates regarding your case. Please monitor your notifications for progress.</p>
-                </div>
               </div>
             )}
           </div>

@@ -622,12 +622,8 @@ public class IncidentService {
         Incident incident = incidentRepository.findById(incidentId)
                 .orElseThrow(() -> new RuntimeException("Incident not found"));
 
-        // Set status based on office
-        if ("SSO".equals(officeCode)) {
-            incident.setStatus("Pending");
-        } else {
-            incident.setStatus("ASSIGNED");
-        }
+        // Always set status to Pending when assigning to any office
+        incident.setStatus("Pending");
         incident.setAssignedOffice(Office.valueOf(officeCode));
 
         // Save the updated incident
