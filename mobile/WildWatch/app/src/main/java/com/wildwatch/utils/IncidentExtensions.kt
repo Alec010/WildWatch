@@ -7,7 +7,7 @@ import com.wildwatch.ui.components.dashboard.IncidentStatus
 fun IncidentResponse.toIncidentInfo(): IncidentInfo {
     val status = when ((this.status ?: "").lowercase()) {
         "in progress" -> IncidentStatus.IN_PROGRESS
-        "assigned" -> IncidentStatus.ASSIGNED
+        "assigned" -> IncidentStatus.PENDING
         "resolved" -> IncidentStatus.RESOLVED
         "urgent" -> IncidentStatus.URGENT
         "pending" -> IncidentStatus.PENDING

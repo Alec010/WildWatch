@@ -90,6 +90,31 @@ export default function OfficeAdminIncidentHistoryPage() {
 
   const totalPages = Math.ceil(filteredIncidents.length / incidentsPerPage)
 
+  const formatDate = (dateString: string) => {
+    const datePH = new Date(new Date(dateString).toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+    return datePH.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      timeZone: 'Asia/Manila'
+    });
+  };
+
+  const formatTime = (timeString: string) => {
+    // timeString is in format HH:mm:ss or HH:mm
+    const [hour, minute, second] = timeString.split(":");
+    const date = new Date();
+    date.setHours(Number(hour));
+    date.setMinutes(Number(minute));
+    date.setSeconds(second ? Number(second) : 0);
+    return date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+      timeZone: "Asia/Manila"
+    });
+  };
+
   const handleDownloadPDF = async (incident: any) => {
     setIsDownloading(true)
     try {
@@ -225,16 +250,16 @@ export default function OfficeAdminIncidentHistoryPage() {
       addFieldRow("Priority", incident.priorityLevel || "-", "Department", incident.officeAdminName || "-")
       addFieldRow(
         "Submitted",
-        new Date(incident.submittedAt).toLocaleDateString(),
+        formatDate(incident.submittedAt) + " " + formatTime(incident.submittedAt),
         "Finished Date",
-        incident.finishedDate ? new Date(incident.finishedDate).toLocaleDateString() : "-",
+        incident.finishedDate ? formatDate(incident.finishedDate) + " " + formatTime(incident.finishedDate) : "-",
       )
       y += sectionSpacing
 
       // Incident Details Section
       addSectionTitle("Incident Details")
       addFieldRow("Incident Type", incident.incidentType, "Location", incident.location)
-      addFieldRow("Date Reported", new Date(incident.dateOfIncident).toLocaleDateString(), "", "")
+      addFieldRow("Date Reported", formatDate(incident.dateOfIncident), "", "")
       doc.setFont("helvetica", "bold")
       doc.text("Description:", margin, y)
       doc.setFont("helvetica", "normal")
@@ -434,7 +459,7 @@ export default function OfficeAdminIncidentHistoryPage() {
           doc.text(update.title || update.status || `Update ${idx + 1}`, margin + 15, y + 5)
           doc.setFont("helvetica", "normal")
           doc.setFontSize(9)
-          const updateDate = update.updatedAt ? new Date(update.updatedAt).toLocaleDateString() : "-"
+          const updateDate = update.updatedAt ? formatDate(update.updatedAt) : "-"
           const updateAuthor = update.updatedByName || update.updatedByFullName || update.author || "-"
           doc.text(`${updateDate} by ${updateAuthor}`, margin + 15, y + 13)
           if (update.message || update.description) {
@@ -463,7 +488,7 @@ export default function OfficeAdminIncidentHistoryPage() {
   return (
     <div className="flex min-h-screen bg-[#f5f5f5]">
       <OfficeAdminSidebar />
-      <div className="flex-1 p-8 max-w-[1700px] mx-auto">
+      <div className="flex-1 ml-64 p-8 max-w-[1700px] mx-auto">
         {/* Loading Modal */}
         {isDownloading && (
           <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center">
@@ -477,9 +502,9 @@ export default function OfficeAdminIncidentHistoryPage() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold text-[#800000] mb-1 flex items-center gap-2">
-              <History className="h-7 w-7 mr-2 text-[#800000]" /> Office Incident History
+              <History className="h-7 w-7 mr-2 text-[#800000]" /> Resolved & Dismissed Cases
             </h1>
-            <p className="text-gray-600">View and access past incident reports for your office</p>
+            <p className="text-gray-600">View and access all resolved and dismissed incident reports for your office</p>
           </div>
           <div className="flex gap-2">
             <Input
@@ -577,7 +602,7 @@ export default function OfficeAdminIncidentHistoryPage() {
                       <td className="p-3 font-mono">
                         {incident.trackingNumber}
                       </td>
-                      <td className="p-3">{new Date(incident.submittedAt).toLocaleDateString()}</td>
+                      <td className="p-3">{formatDate(incident.submittedAt)} {formatTime(incident.submittedAt)}</td>
                       <td className="p-3">
                         <Badge
                           className={
@@ -627,14 +652,14 @@ export default function OfficeAdminIncidentHistoryPage() {
                       </td>
                       <td className="p-3">{incident.officeAdminName || "-"}</td>
                       <td className="p-3">
-                        {incident.finishedDate ? new Date(incident.finishedDate).toLocaleDateString() : "-"}
+                        {incident.finishedDate ? formatDate(incident.finishedDate) + " " + formatTime(incident.finishedDate) : "-"}
                       </td>
                       <td className="p-3 text-center">
                         <Button
                           variant="outline"
                           size="icon"
                           className="mr-2"
-                          onClick={() => router.push(`/office-admin/incidents/${incident.id}`)}
+                          onClick={() => router.push(`/incidents/tracking/${incident.trackingNumber}`)}
                         >
                           <Eye className="h-4 w-4" />
                         </Button>

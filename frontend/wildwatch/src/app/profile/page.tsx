@@ -350,7 +350,7 @@ function ProfileContent({ user }: { user: UserProfile }) {
       {user.role === "OFFICE_ADMIN" ? <OfficeAdminSidebar /> : <Sidebar />}
 
       {/* Main Content */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto ml-64">
         <header className="bg-white shadow sticky top-0 z-10">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">

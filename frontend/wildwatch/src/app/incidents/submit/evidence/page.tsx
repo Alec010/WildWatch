@@ -152,7 +152,7 @@ export default function EvidenceSubmissionPage() {
   return (
     <div className="flex min-h-screen bg-[#f5f5f5]">
       <Sidebar />
-      <div className="flex-1 p-6 max-w-[1700px] mx-auto">
+      <div className="flex-1 ml-64 p-8 max-w-[1700px] mx-auto">
         <h1 className="text-2xl font-bold text-[#8B0000] mb-1">
           Report an Incident
         </h1>

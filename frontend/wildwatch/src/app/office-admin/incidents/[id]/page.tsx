@@ -109,9 +109,33 @@ export default function IncidentDetailsPage({ params }: PageProps) {
   const [officesLoading, setOfficesLoading] = useState(false)
   const [officesError, setOfficesError] = useState<string | null>(null)
   const [priorityError, setPriorityError] = useState("")
-  const [isAnonymous, setIsAnonymous] = useState<boolean>(false)
   const [verifyError, setVerifyError] = useState("")
   const { id } = use(params)
+
+  const formatDate = (dateString: string) => {
+    const datePH = new Date(new Date(dateString).toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+    return datePH.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      timeZone: 'Asia/Manila'
+    });
+  };
+
+  const formatTime = (timeString: string) => {
+    // timeString is in format HH:mm:ss or HH:mm
+    const [hour, minute, second] = timeString.split(":");
+    const date = new Date();
+    date.setHours(Number(hour));
+    date.setMinutes(Number(minute));
+    date.setSeconds(second ? Number(second) : 0);
+    return date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+      timeZone: "Asia/Manila"
+    });
+  };
 
   useEffect(() => {
     const fetchIncident = async () => {
@@ -204,7 +228,6 @@ export default function IncidentDetailsPage({ params }: PageProps) {
           verificationNotes,
           status: "In Progress",
           priorityLevel,
-          isAnonymous,
         }),
       })
 
@@ -277,7 +300,6 @@ export default function IncidentDetailsPage({ params }: PageProps) {
           verificationNotes,
           status: "Dismissed",
           priorityLevel: null,
-          isAnonymous,
         }),
       })
 
@@ -339,7 +361,6 @@ export default function IncidentDetailsPage({ params }: PageProps) {
           verificationNotes,
           status,
           priorityLevel,
-          isAnonymous,
         }),
       })
 
@@ -409,7 +430,6 @@ export default function IncidentDetailsPage({ params }: PageProps) {
         body: JSON.stringify({
           newOffice: selectedOffice,
           transferNotes: transferNotes,
-          isAnonymous,
         }),
       })
 
@@ -565,7 +585,7 @@ export default function IncidentDetailsPage({ params }: PageProps) {
   return (
     <div className="flex min-h-screen bg-gray-50">
       <OfficeAdminSidebar />
-      <div className="flex-1 p-6 overflow-auto">
+      <div className="flex-1 ml-64 p-6 overflow-auto">
         <div className="max-w-[1200px] mx-auto">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
             <div>
@@ -608,7 +628,7 @@ export default function IncidentDetailsPage({ params }: PageProps) {
                     </div>
                     <div className="flex flex-col items-end">
                       <p className="text-white/80 text-sm">Reported</p>
-                      <p className="font-medium">{new Date(incident.submittedAt).toLocaleDateString()}</p>
+                      <p className="font-medium">{formatDate(incident.submittedAt)}</p>
                     </div>
                   </div>
                 </CardHeader>
@@ -618,14 +638,14 @@ export default function IncidentDetailsPage({ params }: PageProps) {
                       <Calendar className="h-5 w-5 text-gray-500 mt-0.5" />
                       <div>
                         <p className="text-sm text-gray-500">Date of Incident</p>
-                        <p className="font-medium">{new Date(incident.dateOfIncident).toLocaleDateString()}</p>
+                        <p className="font-medium">{formatDate(incident.dateOfIncident)}</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
                       <Clock className="h-5 w-5 text-gray-500 mt-0.5" />
                       <div>
                         <p className="text-sm text-gray-500">Time of Incident</p>
-                        <p className="font-medium">{incident.timeOfIncident}</p>
+                        <p className="font-medium">{formatTime(incident.timeOfIncident)}</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
@@ -693,7 +713,7 @@ export default function IncidentDetailsPage({ params }: PageProps) {
                                 <p className="text-sm font-medium text-gray-700 truncate">{file.fileName}</p>
                                 <p className="text-xs text-gray-500">
                                   {(file.fileSize / 1024 / 1024).toFixed(2)} MB •{" "}
-                                  {new Date(file.uploadedAt).toLocaleDateString()}
+                                  {formatDate(file.uploadedAt)}
                                 </p>
                               </div>
                             </div>
@@ -800,34 +820,6 @@ export default function IncidentDetailsPage({ params }: PageProps) {
                       className="mt-1 min-h-[100px] focus:ring-2 focus:ring-[#8B0000]/20 focus:border-[#8B0000] transition-all"
                     />
                   </div>
-
-                  {/* Anonymous */}
-                  <div className="mb-4">
-                    <label htmlFor="is-anonymous" className="flex items-center gap-3 cursor-pointer">
-                      <Switch
-                        id="is-anonymous"
-                        checked={isAnonymous}
-                        onCheckedChange={checked => setIsAnonymous(checked)}
-                      />
-                      <span className="text-sm font-medium text-gray-900">
-                        Mark this report as anonymous
-                      </span>
-                    </label>
-                    <p className="text-xs text-gray-500 ml-9">
-                      If enabled, this report will not be displayed in public listings.
-                    </p>
-                  </div>
-
-                  {/* Update Button */}
-                  {/*
-                  <Button
-                    onClick={handleStatusUpdate}
-                    disabled={isProcessing}
-                    className="w-full bg-[#8B0000] hover:bg-[#700000] text-white"
-                  >
-                    {isProcessing ? "Updating..." : "Update Status"}
-                  </Button>
-                  */}
                 </CardContent>
               </Card>
 
@@ -873,7 +865,7 @@ export default function IncidentDetailsPage({ params }: PageProps) {
                       <Calendar className="h-5 w-5 text-gray-400 mt-0.5" />
                       <div>
                         <p className="text-sm text-gray-500">Submission Date</p>
-                        <p className="font-medium">{new Date(incident.submittedAt).toLocaleString()}</p>
+                        <p className="font-medium">{formatDate(incident.submittedAt)}</p>
                       </div>
                     </div>
                   </div>
@@ -919,7 +911,7 @@ export default function IncidentDetailsPage({ params }: PageProps) {
                     <div className="text-sm bg-green-50 text-green-700 p-3 rounded-md border border-green-200 flex items-start gap-2">
                       <CheckCircle2 className="h-4 w-4 mt-0.5" />
                       <span>
-                        Verified by {incident.verifiedBy} on {new Date(incident.verifiedAt!).toLocaleString()}
+                        Verified by {incident.verifiedBy} on {formatDate(incident.verifiedAt!)}
                       </span>
                     </div>
                   )}

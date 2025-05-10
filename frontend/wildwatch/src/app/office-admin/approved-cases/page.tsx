@@ -20,6 +20,7 @@ interface Incident {
   submittedByFullName: string
   status: string
   priorityLevel: "HIGH" | "MEDIUM" | "LOW"
+  timeOfIncident: string
 }
 
 export default function ApprovedCaseTracker() {
@@ -29,6 +30,7 @@ export default function ApprovedCaseTracker() {
   const [error, setError] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [searchQuery, setSearchQuery] = useState("")
+  const [selectedPriority, setSelectedPriority] = useState<string | null>(null)
   const [stats, setStats] = useState({
     highPriority: 0,
     mediumPriority: 0,
@@ -81,13 +83,16 @@ export default function ApprovedCaseTracker() {
     fetchApprovedCases()
   }, [])
 
-  // Filter incidents based on search query
+  // Filter incidents based on search query and priority
   const filteredIncidents = incidents.filter((incident) => {
     const searchLower = searchQuery.toLowerCase()
-    return (
+    const matchesSearch = 
       incident.trackingNumber.toLowerCase().includes(searchLower) ||
       incident.incidentType.toLowerCase().includes(searchLower)
-    )
+    
+    const matchesPriority = selectedPriority ? incident.priorityLevel === selectedPriority : true
+    
+    return matchesSearch && matchesPriority
   })
 
   // Pagination
@@ -104,6 +109,21 @@ export default function ApprovedCaseTracker() {
       year: "numeric",
     })
   }
+
+  const formatTime = (timeString: string) => {
+    // timeString is in format HH:mm:ss or HH:mm
+    const [hour, minute, second] = timeString.split(":");
+    const date = new Date();
+    date.setHours(Number(hour));
+    date.setMinutes(Number(minute));
+    date.setSeconds(second ? Number(second) : 0);
+    return date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+      timeZone: "Asia/Manila"
+    });
+  };
 
   if (loading) {
     return (
@@ -134,7 +154,7 @@ export default function ApprovedCaseTracker() {
   return (
     <div className="flex h-screen">
       <OfficeAdminSidebar />
-      <div className="flex-1 overflow-auto bg-gray-50">
+      <div className="flex-1 ml-64 overflow-auto bg-gray-50">
         <div className="p-8">
           <div className="max-w-7xl mx-auto">
             <div className="mb-6">
@@ -144,7 +164,12 @@ export default function ApprovedCaseTracker() {
 
             {/* Priority Stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <Card className="overflow-hidden border-0 shadow-md">
+              <Card 
+                className={`overflow-hidden border-0 shadow-md cursor-pointer transition-all hover:shadow-lg ${
+                  selectedPriority === "HIGH" ? "ring-2 ring-red-600" : ""
+                }`}
+                onClick={() => setSelectedPriority(selectedPriority === "HIGH" ? null : "HIGH")}
+              >
                 <div className="bg-red-600 h-1.5 w-full"></div>
                 <div className="p-6">
                   <div className="flex items-center justify-between">
@@ -159,7 +184,12 @@ export default function ApprovedCaseTracker() {
                 </div>
               </Card>
 
-              <Card className="overflow-hidden border-0 shadow-md">
+              <Card 
+                className={`overflow-hidden border-0 shadow-md cursor-pointer transition-all hover:shadow-lg ${
+                  selectedPriority === "MEDIUM" ? "ring-2 ring-amber-500" : ""
+                }`}
+                onClick={() => setSelectedPriority(selectedPriority === "MEDIUM" ? null : "MEDIUM")}
+              >
                 <div className="bg-amber-500 h-1.5 w-full"></div>
                 <div className="p-6">
                   <div className="flex items-center justify-between">
@@ -174,7 +204,12 @@ export default function ApprovedCaseTracker() {
                 </div>
               </Card>
 
-              <Card className="overflow-hidden border-0 shadow-md">
+              <Card 
+                className={`overflow-hidden border-0 shadow-md cursor-pointer transition-all hover:shadow-lg ${
+                  selectedPriority === "LOW" ? "ring-2 ring-green-500" : ""
+                }`}
+                onClick={() => setSelectedPriority(selectedPriority === "LOW" ? null : "LOW")}
+              >
                 <div className="bg-green-500 h-1.5 w-full"></div>
                 <div className="p-6">
                   <div className="flex items-center justify-between">

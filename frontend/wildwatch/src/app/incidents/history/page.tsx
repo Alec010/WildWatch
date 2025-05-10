@@ -746,10 +746,20 @@ export default function IncidentHistoryPage() {
     }
   }
 
+  const formatDate = (dateString: string) => {
+    const datePH = new Date(new Date(dateString).toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+    return datePH.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      timeZone: 'Asia/Manila'
+    });
+  };
+
   return (
     <div className="flex min-h-screen bg-[#f5f5f5]">
       <Sidebar />
-      <div className="flex-1 p-8 max-w-[1700px] mx-auto">
+      <div className="flex-1 ml-64 p-8 max-w-[1700px] mx-auto">
         {/* Loading Modal */}
         {isDownloading && (
           <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center">
@@ -799,19 +809,23 @@ export default function IncidentHistoryPage() {
 
         {/* Status Filter Buttons (large) */}
         <div className="grid grid-cols-3 gap-4 mb-6">
-          {["All", "Resolved", "Dismissed"].map((status) => (
+          {[
+            { key: "All", label: "All Dismissed and Resolved Cases" },
+            { key: "Resolved", label: "Resolved" },
+            { key: "Dismissed", label: "Dismissed" },
+          ].map(({ key, label }) => (
             <button
-              key={status}
+              key={key}
               type="button"
-              onClick={() => setStatusFilter(status)}
+              onClick={() => setStatusFilter(key)}
               className={`bg-white p-4 rounded-lg shadow-md text-center transition-all duration-200 hover:bg-gray-50 ${
-                statusFilter === status ? "border-l-4 border-[#800000] bg-[#fff9f9]" : ""
+                statusFilter === key ? "border-l-4 border-[#800000] bg-[#fff9f9]" : ""
               }`}
             >
               <div className="text-2xl font-bold text-[#800000]">
-                {status === "All" ? incidents.length : incidents.filter((i) => i.status === status).length}
+                {key === "All" ? incidents.length : incidents.filter((i) => i.status === key).length}
               </div>
-              <div className="text-gray-600 font-medium">{status === "All" ? "All Cases" : status}</div>
+              <div className="text-gray-600 font-medium">{label}</div>
             </button>
           ))}
         </div>
@@ -866,7 +880,7 @@ export default function IncidentHistoryPage() {
                       <td className="p-3 font-mono">
                         {incident.trackingNumber}
                       </td>
-                      <td className="p-3">{new Date(incident.submittedAt).toLocaleDateString()}</td>
+                      <td className="p-3">{formatDate(incident.submittedAt)}</td>
                       <td className="p-3">
                         <Badge
                           className={
@@ -916,7 +930,7 @@ export default function IncidentHistoryPage() {
                       </td>
                       <td className="p-3">{incident.officeAdminName || "-"}</td>
                       <td className="p-3">
-                        {incident.finishedDate ? new Date(incident.finishedDate).toLocaleDateString() : "-"}
+                        {incident.finishedDate ? formatDate(incident.finishedDate) : "-"}
                       </td>
                       <td className="p-3 text-center">
                         <Button

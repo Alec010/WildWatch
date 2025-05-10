@@ -86,7 +86,7 @@ export default function CaseTrackingPage() {
         const incidentsData = await incidentsResponse.json();
         // Only show PENDING and IN PROGRESS status (case-insensitive, with space)
         setIncidents(incidentsData.filter((i: Incident) => 
-          ["pending", "in progress"].includes(i.status.toLowerCase())
+          i.status && ["pending", "in progress"].includes(i.status.toLowerCase())
         ));
 
         // Fetch activity logs
@@ -115,30 +115,30 @@ export default function CaseTrackingPage() {
 
   // Helper function to format dates for activities
   const formatDate = (dateString: string): string => {
-    const date = new Date(dateString);
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    if (date.toDateString() === today.toDateString()) {
-      return `Today, ${date.toLocaleTimeString([], {
+    const datePH = new Date(new Date(dateString).toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+    const nowPH = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+    const yesterdayPH = new Date(new Date(new Date().setDate(new Date().getDate() - 1)).toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+    if (datePH.toDateString() === nowPH.toDateString()) {
+      return `Today, ${datePH.toLocaleTimeString('en-US', {
         hour: "2-digit",
         minute: "2-digit",
+        timeZone: 'Asia/Manila'
       })}`;
-    } else if (date.toDateString() === yesterday.toDateString()) {
-      return `Yesterday, ${date.toLocaleTimeString([], {
+    } else if (datePH.toDateString() === yesterdayPH.toDateString()) {
+      return `Yesterday, ${datePH.toLocaleTimeString('en-US', {
         hour: "2-digit",
         minute: "2-digit",
+        timeZone: 'Asia/Manila'
       })}`;
     } else {
-      return `${date.toLocaleDateString("en-US", {
+      return datePH.toLocaleString('en-US', {
         month: "short",
         day: "numeric",
         year: "numeric",
-      })}, ${date.toLocaleTimeString([], {
         hour: "2-digit",
         minute: "2-digit",
-      })}`;
+        timeZone: 'Asia/Manila'
+      });
     }
   };
 
@@ -190,7 +190,7 @@ export default function CaseTrackingPage() {
     return (
       <div className="min-h-screen flex bg-[#f5f5f5]">
         <Sidebar />
-        <div className="flex-1 flex items-center justify-center">
+        <div className="flex-1 ml-64 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#8B0000] mx-auto"></div>
             <p className="mt-4 text-gray-600">Loading incidents...</p>
@@ -204,7 +204,7 @@ export default function CaseTrackingPage() {
     return (
       <div className="min-h-screen flex bg-[#f5f5f5]">
         <Sidebar />
-        <div className="flex-1 p-8">
+        <div className="flex-1 ml-64 p-8">
           <h1 className="text-2xl font-bold text-[#800000] mb-4">
             Case Tracking
           </h1>
@@ -217,7 +217,7 @@ export default function CaseTrackingPage() {
   return (
     <div className={`min-h-screen flex bg-[#f8f5f5] ${inter.className}`}>
       <Sidebar />
-      <div className="flex-1 p-8">
+      <div className="flex-1 ml-64 p-8">
         {/* Header with notification icon on the right */}
         <div className="flex justify-between items-center mb-6">
           <div>
@@ -265,23 +265,27 @@ export default function CaseTrackingPage() {
         </div>
         {/* Filter Buttons */}
         <div className="grid grid-cols-3 gap-4 mb-6">
-          {['Pending', 'In Progress', 'All'].map((status) => (
+          {[
+            { key: 'Pending', label: 'Pending Cases' },
+            { key: 'In Progress', label: 'In Progress Cases' },
+            { key: 'All', label: 'All Pending and In Progress Cases' },
+          ].map(({ key, label }) => (
             <button
-              key={status}
-              onClick={() => setSelectedStatus(status)}
+              key={key}
+              onClick={() => setSelectedStatus(key)}
               className={`bg-white p-4 rounded-lg shadow-md text-center transition-all duration-200 hover:bg-gray-50 ${
-                selectedStatus === status
+                selectedStatus === key
                   ? 'border-l-4 border-[#800000] bg-[#fff9f9]'
                   : ''
               }`}
             >
               <div className="text-2xl font-bold text-[#800000]">
-                {status === 'All'
+                {key === 'All'
                   ? incidents.length
-                  : incidents.filter((item) => item.status === status).length}
+                  : incidents.filter((item) => item.status === key).length}
               </div>
               <div className="text-gray-600 font-medium">
-                {status === 'All' ? 'All Cases' : status}
+                {label}
               </div>
             </button>
           ))}

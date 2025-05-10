@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/form";
 import { handleAuthRedirect } from "@/utils/auth";
 import { API_BASE_URL } from "@/utils/api";
+import { useUser } from "@/contexts/UserContext";
 
 const formSchema = z.object({
   email: z.string()
@@ -34,6 +35,7 @@ export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
+  const { refetchUser } = useUser();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -74,6 +76,9 @@ export function LoginForm() {
       if (!data.user) {
         throw new Error("No user data received");
       }
+      
+      // Refresh the user profile
+      await refetchUser();
       
       // Use the handleAuthRedirect function to determine where to redirect
       const redirectPath = handleAuthRedirect({

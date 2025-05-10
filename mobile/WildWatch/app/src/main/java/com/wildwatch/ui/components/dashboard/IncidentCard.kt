@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.sp
 import com.wildwatch.ui.theme.*
 
 enum class IncidentStatus {
-    IN_PROGRESS, ASSIGNED, RESOLVED, URGENT, PENDING
+    IN_PROGRESS, RESOLVED, URGENT, PENDING
 }
 
 data class IncidentInfo(
@@ -39,7 +39,6 @@ fun IncidentCard(
 ) {
     val (borderColor, statusColor, statusText) = when (incident.status) {
         IncidentStatus.IN_PROGRESS -> Triple(InProgressYellow, InProgressYellow, "In Progress")
-        IncidentStatus.ASSIGNED -> Triple(AssignedPurple, AssignedPurple, "Assigned")
         IncidentStatus.RESOLVED -> Triple(ResolvedGreen, ResolvedGreen, "Resolved")
         IncidentStatus.URGENT -> Triple(UrgentRed, UrgentRed, "Urgent")
         IncidentStatus.PENDING -> Triple(Color(0xFFFFA000), Color(0xFFFFA000), "Pending")
@@ -197,7 +196,6 @@ fun IncidentCard(
                             // Status icon
                             val statusIcon = when (incident.status) {
                                 IncidentStatus.IN_PROGRESS -> Icons.Default.Pending
-                                IncidentStatus.ASSIGNED -> Icons.Default.Assignment
                                 IncidentStatus.RESOLVED -> Icons.Default.CheckCircle
                                 IncidentStatus.URGENT -> Icons.Default.PriorityHigh
                                 IncidentStatus.PENDING -> Icons.Default.Schedule

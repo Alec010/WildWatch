@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.Arrays;
 import java.util.Optional;
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -607,5 +608,48 @@ public class IncidentService {
         Incident incident = incidentRepository.findById(incidentId)
             .orElseThrow(() -> new RuntimeException("Incident not found"));
         return incidentUpvoteRepository.existsByIncidentAndUser(incident, user);
+    }
+
+    public List<IncidentResponse> getUnassignedIncidents() {
+        return incidentRepository.findUnassignedIncidents()
+            .stream()
+            .map(this::mapToIncidentResponseWithExtras)
+            .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public void assignIncident(String incidentId, String officeCode, String notes, String assignedBy) {
+        Incident incident = incidentRepository.findById(incidentId)
+                .orElseThrow(() -> new RuntimeException("Incident not found"));
+
+        // Always set status to Pending when assigning to any office
+        incident.setStatus("Pending");
+        incident.setAssignedOffice(Office.valueOf(officeCode));
+
+        // Save the updated incident
+        incidentRepository.save(incident);
+
+        // Notify the user who submitted the incident
+        User submitter = incident.getSubmittedBy();
+        activityLogService.logActivity(
+            "OFFICE_ASSIGNED",
+            String.format("Your report has been assigned to %s. Note: %s", officeCode, notes),
+            incident,
+            submitter
+        );
+
+        // Notify all SSO admins
+        List<OfficeAdmin> ssoAdmins = officeAdminService.findAllActive().stream()
+            .filter(admin -> admin.getOfficeCode().equals("SSO"))
+            .collect(Collectors.toList());
+        for (OfficeAdmin admin : ssoAdmins) {
+            User adminUser = admin.getUser();
+            activityLogService.logActivity(
+                "OFFICE_ASSIGNED",
+                String.format("A report has been assigned to %s. Note: %s", officeCode, notes),
+                incident,
+                adminUser
+            );
+        }
     }
 } 

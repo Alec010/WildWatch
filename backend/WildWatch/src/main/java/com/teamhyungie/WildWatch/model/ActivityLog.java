@@ -3,6 +3,7 @@ package com.teamhyungie.WildWatch.model;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Entity
 @Table(name = "activity_logs")
@@ -38,5 +39,10 @@ public class ActivityLog {
 
     public void setIsRead(Boolean isRead) {
         this.isRead = isRead;
+    }
+
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now(ZoneId.of("Asia/Manila"));
     }
 } 

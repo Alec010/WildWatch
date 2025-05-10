@@ -6,6 +6,7 @@ import com.teamhyungie.WildWatch.dto.IncidentResponse;
 import com.teamhyungie.WildWatch.dto.IncidentUpdateRequest;
 import com.teamhyungie.WildWatch.dto.IncidentUpdateResponse;
 import com.teamhyungie.WildWatch.dto.IncidentTransferRequest;
+import com.teamhyungie.WildWatch.dto.OfficeAssignmentRequest;
 import com.teamhyungie.WildWatch.service.IncidentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -128,5 +129,25 @@ public class IncidentController {
     public ResponseEntity<Boolean> getUpvoteStatus(@PathVariable String id, @AuthenticationPrincipal UserDetails userDetails) {
         boolean hasUpvoted = incidentService.hasUserUpvoted(id, userDetails.getUsername());
         return ResponseEntity.ok(hasUpvoted);
+    }
+
+    @GetMapping("/unassigned")
+    public ResponseEntity<List<IncidentResponse>> getUnassignedIncidents() {
+        List<IncidentResponse> incidents = incidentService.getUnassignedIncidents();
+        return ResponseEntity.ok(incidents);
+    }
+
+    @PostMapping("/{id}/assign")
+    public ResponseEntity<?> assignIncident(
+            @PathVariable String id,
+            @RequestBody OfficeAssignmentRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        try {
+            incidentService.assignIncident(id, request.getOfficeCode(), request.getNotes(), userDetails.getUsername());
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 } 

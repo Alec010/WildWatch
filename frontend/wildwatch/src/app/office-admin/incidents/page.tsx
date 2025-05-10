@@ -56,6 +56,31 @@ export default function IncidentManagementPage() {
     return profile.officeCode || profile.office || profile.assignedOffice || null;
   };
 
+  const formatDate = (dateString: string) => {
+    const datePH = new Date(new Date(dateString).toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+    return datePH.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      timeZone: 'Asia/Manila'
+    });
+  };
+
+  const formatTime = (timeString: string) => {
+    // timeString is in format HH:mm:ss or HH:mm
+    const [hour, minute, second] = timeString.split(":");
+    const date = new Date();
+    date.setHours(Number(hour));
+    date.setMinutes(Number(minute));
+    date.setSeconds(second ? Number(second) : 0);
+    return date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+      timeZone: "Asia/Manila"
+    });
+  };
+
   const fetchIncidents = async (officeCode: string | null) => {
     try {
       const token = document.cookie
@@ -224,7 +249,7 @@ export default function IncidentManagementPage() {
   return (
     <div className="flex min-h-screen bg-[#f5f5f5]">
       <OfficeAdminSidebar />
-      <div className="flex-1 p-8">
+      <div className="flex-1 ml-64 p-8">
         <div className="max-w-7xl mx-auto">
           <div className="mb-6">
             <h1 className="text-2xl font-semibold text-[#8B0000]">Incident Management</h1>
@@ -254,7 +279,7 @@ export default function IncidentManagementPage() {
                           {incident.trackingNumber}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {new Date(incident.dateOfIncident).toLocaleDateString()} {incident.timeOfIncident}
+                          {formatDate(incident.dateOfIncident)} {formatTime(incident.timeOfIncident)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {incident.location}
@@ -328,7 +353,7 @@ export default function IncidentManagementPage() {
                             {incident.trackingNumber}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {new Date(incident.dateOfIncident).toLocaleDateString()} {incident.timeOfIncident}
+                            {formatDate(incident.dateOfIncident)} {formatTime(incident.timeOfIncident)}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {incident.location}

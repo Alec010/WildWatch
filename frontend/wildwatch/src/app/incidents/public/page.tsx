@@ -159,13 +159,14 @@ export default function PublicIncidentsPage() {
   }, [incidents]);
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "numeric",
+    const datePH = new Date(new Date(dateString).toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+    return datePH.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: 'numeric',
       hour12: true,
+      timeZone: 'Asia/Manila'
     });
   };
 
@@ -350,7 +351,7 @@ export default function PublicIncidentsPage() {
   return (
     <div className="min-h-screen flex bg-[#f5f5f5]">
       <Sidebar />
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto ml-64">
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
             <div>

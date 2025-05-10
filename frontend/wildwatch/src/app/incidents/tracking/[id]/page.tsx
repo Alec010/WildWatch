@@ -56,13 +56,52 @@ interface Evidence {
 }
 
 function getEstimatedResolution(submittedAt: string, priority: string) {
-  const base = new Date(submittedAt)
-  let days = 2
-  if (priority === "MEDIUM") days = 3
-  if (priority === "HIGH") days = 5
-  base.setDate(base.getDate() + days)
-  return base
+  const base = new Date(submittedAt);
+  let days = 2;
+  if (priority === "MEDIUM") days = 3;
+  if (priority === "HIGH") days = 5;
+  base.setDate(base.getDate() + days);
+  
+  // Format the estimated resolution date in Asia/Manila timezone
+  return new Date(base.toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
 }
+
+const formatDate = (dateString: string) => {
+  const datePH = new Date(new Date(dateString).toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+  const nowPH = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+  const diffMs = nowPH.getTime() - datePH.getTime();
+  const diffMins = Math.round(diffMs / 60000);
+  const diffHours = Math.round(diffMins / 60);
+  const diffDays = Math.round(diffHours / 24);
+  if (diffMins < 60) {
+    return `${diffMins} ${diffMins === 1 ? "minute" : "minutes"} ago`;
+  } else if (diffHours < 24) {
+    return `${diffHours} ${diffHours === 1 ? "hour" : "hours"} ago`;
+  } else if (diffDays < 7) {
+    return `${diffDays} ${diffDays === 1 ? "day" : "days"} ago`;
+  } else {
+    return datePH.toLocaleString('en-US', {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: 'Asia/Manila'
+    });
+  }
+};
+
+const formatFullDate = (dateString: string) => {
+  const datePH = new Date(new Date(dateString).toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+  return datePH.toLocaleString('en-US', {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: 'Asia/Manila'
+  });
+};
 
 export default function CaseDetailsPage() {
   const { id } = useParams() // id is trackingNumber
@@ -242,19 +281,10 @@ export default function CaseDetailsPage() {
     incident.priorityLevel,
   )
 
-  const formatDate = (dateString: string) => {
-    if (!dateString) return "-"
-    return new Date(dateString).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    })
-  }
-
   return (
     <div className="min-h-screen flex">
       {userRole === 'OFFICE_ADMIN' ? <OfficeAdminSidebar /> : <Sidebar />}
-      <div className="flex-1 bg-[#f5f5f5]">
+      <div className="flex-1 bg-[#f5f5f5] ml-64">
         <div className="p-6 max-w-[1200px] mx-auto">
           {/* Header Section */}
           <div className="mb-6">
@@ -304,7 +334,7 @@ export default function CaseDetailsPage() {
                 <div>
                   <div className="text-xs text-gray-500">Estimated Resolution</div>
                   <div className="font-medium">
-                    {estimatedResolution ? formatDate(estimatedResolution.toISOString()) : "-"}
+                    {estimatedResolution ? formatFullDate(estimatedResolution.toISOString()) : "-"}
                   </div>
                 </div>
               </div>
@@ -373,7 +403,7 @@ export default function CaseDetailsPage() {
               </div>
             </div>
 
-            {isOfficeAdmin && normalizedStatus !== "pending" && (
+            {isOfficeAdmin && !["resolved", "closed", "dismissed"].includes(normalizedStatus) && (
               <div className="flex gap-4 mb-6">
                 <Button
                   variant="default"
