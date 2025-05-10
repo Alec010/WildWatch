@@ -135,9 +135,11 @@ export default function OfficeAdminNotificationsPage() {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
     const now = new Date()
+    
     // Convert both to Asia/Manila time
-    const datePH = new Date(date.toLocaleString("en-US", { timeZone: "Asia/Manila" }))
-    const nowPH = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Manila" }))
+    const datePH = new Date(date.toLocaleString('en-US', { timeZone: 'Asia/Manila' }))
+    const nowPH = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Manila' }))
+    
     const diffMs = nowPH.getTime() - datePH.getTime()
     const diffMins = Math.round(diffMs / 60000)
     const diffHours = Math.round(diffMins / 60)
@@ -154,6 +156,7 @@ export default function OfficeAdminNotificationsPage() {
         month: "short",
         day: "numeric",
         year: datePH.getFullYear() !== nowPH.getFullYear() ? "numeric" : undefined,
+        timeZone: 'Asia/Manila'
       })
     }
   }

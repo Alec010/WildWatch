@@ -87,10 +87,8 @@ export default function NotificationsPage() {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
     const now = new Date()
-    // Convert both to Asia/Manila time
-    const datePH = new Date(date.toLocaleString('en-US', { timeZone: 'Asia/Manila' }))
-    const nowPH = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Manila' }))
-    const diffMs = nowPH.getTime() - datePH.getTime()
+    
+    const diffMs = now.getTime() - date.getTime()
     const diffMins = Math.round(diffMs / 60000)
     const diffHours = Math.round(diffMins / 60)
     const diffDays = Math.round(diffHours / 24)
@@ -102,10 +100,11 @@ export default function NotificationsPage() {
     } else if (diffDays < 7) {
       return `${diffDays} ${diffDays === 1 ? "day" : "days"} ago`
     } else {
-      return datePH.toLocaleDateString("en-US", {
+      return date.toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
-        year: datePH.getFullYear() !== nowPH.getFullYear() ? "numeric" : undefined,
+        year: date.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
+        timeZone: 'Asia/Manila'
       })
     }
   }

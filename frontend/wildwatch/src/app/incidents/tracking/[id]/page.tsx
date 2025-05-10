@@ -56,13 +56,58 @@ interface Evidence {
 }
 
 function getEstimatedResolution(submittedAt: string, priority: string) {
-  const base = new Date(submittedAt)
-  let days = 2
-  if (priority === "MEDIUM") days = 3
-  if (priority === "HIGH") days = 5
-  base.setDate(base.getDate() + days)
-  return base
+  const base = new Date(submittedAt);
+  let days = 2;
+  if (priority === "MEDIUM") days = 3;
+  if (priority === "HIGH") days = 5;
+  base.setDate(base.getDate() + days);
+  
+  // Format the estimated resolution date in Asia/Manila timezone
+  return new Date(base.toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
 }
+
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString);
+  const now = new Date();
+  
+  // Format the date in Asia/Manila timezone
+  const formattedDate = new Date(date.toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+  const formattedNow = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+  
+  const diffMs = formattedNow.getTime() - formattedDate.getTime();
+  const diffMins = Math.round(diffMs / 60000);
+  const diffHours = Math.round(diffMins / 60);
+  const diffDays = Math.round(diffHours / 24);
+
+  if (diffMins < 60) {
+    return `${diffMins} ${diffMins === 1 ? "minute" : "minutes"} ago`;
+  } else if (diffHours < 24) {
+    return `${diffHours} ${diffHours === 1 ? "hour" : "hours"} ago`;
+  } else if (diffDays < 7) {
+    return `${diffDays} ${diffDays === 1 ? "day" : "days"} ago`;
+  } else {
+    return formattedDate.toLocaleString('en-US', {
+      month: "short",
+      day: "numeric",
+      year: formattedDate.getFullYear() !== formattedNow.getFullYear() ? "numeric" : undefined,
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: 'Asia/Manila'
+    });
+  }
+};
+
+const formatFullDate = (dateString: string) => {
+  const date = new Date(dateString);
+  return date.toLocaleString('en-US', {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: 'Asia/Manila'
+  });
+};
 
 export default function CaseDetailsPage() {
   const { id } = useParams() // id is trackingNumber
@@ -244,15 +289,6 @@ export default function CaseDetailsPage() {
     incident.submittedAt || incident.dateOfIncident,
     incident.priorityLevel,
   )
-
-  const formatDate = (dateString: string) => {
-    if (!dateString) return "-"
-    return new Date(dateString).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    })
-  }
 
   return (
     <div className="min-h-screen flex">

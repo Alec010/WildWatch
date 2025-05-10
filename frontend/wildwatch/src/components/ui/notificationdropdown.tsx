@@ -153,7 +153,6 @@ export default function NotificationDropdown({
 
   const formatNotificationTime = (dateString: string) => {
     try {
-      // Parse the UTC date string
       const date = new Date(dateString);
       const now = new Date();
       
@@ -174,14 +173,14 @@ export default function NotificationDropdown({
       } else if (diffDays < 7) {
         return `${diffDays} day${diffDays !== 1 ? "s" : ""} ago`;
       } else {
-        // For older notifications, show the actual date in local timezone
+        // For older notifications, show the actual date
         return date.toLocaleString('en-US', {
           month: 'short',
           day: 'numeric',
           year: 'numeric',
           hour: '2-digit',
           minute: '2-digit',
-          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+          timeZone: 'Asia/Manila'
         });
       }
     } catch (error) {
