@@ -86,6 +86,18 @@ export default function IncidentSubmissionPage() {
     }
   }, [formData]);
 
+  useEffect(() => {
+    // Listen for logout/login events (e.g., token removal)
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === 'token' && !event.newValue) {
+        sessionStorage.removeItem('incidentSubmissionData');
+        sessionStorage.removeItem('evidenceSubmissionData');
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {

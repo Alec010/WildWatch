@@ -258,6 +258,21 @@ export default function UpdateApprovedCasePage({ params }: { params: Promise<{ i
     })
   }
 
+  const formatTime = (timeString: string) => {
+    // timeString is in format HH:mm:ss or HH:mm
+    const [hour, minute, second] = timeString.split(":");
+    const date = new Date();
+    date.setHours(Number(hour));
+    date.setMinutes(Number(minute));
+    date.setSeconds(second ? Number(second) : 0);
+    return date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+      timeZone: "Asia/Manila"
+    });
+  };
+
   const handleSendUpdate = async () => {
     if (!incident || !updateMessage.trim() || !updatedBy.trim() || !status) return
 
@@ -663,7 +678,7 @@ export default function UpdateApprovedCasePage({ params }: { params: Promise<{ i
                               Date & Time
                             </h3>
                             <p className="text-sm font-medium">
-                              {formatDate(incident.dateOfIncident)} at {incident.timeOfIncident}
+                              {formatDate(incident.dateOfIncident)} at {formatTime(incident.timeOfIncident)}
                             </p>
                           </div>
 

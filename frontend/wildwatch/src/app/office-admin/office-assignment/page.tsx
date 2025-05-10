@@ -89,6 +89,21 @@ const OfficeAssignment = () => {
     })
   }
 
+  const formatTime = (timeString: string) => {
+    // timeString is in format HH:mm:ss or HH:mm
+    const [hour, minute, second] = timeString.split(":");
+    const date = new Date();
+    date.setHours(Number(hour));
+    date.setMinutes(Number(minute));
+    date.setSeconds(second ? Number(second) : 0);
+    return date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+      timeZone: "Asia/Manila"
+    });
+  };
+
   const getIncidentTypes = () => {
     const types = new Set(incidents.map((incident) => incident.incidentType))
     return Array.from(types)
@@ -241,7 +256,7 @@ const OfficeAssignment = () => {
                             <>
                               <span className="mx-2">•</span>
                               <Clock className="h-4 w-4 mr-1 text-[#800000]" />
-                              <span>{incident.timeOfIncident}</span>
+                              <span>{formatTime(incident.timeOfIncident)}</span>
                             </>
                           )}
                         </div>

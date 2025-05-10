@@ -66,6 +66,21 @@ export default function IncidentManagementPage() {
     });
   };
 
+  const formatTime = (timeString: string) => {
+    // timeString is in format HH:mm:ss or HH:mm
+    const [hour, minute, second] = timeString.split(":");
+    const date = new Date();
+    date.setHours(Number(hour));
+    date.setMinutes(Number(minute));
+    date.setSeconds(second ? Number(second) : 0);
+    return date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+      timeZone: "Asia/Manila"
+    });
+  };
+
   const fetchIncidents = async (officeCode: string | null) => {
     try {
       const token = document.cookie
@@ -264,7 +279,7 @@ export default function IncidentManagementPage() {
                           {incident.trackingNumber}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {formatDate(incident.dateOfIncident)} {incident.timeOfIncident}
+                          {formatDate(incident.dateOfIncident)} {formatTime(incident.timeOfIncident)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {incident.location}
@@ -338,7 +353,7 @@ export default function IncidentManagementPage() {
                             {incident.trackingNumber}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {formatDate(incident.dateOfIncident)} {incident.timeOfIncident}
+                            {formatDate(incident.dateOfIncident)} {formatTime(incident.timeOfIncident)}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {incident.location}

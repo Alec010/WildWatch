@@ -122,6 +122,21 @@ export default function IncidentDetailsPage({ params }: PageProps) {
     });
   };
 
+  const formatTime = (timeString: string) => {
+    // timeString is in format HH:mm:ss or HH:mm
+    const [hour, minute, second] = timeString.split(":");
+    const date = new Date();
+    date.setHours(Number(hour));
+    date.setMinutes(Number(minute));
+    date.setSeconds(second ? Number(second) : 0);
+    return date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+      timeZone: "Asia/Manila"
+    });
+  };
+
   useEffect(() => {
     const fetchIncident = async () => {
       try {
@@ -630,7 +645,7 @@ export default function IncidentDetailsPage({ params }: PageProps) {
                       <Clock className="h-5 w-5 text-gray-500 mt-0.5" />
                       <div>
                         <p className="text-sm text-gray-500">Time of Incident</p>
-                        <p className="font-medium">{incident.timeOfIncident}</p>
+                        <p className="font-medium">{formatTime(incident.timeOfIncident)}</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">

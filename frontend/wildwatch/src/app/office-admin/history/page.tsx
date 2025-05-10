@@ -100,6 +100,21 @@ export default function OfficeAdminIncidentHistoryPage() {
     });
   };
 
+  const formatTime = (timeString: string) => {
+    // timeString is in format HH:mm:ss or HH:mm
+    const [hour, minute, second] = timeString.split(":");
+    const date = new Date();
+    date.setHours(Number(hour));
+    date.setMinutes(Number(minute));
+    date.setSeconds(second ? Number(second) : 0);
+    return date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+      timeZone: "Asia/Manila"
+    });
+  };
+
   const handleDownloadPDF = async (incident: any) => {
     setIsDownloading(true)
     try {
@@ -235,9 +250,9 @@ export default function OfficeAdminIncidentHistoryPage() {
       addFieldRow("Priority", incident.priorityLevel || "-", "Department", incident.officeAdminName || "-")
       addFieldRow(
         "Submitted",
-        formatDate(incident.submittedAt),
+        formatDate(incident.submittedAt) + " " + formatTime(incident.submittedAt),
         "Finished Date",
-        incident.finishedDate ? formatDate(incident.finishedDate) : "-",
+        incident.finishedDate ? formatDate(incident.finishedDate) + " " + formatTime(incident.finishedDate) : "-",
       )
       y += sectionSpacing
 
@@ -587,7 +602,7 @@ export default function OfficeAdminIncidentHistoryPage() {
                       <td className="p-3 font-mono">
                         {incident.trackingNumber}
                       </td>
-                      <td className="p-3">{formatDate(incident.submittedAt)}</td>
+                      <td className="p-3">{formatDate(incident.submittedAt)} {formatTime(incident.submittedAt)}</td>
                       <td className="p-3">
                         <Badge
                           className={
@@ -637,7 +652,7 @@ export default function OfficeAdminIncidentHistoryPage() {
                       </td>
                       <td className="p-3">{incident.officeAdminName || "-"}</td>
                       <td className="p-3">
-                        {incident.finishedDate ? formatDate(incident.finishedDate) : "-"}
+                        {incident.finishedDate ? formatDate(incident.finishedDate) + " " + formatTime(incident.finishedDate) : "-"}
                       </td>
                       <td className="p-3 text-center">
                         <Button

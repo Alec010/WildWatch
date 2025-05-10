@@ -20,6 +20,7 @@ interface Incident {
   submittedByFullName: string
   status: string
   priorityLevel: "HIGH" | "MEDIUM" | "LOW"
+  timeOfIncident: string
 }
 
 export default function ApprovedCaseTracker() {
@@ -108,6 +109,21 @@ export default function ApprovedCaseTracker() {
       year: "numeric",
     })
   }
+
+  const formatTime = (timeString: string) => {
+    // timeString is in format HH:mm:ss or HH:mm
+    const [hour, minute, second] = timeString.split(":");
+    const date = new Date();
+    date.setHours(Number(hour));
+    date.setMinutes(Number(minute));
+    date.setSeconds(second ? Number(second) : 0);
+    return date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+      timeZone: "Asia/Manila"
+    });
+  };
 
   if (loading) {
     return (
