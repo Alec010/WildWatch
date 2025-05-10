@@ -19,6 +19,7 @@ interface UserContextType {
   loading: boolean;
   error: string | null;
   refetchUser: () => Promise<void>;
+  clearUser: () => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -29,14 +30,22 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const clearUser = useCallback(() => {
+    setUser(null);
+    setError(null);
+    setLoading(false);
+  }, []);
+
   const fetchUserProfile = useCallback(async () => {
     const token = Cookies.get('token');
     if (!token) {
+      clearUser();
       router.push('/login');
       return;
     }
 
     try {
+      setLoading(true);
       const response = await fetch(`${API_BASE_URL}/api/auth/profile`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -47,6 +56,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       if (!response.ok) {
         if (response.status === 401) {
           Cookies.remove('token');
+          clearUser();
           router.push('/login');
           return;
         }
@@ -66,18 +76,19 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('Error fetching user profile:', error);
       setError(error instanceof Error ? error.message : 'An error occurred');
+      clearUser();
       router.push('/login');
     } finally {
       setLoading(false);
     }
-  }, [router]);
+  }, [router, clearUser]);
 
   useEffect(() => {
     fetchUserProfile();
   }, [fetchUserProfile]);
 
   return (
-    <UserContext.Provider value={{ user, loading, error, refetchUser: fetchUserProfile }}>
+    <UserContext.Provider value={{ user, loading, error, refetchUser: fetchUserProfile, clearUser }}>
       {children}
     </UserContext.Provider>
   );

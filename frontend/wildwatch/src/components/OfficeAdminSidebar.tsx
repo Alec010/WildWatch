@@ -19,10 +19,11 @@ import { useUser } from '@/contexts/UserContext';
 export function OfficeAdminSidebar() {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, loading } = useUser();
+  const { user, loading, clearUser } = useUser();
 
   const handleSignOut = () => {
     Cookies.remove('token');
+    clearUser();
     router.push('/login');
   };
 

@@ -12,68 +12,16 @@ import {
   LogOut,
 } from "lucide-react";
 import Cookies from "js-cookie";
-import { useEffect, useState } from "react";
-import { API_BASE_URL } from "@/utils/api";
-
-interface User {
-  firstName: string;
-  lastName: string;
-  schoolIdNumber: string;
-  email: string;
-}
+import { useUser } from "@/contexts/UserContext";
 
 export function Sidebar() {
   const router = useRouter();
   const pathname = usePathname();
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchUserProfile = async () => {
-      const token = Cookies.get("token");
-      if (!token) {
-        router.push("/login");
-        return;
-      }
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/auth/profile`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        });
-
-        if (!response.ok) {
-          if (response.status === 401) {
-            // Token is invalid or expired
-            Cookies.remove("token");
-            router.push("/login");
-            return;
-          }
-          throw new Error("Failed to fetch user profile");
-        }
-
-        const userData = await response.json();
-        setUser({
-          firstName: userData.firstName,
-          lastName: userData.lastName,
-          schoolIdNumber: userData.schoolIdNumber,
-          email: userData.email,
-        });
-      } catch (error) {
-        console.error("Error fetching user profile:", error);
-        router.push("/login");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUserProfile();
-  }, [router]);
+  const { user, loading, clearUser } = useUser();
 
   const handleSignOut = () => {
     Cookies.remove("token");
+    clearUser();
     router.push("/login");
   };
 
@@ -86,6 +34,7 @@ export function Sidebar() {
           width={150}
           height={50}
           className="mb-8"
+          priority
         />
         <nav className="space-y-4">
           <Link
@@ -100,9 +49,9 @@ export function Sidebar() {
             <span>Dashboard</span>
           </Link>
           <Link
-            href="/incidents/submit"
+            href="/incidents/report"
             className={`flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-              pathname.startsWith("/incidents/submit")
+              pathname === "/incidents/report"
                 ? "bg-[#6B0000] text-[#F0B429] border-l-4 border-[#F0B429]"
                 : "hover:bg-[#6B0000]"
             }`}
@@ -110,7 +59,6 @@ export function Sidebar() {
             <AlertTriangle size={20} />
             <span>Report Incident</span>
           </Link>
-
           <Link
             href="/incidents/tracking"
             className={`flex items-center space-x-3 p-3 rounded-lg transition-colors ${
@@ -120,7 +68,7 @@ export function Sidebar() {
             }`}
           >
             <ClipboardList size={20} />
-            <span>Case Tracking</span>
+            <span>Track Incident</span>
           </Link>
           <Link
             href="/incidents/history"
