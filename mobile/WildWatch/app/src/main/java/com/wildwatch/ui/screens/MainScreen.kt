@@ -99,6 +99,9 @@ fun MainScreen(
                     navController = navController,
                     onIncidentClick = { trackingNumber ->
                         navController.navigate(Screen.CaseDetails.createRoute(trackingNumber))
+                    },
+                    onViewAllClick = {
+                        navController.navigate(Screen.ViewAllCases.route)
                     }
                 )
                 "history" -> HistoryScreen(
