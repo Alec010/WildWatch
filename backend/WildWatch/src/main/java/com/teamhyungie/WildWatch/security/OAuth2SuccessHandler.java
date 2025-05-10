@@ -90,7 +90,23 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
             email = (String) attributes.get("upn"); // Microsoft's User Principal Name
         }
         if (email == null) {
-            throw new RuntimeException("No email found in OAuth response");
+            email = (String) attributes.get("mail");
+        }
+        if (email == null) {
+            email = (String) attributes.get("userPrincipalName");
+        }
+        if (email == null) {
+            // Redirect to error page if no email found
+            String errorMessage = URLEncoder.encode("No email found in OAuth response", StandardCharsets.UTF_8);
+            String mobileRedirectUri = extractMobileRedirectUri(request);
+            String redirectUrl;
+            if (mobileRedirectUri != null && !mobileRedirectUri.isEmpty()) {
+                redirectUrl = mobileRedirectUri + "?error=" + errorMessage;
+            } else {
+                redirectUrl = frontendConfig.getActiveUrl() + "/auth/error?message=" + errorMessage;
+            }
+            getRedirectStrategy().sendRedirect(request, response, redirectUrl);
+            return;
         }
 
         System.out.println("Extracted email: " + email);
@@ -171,6 +187,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
             System.out.println("=================================");
         }
 
+        // Only now generate JWT and redirect
         try {
             // Create UserDetails for JWT
             UserDetails userDetails = org.springframework.security.core.userdetails.User

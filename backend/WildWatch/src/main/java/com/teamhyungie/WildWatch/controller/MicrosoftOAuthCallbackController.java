@@ -112,30 +112,61 @@ public class MicrosoftOAuthCallbackController {
         logger.info("Received user info response from Microsoft");
 
         JsonNode userInfo = objectMapper.readTree(userInfoResponse.getBody());
-        String email = userInfo.has("email") ? userInfo.get("email").asText() : userInfo.get("upn").asText();
+        String email = userInfo.has("email") ? userInfo.get("email").asText() : null;
+        if (email == null && userInfo.has("upn")) email = userInfo.get("upn").asText();
+        if (email == null && userInfo.has("mail")) email = userInfo.get("mail").asText();
+        if (email == null && userInfo.has("userPrincipalName")) email = userInfo.get("userPrincipalName").asText();
         String firstName = userInfo.has("given_name") ? userInfo.get("given_name").asText() : "";
         String lastName = userInfo.has("family_name") ? userInfo.get("family_name").asText() : "";
         logger.info("Extracted user info - email: {}, firstName: {}, lastName: {}", email, firstName, lastName);
+
+        if (email == null) {
+            String errorMessage = URLEncoder.encode("No email found in OAuth response", StandardCharsets.UTF_8);
+            String redirectUrl;
+            if (mobileRedirectUri != null && !mobileRedirectUri.isEmpty()) {
+                redirectUrl = mobileRedirectUri + "?error=" + errorMessage;
+            } else {
+                redirectUrl = frontendConfig.getActiveUrl() + "/auth/error?message=" + errorMessage;
+            }
+            response.sendRedirect(redirectUrl);
+            return;
+        }
 
         // 4. Find or create user in your DB
         logger.info("[OAuthCallback] Looking up user in database");
         User user = userService.findByUsername(email);
         if (user == null) {
             logger.info("User not found, creating new user");
-            user = new User();
-            user.setEmail(email);
-            user.setFirstName(firstName);
-            user.setLastName(lastName);
-            user.setRole(Role.REGULAR_USER);
-            user.setEnabled(true);
-            user.setTermsAccepted(false);
-            user.setPassword(UUID.randomUUID().toString());
-            user.setSchoolIdNumber("TEMP_" + System.currentTimeMillis());
-            user.setContactNumber("+639000000000");
-            user.setMiddleInitial("");
-            user.setAuthProvider("microsoft");
-            user = userService.save(user);
-            logger.info("Created new user with ID: {}", user.getId());
+            try {
+                user = new User();
+                user.setEmail(email);
+                user.setFirstName(firstName);
+                user.setLastName(lastName);
+                user.setRole(Role.REGULAR_USER);
+                user.setEnabled(true);
+                user.setTermsAccepted(false);
+                user.setPassword(UUID.randomUUID().toString());
+                user.setSchoolIdNumber("TEMP_" + System.currentTimeMillis());
+                user.setContactNumber("+639000000000");
+                user.setMiddleInitial("");
+                user.setAuthProvider("microsoft");
+                user = userService.save(user);
+                if (user == null) {
+                    throw new RuntimeException("Failed to create new user");
+                }
+                logger.info("Created new user with ID: {}", user.getId());
+            } catch (Exception e) {
+                logger.error("Error creating new user: {}", e.getMessage());
+                String errorMessage = URLEncoder.encode("Failed to create user account: " + e.getMessage(), StandardCharsets.UTF_8);
+                String redirectUrl;
+                if (mobileRedirectUri != null && !mobileRedirectUri.isEmpty()) {
+                    redirectUrl = mobileRedirectUri + "?error=" + errorMessage;
+                } else {
+                    redirectUrl = frontendConfig.getActiveUrl() + "/auth/error?message=" + errorMessage;
+                }
+                response.sendRedirect(redirectUrl);
+                return;
+            }
         } else {
             logger.info("Found existing user with ID: {}", user.getId());
         }
