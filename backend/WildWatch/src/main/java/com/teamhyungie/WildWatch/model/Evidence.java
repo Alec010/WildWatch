@@ -3,7 +3,7 @@ package com.teamhyungie.WildWatch.model;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
+import java.time.ZoneId;
 
 @Entity
 @Table(name = "evidence")
@@ -34,6 +34,6 @@ public class Evidence {
 
     @PrePersist
     protected void onCreate() {
-        uploadedAt = LocalDateTime.now(ZoneOffset.UTC);
+        uploadedAt = LocalDateTime.now(ZoneId.of("Asia/Manila"));
     }
 } 
