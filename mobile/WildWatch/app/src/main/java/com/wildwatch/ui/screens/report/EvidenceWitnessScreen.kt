@@ -60,7 +60,7 @@ fun EvidenceWitnessScreen(
     // Local state for form fields
     var witnessName by remember { mutableStateOf("") }
     var witnessContact by remember { mutableStateOf("") }
-    var witnessStatement by remember { mutableStateOf("") }
+    var witnessNotes by remember { mutableStateOf("") }
     var additionalNotes by remember { mutableStateOf(formState.additionalNotes) }
 
     // Local state for UI
@@ -249,7 +249,7 @@ fun EvidenceWitnessScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = {
-                        updateFormStateBeforeNavigation(formViewModel, witnesses, evidenceUris, additionalNotes)
+                        updateFormStateBeforeNavigation(formViewModel, witnesses, evidenceUris, "")
                         onBackClick()
                     }) {
                         Icon(
@@ -317,11 +317,11 @@ fun EvidenceWitnessScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
             ) {
-                // Main form card
+                // Evidence Upload Card
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 16.dp),
+                        .padding(top = 16.dp, bottom = 12.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = Color.White
@@ -335,30 +335,22 @@ fun EvidenceWitnessScreen(
                             .fillMaxWidth()
                             .padding(20.dp)
                     ) {
-                        // Section icon and title
-                        SectionHeader(
-                            title = "Evidence & Witnesses",
-                            icon = Icons.Default.Assignment,
-                            color = darkRed
-                        )
-
-                        Text(
-                            text = "Upload evidence and provide witness information",
-                            color = Color.Gray,
-                            fontSize = 14.sp,
-                            modifier = Modifier.padding(bottom = 24.dp)
-                        )
-
-                        // Evidence Upload Section
-                        SectionTitle(title = "Evidence Upload")
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Upload,
+                                contentDescription = null,
+                                tint = darkRed,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            SectionTitle(title = "Evidence Upload")
+                        }
                         Text(
                             text = "Upload photos or videos related to the incident (optional)",
                             color = Color.Gray,
                             fontSize = 14.sp,
                             modifier = Modifier.padding(bottom = 12.dp)
                         )
-
-                        // Upload area
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -383,12 +375,10 @@ fun EvidenceWitnessScreen(
                                         .size(48.dp)
                                         .padding(bottom = 16.dp)
                                 )
-
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    // Take Photo button
                                     Button(
                                         onClick = {
                                             val hasCameraPermission = ContextCompat.checkSelfPermission(
@@ -417,14 +407,12 @@ fun EvidenceWitnessScreen(
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(
-                                            "TAKE PHOTO",
+                                            "PHOTO",
                                             color = darkRed,
                                             fontSize = 12.sp,
                                             fontWeight = FontWeight.Bold
                                         )
                                     }
-
-                                    // Upload button
                                     Button(
                                         onClick = {
                                             imagePickerLauncher.launch("image/*")
@@ -451,9 +439,7 @@ fun EvidenceWitnessScreen(
                                         )
                                     }
                                 }
-
                                 Spacer(modifier = Modifier.height(16.dp))
-
                                 Text(
                                     text = "Maximum up to 5 images",
                                     color = Color.Gray,
@@ -461,31 +447,56 @@ fun EvidenceWitnessScreen(
                                 )
                             }
                         }
-
-                        // Display uploaded images (thumbnails)
-                        SectionTitle(
-                            title = "Uploaded Files (${evidenceUris.size})",
-                            trailingContent = {
-                                if (evidenceUris.isNotEmpty()) {
-                                    TextButton(
-                                        onClick = {
-                                            evidenceUris.clear()
-                                            evidenceFiles.clear()
-                                            formViewModel.clearEvidence()
-                                        },
-                                        colors = ButtonDefaults.textButtonColors(contentColor = darkRed)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Delete,
-                                            contentDescription = "Clear all",
-                                            modifier = Modifier.padding(end = 4.dp)
-                                        )
-                                        Text("Clear All")
+                    }
+                }
+                // Uploaded Files Card
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color.White
+                    ),
+                    elevation = CardDefaults.cardElevation(
+                        defaultElevation = 2.dp
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Folder,
+                                contentDescription = null,
+                                tint = darkRed,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            SectionTitle(title = "Uploaded Files (${evidenceUris.size})",
+                                trailingContent = {
+                                    if (evidenceUris.isNotEmpty()) {
+                                        TextButton(
+                                            onClick = {
+                                                evidenceUris.clear()
+                                                evidenceFiles.clear()
+                                                formViewModel.clearEvidence()
+                                            },
+                                            colors = ButtonDefaults.textButtonColors(contentColor = darkRed)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Delete,
+                                                contentDescription = "Clear all",
+                                                modifier = Modifier.padding(end = 4.dp)
+                                            )
+                                            Text("Clear All")
+                                        }
                                     }
                                 }
-                            }
-                        )
-
+                            )
+                        }
                         if (evidenceUris.isEmpty()) {
                             Box(
                                 modifier = Modifier
@@ -514,7 +525,6 @@ fun EvidenceWitnessScreen(
                                             filename = uri.lastPathSegment ?: "image.jpg",
                                             imageUri = uri
                                         )
-
                                         IconButton(
                                             onClick = {
                                                 evidenceUris.removeAt(index)
@@ -537,20 +547,42 @@ fun EvidenceWitnessScreen(
                                 }
                             }
                         }
-
-                        // Witness Information
-                        SectionTitle(
-                            title = "Witness Information",
-                            modifier = Modifier.padding(top = 24.dp)
-                        )
-
+                    }
+                }
+                // Witness Information Card
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color.White
+                    ),
+                    elevation = CardDefaults.cardElevation(
+                        defaultElevation = 2.dp
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Warning,
+                                contentDescription = null,
+                                tint = darkRed,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            SectionTitle(title = "Witness Information")
+                        }
                         Text(
                             text = "Provide details about any witnesses (optional)",
                             color = Color.Gray,
                             fontSize = 14.sp,
                             modifier = Modifier.padding(bottom = 16.dp)
                         )
-
                         witnesses.forEachIndexed { index, witness ->
                             WitnessCard(
                                 witness = witness,
@@ -565,14 +597,15 @@ fun EvidenceWitnessScreen(
                                 modifier = Modifier.padding(bottom = 16.dp)
                             )
                         }
-
                         if (!showWitnessForm && witnesses.isEmpty()) {
                             Button(
                                 onClick = { showWitnessForm = true },
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = darkRed
                                 ),
-                                modifier = Modifier.padding(bottom = 16.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 16.dp),
                                 shape = RoundedCornerShape(8.dp)
                             ) {
                                 Icon(
@@ -583,7 +616,6 @@ fun EvidenceWitnessScreen(
                                 Text("Add Witness")
                             }
                         }
-
                         AnimatedVisibility(
                             visible = showWitnessForm,
                             enter = fadeIn() + expandVertically(),
@@ -608,12 +640,7 @@ fun EvidenceWitnessScreen(
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Text(
-                                            text = "Add Witness",
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 16.sp
-                                        )
-
+                                        Spacer(modifier = Modifier.weight(1f))
                                         IconButton(
                                             onClick = { showWitnessForm = false }
                                         ) {
@@ -624,45 +651,56 @@ fun EvidenceWitnessScreen(
                                             )
                                         }
                                     }
-
                                     Spacer(modifier = Modifier.height(8.dp))
-
+                                    // Name field with header
+                                    Text(
+                                        text = "Name",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp,
+                                        modifier = Modifier.padding(bottom = 4.dp)
+                                    )
                                     OutlinedTextField(
                                         value = witnessName,
                                         onValueChange = { witnessName = it },
-                                        label = { Text("Name") },
                                         placeholder = { Text("Witness full name") },
                                         modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(bottom = 12.dp),
+                                            .fillMaxWidth(),
                                         singleLine = true,
                                         shape = RoundedCornerShape(8.dp)
                                     )
-
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    // Contact Information field with header
+                                    Text(
+                                        text = "Contact Information",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp,
+                                        modifier = Modifier.padding(bottom = 4.dp)
+                                    )
                                     OutlinedTextField(
                                         value = witnessContact,
                                         onValueChange = { witnessContact = it },
-                                        label = { Text("Contact Information") },
                                         placeholder = { Text("Email or phone number") },
                                         modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(bottom = 12.dp),
+                                            .fillMaxWidth(),
                                         singleLine = true,
                                         shape = RoundedCornerShape(8.dp)
                                     )
-
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    Text(
+                                        text = "Additional Notes (What did they see or hear?)",
+                                        fontWeight = FontWeight.SemiBold,
+                                        modifier = Modifier.padding(bottom = 4.dp)
+                                    )
                                     OutlinedTextField(
-                                        value = witnessStatement,
-                                        onValueChange = { witnessStatement = it },
-                                        label = { Text("Statement (What did they see or hear?)") },
+                                        value = witnessNotes,
+                                        onValueChange = { witnessNotes = it },
                                         placeholder = { Text("Describe what the witness observed") },
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .height(120.dp)
+                                            .height(100.dp)
                                             .padding(bottom = 12.dp),
                                         shape = RoundedCornerShape(8.dp)
                                     )
-
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.End
@@ -676,7 +714,6 @@ fun EvidenceWitnessScreen(
                                         ) {
                                             Text("Cancel")
                                         }
-
                                         Button(
                                             onClick = {
                                                 if (witnessName.isBlank()) {
@@ -687,25 +724,21 @@ fun EvidenceWitnessScreen(
                                                     ).show()
                                                     return@Button
                                                 }
-
                                                 val newWitness = WitnessDTO(
                                                     name = witnessName,
                                                     contactInformation = witnessContact,
-                                                    statement = witnessStatement
+                                                    additionalNotes = witnessNotes
                                                 )
-
                                                 witnesses.add(newWitness)
                                                 formViewModel.updateFormState(
                                                     formState.copy(
                                                         witnesses = witnesses.toList()
                                                     )
                                                 )
-
                                                 witnessName = ""
                                                 witnessContact = ""
-                                                witnessStatement = ""
+                                                witnessNotes = ""
                                                 showWitnessForm = false
-
                                                 Log.d("EvidenceWitnessScreen", "Added witness, total: ${witnesses.size}")
                                             },
                                             colors = ButtonDefaults.buttonColors(
@@ -724,7 +757,6 @@ fun EvidenceWitnessScreen(
                                 }
                             }
                         }
-
                         if (!showWitnessForm && witnesses.isNotEmpty()) {
                             TextButton(
                                 onClick = { showWitnessForm = true },
@@ -741,55 +773,24 @@ fun EvidenceWitnessScreen(
                                 Text("Add Another Witness")
                             }
                         }
-
-                        // Additional Notes
-                        SectionTitle(
-                            title = "Additional Notes",
-                            modifier = Modifier.padding(top = 8.dp)
-                        )
-
-                        Text(
-                            text = "Any other details that might be helpful",
-                            color = Color.Gray,
-                            fontSize = 14.sp,
-                            modifier = Modifier.padding(bottom = 12.dp)
-                        )
-
-                        OutlinedTextField(
-                            value = additionalNotes,
-                            onValueChange = {
-                                additionalNotes = it
-                                formViewModel.updateAdditionalNotes(it)
-                            },
-                            placeholder = { Text("Add any other relevant information about the incident") },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(100.dp)
-                                .padding(bottom = 24.dp),
-                            shape = RoundedCornerShape(8.dp)
-                        )
-
-                        // Navigation buttons
                         FormNavigationButtons(
                             onBackClick = {
-                                updateFormStateBeforeNavigation(formViewModel, witnesses, evidenceUris, additionalNotes)
+                                updateFormStateBeforeNavigation(formViewModel, witnesses, evidenceUris, "")
                                 onBackClick()
                             },
                             onNextClick = {
-                                updateFormStateBeforeNavigation(formViewModel, witnesses, evidenceUris, additionalNotes)
+                                updateFormStateBeforeNavigation(formViewModel, witnesses, evidenceUris, "")
                                 onContinueClick()
                             },
                             darkRed = darkRed
                         )
                     }
                 }
-
                 // Help panel
                 HelpPanel(
                     modifier = Modifier.fillMaxWidth(),
                     darkRed = darkRed
                 )
-
                 Spacer(modifier = Modifier.height(16.dp))
             }
         }

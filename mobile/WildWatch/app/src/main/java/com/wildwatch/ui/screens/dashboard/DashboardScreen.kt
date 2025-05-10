@@ -26,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -162,215 +163,126 @@ fun DashboardScreen(
                 }
 
                 item {
-                    Column(
-                        modifier = Modifier.fillMaxWidth()
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp)
                         ) {
-                            Text(
-                                text = "Overview",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = WildWatchRed
-                            )
-
-                            Spacer(modifier = Modifier.width(8.dp))
-
-                            HorizontalDivider(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .padding(vertical = 8.dp),
-                                color = WildWatchRed.copy(alpha = 0.3f),
-                                thickness = 2.dp
-                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Overview",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = WildWatchRed
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                StatCard(
+                                    title = "Total Reports",
+                                    count = total,
+                                    icon = Icons.Default.Description,
+                                    iconTint = Color(0xFF8B0000),
+                                    modifier = Modifier.weight(1f)
+                                )
+                                StatCard(
+                                    title = "Pending",
+                                    count = pending,
+                                    icon = Icons.Default.Schedule,
+                                    iconTint = Color(0xFFFFA000),
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                StatCard(
+                                    title = "In Progress",
+                                    count = inProgress,
+                                    icon = Icons.Default.Pending,
+                                    iconTint = Color(0xFF1976D2),
+                                    modifier = Modifier.weight(1f)
+                                )
+                                StatCard(
+                                    title = "Resolved",
+                                    count = resolved,
+                                    icon = Icons.Default.CheckCircle,
+                                    iconTint = Color(0xFF4CAF50),
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
                         }
                     }
-                }
-
-                item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        StatCard(
-                            title = "Total Reports",
-                            count = total,
-                            icon = Icons.Default.Description,
-                            iconTint = Color(0xFF8B0000), // Dark red from the image
-                            modifier = Modifier.weight(1f)
-                        )
-
-                        StatCard(
-                            title = "Pending",
-                            count = pending,
-                            icon = Icons.Default.Schedule,
-                            iconTint = Color(0xFFFFA000), // Amber color from the image
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-
-                item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        StatCard(
-                            title = "In Progress",
-                            count = inProgress,
-                            icon = Icons.Default.Pending,
-                            iconTint = Color(0xFF1976D2), // Blue color from the image
-                            modifier = Modifier.weight(1f)
-                        )
-
-                        StatCard(
-                            title = "Resolved",
-                            count = resolved,
-                            icon = Icons.Default.CheckCircle,
-                            iconTint = Color(0xFF4CAF50), // Green color from the image
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-
                     Spacer(modifier = Modifier.height(16.dp))
                 }
 
                 item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                     ) {
-                        Text(
-                            text = "Recent Incidents",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = WildWatchRed
-                        )
-
-                        Spacer(modifier = Modifier.width(8.dp))
-
-                        HorizontalDivider(
-                            modifier = Modifier
-                                .weight(1f)
-                                .padding(vertical = 8.dp),
-                            color = WildWatchRed.copy(alpha = 0.3f),
-                            thickness = 2.dp
-                        )
-
-                        TextButton(onClick = onViewAllClick) {
-                            Text(
-                                text = "View All",
-                                color = WildWatchRed,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    }
-                }
-
-                // Show loading indicator or error message
-                if (loading && recentIncidents.isEmpty()) {
-                    item {
-                        Box(
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(200.dp),
-                            contentAlignment = Alignment.Center
+                                .padding(16.dp)
                         ) {
-                            CircularProgressIndicator(color = WildWatchRed)
-                        }
-                    }
-                } else if (error != null && recentIncidents.isEmpty()) {
-                    item {
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = Color(0xFFFFEBEE)
-                            )
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(16.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Error,
-                                    contentDescription = null,
-                                    tint = WildWatchRed,
-                                    modifier = Modifier.size(48.dp)
-                                )
-
-                                Spacer(modifier = Modifier.height(8.dp))
-
                                 Text(
-                                    text = "Error loading incidents",
+                                    text = "Recent Incidents",
+                                    fontSize = 18.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = WildWatchRed
                                 )
-
-                                Spacer(modifier = Modifier.height(4.dp))
-
-                                Text(
-                                    text = error ?: "Unknown error",
-                                    color = Color.Gray
-                                )
-
-                                Spacer(modifier = Modifier.height(8.dp))
-
-                                Button(
-                                    onClick = viewModel::refresh,
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = WildWatchRed
-                                    )
+                                Spacer(modifier = Modifier.weight(1f))
+                                OutlinedButton(
+                                    onClick = onViewAllClick,
+                                    shape = RoundedCornerShape(8.dp),
+                                    border = ButtonDefaults.outlinedButtonBorder.copy(
+                                        brush = SolidColor(WildWatchRed)
+                                    ),
+                                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+                                    modifier = Modifier.height(32.dp)
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Refresh,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(16.dp)
+                                    Text(
+                                        text = "View All",
+                                        color = WildWatchRed,
+                                        fontWeight = FontWeight.Medium
                                     )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text("Retry")
                                 }
                             }
-                        }
-                    }
-                } else if (recentIncidents.isEmpty()) {
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(200.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Info,
-                                    contentDescription = null,
-                                    tint = Color.Gray,
-                                    modifier = Modifier.size(48.dp)
+                            Spacer(modifier = Modifier.height(12.dp))
+                            // Display incidents
+                            recentIncidents.take(3).forEach { incident ->
+                                IncidentCard(
+                                    incident = incident.toIncidentInfo(),
+                                    onViewDetailsClick = { onIncidentClick(incident.id) }
                                 )
-
                                 Spacer(modifier = Modifier.height(8.dp))
-
-                                Text(
-                                    text = "No incidents found",
-                                    color = Color.Gray
-                                )
                             }
                         }
                     }
-                }
-
-                // Display incidents
-                items(recentIncidents) { incident ->
-                    IncidentCard(
-                        incident = incident.toIncidentInfo(),
-                        onViewDetailsClick = { onIncidentClick(incident.id) }
-                    )
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
 
                 item {

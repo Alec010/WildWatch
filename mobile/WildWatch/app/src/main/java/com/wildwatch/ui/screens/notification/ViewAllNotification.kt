@@ -8,6 +8,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.VerifiedUser
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -61,8 +67,15 @@ fun ViewAllNotificationScreen(
                         )
                     }
                 },
+                actions = {
+                    if (notifications.any { !it.isRead }) {
+                        TextButton(onClick = { viewModel.markAllAsRead() }) {
+                            Text("Mark all as read", color = WildWatchRed, fontSize = 14.sp)
+                        }
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White
+                    containerColor = Color(0xFFF5F5F5)
                 )
             )
         }
@@ -109,8 +122,8 @@ fun ViewAllNotificationScreen(
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         items(notifications) { notification ->
                             NotificationListItem(
@@ -135,45 +148,72 @@ private fun NotificationListItem(
     notification: ActivityLog,
     onClick: () -> Unit
 ) {
+    val icon = when (notification.activityType) {
+        "STATUS_CHANGE" -> Icons.Default.Info
+        "UPDATE" -> Icons.Default.Edit
+        "NEW_REPORT" -> Icons.Default.Warning
+        "CASE_RESOLVED" -> Icons.Default.CheckCircle
+        "VERIFICATION" -> Icons.Default.VerifiedUser
+        else -> Icons.Default.Notifications
+    }
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(10.dp),
+            .clickable(onClick = onClick)
+            .padding(horizontal = 8.dp, vertical = 2.dp),
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (!notification.isRead) Color(0xFFF8F8F8) else Color.White
+            containerColor = if (!notification.isRead) Color(0xFFEFEFEF) else Color(0xFFF5F5F5)
         ),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = 2.dp
-        )
+        elevation = CardDefaults.cardElevation(2.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = if (!notification.isRead) WildWatchRed else Color.Gray,
+                modifier = Modifier.size(28.dp)
+            )
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = formatActivityType(notification.activityType),
+                        fontWeight = if (!notification.isRead) FontWeight.Bold else FontWeight.Medium,
+                        fontSize = 15.sp,
+                        color = Color(0xFF333333)
+                    )
+                    Spacer(Modifier.weight(1f))
+                    Text(
+                        text = formatTimestamp(notification.createdAt),
+                        fontSize = 12.sp,
+                        color = Color.Gray
+                    )
+                    if (!notification.isRead) {
+                        Spacer(Modifier.width(8.dp))
+                        Box(
+                            Modifier
+                                .size(8.dp)
+                                .background(WildWatchRed, shape = RoundedCornerShape(50))
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = formatActivityType(notification.activityType),
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 15.sp,
-                    color = Color(0xFF333333)
-                )
-                Text(
-                    text = formatTimestamp(notification.createdAt),
-                    fontSize = 12.sp,
-                    color = Color.Gray
+                    text = notification.description,
+                    fontSize = 14.sp,
+                    color = Color(0xFF666666),
+                    lineHeight = 18.sp
                 )
             }
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = notification.description,
-                fontSize = 14.sp,
-                color = Color(0xFF666666),
-                lineHeight = 18.sp
-            )
         }
     }
 }

@@ -216,7 +216,7 @@ fun HelpPanel(
             // Bullet points
             BulletPoint("Upload clear, high-quality images", Color.White)
             BulletPoint("Include relevant timestamps in photos if possible", Color.White)
-            BulletPoint("Ensure witness statements are detailed and accurate", Color.White)
+            BulletPoint("Ensure witness additional notes are detailed and accurate", Color.White)
             BulletPoint("Provide contact information for follow-up", Color.White)
         }
     }
@@ -347,10 +347,10 @@ fun WitnessCard(
                 }
             }
 
-            if (witness.statement.isNotBlank()) {
+            if (witness.additionalNotes.isNotBlank()) {
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = witness.statement,
+                    text = witness.additionalNotes,
                     fontSize = 14.sp,
                     color = Color.DarkGray
                 )

@@ -31,6 +31,16 @@ class HistoryViewModel(
     
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
+    // Separate flows for counts
+    private val _allCount = MutableStateFlow(0)
+    val allCount: StateFlow<Int> = _allCount.asStateFlow()
+
+    private val _resolvedCount = MutableStateFlow(0)
+    val resolvedCount: StateFlow<Int> = _resolvedCount.asStateFlow()
+
+    private val _dismissedCount = MutableStateFlow(0)
+    val dismissedCount: StateFlow<Int> = _dismissedCount.asStateFlow()
     
     private var allIncidents = listOf<IncidentResponse>()
 
@@ -46,9 +56,16 @@ class HistoryViewModel(
                 }
                 .collect { incidents ->
                     allIncidents = incidents
+                    updateCounts(incidents)
                     applyFilters()
                 }
         }
+    }
+    
+    private fun updateCounts(incidents: List<IncidentResponse>) {
+        _allCount.value = incidents.size
+        _resolvedCount.value = incidents.count { it.status.equals("Resolved", ignoreCase = true) }
+        _dismissedCount.value = incidents.count { it.status.equals("Dismissed", ignoreCase = true) }
     }
     
     fun refresh() {
@@ -56,6 +73,7 @@ class HistoryViewModel(
             _isRefreshing.value = true
             try {
                 allIncidents = repository.getIncidentHistory()
+                updateCounts(allIncidents)
                 applyFilters()
             } catch (e: Exception) {
                 _uiState.value = HistoryUiState.Error(e.message ?: "Failed to refresh incidents")

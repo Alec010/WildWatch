@@ -36,6 +36,8 @@ import com.wildwatch.ui.theme.WildWatchRed
 import com.wildwatch.viewmodel.CaseDetailsViewModel
 import com.wildwatch.viewmodel.CaseDetailsUiState
 import coil.compose.AsyncImage
+import com.wildwatch.ui.components.WitnessCard
+import com.wildwatch.ui.components.casetracking.WitnessCardCaseDetail
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -115,21 +117,21 @@ fun CaseDetailsScreen(
                 ) {
                     // Header Section with Case Info
                     CaseHeader(
-                        caseNumber = incident.trackingNumber,
+                        caseNumber = incident.trackingNumber ?: "",
                         priorityLevel = incident.priorityLevel ?: "LOW",
-                        isDismissed = incident.status.equals("Dismissed", ignoreCase = true)
+                        isDismissed = incident.status?.equals("Dismissed", ignoreCase = true) == true
                     )
 
                     // Progress Tracker
                     ProgressTracker(
-                        status = incident.status,
-                        isDismissed = incident.status.equals("Dismissed", ignoreCase = true)
+                        status = incident.status ?: "",
+                        isDismissed = incident.status?.equals("Dismissed", ignoreCase = true) == true
                     )
 
                     // Dates Section
                     DatesSection(
-                        submittedDate = incident.submittedAt,
-                        lastUpdated = incident.submittedAt, // TODO: Add last updated field to API
+                        submittedDate = incident.submittedAt ?: "",
+                        lastUpdated = incident.submittedAt ?: "",
                         estimatedResolution = incident.finishedDate ?: "Pending"
                     )
 
@@ -141,16 +143,16 @@ fun CaseDetailsScreen(
                     ) {
                         // Incident Details
                         IncidentDetailsCard(
-                            incidentType = incident.incidentType,
-                            location = incident.location,
-                            dateTime = "${incident.dateOfIncident} ${incident.timeOfIncident}",
-                            description = incident.description
+                            incidentType = incident.incidentType ?: "",
+                            location = incident.location ?: "",
+                            dateTime = "${incident.dateOfIncident ?: ""} ${incident.timeOfIncident ?: ""}",
+                            description = incident.description ?: ""
                         )
 
                         // Case Information
                         CaseInformationCard(
                             assignedTo = incident.officeAdminName ?: "Not Assigned",
-                            office = incident.assignedOffice,
+                            office = incident.assignedOffice ?: "Unknown",
                             contactEmail = "tsg@wildwatch.org", // TODO: Add to API
                             contactPhone = "+1234567890" // TODO: Add to API
                         )
@@ -158,6 +160,50 @@ fun CaseDetailsScreen(
                         // Evidence Section
                         if (incident.evidence != null) {
                             EvidenceCard(evidence = incident.evidence)
+                        }
+
+                        // Witness Section
+                        if (!incident.witnesses.isNullOrEmpty()) {
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = Color.White
+                                ),
+                                elevation = CardDefaults.cardElevation(
+                                    defaultElevation = 2.dp
+                                )
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp)
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Default.Groups,
+                                            contentDescription = null,
+                                            tint = WildWatchRed,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = "Witnesses",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = WildWatchRed
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    incident.witnesses.forEach { witness ->
+                                        WitnessCardCaseDetail(
+                                            witness = witness,
+                                            modifier = Modifier.padding(bottom = 8.dp)
+                                        )
+                                    }
+                                }
+                            }
                         }
 
                         // Reporter Information
@@ -169,8 +215,8 @@ fun CaseDetailsScreen(
 
                         // Next Steps
                         NextStepsCard(
-                            status = incident.status,
-                            isDismissed = incident.status.equals("Dismissed", ignoreCase = true)
+                            status = incident.status ?: "",
+                            isDismissed = incident.status?.equals("Dismissed", ignoreCase = true) == true
                         )
 
                         Spacer(modifier = Modifier.height(16.dp))
@@ -400,58 +446,63 @@ private fun DatesSection(
             defaultElevation = 2.dp
         )
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            Text(
+                text = "Timeline",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = WildWatchRed,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
             DateItem(label = "Submitted", date = submittedDate, icon = Icons.Default.CalendarToday)
-            HorizontalDivider(
-                modifier = Modifier
-                    .height(36.dp)
-                    .width(1.dp),
-                color = Color.LightGray
-            )
             DateItem(label = "Last Updated", date = lastUpdated, icon = Icons.Default.Update)
-            HorizontalDivider(
-                modifier = Modifier
-                    .height(36.dp)
-                    .width(1.dp),
-                color = Color.LightGray
-            )
-            DateItem(label = "Est. Resolution", date = estimatedResolution, icon = Icons.Default.Event)
+            DateItem(label = "Estimated Resolution", date = estimatedResolution, icon = Icons.Default.Event)
         }
     }
 }
 
 @Composable
-private fun DateItem(label: String, date: String, icon: androidx.compose.ui.graphics.vector.ImageVector) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
+private fun DateItem(
+    label: String,
+    date: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector
+) {
+    val formattedDate = try {
+        if (date.isBlank()) "-"
+        else {
+            val inputFormat = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.getDefault())
+            val outputFormat = java.text.SimpleDateFormat("MMM d, yyyy", java.util.Locale.getDefault())
+            val parsedDate = inputFormat.parse(date)
+            parsedDate?.let { outputFormat.format(it) } ?: date
+        }
+    } catch (e: Exception) {
+        if (date.isBlank()) "-" else date
+    }
+    Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
             imageVector = icon,
             contentDescription = null,
             tint = WildWatchRed,
-            modifier = Modifier.size(20.dp)
+            modifier = Modifier.size(20.dp).padding(end = 8.dp)
         )
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = Color.Gray,
-            textAlign = TextAlign.Center
-        )
-
-        Text(
-            text = date,
-            style = MaterialTheme.typography.bodySmall,
-            fontWeight = FontWeight.Medium,
-            textAlign = TextAlign.Center
-        )
+        Column(horizontalAlignment = Alignment.Start) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.Gray
+            )
+            Text(
+                text = formattedDate,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black
+            )
+        }
     }
 }
 
