@@ -3,6 +3,7 @@ package com.teamhyungie.WildWatch.model;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 
 @Entity
 @Table(name = "incident_upvotes")
@@ -25,6 +26,6 @@ public class IncidentUpvote {
 
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
+        createdAt = LocalDateTime.now(ZoneOffset.UTC);
     }
 } 

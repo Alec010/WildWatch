@@ -2,6 +2,7 @@ package com.teamhyungie.WildWatch.model;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 
 @Entity
 @Table(name = "incident_updates")
@@ -35,7 +36,7 @@ public class IncidentUpdate {
 
     @PrePersist
     protected void onCreate() {
-        updatedAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now(ZoneOffset.UTC);
     }
 
     public Long getId() {
