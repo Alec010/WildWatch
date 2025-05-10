@@ -153,17 +153,12 @@ export default function NotificationDropdown({
 
   const formatNotificationTime = (dateString: string) => {
     try {
-      const date = new Date(dateString);
-      const now = new Date();
-      
-      // Get the time difference in milliseconds
-      const diffMs = now.getTime() - date.getTime();
-      
-      // Convert to minutes, hours, and days
+      const datePH = new Date(new Date(dateString).toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+      const nowPH = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+      const diffMs = nowPH.getTime() - datePH.getTime();
       const diffMins = Math.floor(diffMs / 60000);
       const diffHours = Math.floor(diffMs / 3600000);
       const diffDays = Math.floor(diffMs / 86400000);
-
       if (diffMins < 1) {
         return "Just now";
       } else if (diffMins < 60) {
@@ -173,8 +168,7 @@ export default function NotificationDropdown({
       } else if (diffDays < 7) {
         return `${diffDays} day${diffDays !== 1 ? "s" : ""} ago`;
       } else {
-        // For older notifications, show the actual date
-        return date.toLocaleString('en-US', {
+        return datePH.toLocaleString('en-US', {
           month: 'short',
           day: 'numeric',
           year: 'numeric',

@@ -56,6 +56,16 @@ export default function IncidentManagementPage() {
     return profile.officeCode || profile.office || profile.assignedOffice || null;
   };
 
+  const formatDate = (dateString: string) => {
+    const datePH = new Date(new Date(dateString).toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+    return datePH.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      timeZone: 'Asia/Manila'
+    });
+  };
+
   const fetchIncidents = async (officeCode: string | null) => {
     try {
       const token = document.cookie
@@ -254,7 +264,7 @@ export default function IncidentManagementPage() {
                           {incident.trackingNumber}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {new Date(incident.dateOfIncident).toLocaleDateString()} {incident.timeOfIncident}
+                          {formatDate(incident.dateOfIncident)} {incident.timeOfIncident}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {incident.location}
@@ -328,7 +338,7 @@ export default function IncidentManagementPage() {
                             {incident.trackingNumber}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {new Date(incident.dateOfIncident).toLocaleDateString()} {incident.timeOfIncident}
+                            {formatDate(incident.dateOfIncident)} {incident.timeOfIncident}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {incident.location}

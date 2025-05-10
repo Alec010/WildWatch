@@ -115,30 +115,23 @@ export default function CaseTrackingPage() {
 
   // Helper function to format dates for activities
   const formatDate = (dateString: string): string => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const yesterday = new Date(now);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    // Format the date in Asia/Manila timezone
-    const formattedDate = new Date(date.toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
-    const formattedNow = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
-    const formattedYesterday = new Date(yesterday.toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
-
-    if (formattedDate.toDateString() === formattedNow.toDateString()) {
-      return `Today, ${formattedDate.toLocaleTimeString('en-US', {
+    const datePH = new Date(new Date(dateString).toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+    const nowPH = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+    const yesterdayPH = new Date(new Date(new Date().setDate(new Date().getDate() - 1)).toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+    if (datePH.toDateString() === nowPH.toDateString()) {
+      return `Today, ${datePH.toLocaleTimeString('en-US', {
         hour: "2-digit",
         minute: "2-digit",
         timeZone: 'Asia/Manila'
       })}`;
-    } else if (formattedDate.toDateString() === formattedYesterday.toDateString()) {
-      return `Yesterday, ${formattedDate.toLocaleTimeString('en-US', {
+    } else if (datePH.toDateString() === yesterdayPH.toDateString()) {
+      return `Yesterday, ${datePH.toLocaleTimeString('en-US', {
         hour: "2-digit",
         minute: "2-digit",
         timeZone: 'Asia/Manila'
       })}`;
     } else {
-      return formattedDate.toLocaleString('en-US', {
+      return datePH.toLocaleString('en-US', {
         month: "short",
         day: "numeric",
         year: "numeric",

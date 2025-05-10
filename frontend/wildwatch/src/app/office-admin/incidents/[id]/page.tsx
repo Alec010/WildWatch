@@ -112,6 +112,16 @@ export default function IncidentDetailsPage({ params }: PageProps) {
   const [verifyError, setVerifyError] = useState("")
   const { id } = use(params)
 
+  const formatDate = (dateString: string) => {
+    const datePH = new Date(new Date(dateString).toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+    return datePH.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      timeZone: 'Asia/Manila'
+    });
+  };
+
   useEffect(() => {
     const fetchIncident = async () => {
       try {
@@ -603,7 +613,7 @@ export default function IncidentDetailsPage({ params }: PageProps) {
                     </div>
                     <div className="flex flex-col items-end">
                       <p className="text-white/80 text-sm">Reported</p>
-                      <p className="font-medium">{new Date(incident.submittedAt).toLocaleDateString()}</p>
+                      <p className="font-medium">{formatDate(incident.submittedAt)}</p>
                     </div>
                   </div>
                 </CardHeader>
@@ -613,7 +623,7 @@ export default function IncidentDetailsPage({ params }: PageProps) {
                       <Calendar className="h-5 w-5 text-gray-500 mt-0.5" />
                       <div>
                         <p className="text-sm text-gray-500">Date of Incident</p>
-                        <p className="font-medium">{new Date(incident.dateOfIncident).toLocaleDateString()}</p>
+                        <p className="font-medium">{formatDate(incident.dateOfIncident)}</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
@@ -688,7 +698,7 @@ export default function IncidentDetailsPage({ params }: PageProps) {
                                 <p className="text-sm font-medium text-gray-700 truncate">{file.fileName}</p>
                                 <p className="text-xs text-gray-500">
                                   {(file.fileSize / 1024 / 1024).toFixed(2)} MB •{" "}
-                                  {new Date(file.uploadedAt).toLocaleDateString()}
+                                  {formatDate(file.uploadedAt)}
                                 </p>
                               </div>
                             </div>
@@ -840,7 +850,7 @@ export default function IncidentDetailsPage({ params }: PageProps) {
                       <Calendar className="h-5 w-5 text-gray-400 mt-0.5" />
                       <div>
                         <p className="text-sm text-gray-500">Submission Date</p>
-                        <p className="font-medium">{new Date(incident.submittedAt).toLocaleString()}</p>
+                        <p className="font-medium">{formatDate(incident.submittedAt)}</p>
                       </div>
                     </div>
                   </div>
@@ -886,7 +896,7 @@ export default function IncidentDetailsPage({ params }: PageProps) {
                     <div className="text-sm bg-green-50 text-green-700 p-3 rounded-md border border-green-200 flex items-start gap-2">
                       <CheckCircle2 className="h-4 w-4 mt-0.5" />
                       <span>
-                        Verified by {incident.verifiedBy} on {new Date(incident.verifiedAt!).toLocaleString()}
+                        Verified by {incident.verifiedBy} on {formatDate(incident.verifiedAt!)}
                       </span>
                     </div>
                   )}

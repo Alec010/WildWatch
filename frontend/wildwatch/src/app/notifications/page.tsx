@@ -85,27 +85,25 @@ export default function NotificationsPage() {
   }
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    
-    const diffMs = now.getTime() - date.getTime()
-    const diffMins = Math.round(diffMs / 60000)
-    const diffHours = Math.round(diffMins / 60)
-    const diffDays = Math.round(diffHours / 24)
-
+    const datePH = new Date(new Date(dateString).toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+    const nowPH = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+    const diffMs = nowPH.getTime() - datePH.getTime();
+    const diffMins = Math.round(diffMs / 60000);
+    const diffHours = Math.round(diffMins / 60);
+    const diffDays = Math.round(diffHours / 24);
     if (diffMins < 60) {
-      return `${diffMins} ${diffMins === 1 ? "minute" : "minutes"} ago`
+      return `${diffMins} ${diffMins === 1 ? "minute" : "minutes"} ago`;
     } else if (diffHours < 24) {
-      return `${diffHours} ${diffHours === 1 ? "hour" : "hours"} ago`
+      return `${diffHours} ${diffHours === 1 ? "hour" : "hours"} ago`;
     } else if (diffDays < 7) {
-      return `${diffDays} ${diffDays === 1 ? "day" : "days"} ago`
+      return `${diffDays} ${diffDays === 1 ? "day" : "days"} ago`;
     } else {
-      return date.toLocaleDateString("en-US", {
+      return datePH.toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
-        year: date.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
+        year: datePH.getFullYear() !== nowPH.getFullYear() ? "numeric" : undefined,
         timeZone: 'Asia/Manila'
-      })
+      });
     }
   }
 

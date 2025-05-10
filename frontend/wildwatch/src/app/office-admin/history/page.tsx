@@ -90,6 +90,16 @@ export default function OfficeAdminIncidentHistoryPage() {
 
   const totalPages = Math.ceil(filteredIncidents.length / incidentsPerPage)
 
+  const formatDate = (dateString: string) => {
+    const datePH = new Date(new Date(dateString).toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+    return datePH.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      timeZone: 'Asia/Manila'
+    });
+  };
+
   const handleDownloadPDF = async (incident: any) => {
     setIsDownloading(true)
     try {
@@ -225,16 +235,16 @@ export default function OfficeAdminIncidentHistoryPage() {
       addFieldRow("Priority", incident.priorityLevel || "-", "Department", incident.officeAdminName || "-")
       addFieldRow(
         "Submitted",
-        new Date(incident.submittedAt).toLocaleDateString(),
+        formatDate(incident.submittedAt),
         "Finished Date",
-        incident.finishedDate ? new Date(incident.finishedDate).toLocaleDateString() : "-",
+        incident.finishedDate ? formatDate(incident.finishedDate) : "-",
       )
       y += sectionSpacing
 
       // Incident Details Section
       addSectionTitle("Incident Details")
       addFieldRow("Incident Type", incident.incidentType, "Location", incident.location)
-      addFieldRow("Date Reported", new Date(incident.dateOfIncident).toLocaleDateString(), "", "")
+      addFieldRow("Date Reported", formatDate(incident.dateOfIncident), "", "")
       doc.setFont("helvetica", "bold")
       doc.text("Description:", margin, y)
       doc.setFont("helvetica", "normal")
@@ -434,7 +444,7 @@ export default function OfficeAdminIncidentHistoryPage() {
           doc.text(update.title || update.status || `Update ${idx + 1}`, margin + 15, y + 5)
           doc.setFont("helvetica", "normal")
           doc.setFontSize(9)
-          const updateDate = update.updatedAt ? new Date(update.updatedAt).toLocaleDateString() : "-"
+          const updateDate = update.updatedAt ? formatDate(update.updatedAt) : "-"
           const updateAuthor = update.updatedByName || update.updatedByFullName || update.author || "-"
           doc.text(`${updateDate} by ${updateAuthor}`, margin + 15, y + 13)
           if (update.message || update.description) {
@@ -577,7 +587,7 @@ export default function OfficeAdminIncidentHistoryPage() {
                       <td className="p-3 font-mono">
                         {incident.trackingNumber}
                       </td>
-                      <td className="p-3">{new Date(incident.submittedAt).toLocaleDateString()}</td>
+                      <td className="p-3">{formatDate(incident.submittedAt)}</td>
                       <td className="p-3">
                         <Badge
                           className={
@@ -627,7 +637,7 @@ export default function OfficeAdminIncidentHistoryPage() {
                       </td>
                       <td className="p-3">{incident.officeAdminName || "-"}</td>
                       <td className="p-3">
-                        {incident.finishedDate ? new Date(incident.finishedDate).toLocaleDateString() : "-"}
+                        {incident.finishedDate ? formatDate(incident.finishedDate) : "-"}
                       </td>
                       <td className="p-3 text-center">
                         <Button

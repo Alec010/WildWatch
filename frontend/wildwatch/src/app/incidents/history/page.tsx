@@ -746,6 +746,16 @@ export default function IncidentHistoryPage() {
     }
   }
 
+  const formatDate = (dateString: string) => {
+    const datePH = new Date(new Date(dateString).toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+    return datePH.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      timeZone: 'Asia/Manila'
+    });
+  };
+
   return (
     <div className="flex min-h-screen bg-[#f5f5f5]">
       <Sidebar />
@@ -870,7 +880,7 @@ export default function IncidentHistoryPage() {
                       <td className="p-3 font-mono">
                         {incident.trackingNumber}
                       </td>
-                      <td className="p-3">{new Date(incident.submittedAt).toLocaleDateString()}</td>
+                      <td className="p-3">{formatDate(incident.submittedAt)}</td>
                       <td className="p-3">
                         <Badge
                           className={
@@ -920,7 +930,7 @@ export default function IncidentHistoryPage() {
                       </td>
                       <td className="p-3">{incident.officeAdminName || "-"}</td>
                       <td className="p-3">
-                        {incident.finishedDate ? new Date(incident.finishedDate).toLocaleDateString() : "-"}
+                        {incident.finishedDate ? formatDate(incident.finishedDate) : "-"}
                       </td>
                       <td className="p-3 text-center">
                         <Button
