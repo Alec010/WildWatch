@@ -49,9 +49,9 @@ export function Sidebar() {
             <span>Dashboard</span>
           </Link>
           <Link
-            href="/incidents/report"
+            href="/incidents/submit"
             className={`flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-              pathname === "/incidents/report"
+              pathname === "/incidents/submit"
                 ? "bg-[#6B0000] text-[#F0B429] border-l-4 border-[#F0B429]"
                 : "hover:bg-[#6B0000]"
             }`}
