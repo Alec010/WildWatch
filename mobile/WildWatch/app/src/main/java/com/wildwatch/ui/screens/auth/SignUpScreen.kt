@@ -226,7 +226,7 @@ fun SignUpScreen(
                         OutlinedTextField(
                             value = firstName,
                             onValueChange = { firstName = it },
-                            placeholder = { Text("Enter first name", fontSize = 14.sp) },
+                            placeholder = { Text("First name", fontSize = 14.sp) },
                             singleLine = true,
                             modifier = Modifier.weight(1f),
                             shape = MaterialTheme.shapes.medium,
@@ -250,7 +250,7 @@ fun SignUpScreen(
                         OutlinedTextField(
                             value = lastName,
                             onValueChange = { lastName = it },
-                            placeholder = { Text("Enter last name", fontSize = 14.sp) },
+                            placeholder = { Text("Last name", fontSize = 14.sp) },
                             singleLine = true,
                             modifier = Modifier.weight(1f),
                             shape = MaterialTheme.shapes.medium,

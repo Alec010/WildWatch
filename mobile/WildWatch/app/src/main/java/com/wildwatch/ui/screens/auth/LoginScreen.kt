@@ -142,7 +142,7 @@ fun LoginScreen(
                 
                 // Navigate based on terms acceptance
                 if (response.termsAccepted) {
-                    navController.navigate("main/dashboard") {
+                    navController.navigate("main") {
                         popUpTo("login") { inclusive = true }
                     }
                 } else {
