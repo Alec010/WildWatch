@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import './leaderboard-shimmer.css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -135,4 +136,18 @@
 
 .animate-gradient-x {
   animation: gradient-x 8s ease infinite;
+}
+
+@keyframes pulse-info {
+  0%, 100% {
+    color: #800000;
+    transform: scale(1);
+  }
+  50% {
+    color: #FFD700;
+    transform: scale(1.18);
+  }
+}
+.animate-pulse-info {
+  animation: pulse-info 1.2s infinite;
 }

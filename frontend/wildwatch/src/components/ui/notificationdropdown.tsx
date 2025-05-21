@@ -11,7 +11,7 @@ import {
   FileText,
   RefreshCw,
   ArrowRightLeft,
-  ThumbsUp,
+  ArrowUp,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
@@ -312,7 +312,7 @@ export default function NotificationDropdown({
       case "TRANSFER_APPROVED":
         return <CheckCircle className="h-5 w-5 text-green-500" />;
       case "UPVOTE":
-        return <ThumbsUp className="h-5 w-5 text-[#800000]" />;
+        return <ArrowUp className="h-5 w-5 text-[#800000]" />;
       default:
         return <Bell className="h-5 w-5 text-gray-500" />;
     }

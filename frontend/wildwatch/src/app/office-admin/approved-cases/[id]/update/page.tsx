@@ -48,6 +48,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { API_BASE_URL } from "@/utils/api"
 import { RatingModal } from "@/components/RatingModal"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 
 interface IncidentUpdate {
   id: number
@@ -113,6 +114,7 @@ export default function UpdateApprovedCasePage() {
   const [officesError, setOfficesError] = useState<string | null>(null)
   const [officeName, setOfficeName] = useState<string>("")
   const [showRatingModal, setShowRatingModal] = useState(false)
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false)
   const prevStatusRef = useRef<string>("")
 
   // Fetch user's office name when component mounts
@@ -496,7 +498,13 @@ export default function UpdateApprovedCasePage() {
   }, [showTransferModal]);
 
   const handleRatingSuccess = () => {
-    router.refresh()
+    setShowRatingModal(false);
+    setShowSuccessDialog(true);
+  }
+
+  const handleCloseSuccessDialog = () => {
+    setShowSuccessDialog(false);
+    router.push('/office-admin/dashboard');
   }
 
   // Efficiently handle status change
@@ -1095,7 +1103,7 @@ export default function UpdateApprovedCasePage() {
         isOpen={showRatingModal}
         onClose={() => setShowRatingModal(false)}
         incidentId={params.id as string}
-        type="reporter"
+        type="office"
         onSuccess={handleRatingSuccess}
       />
     </>

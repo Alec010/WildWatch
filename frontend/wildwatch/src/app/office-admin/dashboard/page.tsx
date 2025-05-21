@@ -310,10 +310,13 @@ export default function OfficeAdminDashboard() {
                           size="sm"
                           className="text-xs border-[#800000] text-[#800000] hover:bg-[#fff9f9]"
                           onClick={() => {
-                            console.log("Verified:", incident.verified);
-                            incident.verified
-                              ? router.push(`/office-admin/approved-cases/${incident.id}/update`)
-                              : router.push(`/office-admin/incidents/${incident.id}`);
+                            if (incident.status === "Resolved") {
+                              router.push(`/incidents/tracking/${incident.trackingNumber}`);
+                            } else if (incident.status === "In Progress") {
+                              router.push(`/office-admin/approved-cases/${incident.id}/update`);
+                            } else {
+                              router.push(`/office-admin/incidents/${incident.id}`);
+                            }
                           }}
                         >
                           View Details

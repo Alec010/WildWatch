@@ -15,7 +15,7 @@ import {
   CheckCircle,
   Search,
   FileText,
-  ThumbsUp,
+  ArrowUp,
   Frown,
 } from 'lucide-react';
 import { API_BASE_URL } from "@/utils/api";
@@ -427,7 +427,7 @@ export default function PublicIncidentsPage() {
                                 : "text-gray-400 hover:text-[#800000]"
                             }`}
                           >
-                            <ThumbsUp
+                            <ArrowUp
                               className={`h-5 w-5 ${
                                 isOptimisticallyUpvoted ? "fill-[#800000]" : "fill-none"
                               }`}

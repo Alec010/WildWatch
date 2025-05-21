@@ -25,6 +25,9 @@ public class OfficeAdmin {
     @Column(name = "is_active", nullable = false)
     private boolean isActive = true;
 
+    @Column(name = "points")
+    private Integer points = 0;
+
     // Getters and Setters
     public Long getId() {
         return id;
@@ -72,5 +75,13 @@ public class OfficeAdmin {
 
     public void setActive(boolean active) {
         isActive = active;
+    }
+
+    public Integer getPoints() {
+        return points;
+    }
+
+    public void setPoints(Integer points) {
+        this.points = points;
     }
 } 

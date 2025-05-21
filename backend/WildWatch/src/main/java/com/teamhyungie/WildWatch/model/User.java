@@ -62,6 +62,9 @@ public class User {
     @Column(name = "auth_provider")
     private String authProvider = "local";
 
+    @Column(name = "points")
+    private Integer points = 0;
+
     // Getters and Setters
     public Long getId() {
         return id;
@@ -184,5 +187,13 @@ public class User {
 
     public void setAuthProvider(String authProvider) {
         this.authProvider = authProvider;
+    }
+
+    public Integer getPoints() {
+        return points;
+    }
+
+    public void setPoints(Integer points) {
+        this.points = points;
     }
 } 

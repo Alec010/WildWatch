@@ -13,4 +13,5 @@ public class IncidentRatingResponse {
     private String reporterFeedback;
     private Integer officeRating;
     private String officeFeedback;
+    private Boolean pointsAwarded;
 } 

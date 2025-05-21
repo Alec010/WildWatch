@@ -94,7 +94,7 @@ export default function ReviewSubmissionPage() {
   return (
     <div className="flex min-h-screen bg-[#f5f5f5]">
       <Sidebar />
-      <div className="flex-1 p-6 max-w-[1200px] mx-auto ml-64">
+      <div className="flex-1 p-6 max-w-[1700px] mx-auto ml-64">
         <h1 className="text-2xl font-bold text-[#8B0000] mb-2">
           Report an Incident
         </h1>
@@ -269,7 +269,7 @@ export default function ReviewSubmissionPage() {
                 </span>
               </label>
               <p className="text-xs text-gray-500 ml-9">
-                If enabled, your identity will be hidden from office admins. This is just a preference and may be reviewed by the admin.
+                If enabled, your identity will be hidden to the public. This is just a preference and may be reviewed by the admin.
               </p>
             </div>
 

@@ -37,8 +37,12 @@ public class IncidentRating {
     @Column(name = "rating_timestamp")
     private LocalDateTime ratingTimestamp;
 
+    @Column(name = "points_awarded")
+    private Boolean pointsAwarded = false;
+
     public IncidentRating() {
         this.ratingTimestamp = LocalDateTime.now();
+        this.pointsAwarded = false;
     }
 
     // Getters and Setters
@@ -56,4 +60,6 @@ public class IncidentRating {
     public void setOfficeFeedback(String officeFeedback) { this.officeFeedback = officeFeedback; }
     public LocalDateTime getRatingTimestamp() { return ratingTimestamp; }
     public void setRatingTimestamp(LocalDateTime ratingTimestamp) { this.ratingTimestamp = ratingTimestamp; }
+    public Boolean getPointsAwarded() { return pointsAwarded; }
+    public void setPointsAwarded(Boolean pointsAwarded) { this.pointsAwarded = pointsAwarded; }
 } 

@@ -13,7 +13,7 @@ import {
   Search,
   Plus,
   FileText,
-  ThumbsUp,
+  ArrowUp,
   Frown,
 } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
@@ -493,7 +493,7 @@ export default function DashboardPage() {
                                 : "text-gray-400 hover:text-[#800000]"
                             }`}
                           >
-                            <ThumbsUp
+                            <ArrowUp
                               className={`h-5 w-5 ${
                                 pendingUpvote[incident.id] !== undefined
                                   ? pendingUpvote[incident.id]

@@ -3,28 +3,28 @@ package com.teamhyungie.WildWatch.dto;
 public class LeaderboardEntry {
     private Long id;
     private String name;
-    private Integer totalRatings;
+    private Integer totalIncidents;
     private Double averageRating;
     private Integer points;
     private Integer activeIncidents;
     private Integer resolvedIncidents;
 
     // Constructor for reporter entries
-    public LeaderboardEntry(Long id, String firstName, String lastName, Integer totalRatings, Double averageRating) {
+    public LeaderboardEntry(Long id, String firstName, String lastName, Integer totalIncidents, Double averageRating, Integer points) {
         this.id = id;
         this.name = firstName + " " + lastName;
-        this.totalRatings = totalRatings;
+        this.totalIncidents = totalIncidents;
         this.averageRating = averageRating;
-        this.points = averageRating != null ? (int) Math.round(averageRating * 10) : 0;
+        this.points = points;
     }
 
     // Constructor for office entries
-    public LeaderboardEntry(Long id, String name, Integer totalRatings, Double averageRating) {
+    public LeaderboardEntry(Long id, String name, Integer totalIncidents, Double averageRating, Integer points) {
         this.id = id;
         this.name = name;
-        this.totalRatings = totalRatings;
+        this.totalIncidents = totalIncidents;
         this.averageRating = averageRating;
-        this.points = averageRating != null ? (int) Math.round(averageRating * 10) : 0;
+        this.points = points;
     }
 
     // Constructor for active reporters
@@ -46,8 +46,8 @@ public class LeaderboardEntry {
     public void setId(Long id) { this.id = id; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
-    public Integer getTotalRatings() { return totalRatings; }
-    public void setTotalRatings(Integer totalRatings) { this.totalRatings = totalRatings; }
+    public Integer getTotalIncidents() { return totalIncidents; }
+    public void setTotalIncidents(Integer totalIncidents) { this.totalIncidents = totalIncidents; }
     public Double getAverageRating() { return averageRating; }
     public void setAverageRating(Double averageRating) { this.averageRating = averageRating; }
     public Integer getPoints() { return points; }

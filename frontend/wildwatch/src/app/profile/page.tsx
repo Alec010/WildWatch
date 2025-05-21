@@ -33,6 +33,7 @@ interface UserProfile {
   contactNumber: string
   role: string
   authProvider?: string
+  points?: number
 }
 
 const editFormSchema = z.object({
@@ -383,8 +384,14 @@ function ProfileContent({ user }: { user: UserProfile }) {
                   </div>
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold">
-                  {user.firstName} {user.lastName} 
+                  <h2 className="text-2xl font-bold flex items-center gap-3">
+                    {user.firstName} {user.lastName}
+                    {typeof user.points === 'number' && (
+                      <span className="bg-yellow-200 text-yellow-800 px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        {user.points} pts
+                      </span>
+                    )}
                   </h2>
                   <p className="text-sm opacity-90 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
                     <span>{user.email}</span>

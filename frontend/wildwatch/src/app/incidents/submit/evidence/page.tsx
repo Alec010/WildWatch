@@ -152,7 +152,7 @@ export default function EvidenceSubmissionPage() {
   return (
     <div className="flex min-h-screen bg-[#f5f5f5]">
       <Sidebar />
-      <div className="flex-1 p-6 max-w-[1700px] mx-auto">
+      <div className="flex-1 p-6 max-w-[1700px] mx-auto ml-64">
         <h1 className="text-2xl font-bold text-[#8B0000] mb-1">
           Report an Incident
         </h1>
@@ -167,9 +167,9 @@ export default function EvidenceSubmissionPage() {
           <StepItem label="Review & Submit" />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-[1fr,300px] gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-[1fr,300px] gap-6 items-start">
           {/* Main Form */}
-          <Card className="p-6 bg-white shadow-sm border-0">
+          <Card className="p-6 bg-white shadow-sm border-0 h-fit self-start mb-8 md:mb-0">
             <div className="flex items-center gap-3 border-b pb-5 mb-6">
               <div className="bg-[#8B0000] rounded-full w-10 h-10 flex items-center justify-center">
                 <Camera className="text-white w-5 h-5" />
@@ -389,7 +389,7 @@ export default function EvidenceSubmissionPage() {
           </Card>
 
           {/* Help Section */}
-          <div className="bg-[#8B0000] text-white rounded-lg p-4 h-fit">
+          <div className="bg-[#8B0000] text-white rounded-lg p-4 h-fit self-start mt-8 md:mt-0">
             <h2 className="flex items-center gap-2 text-lg font-semibold mb-4">
               <HelpCircle size={20} /> Need Help?
             </h2>

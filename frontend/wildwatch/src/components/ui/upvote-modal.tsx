@@ -1,6 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ThumbsUp, Frown } from "lucide-react";
+import { ArrowUp, Frown } from "lucide-react";
 
 interface UpvoteModalProps {
   isOpen: boolean;
@@ -24,7 +24,7 @@ export function UpvoteModal({ isOpen, onClose, onConfirm, incidentType, isUpvote
             {isUpvoted ? (
               <Frown className="h-8 w-8 text-[#800000]" />
             ) : (
-              <ThumbsUp className="h-8 w-8 text-[#800000]" />
+              <ArrowUp className="h-8 w-8 text-[#800000]" />
             )}
           </div>
           <p className="text-center text-gray-600">

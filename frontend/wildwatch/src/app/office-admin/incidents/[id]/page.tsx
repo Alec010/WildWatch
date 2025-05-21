@@ -765,7 +765,6 @@ export default function IncidentDetailsPage({ params }: PageProps) {
                     >
                       <option value="Pending">Pending</option>
                       <option value="In Progress">In Progress</option>
-                      <option value="Resolved">Resolved</option>
                       <option value="Closed">Closed</option>
                     </select>
                   </div>

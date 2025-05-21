@@ -34,19 +34,27 @@ public interface IncidentRatingRepository extends JpaRepository<IncidentRating, 
            "ORDER BY resolvedIncidents DESC")
     List<Object[]> getMostActiveOffices();
 
-    @Query("SELECT ir.incident.submittedBy.id, ir.incident.submittedBy.firstName, ir.incident.submittedBy.lastName, COUNT(ir.id) as totalRatings, AVG(ir.reporterRating) as averageRating " +
-           "FROM IncidentRating ir " +
-           "WHERE ir.reporterRating IS NOT NULL " +
-           "GROUP BY ir.incident.submittedBy.id, ir.incident.submittedBy.firstName, ir.incident.submittedBy.lastName " +
-           "HAVING COUNT(ir.id) >= :minRatings " +
-           "ORDER BY averageRating DESC")
-    List<Object[]> getTopReporters(@Param("minRatings") int minRatings);
+    @Query("SELECT u.id, u.firstName, u.lastName, COUNT(i.id) as totalIncidents, " +
+           "COALESCE(AVG(r.officeRating), 0) as avgRating, " +
+           "COALESCE(u.points, 0) as points " +
+           "FROM User u " +
+           "LEFT JOIN Incident i ON i.submittedBy.id = u.id " +
+           "LEFT JOIN IncidentRating r ON r.incident.id = i.id " +
+           "WHERE u.points > 0 " +
+           "GROUP BY u.id, u.firstName, u.lastName " +
+           "ORDER BY points DESC " +
+           "LIMIT 10")
+    List<Object[]> getTopReporters();
 
-    @Query("SELECT ir.incident.assignedOffice, COUNT(ir.id) as totalRatings, AVG(ir.officeRating) as averageRating " +
-           "FROM IncidentRating ir " +
-           "WHERE ir.officeRating IS NOT NULL " +
-           "GROUP BY ir.incident.assignedOffice " +
-           "HAVING COUNT(ir.id) >= :minRatings " +
-           "ORDER BY averageRating DESC")
-    List<Object[]> getTopOffices(@Param("minRatings") int minRatings);
+    @Query("SELECT o.id, o.officeCode, COUNT(i.id) as totalIncidents, " +
+           "COALESCE(AVG(r.reporterRating), 0) as avgRating, " +
+           "COALESCE(o.points, 0) as points " +
+           "FROM OfficeAdmin o " +
+           "LEFT JOIN Incident i ON i.assignedOffice = o.officeCode " +
+           "LEFT JOIN IncidentRating r ON r.incident.id = i.id " +
+           "WHERE o.points > 0 " +
+           "GROUP BY o.id, o.officeCode " +
+           "ORDER BY points DESC " +
+           "LIMIT 10")
+    List<Object[]> getTopOffices();
 } 
