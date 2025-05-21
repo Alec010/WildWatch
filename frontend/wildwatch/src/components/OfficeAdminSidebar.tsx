@@ -135,9 +135,9 @@ export function OfficeAdminSidebar() {
             <span>Incident History</span>
           </Link>
           <Link
-            href="/office-admin/leaderboard"
+            href="/leaderboard"
             className={`flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-              pathname === "/office-admin/leaderboard"
+              pathname === "/leaderboard"
                 ? "bg-[#6B0000] text-[#F0B429] border-l-4 border-[#F0B429]"
                 : "hover:bg-[#6B0000]"
             }`}

@@ -1,12 +1,12 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Sidebar } from "@/components/Sidebar"
-import { Trophy, Medal, Star, Users, Building2, Loader2, TrophyIcon, Info } from "lucide-react"
+import { Trophy, Medal, Star, Users, Building2, Loader2, TrophyIcon } from "lucide-react"
 import { API_BASE_URL } from "@/utils/api"
 import { motion } from "framer-motion"
 import { RecognitionInfoModal } from "@/components/RecognitionInfoModal"
 import { PulsingInfoIcon } from "@/components/PulsingInfoIcon"
+import { useUser } from "@/contexts/UserContext"
 
 interface LeaderboardEntry {
   id: number
@@ -19,6 +19,7 @@ interface LeaderboardEntry {
 }
 
 export default function LeaderboardPage() {
+  const { isLoading } = useUser();
   const [activeTab, setActiveTab] = useState<"students" | "offices">("students")
   const [topStudents, setTopStudents] = useState<LeaderboardEntry[]>([])
   const [topOffices, setTopOffices] = useState<LeaderboardEntry[]>([])
@@ -165,85 +166,92 @@ export default function LeaderboardPage() {
     </div>
   )
 
-  return (
-    <div className="min-h-screen flex bg-[#f5f5f5]">
-      <Sidebar />
+  if (isLoading) {
+    return (
       <div className="flex-1 p-8 ml-64">
-        <div className="max-w-6xl w-full mx-auto">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-2">
-              <Trophy className="w-8 h-8 text-[#800000]" />
-              <h1 className="text-2xl font-bold text-[#800000]">Leaderboard</h1>
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 text-[#800000] animate-spin" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex-1 p-8 ml-64">
+      <div className="max-w-6xl w-full mx-auto">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-2">
+            <Trophy className="w-8 h-8 text-[#800000]" />
+            <h1 className="text-2xl font-bold text-[#800000]">Leaderboard</h1>
+          </div>
+          <button
+            onClick={() => setShowInfoModal(true)}
+            className="relative group"
+            aria-label="Show recognition info"
+          >
+            <PulsingInfoIcon />
+          </button>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-4 mb-6">
+          <button
+            onClick={() => setActiveTab("students")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+              activeTab === "students"
+                ? "bg-[#800000] text-white"
+                : "bg-white text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            <Users className="w-5 h-5" />
+            Top Students
+          </button>
+          <button
+            onClick={() => setActiveTab("offices")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+              activeTab === "offices"
+                ? "bg-[#800000] text-white"
+                : "bg-white text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            <Building2 className="w-5 h-5" />
+            Top Offices
+          </button>
+        </div>
+
+        {/* Leaderboard Content */}
+        <div className="space-y-4">
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 text-[#800000] animate-spin" />
             </div>
-            <button
-              onClick={() => setShowInfoModal(true)}
-              className="relative group"
-              aria-label="Show recognition info"
-            >
-              <PulsingInfoIcon />
-            </button>
-          </div>
-
-          {/* Tabs */}
-          <div className="flex gap-4 mb-6">
-            <button
-              onClick={() => setActiveTab("students")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                activeTab === "students"
-                  ? "bg-[#800000] text-white"
-                  : "bg-white text-gray-600 hover:bg-gray-50"
-              }`}
-            >
-              <Users className="w-5 h-5" />
-              Top Students
-            </button>
-            <button
-              onClick={() => setActiveTab("offices")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                activeTab === "offices"
-                  ? "bg-[#800000] text-white"
-                  : "bg-white text-gray-600 hover:bg-gray-50"
-              }`}
-            >
-              <Building2 className="w-5 h-5" />
-              Top Offices
-            </button>
-          </div>
-
-          {/* Leaderboard Content */}
-          <div className="space-y-4">
-            {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 text-[#800000] animate-spin" />
-              </div>
-            ) : (
-              <>
-                {activeTab === "students" ? (
-                  <>
-                    <div className="text-sm text-gray-500 mb-2">Showing top 10 students</div>
-                    {getLeaderboardDisplay(topStudents).map((student, index) =>
-                      student ? (
-                        <LeaderboardCard key={student.id} entry={student} index={index} />
-                      ) : (
-                        <PlaceholderCard key={`placeholder-student-${index}`} index={index} />
-                      )
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <div className="text-sm text-gray-500 mb-2">Showing top 10 offices</div>
-                    {getLeaderboardDisplay(topOffices).map((office, index) =>
-                      office ? (
-                        <LeaderboardCard key={office.id} entry={office} index={index} />
-                      ) : (
-                        <PlaceholderCard key={`placeholder-office-${index}`} index={index} />
-                      )
-                    )}
-                  </>
-                )}
-              </>
-            )}
-          </div>
+          ) : (
+            <>
+              {activeTab === "students" ? (
+                <>
+                  <div className="text-sm text-gray-500 mb-2">Showing top 10 students</div>
+                  {getLeaderboardDisplay(topStudents).map((student, index) =>
+                    student ? (
+                      <LeaderboardCard key={student.id} entry={student} index={index} />
+                    ) : (
+                      <PlaceholderCard key={`placeholder-student-${index}`} index={index} />
+                    )
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="text-sm text-gray-500 mb-2">Showing top 10 offices</div>
+                  {getLeaderboardDisplay(topOffices).map((office, index) =>
+                    office ? (
+                      <LeaderboardCard key={office.id} entry={office} index={index} />
+                    ) : (
+                      <PlaceholderCard key={`placeholder-office-${index}`} index={index} />
+                    )
+                  )}
+                </>
+              )}
+            </>
+          )}
         </div>
       </div>
 
@@ -252,5 +260,5 @@ export default function LeaderboardPage() {
         onClose={() => setShowInfoModal(false)}
       />
     </div>
-  )
+  );
 } 
