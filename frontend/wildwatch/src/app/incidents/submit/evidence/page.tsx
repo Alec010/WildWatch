@@ -146,6 +146,8 @@ export default function EvidenceSubmissionPage() {
       return;
     }
     
+    // Save the current evidence data before navigating
+    sessionStorage.setItem("evidenceSubmissionData", JSON.stringify(formData));
     router.push("/incidents/submit/review");
   };
 

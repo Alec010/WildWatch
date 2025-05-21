@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { Info, AlertTriangle, HelpCircle } from "lucide-react";
+import { AlertTriangle, HelpCircle, X } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Sidebar } from "@/components/Sidebar";
 import { ResetButton } from "@/components/ui/resetbutton";
@@ -20,12 +20,7 @@ import {
 } from "@/components/ui/tooltip";
 import Cookies from "js-cookie";
 import { API_BASE_URL } from "@/utils/api";
-
-interface Office {
-  code: string;
-  fullName: string;
-  description: string;
-}
+import { Badge } from "@/components/ui/badge";
 
 export default function IncidentSubmissionPage() {
   const router = useRouter();
@@ -34,58 +29,36 @@ export default function IncidentSubmissionPage() {
     dateOfIncident: "",
     timeOfIncident: "",
     location: "",
-    assignedOffice: "",
     description: "",
+    tags: [] as string[]
   });
-  const [offices, setOffices] = useState<Office[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagsLoading, setTagsLoading] = useState(false);
+  const [tagsError, setTagsError] = useState<string | null>(null);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [tagSelectError, setTagSelectError] = useState<string | null>(null);
 
   useEffect(() => {
     const storedData = sessionStorage.getItem("incidentSubmissionData");
     if (storedData) {
-      setFormData(JSON.parse(storedData));
-    }
-
-    const fetchOffices = async () => {
-      try {
-        const token = Cookies.get("token");
-        if (!token) throw new Error("No authentication token found");
-
-        const response = await fetch(`${API_BASE_URL}/api/offices`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        });
-        if (!response.ok)
-          throw new Error(`HTTP error! status: ${response.status}`);
-
-        const data = await response.json();
-        setOffices(data);
-      } catch (error: any) {
-        setError(error.message || "Failed to load offices");
-        if (
-          error.message.includes("403") ||
-          error.message.includes("authentication")
-        ) {
-          router.push("/auth/login");
-        }
-      } finally {
-        setLoading(false);
+      const parsedData = JSON.parse(storedData);
+      setFormData(parsedData);
+      if (parsedData.tags) {
+        setSelectedTags(parsedData.tags);
       }
-    };
-    fetchOffices();
-  }, [router]);
+    }
+  }, []);
 
   useEffect(() => {
     if (formData.incidentType || formData.location || formData.description) {
       sessionStorage.setItem(
         "incidentSubmissionData",
-        JSON.stringify(formData)
+        JSON.stringify({ ...formData, tags: selectedTags })
       );
     }
-  }, [formData]);
+  }, [formData, selectedTags]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -107,10 +80,6 @@ export default function IncidentSubmissionPage() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleOfficeSelect = (office: string) => {
-    setFormData((prev) => ({ ...prev, assignedOffice: office }));
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (
@@ -118,13 +87,12 @@ export default function IncidentSubmissionPage() {
       !formData.dateOfIncident ||
       !formData.timeOfIncident ||
       !formData.location ||
-      !formData.assignedOffice ||
       !formData.description
     ) {
       alert("Please fill in all required fields");
       return;
     }
-    sessionStorage.setItem("incidentSubmissionData", JSON.stringify(formData));
+    sessionStorage.setItem("incidentSubmissionData", JSON.stringify({ ...formData, tags: selectedTags }));
     router.push("/incidents/submit/evidence");
   };
 
@@ -134,10 +102,61 @@ export default function IncidentSubmissionPage() {
       dateOfIncident: "",
       timeOfIncident: "",
       location: "",
-      assignedOffice: "",
       description: "",
+      tags: []
     });
+    setSelectedTags([]);
     sessionStorage.removeItem("incidentSubmissionData");
+  };
+
+  const handleGenerateTags = async () => {
+    setTagsError(null);
+    setTagsLoading(true);
+    setTags([]);
+    try {
+      const token = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("token="))
+        ?.split("=")[1];
+
+      if (!token) {
+        throw new Error("No authentication token found");
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/tags/generate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          description: formData.description,
+          location: formData.location,
+        }),
+      });
+      if (!response.ok) {
+        throw new Error("Failed to generate tags");
+      }
+      const data = await response.json();
+      setTags(data.tags || []);
+    } catch (err: any) {
+      setTagsError(err.message || "Failed to generate tags");
+    } finally {
+      setTagsLoading(false);
+    }
+  };
+
+  const handleTagClick = (tag: string) => {
+    setTagSelectError(null);
+    if (selectedTags.includes(tag)) {
+      setSelectedTags(selectedTags.filter((t) => t !== tag));
+    } else {
+      if (selectedTags.length >= 5) {
+        setTagSelectError("You can select up to 5 tags only.");
+        return;
+      }
+      setSelectedTags([...selectedTags, tag]);
+    }
   };
 
   return (
@@ -265,50 +284,6 @@ export default function IncidentSubmissionPage() {
               </div>
 
               <div className="space-y-2">
-                <Label className="text-sm font-medium">
-                  Report to what Office <span className="text-red-500">*</span>
-                </Label>
-                <div className="flex flex-wrap gap-2">
-                  {loading ? (
-                    <p className="text-sm text-gray-500">Loading offices...</p>
-                  ) : error ? (
-                    <p className="text-sm text-red-500">{error}</p>
-                  ) : (
-                    <TooltipProvider>
-                      {offices.map((office) => (
-                        <Tooltip key={office.code}>
-                          <TooltipTrigger asChild>
-                            <Button
-                              type="button"
-                              variant={
-                                formData.assignedOffice === office.code
-                                  ? "default"
-                                  : "outline"
-                              }
-                              className={`h-8 px-3 rounded-md ${
-                                formData.assignedOffice === office.code
-                                  ? "bg-[#8B0000] text-white hover:bg-[#8B0000]/90"
-                                  : "border-gray-300 hover:bg-gray-100"
-                              }`}
-                              onClick={() => handleOfficeSelect(office.code)}
-                            >
-                              {office.code} <Info className="h-4 w-4 ml-1" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p className="font-semibold">{office.fullName}</p>
-                            <p className="text-sm text-gray-500">
-                              {office.description}
-                            </p>
-                          </TooltipContent>
-                        </Tooltip>
-                      ))}
-                    </TooltipProvider>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-2">
                 <Label htmlFor="description" className="text-sm font-medium">
                   Description <span className="text-red-500">*</span>
                 </Label>
@@ -324,6 +299,63 @@ export default function IncidentSubmissionPage() {
                 <div className="text-right text-xs text-gray-500">
                   {formData.description.length}/1000 characters
                 </div>
+                <div className="flex items-center gap-2 mt-2">
+                  <Button
+                    type="button"
+                    onClick={handleGenerateTags}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    disabled={tagsLoading || !formData.description || !formData.location}
+                  >
+                    {tagsLoading ? (
+                      <div className="flex items-center">
+                        <div className="animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                        AI is generating tags...
+                      </div>
+                    ) : (
+                      "Generate Tags"
+                    )}
+                  </Button>
+                  {tagsError && (
+                    <span className="text-red-500 text-xs ml-2">{tagsError}</span>
+                  )}
+                </div>
+                {tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {tags.map((tag) => (
+                      <Badge
+                        key={tag}
+                        variant={selectedTags.includes(tag) ? "default" : "secondary"}
+                        className={`cursor-pointer select-none ${selectedTags.includes(tag) ? "bg-[#8B0000] text-white" : ""}`}
+                        onClick={() => handleTagClick(tag)}
+                      >
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+                {tagSelectError && (
+                  <div className="text-red-500 text-xs mt-1">{tagSelectError}</div>
+                )}
+
+                {/* Selected Tags Section */}
+                {selectedTags.length > 0 && (
+                  <div className="mt-4">
+                    <p className="text-sm text-gray-500 mb-2">Selected Tags</p>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedTags.map((tag) => (
+                        <Badge
+                          key={tag}
+                          variant="default"
+                          className="bg-[#8B0000] text-white cursor-pointer select-none"
+                          onClick={() => handleTagClick(tag)}
+                        >
+                          {tag}
+                          <X className="ml-1 h-3 w-3" />
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-between pt-4">

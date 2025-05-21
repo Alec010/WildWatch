@@ -42,13 +42,28 @@ public class IncidentService {
     private final IncidentUpdateRepository incidentUpdateRepository;
     private final IncidentUpvoteRepository incidentUpvoteRepository;
     private final SimpMessagingTemplate messagingTemplate;
+    private final TagGenerationService tagGenerationService;
+    private final OfficeAssignmentService officeAssignmentService;
 
     @Transactional
     public IncidentResponse createIncident(IncidentRequest request, String userEmail, List<MultipartFile> files) {
         User user = userService.getUserByEmail(userEmail);
         
+        // Use tags from request if provided, otherwise generate tags using AI
+        List<String> tags = (request.getTags() != null && !request.getTags().isEmpty())
+            ? request.getTags()
+            : tagGenerationService.generateTags(request.getDescription(), request.getLocation());
+        
+        // If no office is assigned in the request, use AI to assign one
+        Office assignedOffice = request.getAssignedOffice();
+        if (assignedOffice == null) {
+            assignedOffice = officeAssignmentService.assignOffice(request.getDescription(), request.getLocation(), tags);
+        }
+        
         // Create and save the incident first
-        final Incident savedIncident = createAndSaveIncident(request, user);
+        final Incident savedIncident = createAndSaveIncident(request, user, tags);
+        savedIncident.setAssignedOffice(assignedOffice);
+        incidentRepository.save(savedIncident);
 
         // Handle witnesses if provided
         if (request.getWitnesses() != null && !request.getWitnesses().isEmpty()) {
@@ -93,7 +108,7 @@ public class IncidentService {
         return IncidentResponse.fromIncident(savedIncident);
     }
 
-    private Incident createAndSaveIncident(IncidentRequest request, User user) {
+    private Incident createAndSaveIncident(IncidentRequest request, User user, List<String> tags) {
         Incident incident = new Incident();
         incident.setIncidentType(request.getIncidentType());
         incident.setDateOfIncident(request.getDateOfIncident());
@@ -103,6 +118,7 @@ public class IncidentService {
         incident.setAssignedOffice(request.getAssignedOffice());
         incident.setSubmittedBy(user);
         incident.setPreferAnonymous(request.getPreferAnonymous());
+        incident.setTags(tags);
         return incidentRepository.save(incident);
     }
 

@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Sidebar } from "@/components/Sidebar";
 import Image from "next/image";
-import { CheckCircle2, ArrowLeft, Info, Edit2 } from "lucide-react";
+import { CheckCircle2, ArrowLeft, Info, Edit2, Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -22,6 +22,8 @@ export default function ReviewSubmissionPage() {
   const [incidentData, setIncidentData] = useState<any>(null);
   const [evidenceData, setEvidenceData] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isAssigningOffice, setIsAssigningOffice] = useState(false);
+  const [assignedOffice, setAssignedOffice] = useState<string | null>(null);
   const [confirmations, setConfirmations] = useState({
     accurateInfo: false,
     contactConsent: false,
@@ -29,6 +31,7 @@ export default function ReviewSubmissionPage() {
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [trackingNumber, setTrackingNumber] = useState("");
   const [preferAnonymous, setPreferAnonymous] = useState<boolean>(false);
+  const [showLoadingDialog, setShowLoadingDialog] = useState(false);
 
   useEffect(() => {
     const storedIncidentData = sessionStorage.getItem("incidentSubmissionData");
@@ -38,12 +41,15 @@ export default function ReviewSubmissionPage() {
       router.push("/incidents/submit");
       return;
     }
-    setIncidentData(JSON.parse(storedIncidentData));
+    const parsedIncidentData = JSON.parse(storedIncidentData);
+    setIncidentData(parsedIncidentData);
     setEvidenceData(JSON.parse(storedEvidenceData));
   }, [router]);
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
+    setIsAssigningOffice(true);
+    setShowLoadingDialog(true);
     try {
       const token = document.cookie
         .split("; ")
@@ -54,7 +60,12 @@ export default function ReviewSubmissionPage() {
       const formData = new FormData();
       formData.append(
         "incidentData",
-        JSON.stringify({ ...incidentData, witnesses: evidenceData.witnesses, preferAnonymous: !!preferAnonymous })
+        JSON.stringify({ 
+          ...incidentData, 
+          witnesses: evidenceData.witnesses, 
+          preferAnonymous: !!preferAnonymous,
+          tags: incidentData.tags || [] // Ensure tags are included in the submission
+        })
       );
       for (const fileInfo of evidenceData.fileInfos) {
         const response = await fetch(fileInfo.data);
@@ -73,6 +84,7 @@ export default function ReviewSubmissionPage() {
 
       const responseData = await response.json();
       setTrackingNumber(responseData.trackingNumber);
+      setAssignedOffice(responseData.assignedOffice);
       setShowSuccessDialog(true);
       sessionStorage.removeItem("incidentSubmissionData");
       sessionStorage.removeItem("evidenceSubmissionData");
@@ -81,6 +93,8 @@ export default function ReviewSubmissionPage() {
       alert("Failed to submit report. Please try again.");
     } finally {
       setIsSubmitting(false);
+      setIsAssigningOffice(false);
+      setShowLoadingDialog(false);
     }
   };
 
@@ -95,7 +109,7 @@ export default function ReviewSubmissionPage() {
     <div className="flex min-h-screen bg-[#f5f5f5]">
       <Sidebar />
       <div className="flex-1 p-6 max-w-[1700px] mx-auto ml-64">
-        <h1 className="text-2xl font-bold text-[#8B0000] mb-2">
+        <h1 className="text-2xl font-bold text-[#8B0000] mb-1">
           Report an Incident
         </h1>
         <p className="text-gray-600 mb-6">
@@ -133,7 +147,6 @@ export default function ReviewSubmissionPage() {
                   Incident Details
                 </h3>
                 <Button
-                  variant="outline"
                   onClick={() => router.push("/incidents/submit")}
                   className="h-8 text-xs"
                 >
@@ -154,13 +167,28 @@ export default function ReviewSubmissionPage() {
                 <SummaryRow label="Location" value={incidentData.location} />
                 <SummaryRow
                   label="Assigned Office"
-                  value={incidentData.assignedOffice}
+                  value={isAssigningOffice ? "AI is assigning to appropriate office..." : (assignedOffice || "Will be assigned automatically")}
                 />
               </div>
               <div className="mt-4">
                 <p className="text-sm text-gray-500">Description</p>
                 <p className="mt-1 text-sm">{incidentData.description}</p>
               </div>
+              {incidentData.tags && incidentData.tags.length > 0 && (
+                <div className="mt-4">
+                  <p className="text-sm text-gray-500">Tags</p>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {incidentData.tags.map((tag: string) => (
+                      <span
+                        key={tag}
+                        className="px-2 py-1 text-xs bg-[#8B0000] text-white rounded-full"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Evidence & Witnesses */}
@@ -170,7 +198,6 @@ export default function ReviewSubmissionPage() {
                   Evidence & Witnesses
                 </h3>
                 <Button
-                  variant="outline"
                   onClick={() => router.push("/incidents/submit/evidence")}
                   className="h-8 text-xs"
                 >
@@ -178,93 +205,75 @@ export default function ReviewSubmissionPage() {
                 </Button>
               </div>
 
-              {/* Uploaded Files */}
-              {evidenceData.fileInfos.length > 0 ? (
+              {/* Evidence Files */}
+              {evidenceData.fileInfos && evidenceData.fileInfos.length > 0 && (
                 <div className="mb-6">
-                  <h4 className="font-medium mb-3 text-sm text-gray-700">
-                    Uploaded Evidence
-                  </h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  <p className="text-sm text-gray-500 mb-2">Evidence Files</p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {evidenceData.fileInfos.map((file: any, index: number) => (
-                      <div key={index} className="space-y-1 text-center">
-                        {file.type.startsWith("image/") ? (
-                          <div className="relative aspect-square rounded-lg overflow-hidden border border-gray-200">
-                            <Image
-                              src={file.data || "/placeholder.svg"}
-                              alt={file.name}
-                              fill
-                              style={{ objectFit: "cover" }}
-                            />
-                          </div>
-                        ) : file.type.startsWith("video/") ? (
-                          <div className="relative aspect-video rounded-lg overflow-hidden border border-gray-200">
-                            <video
-                              src={file.data}
-                              controls
-                              className="w-full h-full"
-                            />
-                          </div>
-                        ) : null}
-                        <p className="text-xs text-gray-600 truncate">
-                          {file.name}
-                        </p>
+                      <div
+                        key={index}
+                        className="relative aspect-square rounded-lg overflow-hidden border border-gray-200"
+                      >
+                        <Image
+                          src={file.data}
+                          alt={file.name}
+                          fill
+                          className="object-cover"
+                        />
                       </div>
                     ))}
                   </div>
                 </div>
-              ) : (
-                <p className="text-sm text-gray-500 mb-4">
-                  No evidence files uploaded
-                </p>
               )}
 
-              {/* Witness Information */}
-              {evidenceData.witnesses.length > 0 ? (
-                <div>
-                  <h4 className="font-medium mb-3 text-sm text-gray-700">
-                    Witness Information
-                  </h4>
-                  <div className="space-y-3">
-                    {evidenceData.witnesses.map(
-                      (witness: any, index: number) => (
-                        <Card key={index} className="p-3 border-gray-200">
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <SummaryRow
-                              label="Name"
-                              value={witness.name || "Not provided"}
-                            />
-                            <SummaryRow
-                              label="Contact"
-                              value={
-                                witness.contactInformation || "Not provided"
-                              }
-                            />
+              {/* Witnesses */}
+              <div>
+                <p className="text-sm text-gray-500 mb-2">Witnesses</p>
+                {evidenceData.witnesses && evidenceData.witnesses.length > 0 ? (
+                  <div className="space-y-4">
+                    {evidenceData.witnesses.map((witness: any, index: number) => (
+                      <div
+                        key={index}
+                        className="bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-3"
+                      >
+                        <div>
+                          <p className="text-xs text-gray-500 mb-1">Full Name</p>
+                          <p className="font-medium text-gray-900">{witness.name}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 mb-1">Contact Information</p>
+                          <p className="text-sm text-gray-700">{witness.contactInformation}</p>
+                        </div>
+                        {witness.additionalNotes && (
+                          <div>
+                            <p className="text-xs text-gray-500 mb-1">Additional Notes</p>
+                            <p className="text-sm text-gray-700">{witness.additionalNotes}</p>
                           </div>
-                          <div className="mt-2">
-                            <p className="text-xs text-gray-500">Additional Notes</p>
-                            <p className="mt-1 text-sm">
-                              {witness.additionalNotes || "No additional notes provided"}
-                            </p>
-                          </div>
-                        </Card>
-                      )
-                    )}
+                        )}
+                      </div>
+                    ))}
                   </div>
-                </div>
-              ) : (
-                <p className="text-sm text-gray-500">No witnesses added</p>
-              )}
+                ) : (
+                  <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 text-center">
+                    <p className="text-sm text-gray-600">No witnesses provided</p>
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* Prefer Anonymous Toggle */}
-            <div className="mb-6">
-              <label htmlFor="prefer-anonymous" className="flex items-center gap-3 cursor-pointer">
-                <Switch
-                  id="prefer-anonymous"
-                  checked={preferAnonymous}
-                  onCheckedChange={checked => setPreferAnonymous(checked)}
-                />
-                <span className="text-sm font-medium text-gray-900">
+            {/* Anonymous Option */}
+            <div className="flex items-start space-x-3">
+              <Switch
+                id="preferAnonymous"
+                checked={preferAnonymous}
+                onCheckedChange={setPreferAnonymous}
+              />
+              <label
+                htmlFor="preferAnonymous"
+                className="text-sm text-gray-600"
+              >
+                <span className="font-medium">
                   Prefer to remain anonymous?
                 </span>
               </label>
@@ -315,7 +324,7 @@ export default function ReviewSubmissionPage() {
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-start space-x-3">
                 <Info className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
                 <p className="text-sm text-blue-700">
-                  Your report will be reviewed by campus security personnel. You
+                  Your report will be reviewed by campus office personnel. You
                   will receive a confirmation email with a tracking number once
                   your report is submitted.
                 </p>
@@ -347,6 +356,21 @@ export default function ReviewSubmissionPage() {
           </div>
         </Card>
 
+        {/* Loading Dialog */}
+        <Dialog open={showLoadingDialog} onOpenChange={setShowLoadingDialog}>
+          <DialogContent className="sm:max-w-md">
+            <div className="flex flex-col items-center justify-center py-8 space-y-4">
+              <div className="animate-spin">
+                <Loader2 className="h-8 w-8 text-[#8B0000]" />
+              </div>
+              <DialogTitle className="text-center">Processing Your Report</DialogTitle>
+              <DialogDescription className="text-center">
+                Our AI system is analyzing your report and assigning it to the most appropriate office for review. This may take a moment...
+              </DialogDescription>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         {/* Success Dialog */}
         <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
           <DialogContent className="sm:max-w-md">
@@ -367,6 +391,14 @@ export default function ReviewSubmissionPage() {
                   {trackingNumber}
                 </p>
               </div>
+              {assignedOffice && (
+                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                  <p className="text-sm text-gray-500">Assigned Office</p>
+                  <p className="text-lg font-semibold text-[#8B0000]">
+                    {assignedOffice}
+                  </p>
+                </div>
+              )}
               <p className="text-sm text-gray-600">
                 Please save this tracking number for your records. You can use
                 it to check the status of your report.
@@ -377,7 +409,7 @@ export default function ReviewSubmissionPage() {
                 onClick={handleCloseDialog}
                 className="bg-[#8B0000] hover:bg-[#8B0000]/90 text-white"
               >
-                Go to Dashboard
+                Return to Dashboard
               </Button>
             </div>
           </DialogContent>

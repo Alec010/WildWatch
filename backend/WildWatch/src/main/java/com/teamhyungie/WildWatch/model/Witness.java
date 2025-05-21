@@ -1,7 +1,6 @@
 package com.teamhyungie.WildWatch.model;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 @Entity
@@ -16,7 +15,6 @@ public class Witness {
     @JoinColumn(name = "incident_id")
     private Incident incident;
 
-    @NotBlank(message = "Witness name is required")
     private String name;
 
     @Column(name = "contact_information")
