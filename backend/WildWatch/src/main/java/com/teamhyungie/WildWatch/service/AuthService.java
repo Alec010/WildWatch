@@ -29,48 +29,31 @@ public class AuthService {
         user = userService.save(user);
         
         String token = jwtUtil.generateToken(userDetailsService.loadUserByUsername(user.getEmail()));
-        System.out.println("New user registered - Token: " + token);
         return AuthResponse.builder()
                 .token(token)
                 .termsAccepted(false)
-                .message("User registered successfully")
+                .message("User registered successfully. Please check your email to verify your account.")
                 .build();
     }
 
     public AuthResponse login(LoginRequest request) {
+        // First authenticate the user
         authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+            new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );
 
-        UserDetails userDetails = userDetailsService.loadUserByUsername(request.getEmail());
-        String token = jwtUtil.generateToken(userDetails);
-        
-        // Get the user and check terms acceptance status
-        User user = userService.findByUsername(request.getEmail());
-        boolean termsAccepted = user.isTermsAccepted();
-        
-        System.out.println("User logged in - Email: " + request.getEmail());
-        System.out.println("Generated Token: " + token);
-        System.out.println("Terms Accepted: " + termsAccepted);
-        
-        // Create user data map
-        Map<String, Object> userData = new HashMap<>();
-        userData.put("id", user.getId());
-        userData.put("email", user.getEmail());
-        userData.put("firstName", user.getFirstName());
-        userData.put("lastName", user.getLastName());
-        userData.put("middleInitial", user.getMiddleInitial());
-        userData.put("schoolIdNumber", user.getSchoolIdNumber());
-        userData.put("contactNumber", user.getContactNumber());
-        userData.put("role", user.getRole().toString());
-        userData.put("termsAccepted", user.isTermsAccepted());
-        userData.put("enabled", user.isEnabled());
-        
+        // Get the user and check if email is verified
+        User user = userService.getUserByEmail(request.getEmail());
+        if (!user.isEnabled()) {
+            throw new RuntimeException("Please verify your email before logging in. Check your inbox for the verification link.");
+        }
+
+        // Generate token only if email is verified
+        String token = jwtUtil.generateToken(userDetailsService.loadUserByUsername(user.getEmail()));
         return AuthResponse.builder()
                 .token(token)
-                .termsAccepted(termsAccepted)
+                .termsAccepted(user.isTermsAccepted())
                 .message("Login successful")
-                .user(userData)
                 .build();
     }
 

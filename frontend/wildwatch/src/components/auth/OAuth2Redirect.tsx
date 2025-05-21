@@ -46,7 +46,16 @@ export default function OAuth2Redirect() {
                     return;
                 }
 
-                console.log('Terms accepted, redirecting to dashboard');
+                // Check if contact number and password are set
+                if (data.user.authProvider === 'microsoft' && 
+                    (data.user.contactNumber === 'Not provided' || !data.user.password)) {
+                    console.log('Contact number or password not set, redirecting to setup page');
+                    sessionStorage.setItem('oauthUserData', JSON.stringify(data.user));
+                    router.push('/auth/setup');
+                    return;
+                }
+
+                console.log('All requirements met, redirecting to dashboard');
                 // Use handleAuthRedirect to determine the correct redirect path
                 const redirectPath = handleAuthRedirect(data.user);
                 router.push(redirectPath);

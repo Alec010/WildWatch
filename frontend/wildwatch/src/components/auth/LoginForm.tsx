@@ -9,7 +9,7 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, X } from "lucide-react";
 import Cookies from "js-cookie";
 import { MicrosoftLogo } from "@/components/icons/MicrosoftLogo";
 import {
@@ -22,6 +22,12 @@ import {
 } from "@/components/ui/form";
 import { handleAuthRedirect } from "@/utils/auth";
 import { API_BASE_URL } from "@/utils/api";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const formSchema = z.object({
   email: z.string()
@@ -33,6 +39,11 @@ const formSchema = z.object({
 export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetStatus, setResetStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [resetMessage, setResetMessage] = useState("");
   const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -46,6 +57,8 @@ export function LoginForm() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       setIsLoading(true);
+      setError(null);
+
       const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: "POST",
         headers: {
@@ -54,40 +67,56 @@ export function LoginForm() {
         body: JSON.stringify(values),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Invalid credentials");
+        throw new Error(data.message || "Failed to login");
       }
 
-      const data = await response.json();
-      console.log('Login response data:', data);
-      
       // Store the token in a cookie
       Cookies.set("token", data.token, {
-        expires: 7, // Expires in 7 days
+        expires: 7,
         secure: true,
         sameSite: "strict",
         path: "/"
       });
 
-      // Check if we have user data
-      if (!data.user) {
-        throw new Error("No user data received");
-      }
-      
-      // Use the handleAuthRedirect function to determine where to redirect
-      const redirectPath = handleAuthRedirect({
-        role: data.user.role,
-        termsAccepted: data.user.termsAccepted
-      });
-      router.push(redirectPath);
+      router.push("/dashboard");
     } catch (error) {
       console.error("Login error:", error);
-      alert(error instanceof Error ? error.message : "Failed to sign in");
+      setError(error instanceof Error ? error.message : "Failed to login");
     } finally {
       setIsLoading(false);
     }
   }
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetStatus("loading");
+    setResetMessage("");
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/reset-password-request`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email: resetEmail }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to send reset link");
+      }
+
+      setResetStatus("success");
+      setResetMessage("Password reset link has been sent to your email.");
+    } catch (error) {
+      setResetStatus("error");
+      setResetMessage(error instanceof Error ? error.message : "Failed to send reset link");
+    }
+  };
 
   return (
     <div className="w-full max-w-md p-8 space-y-6">
@@ -108,6 +137,12 @@ export function LoginForm() {
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+              <p className="text-sm text-red-600">{error}</p>
+            </div>
+          )}
+
           {/* Email Field */}
           <FormField
             control={form.control}
@@ -135,9 +170,13 @@ export function LoginForm() {
               <FormItem>
                 <div className="flex justify-between items-center">
                   <FormLabel>Password</FormLabel>
-                  <Link href="/forgot-password" className="text-sm text-[#8B0000] hover:underline">
+                  <button
+                    type="button"
+                    onClick={() => setShowResetModal(true)}
+                    className="text-sm text-[#8B0000] hover:underline"
+                  >
                     Forgot Password?
-                  </Link>
+                  </button>
                 </div>
                 <FormControl>
                   <div className="relative">
@@ -203,6 +242,61 @@ export function LoginForm() {
           Create Account
         </Link>
       </div>
+
+      {/* Reset Password Modal */}
+      <Dialog open={showResetModal} onOpenChange={setShowResetModal}>
+        <DialogContent className="sm:max-w-md rounded-xl shadow-2xl p-0">
+          <div className="flex justify-end p-2">
+            <button
+              type="button"
+              className="text-gray-400 hover:text-gray-700 transition"
+              onClick={() => setShowResetModal(false)}
+              aria-label="Close"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          <DialogHeader>
+            <DialogTitle className="text-center text-2xl font-bold mb-2 text-[#8B0000]">
+              Reset Password
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleResetPassword} className="space-y-6 px-6 pb-6">
+            <div className="space-y-2">
+              <label htmlFor="reset-email" className="text-sm font-medium text-gray-700">
+                CIT Email
+              </label>
+              <Input
+                id="reset-email"
+                type="email"
+                placeholder="your.name@cit.edu"
+                value={resetEmail}
+                onChange={(e) => setResetEmail(e.target.value)}
+                required
+                pattern="[a-zA-Z0-9._%+-]+@cit\.edu$"
+                title="Please enter a valid CIT email address"
+                className="h-12 text-base rounded-lg border-gray-300 focus:border-[#8B0000] focus:ring-[#8B0000]/30"
+              />
+            </div>
+
+            {resetMessage && (
+              <div className={`p-3 rounded-md text-center text-base font-medium ${
+                resetStatus === "success" ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"
+              }`}>
+                {resetMessage}
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              className="w-full h-12 text-lg font-semibold bg-[#8B0000] hover:bg-[#6B0000] rounded-lg shadow-md transition"
+              disabled={resetStatus === "loading"}
+            >
+              {resetStatus === "loading" ? "Sending..." : "Send Reset Link"}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 } 
