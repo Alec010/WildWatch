@@ -55,34 +55,32 @@ export default function TermsPage() {
       const responseText = await response.text();
       console.log('Success response:', responseText);
 
-      // If this is an OAuth user, get the stored user data
+      // If this is an OAuth user, always redirect to setup after accepting terms
       if (isOAuthUser) {
         const oauthUserData = JSON.parse(sessionStorage.getItem('oauthUserData') || '{}');
-        // Update the termsAccepted status
         oauthUserData.termsAccepted = true;
         sessionStorage.setItem('oauthUserData', JSON.stringify(oauthUserData));
-        
-        const redirectPath = handleAuthRedirect(oauthUserData);
-        console.log('Redirecting to:', redirectPath);
-        router.push(redirectPath);
-      } else {
-        // For regular users, fetch the user profile to get the role
-        const profileResponse = await fetch(`${API_BASE_URL}/api/auth/profile`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (!profileResponse.ok) {
-          throw new Error('Failed to fetch user profile');
-        }
-
-        const userData = await profileResponse.json();
-        const redirectPath = handleAuthRedirect(userData);
-        console.log('Redirecting to:', redirectPath);
-        router.push(redirectPath);
+        console.log('Redirecting to: /auth/setup');
+        router.push('/auth/setup');
+        return;
       }
+
+      // For regular users, fetch the user profile to get the role
+      const profileResponse = await fetch(`${API_BASE_URL}/api/auth/profile`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!profileResponse.ok) {
+        throw new Error('Failed to fetch user profile');
+      }
+
+      const userData = await profileResponse.json();
+      const redirectPath = handleAuthRedirect(userData);
+      console.log('Redirecting to:', redirectPath);
+      router.push(redirectPath);
     } catch (error) {
       console.error('Error accepting terms:', error);
       setError(

@@ -9,6 +9,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -16,7 +20,9 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EmailService emailService;
 
+    @Transactional
     public User registerUser(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new RuntimeException("Email already registered");
@@ -38,13 +44,42 @@ public class UserService {
         user.setSchoolIdNumber(request.getSchoolIdNumber());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setContactNumber(request.getContactNumber());
-        user.setEnabled(true);
+        user.setEnabled(false); // Set to false until email is verified
         user.setRole(Role.REGULAR_USER);
         user.setTermsAccepted(request.isTermsAccepted());
         user.setAuthProvider("local");
-        System.out.println("Creating new user with role: " + Role.REGULAR_USER);
-        System.out.println("Terms accepted set to: " + request.isTermsAccepted());
-        return userRepository.save(user);
+
+        // Generate verification token
+        String verificationToken = UUID.randomUUID().toString();
+        user.setVerificationToken(verificationToken);
+        user.setVerificationTokenExpiry(LocalDateTime.now().plusHours(24));
+
+        user = userRepository.save(user);
+
+        try {
+            emailService.sendVerificationEmail(user.getEmail(), verificationToken);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to send verification email: " + e.getMessage());
+        }
+
+        return user;
+    }
+
+    @Transactional
+    public boolean verifyEmail(String token) {
+        User user = userRepository.findByVerificationToken(token)
+                .orElseThrow(() -> new RuntimeException("Invalid verification token"));
+
+        if (user.getVerificationTokenExpiry().isBefore(LocalDateTime.now())) {
+            throw new RuntimeException("Verification token has expired");
+        }
+
+        user.setEnabled(true);
+        user.setVerificationToken(null);
+        user.setVerificationTokenExpiry(null);
+        userRepository.save(user);
+
+        return true;
     }
 
     public User getUserByEmail(String email) {
@@ -93,5 +128,50 @@ public class UserService {
     public User createMicrosoftOAuthUser(User user) {
         user.setAuthProvider("microsoft");
         return userRepository.save(user);
+    }
+
+    @Transactional
+    public void migrateExistingUsers() {
+        // This method can be called once after deployment to handle existing users
+        userRepository.findAll().forEach(user -> {
+            if (user.getVerificationToken() == null) {
+                // This is an existing user, mark them as verified
+                user.setEnabled(true);
+                userRepository.save(user);
+            }
+        });
+    }
+
+    @Transactional
+    public void requestPasswordReset(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
+
+        // Generate reset token
+        String resetToken = UUID.randomUUID().toString();
+        user.setResetToken(resetToken);
+        user.setResetTokenExpiry(LocalDateTime.now().plusHours(1));
+        userRepository.save(user);
+
+        try {
+            emailService.sendPasswordResetEmail(user.getEmail(), resetToken);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to send password reset email: " + e.getMessage());
+        }
+    }
+
+    @Transactional
+    public void resetPassword(String token, String newPassword) {
+        User user = userRepository.findByResetToken(token)
+                .orElseThrow(() -> new RuntimeException("Invalid reset token"));
+
+        if (user.getResetTokenExpiry().isBefore(LocalDateTime.now())) {
+            throw new RuntimeException("Reset token has expired");
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setResetToken(null);
+        user.setResetTokenExpiry(null);
+        userRepository.save(user);
     }
 } 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -55,6 +55,8 @@ export function SignUpForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [countdown, setCountdown] = useState(3);
   const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -93,10 +95,21 @@ export function SignUpForm() {
     return value;
   };
 
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (showVerificationModal && countdown > 0) {
+      timer = setTimeout(() => {
+        setCountdown(countdown - 1);
+      }, 1000);
+    } else if (showVerificationModal && countdown === 0) {
+      router.push("/");
+    }
+    return () => clearTimeout(timer);
+  }, [showVerificationModal, countdown, router]);
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       setIsLoading(true);
-      // Map acceptTerms to termsAccepted for backend
       const payload = {
         ...values,
         termsAccepted: values.acceptTerms,
@@ -126,8 +139,8 @@ export function SignUpForm() {
         path: "/"
       });
       
-      // Redirect to the index page
-      router.push("/");
+      // Show verification modal instead of immediate redirect
+      setShowVerificationModal(true);
     } catch (error) {
       console.error("Registration error:", error);
       alert(error instanceof Error ? error.message : "Failed to create account");
@@ -472,6 +485,25 @@ export function SignUpForm() {
               Accept Terms
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Verification Modal */}
+      <Dialog open={showVerificationModal} onOpenChange={setShowVerificationModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center text-xl font-semibold">
+              Check Your Email
+            </DialogTitle>
+          </DialogHeader>
+          <div className="text-center space-y-4 py-4">
+            <p className="text-gray-600">
+              Please check your institutional email to verify your account.
+            </p>
+            <p className="text-sm text-gray-500">
+              Redirecting to home page in {countdown}...
+            </p>
+          </div>
         </DialogContent>
       </Dialog>
 
