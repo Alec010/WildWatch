@@ -16,12 +16,16 @@ public class EmailService {
     @Value("${frontend.url}")
     private String frontendUrl;
 
+    @Value("${spring.mail.username}")
+    private String fromEmail;
+
     public void sendVerificationEmail(String to, String token) throws MessagingException {
         MimeMessage message = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, true);
         
         String verificationLink = frontendUrl + "/verify-email?token=" + token;
         
+        helper.setFrom(fromEmail);
         helper.setTo(to);
         helper.setSubject("Verify your WildWatch account");
         helper.setText("""
@@ -44,6 +48,7 @@ public class EmailService {
         
         String resetLink = frontendUrl + "/reset-password?token=" + token;
         
+        helper.setFrom(fromEmail);
         helper.setTo(to);
         helper.setSubject("Reset your WildWatch password");
         helper.setText("""
