@@ -37,6 +37,7 @@ import com.wildwatch.ui.components.*
 import com.wildwatch.utils.TokenManager
 import com.wildwatch.viewmodel.OfficeViewModel
 import com.wildwatch.viewmodel.OfficeViewModelFactory
+import com.wildwatch.ui.components.TagGenerationSection
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -106,6 +107,20 @@ fun ReportIncidentScreen(
         location = formState.location
         selectedOffice = formState.assignedOffice
         description = formState.description
+    }
+
+    // Update ViewModel when local state changes
+    LaunchedEffect(incidentType, incidentDate, incidentTime, location, selectedOffice, description) {
+        formViewModel.updateFormState(
+            formState.copy(
+                incidentType = incidentType,
+                dateOfIncident = incidentDate,
+                timeOfIncident = incidentTime,
+                location = location,
+                assignedOffice = selectedOffice,
+                description = description
+            )
+        )
     }
 
     if (showDatePicker) {
@@ -428,6 +443,14 @@ fun ReportIncidentScreen(
                                 .padding(bottom = 8.dp),
                             maxLines = 10,
                             shape = RoundedCornerShape(8.dp)
+                        )
+
+                        // Add this after the description TextField and before the character counter
+                        TagGenerationSection(
+                            description = description,
+                            location = location,
+                            viewModel = formViewModel,
+                            modifier = Modifier.padding(vertical = 16.dp)
                         )
 
                         // Character counter

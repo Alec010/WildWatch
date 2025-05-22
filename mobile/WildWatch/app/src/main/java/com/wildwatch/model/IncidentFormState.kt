@@ -13,5 +13,6 @@ data class IncidentFormState(
     val witnesses: List<WitnessDTO> = emptyList(),
     val evidenceUris: List<String> = emptyList(),
     val evidenceFiles: List<File> = emptyList(),
-    val additionalNotes: String = ""
+    val additionalNotes: String = "",
+    val tags: List<String> = emptyList()
 )
