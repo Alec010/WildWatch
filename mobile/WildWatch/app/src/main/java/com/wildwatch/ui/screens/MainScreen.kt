@@ -4,6 +4,8 @@ import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.ShowChart
+import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,6 +26,8 @@ import com.wildwatch.viewmodel.CaseTrackingViewModelFactory
 import com.wildwatch.utils.TokenManager
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 fun MainScreen(
@@ -35,7 +39,7 @@ fun MainScreen(
         BottomNavItem(
             route = "dashboard",
             title = "Dashboard",
-            icon = Icons.Default.ShowChart
+            icon = Icons.AutoMirrored.Filled.ShowChart
         ),
         BottomNavItem(
             route = "history",
@@ -51,7 +55,7 @@ fun MainScreen(
         BottomNavItem(
             route = "cases",
             title = "Case Tracking",
-            icon = Icons.Default.Assignment
+            icon = Icons.AutoMirrored.Filled.Assignment
         ),
         BottomNavItem(
             route = "settings",
@@ -63,6 +67,14 @@ fun MainScreen(
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
     var shouldNavigateToLogin by remember { mutableStateOf(false) }
+
+    // Token check on entry
+    LaunchedEffect(Unit) {
+        val token = withContext(Dispatchers.IO) { TokenManager.getToken(context) }
+        if (token.isNullOrBlank()) {
+            shouldNavigateToLogin = true
+        }
+    }
 
     // Handle navigation when shouldNavigateToLogin becomes true
     LaunchedEffect(shouldNavigateToLogin) {
@@ -83,13 +95,28 @@ fun MainScreen(
                 .padding(bottom = 52.dp) // leave space for bottom nav
         ) {
             when (currentTab) {
-                "dashboard" -> DashboardScreen()
-                "history" -> HistoryScreen()
+                "dashboard" -> DashboardScreen(
+                    navController = navController,
+                    onIncidentClick = { trackingNumber ->
+                        navController.navigate(Screen.CaseDetails.createRoute(trackingNumber))
+                    },
+                    onViewAllClick = {
+                        navController.navigate(Screen.ViewAllCases.route)
+                    }
+                )
+                "history" -> HistoryScreen(
+                    onIncidentClick = { trackingNumber ->
+                        navController.navigate(Screen.CaseDetails.createRoute(trackingNumber))
+                    }
+                )
                 "cases" -> {
                     val caseTrackingViewModel: CaseTrackingViewModel = viewModel(
                         factory = CaseTrackingViewModelFactory(context)
                     )
-                    CaseTrackingScreen(viewModel = caseTrackingViewModel)
+                    CaseTrackingScreen(
+                        viewModel = caseTrackingViewModel,
+                        navController = navController
+                    )
                 }
                 "settings" -> ProfileScreen(
                     onLogoutClick = {

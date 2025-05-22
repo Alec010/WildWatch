@@ -22,12 +22,17 @@ android {
         // Other configurations...
         buildTypes {
             debug {
-                buildConfigField ("String", "API_BASE_URL", "\"http://10.0.2.2:8080/\"")
-                buildConfigField ("String", "WS_BASE_URL", "\"ws://10.0.2.2:8080\"")
+                buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:8080\"") // For Android Emulator
+                buildConfigField ("String", "WS_BASE_URL", "\"https://wildwatch-9djc.onrender.com\"")
             }
             release {
-                buildConfigField ("String", "API_BASE_URL", "\"https://wildwatch-9djc.onrender.com/api/\"")
+                buildConfigField("String", "API_BASE_URL", "\"https://wildwatch-9djc.onrender.com\"")
                 buildConfigField ("String", "WS_BASE_URL", "\"wss://wildwatch-9djc.onrender.com\"")
+                isMinifyEnabled = false
+                proguardFiles(
+                    getDefaultProguardFile("proguard-android-optimize.txt"),
+                    "proguard-rules.pro"
+                )
             }
         }
     }
@@ -91,4 +96,6 @@ dependencies {
     implementation ("androidx.compose.material3:material3:1.0.0")
 
     implementation ("com.squareup.okhttp3:logging-interceptor:4.10.0")
+    
+    implementation("com.jakewharton.timber:timber:5.0.1")
 }

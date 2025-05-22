@@ -8,7 +8,7 @@ data class IncidentFormState(
     val dateOfIncident: String = "",
     val timeOfIncident: String = "",
     val location: String = "",
-    val assignedOffice: String = "",
+    val assignedOffice: String? = null,
     val description: String = "",
     val witnesses: List<WitnessDTO> = emptyList(),
     val evidenceUris: List<String> = emptyList(),

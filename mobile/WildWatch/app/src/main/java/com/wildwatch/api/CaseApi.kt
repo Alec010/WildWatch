@@ -7,10 +7,10 @@ import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface CaseApi {
-    @GET("incidents/my-incidents") // No need for "/api/" because your BASE_URL already has it
+    @GET("/api/incidents/my-incidents")
     suspend fun getUserIncidents(): List<IncidentResponse>
 
-    @GET("incidents/{id}")
+    @GET("/api/incidents/{id}")
     suspend fun getIncidentById(@Path("id") id: String): IncidentResponse
 
     @GET("activity-logs")

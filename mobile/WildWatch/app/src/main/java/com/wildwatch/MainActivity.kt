@@ -7,8 +7,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavGraph
 import com.wildwatch.ui.theme.WildWatchTheme
-import com.wildwatch.navigation.NavGraph
+import com.wildwatch.navigation.AppNavGraph
 import androidx.navigation.compose.rememberNavController
 
 class MainActivity : ComponentActivity() {
@@ -21,7 +22,7 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val navController = rememberNavController() // Create the navController here
-                    NavGraph(navController = navController) // Pass navController to NavGraph
+                    AppNavGraph(navController = navController) // Pass navController to NavGraph
                 }
             }
         }
