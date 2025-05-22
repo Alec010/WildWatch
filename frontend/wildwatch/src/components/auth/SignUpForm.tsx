@@ -36,12 +36,20 @@ const formSchema = z
     password: z
       .string()
       .min(8, "Password must be at least 8 characters")
-      .regex(
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
-        "Password must include uppercase, lowercase, number and special character",
-      ),
+      .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+      .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+      .regex(/[0-9]/, "Password must contain at least one number")
+      .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character"),
     confirmPassword: z.string(),
-    contactNumber: z.string().regex(/^\+?[0-9]{10,15}$/, "Please enter a valid contact number"),
+    contactNumber: z
+      .string()
+      .transform(val => val.replace(/\s/g, '')) // Remove spaces before validation
+      .pipe(
+        z.string()
+          .min(11, "Contact number must be at least 11 digits")
+          .max(13, "Contact number must not exceed 13 digits")
+          .regex(/^\+?[0-9]+$/, "Contact number must contain only digits and may start with +")
+      ),
     acceptTerms: z.boolean().refine((val) => val === true, {
       message: "You must accept the Terms and Conditions to create an account",
     }),
@@ -58,6 +66,7 @@ export function SignUpForm() {
   const [showTerms, setShowTerms] = useState(false)
   const [showVerificationModal, setShowVerificationModal] = useState(false)
   const [countdown, setCountdown] = useState(5)
+  const [isPasswordFocused, setIsPasswordFocused] = useState(false)
   const router = useRouter()
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -98,14 +107,35 @@ export function SignUpForm() {
   }
 
   const formatContactNumber = (value: string) => {
-    // Remove all non-digit characters
-    const numbers = value.replace(/\D/g, "")
-
-    // If the number doesn't start with +63, add it
-    if (!value.startsWith("+63")) {
-      return `+63${numbers}`
+    // Remove all non-digits
+    let inputValue = value.replace(/\D/g, '')
+    
+    // Always ensure it starts with +63
+    if (!inputValue.startsWith('639')) {
+      inputValue = '639' + inputValue.replace(/^639/, '')
     }
-    return value
+    
+    // Format the number as +63### ### ####
+    let formattedValue = '+63'
+    if (inputValue.length > 2) {
+      const remainingDigits = inputValue.slice(2)
+      if (remainingDigits.length > 0) {
+        formattedValue += ' ' + remainingDigits.slice(0, 3)
+      }
+      if (remainingDigits.length > 3) {
+        formattedValue += ' ' + remainingDigits.slice(3, 6)
+      }
+      if (remainingDigits.length > 6) {
+        formattedValue += ' ' + remainingDigits.slice(6, 10)
+      }
+    }
+    
+    // Limit total length to 15 characters (including spaces and +)
+    if (formattedValue.length > 16) {
+      formattedValue = formattedValue.slice(0, 16)
+    }
+    
+    return formattedValue
   }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
@@ -336,6 +366,8 @@ export function SignUpForm() {
                       placeholder="Create a secure password"
                       className="pl-10 pr-10 border-[#D4AF37]/40 focus-visible:ring-[#D4AF37]/60 transition-all [&::-ms-reveal]:hidden [&::-ms-clear]:hidden"
                       {...field}
+                      onFocus={() => setIsPasswordFocused(true)}
+                      onBlur={() => setIsPasswordFocused(false)}
                     />
                     <button
                       type="button"
@@ -346,8 +378,52 @@ export function SignUpForm() {
                     </button>
                   </div>
                 </FormControl>
+                {isPasswordFocused && (
+                  <div className="mt-4 grid grid-cols-3 gap-2 text-xs">
+                    <div className="flex items-center gap-1">
+                      <div
+                        className={`h-3 w-3 rounded-full ${field.value.length >= 8 ? "bg-green-500" : "bg-gray-300"}`}
+                      ></div>
+                      <span className={field.value.length >= 8 ? "text-green-700" : "text-gray-500"}>
+                        8+ characters
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div
+                        className={`h-3 w-3 rounded-full ${/[A-Z]/.test(field.value) ? "bg-green-500" : "bg-gray-300"}`}
+                      ></div>
+                      <span className={/[A-Z]/.test(field.value) ? "text-green-700" : "text-gray-500"}>
+                        Uppercase letter
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div
+                        className={`h-3 w-3 rounded-full ${/[a-z]/.test(field.value) ? "bg-green-500" : "bg-gray-300"}`}
+                      ></div>
+                      <span className={/[a-z]/.test(field.value) ? "text-green-700" : "text-gray-500"}>
+                        Lowercase letter
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div
+                        className={`h-3 w-3 rounded-full ${/[0-9]/.test(field.value) ? "bg-green-500" : "bg-gray-300"}`}
+                      ></div>
+                      <span className={/[0-9]/.test(field.value) ? "text-green-700" : "text-gray-500"}>Number</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div
+                        className={`h-3 w-3 rounded-full ${
+                          /[^A-Za-z0-9]/.test(field.value) ? "bg-green-500" : "bg-gray-300"
+                        }`}
+                      ></div>
+                      <span className={/[^A-Za-z0-9]/.test(field.value) ? "text-green-700" : "text-gray-500"}>
+                        Special character
+                      </span>
+                    </div>
+                  </div>
+                )}
                 <FormMessage className="font-normal text-red-600" />
-                </FormItem>
+              </FormItem>
             )}
           />
 
@@ -482,16 +558,16 @@ export function SignUpForm() {
 
       {/* Terms Modal Dialog */}
       <Dialog open={showTerms} onOpenChange={setShowTerms}>
-        <DialogContent className="max-w-3xl max-h-[100vh] overflow-hidden border-[#D4AF37]/30 bg-background p-0 sm:rounded-xl">
+        <DialogContent className="max-w-3xl max-h-[100vh] overflow-hidden border-[#D4AF37]/30 bg-background p-0 sm:rounded-xl animate-in zoom-in-95 fade-in-0 duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=open]:fade-in-0">
           {/* Header with decorative elements */}
           <div className="relative">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#800000] via-[#D4AF37] to-[#800000]"></div>
-            <div className="absolute top-0 right-0 w-32 h-32 bg-[#D4AF37]/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl"></div>
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#800000] via-[#D4AF37] to-[#800000] animate-gradient-x"></div>
+            <div className="absolute top-0 right-0 w-32 h-32 bg-[#D4AF37]/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl animate-pulse"></div>
 
             <DialogHeader className="p-6 border-b border-[#D4AF37]/30">
               <DialogTitle className="text-2xl font-bold text-[#800000] flex justify-between items-center">
                 <div className="flex items-center gap-2">
-                  <div className="h-8 w-1 bg-[#800000] rounded-full"></div>
+                  <div className="h-8 w-1 bg-[#800000] rounded-full animate-pulse"></div>
                   Terms and Conditions
                 </div>
               </DialogTitle>
@@ -499,14 +575,14 @@ export function SignUpForm() {
                 Effective Date: April 08, 2025
               </DialogDescription>
             </DialogHeader>
-            <DialogClose className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none  disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
-              <X className="h-4 w-4 text-[#800000]/70 hover:text-[#800000]" />
+            <DialogClose className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+              <X className="h-4 w-4 text-[#800000]/70 hover:text-[#800000] transition-transform hover:scale-110" />
               <span className="sr-only">Close</span>
             </DialogClose>
           </div>
 
           {/* Content with improved styling */}
-          <div className="p-6 prose max-w-none space-y-6 overflow-y-auto max-h-[60vh]">
+          <div className="p-6 prose max-w-none space-y-6 overflow-y-auto max-h-[60vh] animate-in fade-in-0 duration-300">
             <p className="text-foreground leading-relaxed">
               Welcome to WildWatch, the official incident reporting and case management platform of Cebu Institute of
               Technology – University (CITU). By accessing or using the WildWatch website and application (the

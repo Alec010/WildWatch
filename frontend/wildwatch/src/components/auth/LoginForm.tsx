@@ -11,12 +11,15 @@ import { useForm } from "react-hook-form"
 import * as z from "zod"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Eye, EyeOff, X, Shield, Mail } from "lucide-react"
+import { Eye, EyeOff, X, Shield, Mail, CheckCircle2, AlertCircle } from "lucide-react"
 import Cookies from "js-cookie"
 import { MicrosoftLogo } from "@/components/icons/MicrosoftLogo"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { API_BASE_URL } from "@/utils/api"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import { toast } from "sonner"
+import { Toaster } from "sonner"
+import { handleAuthRedirect } from "@/utils/auth"
 
 const formSchema = z.object({
   email: z.string().email("Invalid email").endsWith("@cit.edu", "Must be a CIT email address"),
@@ -68,10 +71,44 @@ export function LoginForm() {
         path: "/",
       })
 
-      router.push("/dashboard")
+      toast.success("Login successful!", {
+        description: "Welcome back to WildWatch",
+        icon: <CheckCircle2 className="h-5 w-5 text-green-500" />,
+        className: "bg-white border-green-100 text-green-800",
+        duration: 3000,
+      })
+
+      // Check if user data exists and has required properties
+      if (!data.user || typeof data.user.termsAccepted === 'undefined') {
+        // If user data is missing, fetch the user profile
+        const profileResponse = await fetch(`${API_BASE_URL}/api/auth/profile`, {
+          headers: {
+            'Authorization': `Bearer ${data.token}`,
+            'Content-Type': 'application/json',
+          },
+        })
+
+        if (!profileResponse.ok) {
+          throw new Error("Failed to fetch user profile")
+        }
+
+        const userData = await profileResponse.json()
+        const redirectPath = handleAuthRedirect(userData)
+        router.push(redirectPath)
+      } else {
+        // Use the user data from login response
+        const redirectPath = handleAuthRedirect(data.user)
+        router.push(redirectPath)
+      }
     } catch (error) {
-      console.error("Login error:", error)
-      setError(error instanceof Error ? error.message : "Failed to login")
+      const errorMessage = error instanceof Error ? error.message : "Failed to login"
+      setError(errorMessage)
+      toast.error("Login failed", {
+        description: errorMessage,
+        icon: <AlertCircle className="h-5 w-5 text-red-500" />,
+        className: "bg-white border-red-100 text-red-800",
+        duration: 5000,
+      })
     } finally {
       setIsLoading(false)
     }
@@ -99,9 +136,23 @@ export function LoginForm() {
 
       setResetStatus("success")
       setResetMessage("Password reset link has been sent to your email.")
+      toast.success("Reset link sent!", {
+        description: "Please check your email for the password reset link",
+        icon: <CheckCircle2 className="h-5 w-5 text-green-500" />,
+        className: "bg-white border-green-100 text-green-800",
+        duration: 5000,
+      })
+      setShowResetModal(false)
     } catch (error) {
       setResetStatus("error")
-      setResetMessage(error instanceof Error ? error.message : "Failed to send reset link")
+      const errorMessage = error instanceof Error ? error.message : "Failed to send reset link"
+      setResetMessage(errorMessage)
+      toast.error("Reset failed", {
+        description: errorMessage,
+        icon: <AlertCircle className="h-5 w-5 text-red-500" />,
+        className: "bg-white border-red-100 text-red-800",
+        duration: 5000,
+      })
     }
   }
 
@@ -115,6 +166,7 @@ export function LoginForm() {
 
   return (
     <div className="relative w-full max-w-md p-8 space-y-6 bg-card rounded-lg shadow-xl border border-[#D4AF37]/20">
+      <Toaster position="top-right" richColors />
       {/* Decorative elements */}
       <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#800000] via-[#D4AF37] to-[#800000] rounded-t-lg animate-gradient-x"></div>
       <div className="absolute -z-10 top-20 right-0 w-64 h-64 bg-[#D4AF37]/10 rounded-full opacity-20 blur-3xl"></div>
@@ -161,7 +213,7 @@ export function LoginForm() {
                     />
                   </div>
                 </FormControl>
-                <FormMessage className="text-[#800000]" />
+                <FormMessage className="font-normal text-red-600" />
               </FormItem>
             )}
           />
@@ -179,7 +231,7 @@ export function LoginForm() {
                   <button
                     type="button"
                     onClick={() => setShowResetModal(true)}
-                    className="text-sm text-[#800000] hover:text-[#800000]/80 font-medium transition-colors"
+                    className="text-sm text-black/50 hover:text-[#800000]/80 font-medium transition-colors"
                   >
                     Forgot Password?
                   </button>
@@ -190,7 +242,7 @@ export function LoginForm() {
                     <Input
                       type={showPassword ? "text" : "password"}
                       placeholder="Enter your password"
-                      className="pl-10 pr-10 border-[#D4AF37]/40 focus-visible:ring-[#D4AF37]/60 transition-all"
+                      className="pl-10 pr-10 border-[#D4AF37]/40 focus-visible:ring-[#D4AF37]/60 transition-all [&::-ms-reveal]:hidden [&::-ms-clear]:hidden"
                       {...field}
                     />
                     <button
@@ -202,7 +254,7 @@ export function LoginForm() {
                     </button>
                   </div>
                 </FormControl>
-                <FormMessage className="text-[#800000]" />
+                <FormMessage className="font-normal text-red-600" />
               </FormItem>
             )}
           />
@@ -249,7 +301,7 @@ export function LoginForm() {
         <Button
           type="button"
           variant="outline"
-          className="w-full flex items-center justify-center gap-2 border-[#D4AF37]/40 hover:bg-[#D4AF37]/10 py-5"
+          className="w-full flex items-center justify-center gap-2 border-[#D4AF37]/30 hover:bg-[#D4AF37]/10 py-5"
           onClick={() => {
             window.location.href = `${API_BASE_URL}/oauth2/authorization/microsoft`
           }}
@@ -272,90 +324,102 @@ export function LoginForm() {
 
       {/* Reset Password Modal */}
       <Dialog open={showResetModal} onOpenChange={setShowResetModal}>
-        <DialogContent className="sm:max-w-md rounded-xl shadow-2xl p-0 border-[#D4AF37]/30">
-          <div className="relative">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#800000] via-[#D4AF37] to-[#800000]"></div>
-            <div className="flex justify-end p-2">
+        <DialogContent className="sm:max-w-md overflow-hidden p-0 border-[#FFD700]/30">
+          {/* Gradient border at the top */}
+          <div className="w-full h-2 bg-gradient-to-r from-[#800000] via-[#D4AF37] to-[#800000] animate-gradient-x"></div>
+
+          <div className="p-6">
+            <div className="flex justify-between items-center mb-6">
+              <DialogTitle className="text-2xl font-bold text-[#800000]">Reset Password</DialogTitle>
               <button
                 type="button"
-                className="text-[#800000]/70 hover:text-[#800000] transition"
+                className="text-[#800000]/70 hover:text-[#800000] transition rounded-full h-8 w-8 inline-flex items-center justify-center"
                 onClick={() => setShowResetModal(false)}
                 aria-label="Close"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <DialogHeader>
-              <DialogTitle className="text-center text-2xl font-bold mb-2 text-[#800000]">Reset Password</DialogTitle>
-            </DialogHeader>
-          </div>
-          <form onSubmit={handleResetPassword} className="space-y-6 px-6 pb-6">
-            <div className="space-y-2">
-              <label htmlFor="reset-email" className="text-sm font-medium text-[#800000]">
-                CIT Email
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#800000]/70" />
-                <Input
-                  id="reset-email"
-                  type="email"
-                  placeholder="your.name@cit.edu"
-                  value={resetEmail}
-                  onChange={(e) => setResetEmail(e.target.value)}
-                  required
-                  pattern="[a-zA-Z0-9._%+-]+@cit\.edu$"
-                  title="Please enter a valid CIT email address"
-                  className="pl-10 border-[#D4AF37]/40 focus-visible:ring-[#D4AF37]/60 transition-all h-12 text-base rounded-lg"
-                />
-              </div>
-            </div>
 
-            {resetMessage && (
-              <div
-                className={`p-3 rounded-md text-center text-base font-medium ${
-                  resetStatus === "success"
-                    ? "bg-green-50 text-green-700 border border-green-200"
-                    : "bg-red-50 text-[#800000] border border-red-200"
-                }`}
-              >
-                {resetMessage}
+            <form onSubmit={handleResetPassword} className="space-y-6">
+              <div className="space-y-2">
+                <label htmlFor="reset-email" className="text-sm font-medium text-[#800000]">
+                  CIT Email
+                </label>
+                <div className="mt-2 relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#800000]/70" />
+                  <Input
+                    id="reset-email"
+                    type="email"
+                    placeholder="your.name@cit.edu"
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    required
+                    pattern="[a-zA-Z0-9._%+-]+@cit\.edu$"
+                    title="Please enter a valid CIT email address"
+                    className="pl-10 border-[#D4AF37]/40 focus-visible:ring-[#D4AF37]/60 transition-all"
+                  />
+                </div>
               </div>
-            )}
 
-            <Button
-              type="submit"
-              className="w-full h-12 text-lg font-semibold bg-[#800000] hover:bg-[#800000]/90 text-white rounded-lg shadow-md transition"
-              disabled={resetStatus === "loading"}
-            >
-              {resetStatus === "loading" ? (
-                <span className="flex items-center justify-center">
-                  <svg
-                    className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
-                  Sending...
-                </span>
-              ) : (
-                "Send Reset Link"
+              {resetMessage && (
+                <div
+                  className={`p-3 rounded-md text-center text-sm font-medium ${
+                    resetStatus === "success"
+                      ? "bg-green-50 text-green-700 border border-green-200"
+                      : "bg-red-50 text-[#800000] border border-red-200"
+                  }`}
+                >
+                  {resetMessage}
+                </div>
               )}
-            </Button>
-          </form>
+
+              <Button
+                type="submit"
+                className="w-full bg-[#800000] hover:bg-[#800000]/90 text-white font-medium py-5 transition-all duration-300 shadow-md hover:shadow-lg"
+                disabled={resetStatus === "loading"}
+              >
+                {resetStatus === "loading" ? (
+                  <span className="flex items-center justify-center">
+                    <svg
+                      className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    Sending...
+                  </span>
+                ) : (
+                  "Send Reset Link"
+                )}
+              </Button>
+            </form>
+
+            <div className="mt-6 pt-4 border-t border-[#D4AF37]/30 text-center text-sm text-muted-foreground">
+              Remember your password?{" "}
+              <button
+                type="button"
+                onClick={() => setShowResetModal(false)}
+                className="text-[#800000] hover:text-[#800000]/80 font-medium transition-colors"
+              >
+                Back to Sign In
+              </button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

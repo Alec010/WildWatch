@@ -3,13 +3,32 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { OfficeAdminSidebar } from "@/components/OfficeAdminSidebar"
-import { Card } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { OfficeAdminNavbar } from "@/components/OfficeAdminNavbar"
 import { Button } from "@/components/ui/button"
-import { ChevronLeft, ChevronRight, Search, FileEdit } from "lucide-react"
-import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import {
+  ChevronLeft,
+  ChevronRight,
+  FileEdit,
+  AlertTriangle,
+  RefreshCw,
+  BarChart3,
+  ArrowUpRight,
+  Clock,
+  MapPin,
+  User,
+  FileText,
+  Shield,
+  Activity,
+} from "lucide-react"
 import { API_BASE_URL } from "@/utils/api"
+import { motion } from "framer-motion"
+import { useSidebar } from "@/contexts/SidebarContext"
+import { Inter } from "next/font/google"
+import { toast } from "sonner"
+import { Toaster } from "sonner"
+
+const inter = Inter({ subsets: ["latin"] })
 
 interface Incident {
   id: string
@@ -24,12 +43,15 @@ interface Incident {
 
 export default function ApprovedCaseTracker() {
   const router = useRouter()
+  const { collapsed } = useSidebar()
   const [incidents, setIncidents] = useState<Incident[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [searchQuery, setSearchQuery] = useState("")
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [stats, setStats] = useState({
+    total: 0,
     highPriority: 0,
     mediumPriority: 0,
     lowPriority: 0,
@@ -37,47 +59,55 @@ export default function ApprovedCaseTracker() {
 
   const itemsPerPage = 10
 
-  useEffect(() => {
-    const fetchApprovedCases = async () => {
-      try {
-        const token = document.cookie
-          .split("; ")
-          .find((row) => row.startsWith("token="))
-          ?.split("=")[1]
+  const fetchApprovedCases = async () => {
+    try {
+      setIsRefreshing(true)
+      const token = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("token="))
+        ?.split("=")[1]
 
-        if (!token) {
-          throw new Error("No authentication token found")
-        }
-
-        const response = await fetch(`${API_BASE_URL}/api/incidents/in-progress`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
+      if (!token) {
+        toast.error("Authentication Error", {
+          description: "No authentication token found. Please log in again.",
         })
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
-        }
-
-        const data = await response.json()
-        setIncidents(data)
-
-        // Calculate priority stats
-        const stats = {
-          highPriority: data.filter((inc: Incident) => inc.priorityLevel === "HIGH").length,
-          mediumPriority: data.filter((inc: Incident) => inc.priorityLevel === "MEDIUM").length,
-          lowPriority: data.filter((inc: Incident) => inc.priorityLevel === "LOW").length,
-        }
-        setStats(stats)
-      } catch (error) {
-        console.error("Error fetching approved cases:", error)
-        setError(error instanceof Error ? error.message : "Failed to load approved cases")
-      } finally {
-        setLoading(false)
+        return
       }
-    }
 
+      const response = await fetch(`${API_BASE_URL}/api/incidents/in-progress`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
+      setIncidents(data)
+
+      // Calculate priority stats
+      const stats = {
+        total: data.length,
+        highPriority: data.filter((inc: Incident) => inc.priorityLevel === "HIGH").length,
+        mediumPriority: data.filter((inc: Incident) => inc.priorityLevel === "MEDIUM").length,
+        lowPriority: data.filter((inc: Incident) => inc.priorityLevel === "LOW").length,
+      }
+      setStats(stats)
+    } catch (e: any) {
+      setError(e.message || "Failed to load approved cases")
+      toast.error("Failed to Load Cases", {
+        description: e.message || "There was an error loading the approved cases. Please try again.",
+      })
+    } finally {
+      setLoading(false)
+      setIsRefreshing(false)
+    }
+  }
+
+  useEffect(() => {
     fetchApprovedCases()
   }, [])
 
@@ -86,7 +116,9 @@ export default function ApprovedCaseTracker() {
     const searchLower = searchQuery.toLowerCase()
     return (
       incident.trackingNumber.toLowerCase().includes(searchLower) ||
-      incident.incidentType.toLowerCase().includes(searchLower)
+      incident.incidentType.toLowerCase().includes(searchLower) ||
+      incident.location.toLowerCase().includes(searchLower) ||
+      incident.submittedByFullName.toLowerCase().includes(searchLower)
     )
   })
 
@@ -107,10 +139,20 @@ export default function ApprovedCaseTracker() {
 
   if (loading) {
     return (
-      <div className="flex h-screen">
+      <div className="min-h-screen flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9]">
+        <Toaster richColors position="top-right" />
         <OfficeAdminSidebar />
-        <div className="flex-1 flex items-center justify-center bg-gray-50">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#8B0000]"></div>
+        <div
+          className={`flex-1 flex items-center justify-center transition-all duration-300 ${collapsed ? "ml-[5rem]" : "ml-64"}`}
+        >
+          <div className="text-center">
+            <div className="relative w-20 h-20 mx-auto">
+              <div className="absolute inset-0 rounded-full border-t-2 border-b-2 border-[#8B0000] animate-spin"></div>
+              <div className="absolute inset-2 rounded-full border-r-2 border-l-2 border-[#DAA520] animate-spin animation-delay-150"></div>
+              <div className="absolute inset-4 rounded-full border-t-2 border-b-2 border-[#8B0000] animate-spin animation-delay-300"></div>
+            </div>
+            <p className="mt-6 text-gray-600 font-medium">Loading approved cases...</p>
+          </div>
         </div>
       </div>
     )
@@ -118,12 +160,27 @@ export default function ApprovedCaseTracker() {
 
   if (error) {
     return (
-      <div className="flex h-screen">
+      <div className="min-h-screen flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9]">
+        <Toaster richColors position="top-right" />
         <OfficeAdminSidebar />
-        <div className="flex-1 p-8 bg-gray-50">
+        <div className={`flex-1 p-8 transition-all duration-300 ${collapsed ? "ml-[5rem]" : "ml-64"}`}>
           <div className="max-w-7xl mx-auto">
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <p className="text-red-700">{error}</p>
+            <div className="bg-red-50 border border-red-200 rounded-lg p-6 shadow-sm">
+              <div className="flex items-start gap-4">
+                <div className="bg-red-100 p-3 rounded-full">
+                  <AlertTriangle className="h-6 w-6 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-red-800 mb-2">Error Loading Cases</h3>
+                  <p className="text-red-700">{error}</p>
+                  <Button
+                    className="mt-4 bg-[#8B0000] hover:bg-[#6B0000] text-white"
+                    onClick={() => window.location.reload()}
+                  >
+                    <RefreshCw className="mr-2 h-4 w-4" /> Try Again
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -132,140 +189,218 @@ export default function ApprovedCaseTracker() {
   }
 
   return (
-    <div className="flex h-screen">
+    <div className={`min-h-screen flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9] ${inter.className}`}>
       <OfficeAdminSidebar />
-      <div className="flex-1 overflow-auto bg-gray-50 ml-64">
-        <div className="p-8">
-          <div className="max-w-7xl mx-auto">
-            <div className="mb-6">
-              <h1 className="text-2xl font-bold text-[#8B0000]">Approved Case Tracker</h1>
-              <p className="text-gray-600 mt-1">View and manage approved incident reports</p>
+      <OfficeAdminNavbar
+        title="Approved Case Tracker"
+        subtitle="View and manage approved incident reports"
+        showSearch={true}
+        searchPlaceholder="Search cases..."
+        onSearch={setSearchQuery}
+        showQuickActions={true}
+      />
+      <Toaster richColors position="top-right" className="z-50" style={{ top: '80px' }} />
+      <div className={`flex-1 overflow-auto transition-all duration-300 ${collapsed ? "ml-[5rem]" : "ml-64"} pt-24`}>
+        <div className={`p-6 -mt-3 mx-8 ${collapsed ? "max-w-[95vw]" : "max-w-[calc(100vw-8rem)]"}`}>
+          {/* Action Bar */}
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={fetchApprovedCases}
+                disabled={isRefreshing}
+                className="border-[#DAA520]/30 text-[#8B0000] hover:bg-[#8B0000] hover:text-white"
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
+                {isRefreshing ? "Refreshing..." : "Refresh"}
+              </Button>
             </div>
+            <div className="text-sm text-gray-500">Showing {filteredIncidents.length} approved cases</div>
+          </div>
 
-            {/* Priority Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <Card className="overflow-hidden border-0 shadow-md">
-                <div className="bg-red-600 h-1.5 w-full"></div>
-                <div className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">High Priority</p>
-                      <p className="text-3xl font-bold mt-1">{stats.highPriority}</p>
-                    </div>
-                    <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
-                      <span className="text-red-600 text-lg">!</span>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-
-              <Card className="overflow-hidden border-0 shadow-md">
-                <div className="bg-amber-500 h-1.5 w-full"></div>
-                <div className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Medium Priority</p>
-                      <p className="text-3xl font-bold mt-1">{stats.mediumPriority}</p>
-                    </div>
-                    <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
-                      <span className="text-amber-600 text-lg">!</span>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-
-              <Card className="overflow-hidden border-0 shadow-md">
-                <div className="bg-green-500 h-1.5 w-full"></div>
-                <div className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Low Priority</p>
-                      <p className="text-3xl font-bold mt-1">{stats.lowPriority}</p>
-                    </div>
-                    <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-                      <span className="text-green-600 text-lg">!</span>
-                    </div>
-                  </div>
-                </div>
-              </Card>
+          {/* Summary Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.4 }}
+            className="bg-gradient-to-br from-[#8B0000] to-[#6B0000] rounded-xl shadow-md p-6 text-white mb-8"
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <BarChart3 className="h-6 w-6" />
+              <h2 className="text-xl font-semibold">Case Distribution</h2>
             </div>
-
-            {/* Search and Table */}
-            <Card className="border-0 shadow-md overflow-hidden">
-              <div className="p-6 border-b">
-                <div className="flex justify-between items-center">
-                  <div className="relative w-full max-w-md">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                    <Input
-                      type="text"
-                      placeholder="Search by case ID or type..."
-                      className="pl-10 border-gray-200"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                  </div>
-                </div>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className="bg-white/10 rounded-lg p-4">
+                <div className="text-3xl font-bold">{stats.total}</div>
+                <div className="text-white/80 text-sm">Total Cases</div>
               </div>
+              <div className="bg-white/10 rounded-lg p-4">
+                <div className="text-3xl font-bold">{stats.highPriority}</div>
+                <div className="text-white/80 text-sm">High Priority</div>
+              </div>
+              <div className="bg-white/10 rounded-lg p-4">
+                <div className="text-3xl font-bold">{stats.mediumPriority}</div>
+                <div className="text-white/80 text-sm">Medium Priority</div>
+              </div>
+              <div className="bg-white/10 rounded-lg p-4">
+                <div className="text-3xl font-bold">{stats.lowPriority}</div>
+                <div className="text-white/80 text-sm">Low Priority</div>
+              </div>
+            </div>
+          </motion.div>
 
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-gray-50 hover:bg-gray-50">
-                      <TableHead className="font-semibold text-gray-600">Case ID</TableHead>
-                      <TableHead className="font-semibold text-gray-600">Date</TableHead>
-                      <TableHead className="font-semibold text-gray-600">Location</TableHead>
-                      <TableHead className="font-semibold text-gray-600">Incident Type</TableHead>
-                      <TableHead className="font-semibold text-gray-600">Reporter</TableHead>
-                      <TableHead className="font-semibold text-gray-600">Status</TableHead>
-                      <TableHead className="font-semibold text-gray-600">Priority</TableHead>
-                      <TableHead className="font-semibold text-gray-600">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {currentIncidents.map((incident) => (
-                      <TableRow key={incident.id} className="hover:bg-gray-50">
-                        <TableCell className="font-medium text-[#8B0000]">{incident.trackingNumber}</TableCell>
-                        <TableCell>{formatDate(incident.dateOfIncident)}</TableCell>
-                        <TableCell>{incident.location}</TableCell>
-                        <TableCell>{incident.incidentType}</TableCell>
-                        <TableCell>{incident.submittedByFullName}</TableCell>
-                        <TableCell>
-                          <Badge variant="secondary" className="bg-blue-50 text-blue-700 hover:bg-blue-50">
-                            In Progress
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
+          {/* Cases Table */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.5 }}
+            className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden"
+          >
+            <div className="p-6 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <Shield className="h-5 w-5 text-[#8B0000]" />
+                <h2 className="text-lg font-semibold text-gray-800">
+                  Approved Cases
+                  <span className="ml-2 text-sm bg-[#8B0000]/10 text-[#8B0000] px-2 py-0.5 rounded-full">
+                    {filteredIncidents.length}
+                  </span>
+                </h2>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              {currentIncidents.length > 0 ? (
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Case ID
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Date
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Location
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Type
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Reporter
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Priority
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {currentIncidents.map((incident, index) => (
+                      <motion.tr
+                        key={incident.id}
+                        className="hover:bg-[#fff9f9] transition-colors"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2, delay: index * 0.05 }}
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div
+                              className={`flex-shrink-0 h-8 w-1 rounded-full mr-3 ${
+                                incident.priorityLevel === "HIGH"
+                                  ? "bg-red-400"
+                                  : incident.priorityLevel === "MEDIUM"
+                                    ? "bg-orange-400"
+                                    : "bg-green-400"
+                              }`}
+                            ></div>
+                            <div className="text-sm font-medium text-[#8B0000]">{incident.trackingNumber}</div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center text-sm text-gray-700">
+                            <Clock className="h-4 w-4 text-gray-400 mr-2" />
+                            {formatDate(incident.dateOfIncident)}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center text-sm text-gray-700">
+                            <MapPin className="h-4 w-4 text-gray-400 mr-2" />
+                            {incident.location}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center text-sm text-gray-700">
+                            <FileText className="h-4 w-4 text-gray-400 mr-2" />
+                            {incident.incidentType}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center text-sm text-gray-700">
+                            <User className="h-4 w-4 text-gray-400 mr-2" />
+                            {incident.submittedByFullName}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <Badge className="bg-blue-100 text-blue-800 border-blue-200">In Progress</Badge>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
                           <Badge
-                            className={`${
+                            className={
                               incident.priorityLevel === "HIGH"
-                                ? "bg-red-50 text-red-700 hover:bg-red-50"
+                                ? "bg-red-100 text-red-800 border-red-200"
                                 : incident.priorityLevel === "MEDIUM"
-                                  ? "bg-amber-50 text-amber-700 hover:bg-amber-50"
-                                  : "bg-green-50 text-green-700 hover:bg-green-50"
-                            }`}
+                                  ? "bg-orange-100 text-orange-800 border-orange-200"
+                                  : "bg-green-100 text-green-800 border-green-200"
+                            }
                           >
                             {incident.priorityLevel}
                           </Badge>
-                        </TableCell>
-                        <TableCell>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
                           <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-gray-500 hover:text-[#8B0000]"
+                            variant="outline"
+                            size="sm"
                             onClick={() => router.push(`/office-admin/approved-cases/${incident.id}/update`)}
+                            className="border-[#8B0000] text-[#8B0000] hover:bg-[#8B0000] hover:text-white transition-colors"
                           >
-                            <FileEdit className="h-4 w-4" />
-                            <span className="sr-only">Edit</span>
+                            <FileEdit className="h-4 w-4 mr-2" />
+                            Update
                           </Button>
-                        </TableCell>
-                      </TableRow>
+                        </td>
+                      </motion.tr>
                     ))}
-                  </TableBody>
-                </Table>
-              </div>
+                  </tbody>
+                </table>
+              ) : (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 bg-[#8B0000]/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Activity className="h-8 w-8 text-[#8B0000]" />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-800 mb-2">No approved cases found</h3>
+                  <p className="text-gray-500 max-w-md mx-auto">
+                    {searchQuery
+                      ? "No cases match your search criteria. Try adjusting your search terms."
+                      : "There are no approved cases to display at this time."}
+                  </p>
+                  {searchQuery && (
+                    <Button variant="outline" className="mt-4" onClick={() => setSearchQuery("")}>
+                      Clear Search
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
 
-              {/* Pagination */}
-              <div className="p-4 border-t flex items-center justify-between">
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="p-4 border-t border-gray-100 flex items-center justify-between">
                 <div className="text-sm text-gray-500">
                   Showing {startIndex + 1} to {Math.min(endIndex, filteredIncidents.length)} of{" "}
                   {filteredIncidents.length} results
@@ -274,7 +409,7 @@ export default function ApprovedCaseTracker() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-8 w-8 p-0 border-gray-200"
+                    className="h-8 w-8 p-0 border-[#DAA520]/30"
                     onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                     disabled={currentPage === 1}
                   >
@@ -292,7 +427,7 @@ export default function ApprovedCaseTracker() {
                         className={`h-8 w-8 p-0 ${
                           currentPage === pageNumber
                             ? "bg-[#8B0000] text-white hover:bg-[#8B0000]/90"
-                            : "border-gray-200"
+                            : "border-[#DAA520]/30"
                         }`}
                         onClick={() => setCurrentPage(pageNumber)}
                       >
@@ -306,7 +441,7 @@ export default function ApprovedCaseTracker() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-8 w-8 p-0 border-gray-200"
+                    className="h-8 w-8 p-0 border-[#DAA520]/30"
                     onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                     disabled={currentPage === totalPages}
                   >
@@ -315,10 +450,20 @@ export default function ApprovedCaseTracker() {
                   </Button>
                 </div>
               </div>
-            </Card>
-          </div>
+            )}
+          </motion.div>
         </div>
       </div>
+
+      {/* Add custom styles for animation delays */}
+      <style jsx global>{`
+        .animation-delay-150 {
+          animation-delay: 150ms;
+        }
+        .animation-delay-300 {
+          animation-delay: 300ms;
+        }
+      `}</style>
     </div>
   )
 }

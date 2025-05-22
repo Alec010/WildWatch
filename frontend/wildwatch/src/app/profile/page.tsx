@@ -4,7 +4,25 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Bell, AlertTriangle, History, Settings, FileText, Check, X, Eye, EyeOff } from "lucide-react"
+import { Card } from "@/components/ui/card"
+import {
+  AlertTriangle,
+  History,
+  Check,
+  X,
+  Eye,
+  EyeOff,
+  User,
+  Phone,
+  Mail,
+  Shield,
+  Award,
+  Edit3,
+  Save,
+  Lock,
+  Search,
+  Plus,
+} from "lucide-react"
 import Cookies from "js-cookie"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
@@ -23,6 +41,26 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { API_BASE_URL } from "@/utils/api"
+import NotificationDropdown from "@/components/ui/notificationdropdown"
+import { useSidebar } from "@/contexts/SidebarContext"
+import { Navbar } from "@/components/Navbar"
+import { useUser } from "@/contexts/UserContext"
+
+// Add keyframe animation for gradients
+const gradientAnimationStyle = `
+  @keyframes gradient-x {
+    0%, 100% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+  }
+  .animate-gradient-x {
+    background-size: 200% 200%;
+    animation: gradient-x 15s ease infinite;
+  }
+`
 
 interface UserProfile {
   firstName: string
@@ -50,16 +88,29 @@ const passwordSchema = z
     confirmNewPassword: z.string(),
   })
   .refine((data) => data.newPassword === data.confirmNewPassword, {
-    message: "Passwords do not match",
+    message: "Passwords don't match",
     path: ["confirmNewPassword"],
   })
 
 function LoadingSpinner() {
+  const { collapsed } = useSidebar()
+  const { userRole } = useUser()
+  
+  const getContentMargin = () => {
+    if (userRole === 'OFFICE_ADMIN') {
+      return collapsed ? 'ml-20' : 'ml-72'
+    }
+    return collapsed ? 'ml-18' : 'ml-64'
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="flex flex-col items-center gap-2">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#8B0000] border-t-transparent"></div>
-        <div className="text-[#8B0000] font-medium">Loading your profile...</div>
+    <div className="min-h-screen flex bg-[#f5f5f5]">
+      {userRole === 'OFFICE_ADMIN' ? <OfficeAdminSidebar /> : <Sidebar />}
+      <div className={`flex-1 flex items-center justify-center transition-all duration-300 ${getContentMargin()}`}>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#800000] mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading your profile...</p>
+        </div>
       </div>
     </div>
   )
@@ -67,35 +118,12 @@ function LoadingSpinner() {
 
 function ResetPasswordSection({ authProvider }: { authProvider?: string }) {
   const [open, setOpen] = useState(false)
-
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState("")
   const [error, setError] = useState("")
   const [showCurrent, setShowCurrent] = useState(false)
   const [showNew, setShowNew] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
-
-  if (authProvider === "microsoft") {
-    return (
-      <div className="mt-6">
-        <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xl font-semibold text-[#8B0000] flex items-center gap-2">
-              <History size={20} className="text-[#8B0000]" />
-              Password Management
-            </h3>
-          </div>
-          <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-4 rounded flex items-start gap-2">
-            <AlertTriangle size={20} className="text-yellow-600 mt-0.5" />
-            <div>
-              <p className="font-medium">Password change is not allowed</p>
-              <p className="text-sm">Microsoft OAuth accounts must change their password through Microsoft.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
 
   const form = usePasswordForm({
     resolver: zodPasswordResolver(passwordSchema),
@@ -141,12 +169,36 @@ function ResetPasswordSection({ authProvider }: { authProvider?: string }) {
     }
   }
 
+  if (authProvider === "microsoft") {
+    return (
+      <Card className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden mb-6">
+        <div className="p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-xl font-semibold text-[#800000] flex items-center gap-2">
+              <Lock size={20} className="text-[#800000]" />
+              Password Management
+            </h3>
+          </div>
+          <div className="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-lg flex items-start gap-3">
+            <div className="bg-amber-100 p-2 rounded-full">
+              <AlertTriangle size={20} className="text-amber-600" />
+            </div>
+            <div>
+              <p className="font-medium">Password change is not allowed</p>
+              <p className="text-sm">Microsoft OAuth accounts must change their password through Microsoft.</p>
+            </div>
+          </div>
+        </div>
+      </Card>
+    )
+  }
+
   return (
-    <div className="mt-6">
-      <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
+    <Card className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden mb-6">
+      <div className="p-6">
         <div className="flex justify-between items-center">
-          <h3 className="text-xl font-semibold text-[#8B0000] flex items-center gap-2">
-            <History size={20} className="text-[#8B0000]" />
+          <h3 className="text-xl font-semibold text-[#800000] flex items-center gap-2">
+            <Lock size={20} className="text-[#800000]" />
             Password Management
           </h3>
           <Dialog
@@ -161,11 +213,14 @@ function ResetPasswordSection({ authProvider }: { authProvider?: string }) {
             }}
           >
             <DialogTrigger asChild>
-              <Button className="bg-[#8B0000] hover:bg-[#6B0000]">Reset Password</Button>
+              <Button className="bg-[#800000] hover:bg-[#600000] text-white">
+                <Lock className="mr-2 h-4 w-4" /> Reset Password
+              </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle className="text-[#8B0000]">Reset Your Password</DialogTitle>
+            <DialogContent className="sm:max-w-md border border-[#D4AF37]/30 bg-white">
+              <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#800000] via-[#D4AF37] to-[#800000] animate-gradient-x"></div>
+              <DialogHeader className="space-y-3">
+                <DialogTitle className="text-[#800000] text-xl">Reset Your Password</DialogTitle>
                 <DialogDescription>
                   Enter your current password and a new password to update your credentials.
                 </DialogDescription>
@@ -184,7 +239,7 @@ function ResetPasswordSection({ authProvider }: { authProvider?: string }) {
                               type={showCurrent ? "text" : "password"}
                               {...field}
                               autoComplete="current-password"
-                              className="pr-10"
+                              className="pr-10 border-[#D4AF37]/40 focus-visible:ring-[#D4AF37]/60 transition-all"
                             />
                             <button
                               type="button"
@@ -212,7 +267,7 @@ function ResetPasswordSection({ authProvider }: { authProvider?: string }) {
                               type={showNew ? "text" : "password"}
                               {...field}
                               autoComplete="new-password"
-                              className="pr-10"
+                              className="pr-10 border-[#D4AF37]/40 focus-visible:ring-[#D4AF37]/60 transition-all"
                             />
                             <button
                               type="button"
@@ -240,7 +295,7 @@ function ResetPasswordSection({ authProvider }: { authProvider?: string }) {
                               type={showConfirm ? "text" : "password"}
                               {...field}
                               autoComplete="new-password"
-                              className="pr-10"
+                              className="pr-10 border-[#D4AF37]/40 focus-visible:ring-[#D4AF37]/60 transition-all"
                             />
                             <button
                               type="button"
@@ -257,19 +312,23 @@ function ResetPasswordSection({ authProvider }: { authProvider?: string }) {
                     )}
                   />
                   {success && (
-                    <div className="bg-green-50 border border-green-100 text-green-600 p-3 rounded-md flex items-center gap-2">
-                      <Check size={18} />
+                    <div className="bg-green-50 border border-green-200 text-green-600 p-3 rounded-md flex items-center gap-2">
+                      <div className="bg-green-100 p-1 rounded-full">
+                        <Check size={16} />
+                      </div>
                       {success}
                     </div>
                   )}
                   {error && (
-                    <div className="bg-red-50 border border-red-100 text-red-600 p-3 rounded-md flex items-center gap-2">
-                      <X size={18} />
+                    <div className="bg-red-50 border border-red-200 text-red-600 p-3 rounded-md flex items-center gap-2">
+                      <div className="bg-red-100 p-1 rounded-full">
+                        <X size={16} />
+                      </div>
                       {error}
                     </div>
                   )}
                   <div className="flex justify-end pt-2">
-                    <Button type="submit" className="bg-[#8B0000] hover:bg-[#6B0000] text-white" disabled={loading}>
+                    <Button type="submit" className="bg-[#800000] hover:bg-[#600000] text-white" disabled={loading}>
                       {loading ? (
                         <>
                           <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
@@ -289,14 +348,26 @@ function ResetPasswordSection({ authProvider }: { authProvider?: string }) {
           For security reasons, we recommend changing your password regularly.
         </p>
       </div>
-    </div>
+    </Card>
   )
 }
 
+// Add this helper function at the top level
+const formatRole = (role: string) => {
+  if (!role) return "Regular User";
+  return role
+    .split("_")
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+};
+
 function ProfileContent({ user }: { user: UserProfile }) {
+  const { collapsed } = useSidebar()
+  const { userRole } = useUser()
   const router = useRouter()
   const [isEditing, setIsEditing] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
 
   useEffect(() => {
     console.log("Current user role:", user.role)
@@ -345,114 +416,185 @@ function ProfileContent({ user }: { user: UserProfile }) {
     }
   }
 
+  const getContentMargin = () => {
+    if (userRole === 'OFFICE_ADMIN') {
+      return collapsed ? 'ml-20' : 'ml-72'
+    }
+    return collapsed ? 'ml-18' : 'ml-64'
+  }
+
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-gray-50">
-      {/* Render appropriate sidebar based on user role */}
-      {user.role === "OFFICE_ADMIN" ? <OfficeAdminSidebar /> : <Sidebar />}
+    <div className="min-h-screen bg-[#f5f5f5]">
+      {userRole === 'OFFICE_ADMIN' ? <OfficeAdminSidebar /> : <Sidebar />}
+      <div className={`transition-all duration-300 ${getContentMargin()}`}>
+        <Navbar title="Profile" subtitle="Manage your account settings and preferences" />
+        <main className="p-6 pt-24">
+          {/* User Profile Header Card */}
+          <Card className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden mb-6">
+            <div className="bg-gradient-to-r from-[#800000] via-[#9a0000] to-[#800000] text-white p-6 relative">
+              {/* Decorative elements */}
+              <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
+              <div className="absolute bottom-0 left-0 w-64 h-64 bg-[#D4AF37]/10 rounded-full translate-y-1/2 -translate-x-1/2"></div>
+              <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNEMUFGMzciIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzRjMC0yLjIgMS44LTQgNC00czQgMS44IDQgNC0xLjggNC00IDQtNC0xLjgtNC00eiIvPjwvZz48L2c+PC9zdmc+')] opacity-20"></div>
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
 
-      {/* Main Content */}
-      <div className="flex-1 overflow-auto">
-        <header className="bg-white shadow sticky top-0 z-10">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div>
-                <h1 className="text-2xl font-bold text-[#8B0000]">{isEditing ? "Edit Profile" : "User Profile"}</h1>
-              </div>
-              <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
-                <div className="relative w-full sm:w-64">
-                  <Input type="text" placeholder="Search incidents..." className="pl-4 pr-10" />
-                </div>
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                  <Button className="bg-[#8B0000] hover:bg-[#6B0000] w-full sm:w-auto">+ Report New Incident</Button>
-                  <Button variant="outline" size="icon" className="flex-shrink-0">
-                  <Bell size={20} />
-                </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 space-y-6">
-          <div className="bg-gradient-to-r from-[#8B0000] to-[#6B0000] text-white p-6 rounded-t-lg shadow">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className="bg-white rounded-full p-1 hidden sm:block">
-                  <div className="h-16 w-16 rounded-full bg-gray-200 flex items-center justify-center text-[#8B0000] font-bold text-xl">
-                    {user.firstName.charAt(0)}
-                    {user.lastName.charAt(0)}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 relative z-10">
+                <div className="flex items-center gap-5">
+                  <div className="bg-gradient-to-br from-[#D4AF37]/80 to-[#D4AF37]/40 rounded-full p-1 hidden sm:block shadow-lg">
+                    <div className="h-20 w-20 rounded-full bg-white flex items-center justify-center text-[#800000] font-bold text-2xl shadow-inner border-2 border-[#D4AF37]/20">
+                      {user.firstName.charAt(0)}
+                      {user.lastName.charAt(0)}
+                    </div>
+                  </div>
+                  <div>
+                    <h2 className="text-3xl font-bold flex items-center gap-3">
+                      {user.firstName} {user.lastName}
+                      {typeof user.points === "number" && (
+                        <span className="bg-gradient-to-r from-[#D4AF37] to-[#FFD700] text-[#800000] px-4 py-1 rounded-full text-sm font-semibold flex items-center gap-1 shadow-md border border-[#D4AF37]/50">
+                          <Award className="h-4 w-4 text-yellow-600" />
+                          {user.points} pts
+                        </span>
+                      )}
+                    </h2>
+                    <p className="text-sm opacity-90 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mt-1">
+                      <span className="flex items-center gap-1">
+                        <Mail className="h-3.5 w-3.5 text-white/70" />
+                        {user.email}
+                      </span>
+                      <span className="hidden sm:inline text-white/50">•</span>
+                      <span className="capitalize bg-white/20 px-3 py-1 rounded-full text-xs inline-flex items-center gap-1 shadow-sm">
+                        <Shield className="h-3 w-3" />
+                        {formatRole(user.role)}
+                      </span>
+                    </p>
+                    <p className="text-xs mt-1.5 opacity-75 flex items-center gap-1">
+                      <span className="bg-white/10 px-2 py-0.5 rounded">ID: {user.schoolIdNumber}</span>
+                    </p>
                   </div>
                 </div>
-                <div>
-                  <h2 className="text-2xl font-bold flex items-center gap-3">
-                    {user.firstName} {user.lastName}
-                    {typeof user.points === 'number' && (
-                      <span className="bg-yellow-200 text-yellow-800 px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                        {user.points} pts
-                      </span>
-                    )}
-                  </h2>
-                  <p className="text-sm opacity-90 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                    <span>{user.email}</span>
-                    <span className="hidden sm:inline">•</span>
-                    <span className="capitalize bg-white/20 px-2 py-0.5 rounded text-xs inline-block">
-                      {user.role
-                        ? user.role
-                            .split("_")
-                            .map((word) => word.toLowerCase())
-                            .join(" ")
-                        : "regular user"}
-                  </span>
-                </p>
-                  <p className="text-xs mt-1 opacity-75">ID: {user.schoolIdNumber}</p>
+                {isEditing && (
+                  <div className="flex items-center space-x-2 w-full sm:w-auto">
+                    <Button
+                      onClick={form.handleSubmit(onSubmit)}
+                      disabled={isSubmitting}
+                      className="bg-white text-[#800000] hover:bg-gray-100 w-full sm:w-auto shadow-md"
+                      size="sm"
+                    >
+                      <Save className="w-4 h-4 mr-1" />
+                      Save Changes
+                    </Button>
+                    <Button
+                      onClick={handleCancel}
+                      variant="outline"
+                      className="border-white text-black/70 hover:bg-white/20 hover:text-white w-full sm:w-auto"
+                      size="sm"
+                    >
+                      <X className="w-4 h-4 mr-1" />
+                      Cancel
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </Card>
+
+          {/* Stats Section */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <Card className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+              <div className="p-4 flex items-center">
+                <div className="mr-4 bg-[#800000] p-3 rounded-full flex-shrink-0">
+                  <User className="h-6 w-6 text-white" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-gray-500 mb-1">Account Type</p>
+                  <p className="text-lg font-bold break-words">
+                    {formatRole(user.role)}
+                  </p>
                 </div>
               </div>
-              {isEditing && (
-                <div className="flex items-center space-x-2 w-full sm:w-auto">
-                  <Button
-                    onClick={form.handleSubmit(onSubmit)}
-                    disabled={isSubmitting}
-                    className="bg-white text-[#8B0000] hover:bg-gray-100 w-full sm:w-auto"
-                    size="sm"
-                  >
-                    <Check className="w-4 h-4 mr-1" />
-                    Save Changes
-                  </Button>
-                  <Button
-                    onClick={handleCancel}
-                    variant="outline"
-                    className="border-white text-white hover:bg-white/20 w-full sm:w-auto"
-                    size="sm"
-                  >
-                    <X className="w-4 h-4 mr-1" />
-                    Cancel
-                  </Button>
+            </Card>
+
+            <Card className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+              <div className="p-4 flex items-center">
+                <div className="mr-4 bg-[#D4AF37]/20 p-3 rounded-full flex-shrink-0">
+                  <Mail className="h-6 w-6 text-[#D4AF37]" />
                 </div>
-              )}
-            </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-gray-500 mb-1">Email</p>
+                  <p className="text-lg font-bold break-words">
+                    {user.email}
+                  </p>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+              <div className="p-4 flex items-center">
+                <div className="mr-4 bg-gray-50 p-3 rounded-full flex-shrink-0">
+                  <Phone className="h-6 w-6 text-gray-500" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-gray-500 mb-1">Contact</p>
+                  <p className="text-lg font-bold break-words">
+                    {user.contactNumber}
+                  </p>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+              <div className="p-4 flex items-center">
+                <div className="mr-4 bg-[#800000]/10 p-3 rounded-full flex-shrink-0">
+                  <Shield className="h-6 w-6 text-[#800000]" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-gray-500 mb-1">Status</p>
+                  <p className="text-lg font-bold flex items-center">
+                    <span className="h-2 w-2 bg-green-500 rounded-full mr-2"></span>
+                    Active
+                  </p>
+                </div>
+              </div>
+            </Card>
           </div>
 
-          <div className="bg-white p-6 rounded-b-lg shadow">
-            <Form {...form}>
-              <form className="space-y-8">
-                <section className="bg-gray-50 p-4 rounded-lg border border-gray-100">
-                  <h3 className="text-xl font-semibold text-[#8B0000] mb-4 flex items-center gap-2">
-                    <FileText size={20} className="text-[#8B0000]" />
-                    Personal Information
-                  </h3>
+          {/* Personal Information Section */}
+          <Card className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden mb-6">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-semibold text-[#800000] flex items-center gap-2">
+                  <User className="h-5 w-5 text-[#800000]" />
+                  Personal Information
+                </h3>
+                {!isEditing && (
+                  <Button onClick={() => setIsEditing(true)} className="bg-[#800000] hover:bg-[#600000] text-white">
+                    <Edit3 size={16} className="mr-2" />
+                    Edit Profile
+                  </Button>
+                )}
+              </div>
+
+              <Form {...form}>
+                <form className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField
                       control={form.control}
                       name="firstName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-gray-700">First Name</FormLabel>
+                          <FormLabel className="text-gray-700 flex items-center gap-1.5">
+                            <User className="h-3.5 w-3.5 text-[#800000]/70" />
+                            First Name
+                          </FormLabel>
                           <FormControl>
                             <Input
                               {...field}
                               disabled={!isEditing}
-                              className={!isEditing ? "bg-white border-gray-200" : ""}
+                              className={`${
+                                !isEditing
+                                  ? "bg-white border-gray-200 text-gray-700"
+                                  : "border-[#D4AF37]/40 focus-visible:ring-[#D4AF37]/60"
+                              } transition-all`}
                             />
                           </FormControl>
                           <FormMessage />
@@ -464,12 +606,19 @@ function ProfileContent({ user }: { user: UserProfile }) {
                       name="lastName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-gray-700">Last Name</FormLabel>
+                          <FormLabel className="text-gray-700 flex items-center gap-1.5">
+                            <User className="h-3.5 w-3.5 text-[#800000]/70" />
+                            Last Name
+                          </FormLabel>
                           <FormControl>
                             <Input
                               {...field}
                               disabled={!isEditing}
-                              className={!isEditing ? "bg-white border-gray-200" : ""}
+                              className={`${
+                                !isEditing
+                                  ? "bg-white border-gray-200 text-gray-700"
+                                  : "border-[#D4AF37]/40 focus-visible:ring-[#D4AF37]/60"
+                              } transition-all`}
                             />
                           </FormControl>
                           <FormMessage />
@@ -481,13 +630,20 @@ function ProfileContent({ user }: { user: UserProfile }) {
                       name="middleInitial"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-gray-700">Middle Initial</FormLabel>
+                          <FormLabel className="text-gray-700 flex items-center gap-1.5">
+                            <User className="h-3.5 w-3.5 text-[#800000]/70" />
+                            Middle Initial
+                          </FormLabel>
                           <FormControl>
                             <Input
                               {...field}
                               disabled={!isEditing}
                               maxLength={1}
-                              className={!isEditing ? "bg-white border-gray-200" : ""}
+                              className={`${
+                                !isEditing
+                                  ? "bg-white border-gray-200 text-gray-700"
+                                  : "border-[#D4AF37]/40 focus-visible:ring-[#D4AF37]/60"
+                              } transition-all`}
                             />
                           </FormControl>
                           <FormMessage />
@@ -499,12 +655,19 @@ function ProfileContent({ user }: { user: UserProfile }) {
                       name="contactNumber"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-gray-700">Contact Number</FormLabel>
+                          <FormLabel className="text-gray-700 flex items-center gap-1.5">
+                            <Phone className="h-3.5 w-3.5 text-[#800000]/70" />
+                            Contact Number
+                          </FormLabel>
                           <FormControl>
                             <Input
                               {...field}
                               disabled={!isEditing}
-                              className={!isEditing ? "bg-white border-gray-200" : ""}
+                              className={`${
+                                !isEditing
+                                  ? "bg-white border-gray-200 text-gray-700"
+                                  : "border-[#D4AF37]/40 focus-visible:ring-[#D4AF37]/60"
+                              } transition-all`}
                             />
                           </FormControl>
                           <FormMessage />
@@ -512,85 +675,58 @@ function ProfileContent({ user }: { user: UserProfile }) {
                       )}
                     />
                   </div>
-                </section>
+                </form>
+              </Form>
+            </div>
+          </Card>
 
-                <section className="bg-gray-50 p-4 rounded-lg border border-gray-100">
-                  <h3 className="text-xl font-semibold text-[#8B0000] mb-4 flex items-center gap-2">
-                    <Settings size={20} className="text-[#8B0000]" />
-                    Account Information
-                  </h3>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Institutional Email</label>
-                      <Input value={user.email} disabled className="mt-1 bg-white border-gray-200" />
-                      <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
-                        <AlertTriangle size={14} />
-                        Email cannot be changed
-                      </p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Role</label>
-                      <Input 
-                        value={
-                          user.role
-                            ? user.role
-                                .split("_")
-                                .map((word) => word.toLowerCase())
-                                .join(" ")
-                            : "regular user"
-                        }
-                        disabled 
-                        className="mt-1 bg-white border-gray-200"
-                      />
-                      <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
-                        <AlertTriangle size={14} />
-                        Role is assigned by the system
-                      </p>
-                    </div>
-                  </div>
-                </section>
+          {/* Account Information Section */}
+          <Card className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden mb-6">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-semibold text-[#800000] flex items-center gap-2">
+                  <Shield className="h-5 w-5 text-[#800000]" />
+                  Account Information
+                </h3>
+              </div>
+              <div className="space-y-5">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 flex items-center gap-1.5 mb-1.5">
+                    <Mail className="h-3.5 w-3.5 text-[#800000]/70" />
+                    Institutional Email
+                  </label>
+                  <Input value={user.email} disabled className="bg-white border-gray-200 text-gray-500" />
+                  <p className="text-sm text-gray-500 mt-1.5 flex items-center gap-1">
+                    <AlertTriangle size={14} className="text-amber-500" />
+                    Email cannot be changed
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 flex items-center gap-1.5 mb-1.5">
+                    <Shield className="h-3.5 w-3.5 text-[#800000]/70" />
+                    Role
+                  </label>
+                  <Input
+                    value={formatRole(user.role)}
+                    disabled
+                    className="bg-white border-gray-200 text-gray-500"
+                  />
+                  <p className="text-sm text-gray-500 mt-1.5 flex items-center gap-1">
+                    <AlertTriangle size={14} className="text-amber-500" />
+                    Role is assigned by the system
+                  </p>
+                </div>
+              </div>
+            </div>
+          </Card>
 
-                {!isEditing && (
-                  <div className="flex justify-end space-x-4">
-                    <Button onClick={() => setIsEditing(true)} className="bg-[#8B0000] hover:bg-[#6B0000]">
-                      <Settings size={16} className="mr-2" />
-                      Edit Profile
-                    </Button>
-                  </div>
-                )}
-              </form>
-            </Form>
-          </div>
-
+          {/* Password Management Section */}
           <ResetPasswordSection authProvider={user.authProvider} />
         </main>
       </div>
-    </div>
-  )
-}
-
-function ProfileSkeleton() {
-  return (
-    <div className="flex-1 p-8">
-      <div className="max-w-3xl mx-auto">
-        <div className="animate-pulse space-y-6">
-          <div className="h-8 w-1/3 bg-gray-200 rounded mb-4" />
-          <div className="bg-white p-6 rounded-lg shadow space-y-6">
-            <div className="h-6 w-1/4 bg-gray-200 rounded mb-2" />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="h-10 bg-gray-200 rounded" />
-              <div className="h-10 bg-gray-200 rounded" />
-              <div className="h-10 bg-gray-200 rounded" />
-              <div className="h-10 bg-gray-200 rounded" />
-            </div>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow space-y-4">
-            <div className="h-6 w-1/4 bg-gray-200 rounded mb-2" />
-            <div className="h-10 bg-gray-200 rounded w-1/2" />
-            <div className="h-10 bg-gray-200 rounded w-1/2" />
-          </div>
-        </div>
-      </div>
+      <style jsx global>
+        {gradientAnimationStyle}
+      </style>
     </div>
   )
 }
@@ -599,6 +735,7 @@ export default function ProfilePage() {
   const router = useRouter()
   const [user, setUser] = useState<UserProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const token = Cookies.get("token")
@@ -628,6 +765,7 @@ export default function ProfilePage() {
       setUser(data)
     } catch (error) {
       console.error("Error fetching user profile:", error)
+      setError(error instanceof Error ? error.message : "Failed to load profile data")
       router.push("/login")
     } finally {
       setIsLoading(false)
@@ -635,10 +773,23 @@ export default function ProfilePage() {
   }
 
   if (isLoading) {
+    return <LoadingSpinner />
+  }
+
+  if (error) {
     return (
-      <div className="min-h-screen flex">
+      <div className="min-h-screen flex bg-[#f5f5f5]">
         <Sidebar />
-        <ProfileSkeleton />
+        <div className="flex-1 p-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="h-6 w-6 text-red-500" />
+                <p className="text-red-700 font-medium">{error}</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     )
   }
@@ -649,4 +800,4 @@ export default function ProfilePage() {
   }
 
   return <ProfileContent user={user} />
-} 
+}

@@ -19,21 +19,19 @@ import {
   Eye,
   EyeOff,
   Loader2,
-  CheckCircle,
   ChevronLeft,
-  AlertCircle,
   ArrowRightLeft,
   Info,
+  Tag,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { OfficeAdminSidebar } from "@/components/OfficeAdminSidebar"
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
+import { OfficeAdminNavbar } from "@/components/OfficeAdminNavbar"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
 import { Toaster } from "sonner"
-import { use } from "react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -48,7 +46,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { API_BASE_URL } from "@/utils/api"
 import { RatingModal } from "@/components/RatingModal"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { useSidebar } from "@/contexts/SidebarContext"
+import { motion } from "framer-motion"
+import { Inter } from "next/font/google"
+
+const inter = Inter({ subsets: ["latin"] })
 
 interface IncidentUpdate {
   id: number
@@ -93,6 +95,7 @@ interface TransferRequest {
 export default function UpdateApprovedCasePage() {
   const params = useParams()
   const router = useRouter()
+  const { collapsed } = useSidebar()
   const [incident, setIncident] = useState<Incident | null>(null)
   const [updates, setUpdates] = useState<IncidentUpdate[]>([])
   const [loading, setLoading] = useState(true)
@@ -445,7 +448,7 @@ export default function UpdateApprovedCasePage() {
 
       const transferRequest: TransferRequest = {
         newOffice: selectedOffice,
-        transferNotes: transferNotes
+        transferNotes: transferNotes,
       }
 
       const response = await fetch(`${API_BASE_URL}/api/incidents/${params.id}/transfer`, {
@@ -483,28 +486,28 @@ export default function UpdateApprovedCasePage() {
   // Fetch offices when transfer modal is opened
   useEffect(() => {
     if (showTransferModal) {
-      setOfficesLoading(true);
+      setOfficesLoading(true)
       fetch(`${API_BASE_URL}/api/offices`)
-        .then(res => res.json())
-        .then(data => {
-          setOffices(data);
-          setOfficesLoading(false);
+        .then((res) => res.json())
+        .then((data) => {
+          setOffices(data)
+          setOfficesLoading(false)
         })
-        .catch(err => {
-          setOfficesError('Failed to load offices');
-          setOfficesLoading(false);
-        });
+        .catch((err) => {
+          setOfficesError("Failed to load offices")
+          setOfficesLoading(false)
+        })
     }
-  }, [showTransferModal]);
+  }, [showTransferModal])
 
   const handleRatingSuccess = () => {
-    setShowRatingModal(false);
-    setShowSuccessDialog(true);
+    setShowRatingModal(false)
+    setShowSuccessDialog(true)
   }
 
   const handleCloseSuccessDialog = () => {
-    setShowSuccessDialog(false);
-    router.push('/office-admin/dashboard');
+    setShowSuccessDialog(false)
+    router.push("/office-admin/dashboard")
   }
 
   // Efficiently handle status change
@@ -521,12 +524,18 @@ export default function UpdateApprovedCasePage() {
 
   if (loading) {
     return (
-      <div className="flex h-screen">
+      <div className="min-h-screen flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9]">
         <OfficeAdminSidebar />
-        <div className="flex-1 flex items-center justify-center bg-gray-50">
-          <div className="flex flex-col items-center gap-2">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-sm text-muted-foreground">Loading case details...</p>
+        <div
+          className={`flex-1 flex items-center justify-center transition-all duration-300 ${collapsed ? "ml-[5rem]" : "ml-64"}`}
+        >
+          <div className="text-center">
+            <div className="relative w-20 h-20 mx-auto">
+              <div className="absolute inset-0 rounded-full border-t-2 border-b-2 border-[#8B0000] animate-spin"></div>
+              <div className="absolute inset-2 rounded-full border-r-2 border-l-2 border-[#DAA520] animate-spin animation-delay-150"></div>
+              <div className="absolute inset-4 rounded-full border-t-2 border-b-2 border-[#8B0000] animate-spin animation-delay-300"></div>
+            </div>
+            <p className="mt-6 text-gray-600 font-medium">Loading case details...</p>
           </div>
         </div>
       </div>
@@ -535,17 +544,26 @@ export default function UpdateApprovedCasePage() {
 
   if (error || !incident) {
     return (
-      <div className="flex h-screen">
+      <div className="min-h-screen flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9]">
         <OfficeAdminSidebar />
-        <div className="flex-1 p-8 bg-gray-50">
+        <div className={`flex-1 p-8 transition-all duration-300 ${collapsed ? "ml-[5rem]" : "ml-64"}`}>
           <div className="max-w-7xl mx-auto">
-            <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-6 flex flex-col items-center justify-center">
-              <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
-              <h3 className="text-lg font-semibold text-destructive mb-2">Error Loading Case</h3>
-              <p className="text-center text-muted-foreground">{error || "Incident not found"}</p>
-              <Button variant="outline" className="mt-4" onClick={() => router.push("/office-admin/approved-cases")}>
-                Return to Case List
-              </Button>
+            <div className="bg-red-50 border border-red-200 rounded-lg p-6 shadow-sm">
+              <div className="flex items-start gap-4">
+                <div className="bg-red-100 p-3 rounded-full">
+                  <AlertTriangle className="h-6 w-6 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-red-800 mb-2">Error Loading Case</h3>
+                  <p className="text-red-700">{error || "Incident not found"}</p>
+                  <Button
+                    className="mt-4 bg-[#8B0000] hover:bg-[#6B0000] text-white"
+                    onClick={() => router.push("/office-admin/approved-cases")}
+                  >
+                    <ChevronLeft className="mr-2 h-4 w-4" /> Return to Case List
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -564,7 +582,7 @@ export default function UpdateApprovedCasePage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "Pending":
-        return "bg-amber-100 text-amber-800 border-amber-200"
+        return "bg-yellow-100 text-yellow-800 border-yellow-200"
       case "In Progress":
         return "bg-blue-100 text-blue-800 border-blue-200"
       case "Resolved":
@@ -581,7 +599,7 @@ export default function UpdateApprovedCasePage() {
       case "HIGH":
         return "bg-red-100 text-red-800 border-red-200"
       case "MEDIUM":
-        return "bg-amber-100 text-amber-800 border-amber-200"
+        return "bg-orange-100 text-orange-800 border-orange-200"
       case "LOW":
         return "bg-green-100 text-green-800 border-green-200"
       default:
@@ -592,371 +610,435 @@ export default function UpdateApprovedCasePage() {
   return (
     <>
       <Toaster richColors position="top-center" />
-      <div className="flex h-screen">
+      <div className={`min-h-screen flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9] ${inter.className}`}>
         <OfficeAdminSidebar />
-        <div className="flex-1 overflow-auto bg-gray-50">
-          <div className="p-4 md:p-8">
-            <div className="max-w-7xl mx-auto">
-              {/* Breadcrumb and Header */}
-              <div className="mb-6">
-                <div className="flex items-center text-sm text-muted-foreground mb-4">
-                  <Link href="/office-admin/approved-cases" className="hover:text-primary transition-colors">
-                    Approved Case Tracker
-                  </Link>
-                  <ChevronRight className="h-4 w-4 mx-2" />
-                  <span>Update Incident</span>
-                </div>
+        <OfficeAdminNavbar
+          title="Update Case"
+          subtitle="Manage and update incident case details"
+          showSearch={false}
+          showQuickActions={true}
+        />
 
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h1 className="text-2xl font-bold text-gray-900">Case #{incident.trackingNumber}</h1>
-                      <Badge className={`${getStatusColor(incident.status)} border`}>{incident.status}</Badge>
-                    </div>
-                    <div className="flex items-center gap-2 mt-2">
-                      <Badge variant="outline" className="bg-gray-50">
-                        {incident.incidentType}
-                      </Badge>
-                      <Badge className={`${getPriorityColor(incident.priorityLevel)} border`}>
-                        {incident.priorityLevel} Priority
-                      </Badge>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      className="border-[#8B0000] text-[#8B0000] hover:bg-[#8B0000] hover:text-white"
-                      onClick={() => setShowTransferModal(true)}
-                    >
-                      <ArrowRightLeft className="h-4 w-4 mr-2" />
-                      Transfer Case
-                    </Button>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            onClick={() => setIsResolveDialogOpen(true)}
-                            disabled={status === "Resolved" || status === "Dismissed" || isSending}
-                            className="bg-green-600 hover:bg-green-700 text-white"
-                            size="sm"
-                          >
-                            <CheckCircle2 className="h-4 w-4 mr-2" />
-                            <span className="hidden sm:inline">Mark as Resolved</span>
-                            <span className="sm:hidden">Resolve</span>
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Mark this case as resolved</TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            onClick={() => setIsCloseDialogOpen(true)}
-                            disabled={status === "Dismissed" || isSending}
-                            variant="destructive"
-                            size="sm"
-                          >
-                            <XCircle className="h-4 w-4 mr-2" />
-                            <span className="hidden sm:inline">Close Case</span>
-                            <span className="sm:hidden">Close</span>
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Close and dismiss this case</TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                </div>
+        <div className={`flex-1 overflow-auto transition-all duration-300 ${collapsed ? "ml-[5rem]" : "ml-64"} pt-24`}>
+          <div className={`p-6 -mt-3 mx-8 ${collapsed ? "max-w-[95vw]" : "max-w-[calc(100vw-8rem)]"}`}>
+            {/* Breadcrumb and Header */}
+            <div className="mb-6">
+              <div className="flex items-center text-sm text-gray-500 mb-4">
+                <Link
+                  href="/office-admin/approved-cases"
+                  className="hover:text-[#8B0000] transition-colors font-medium"
+                >
+                  Approved Case Tracker
+                </Link>
+                <ChevronRight className="h-4 w-4 mx-2" />
+                <span>Update Case</span>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2 space-y-6">
-                  {/* Incident Summary */}
-                  <Card>
-                    <CardHeader className="bg-gray-50 border-b pb-3">
-                      <CardTitle className="text-base font-medium flex items-center">
-                        <FileText className="h-4 w-4 mr-2 text-primary" />
-                        Incident Summary
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-4">
-                          <div>
-                            <h3 className="text-sm font-medium text-muted-foreground mb-1 flex items-center">
-                              <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
-                              Date & Time
-                            </h3>
-                            <p className="text-sm font-medium">
-                              {formatDate(incident.dateOfIncident)} at {incident.timeOfIncident}
-                            </p>
-                          </div>
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h1 className="text-2xl font-bold text-[#8B0000]">Case #{incident.trackingNumber}</h1>
+                    <Badge className={`${getStatusColor(incident.status)} border`}>{incident.status}</Badge>
+                  </div>
+                  <div className="flex items-center gap-2 mt-2">
+                    <Badge variant="outline" className="bg-[#8B0000]/5 text-[#8B0000] border-[#DAA520]/30">
+                      {incident.incidentType}
+                    </Badge>
+                    <Badge className={`${getPriorityColor(incident.priorityLevel)} border`}>
+                      {incident.priorityLevel} Priority
+                    </Badge>
+                  </div>
+                </div>
 
-                          <div>
-                            <h3 className="text-sm font-medium text-muted-foreground mb-1 flex items-center">
-                              <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
-                              Location
-                            </h3>
-                            <p className="text-sm font-medium">{incident.location}</p>
-                          </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="border-[#DAA520]/30 text-[#8B0000] hover:bg-[#8B0000] hover:text-white"
+                    onClick={() => setShowTransferModal(true)}
+                  >
+                    <ArrowRightLeft className="h-4 w-4 mr-2" />
+                    Transfer Case
+                  </Button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          onClick={() => setIsResolveDialogOpen(true)}
+                          disabled={status === "Resolved" || status === "Dismissed" || isSending}
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                          size="sm"
+                        >
+                          <CheckCircle2 className="h-4 w-4 mr-2" />
+                          <span className="hidden sm:inline">Mark as Resolved</span>
+                          <span className="sm:hidden">Resolve</span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Mark this case as resolved</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          onClick={() => setIsCloseDialogOpen(true)}
+                          disabled={status === "Dismissed" || isSending}
+                          variant="destructive"
+                          size="sm"
+                        >
+                          <XCircle className="h-4 w-4 mr-2" />
+                          <span className="hidden sm:inline">Close Case</span>
+                          <span className="sm:hidden">Close</span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Close and dismiss this case</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2 space-y-6">
+                {/* Incident Summary */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden"
+                >
+                  <div className="p-4 border-b border-[#DAA520]/20">
+                    <div className="flex items-center gap-2">
+                      <div className="bg-[#8B0000]/10 p-2 rounded-lg">
+                        <FileText className="h-5 w-5 text-[#8B0000]" />
+                      </div>
+                      <h2 className="text-lg font-semibold text-[#8B0000]">Incident Summary</h2>
+                    </div>
+                  </div>
+                  <div className="p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <div>
+                          <h3 className="text-sm font-medium text-gray-500 mb-1 flex items-center">
+                            <div className="bg-[#8B0000]/10 p-1 rounded mr-2">
+                              <Calendar className="h-4 w-4 text-[#8B0000]" />
+                            </div>
+                            Date & Time
+                          </h3>
+                          <p className="text-sm font-medium text-[#8B0000]">
+                            {formatDate(incident.dateOfIncident)} at {incident.timeOfIncident}
+                          </p>
                         </div>
 
                         <div>
-                          <h3 className="text-sm font-medium text-muted-foreground mb-1">Description</h3>
-                          <div className="bg-gray-50 p-3 rounded-md border text-sm whitespace-pre-wrap max-h-[150px] overflow-y-auto">
-                            {incident.description}
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Send Update to Reporter */}
-                  <Card>
-                    <CardHeader className="bg-gray-50 border-b pb-3">
-                      <CardTitle className="text-base font-medium flex items-center">
-                        <Clock className="h-4 w-4 mr-2 text-primary" />
-                        Send Update to Reporter
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-6 space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium text-muted-foreground">Updated By</label>
-                          <Input
-                            value={updatedBy}
-                            disabled
-                            className="bg-gray-100"
-                            placeholder="Office name"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium text-muted-foreground">Status</label>
-                          <Select value={status} onValueChange={handleStatusChange}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Pending">Pending</SelectItem>
-                              <SelectItem value="In Progress">In Progress</SelectItem>
-                              <SelectItem value="Resolved">Resolved</SelectItem>
-                              <SelectItem value="Dismissed">Dismissed</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <h3 className="text-sm font-medium text-gray-500 mb-1 flex items-center">
+                            <div className="bg-[#8B0000]/10 p-1 rounded mr-2">
+                              <MapPin className="h-4 w-4 text-[#8B0000]" />
+                            </div>
+                            Location
+                          </h3>
+                          <p className="text-sm font-medium text-[#8B0000]">{incident.location}</p>
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium text-muted-foreground">Priority</label>
-                          <Select
-                            value={priorityLevel}
-                            onValueChange={(value) => setPriorityLevel(value as "HIGH" | "MEDIUM" | "LOW")}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select priority" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="HIGH" className="text-red-600 font-medium">
-                                High Priority
-                              </SelectItem>
-                              <SelectItem value="MEDIUM" className="text-amber-600 font-medium">
-                                Medium Priority
-                              </SelectItem>
-                              <SelectItem value="LOW" className="text-green-600 font-medium">
-                                Low Priority
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium text-muted-foreground">Visibility</label>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => setIsVisibleToReporter(!isVisibleToReporter)}
-                            className={`w-full justify-start ${
-                              isVisibleToReporter
-                                ? "border-green-200 bg-green-50 text-green-700 hover:bg-green-100"
-                                : "border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
-                            }`}
-                          >
-                            {isVisibleToReporter ? (
-                              <>
-                                <Eye className="h-4 w-4 mr-2" />
-                                Visible to reporter
-                              </>
-                            ) : (
-                              <>
-                                <EyeOff className="h-4 w-4 mr-2" />
-                                Not visible to reporter
-                              </>
-                            )}
-                          </Button>
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-500 mb-1">Description</h3>
+                        <div className="bg-[#8B0000]/5 p-3 rounded-md border border-[#DAA520]/20 text-sm whitespace-pre-wrap max-h-[150px] overflow-y-auto">
+                          {incident.description}
                         </div>
                       </div>
+                    </div>
+                  </div>
+                </motion.div>
 
+                {/* Send Update to Reporter */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: 0.1 }}
+                  className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden"
+                >
+                  <div className="p-4 border-b border-[#DAA520]/20">
+                    <div className="flex items-center gap-2">
+                      <div className="bg-[#8B0000]/10 p-2 rounded-lg">
+                        <Clock className="h-5 w-5 text-[#8B0000]" />
+                      </div>
+                      <h2 className="text-lg font-semibold text-[#8B0000]">Send Update to Reporter</h2>
+                    </div>
+                  </div>
+                  <div className="p-6 space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <label className="text-sm font-medium text-muted-foreground">Update Message</label>
-                        <Textarea
-                          value={updateMessage}
-                          onChange={(e) => setUpdateMessage(e.target.value)}
-                          placeholder="Provide an update on the incident investigation..."
-                          className="min-h-[120px] resize-none"
+                        <label className="text-sm font-medium text-[#8B0000]">Updated By</label>
+                        <Input
+                          value={updatedBy}
+                          disabled
+                          className="bg-[#8B0000]/5 border-[#DAA520]/20"
+                          placeholder="Office name"
                         />
                       </div>
 
-                      <div className="flex justify-end gap-3 pt-2">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-[#8B0000]">Status</label>
+                        <Select value={status} onValueChange={handleStatusChange}>
+                          <SelectTrigger className="border-[#DAA520]/20 focus:ring-[#8B0000]/20 focus:border-[#8B0000]">
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Pending">Pending</SelectItem>
+                            <SelectItem value="In Progress">In Progress</SelectItem>
+                            <SelectItem value="Resolved">Resolved</SelectItem>
+                            <SelectItem value="Dismissed">Dismissed</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-[#8B0000]">Priority</label>
+                        <Select
+                          value={priorityLevel}
+                          onValueChange={(value) => setPriorityLevel(value as "HIGH" | "MEDIUM" | "LOW")}
+                        >
+                          <SelectTrigger className="border-[#DAA520]/20 focus:ring-[#8B0000]/20 focus:border-[#8B0000]">
+                            <SelectValue placeholder="Select priority" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="HIGH" className="text-red-600 font-medium">
+                              High Priority
+                            </SelectItem>
+                            <SelectItem value="MEDIUM" className="text-orange-600 font-medium">
+                              Medium Priority
+                            </SelectItem>
+                            <SelectItem value="LOW" className="text-green-600 font-medium">
+                              Low Priority
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-[#8B0000]">Visibility</label>
                         <Button
+                          type="button"
                           variant="outline"
-                          onClick={() => {
-                            setUpdateMessage("")
-                            setUpdatedBy("")
-                            setIsVisibleToReporter(true)
-                            if (incident) {
-                              setStatus(incident.status)
-                              setPriorityLevel(incident.priorityLevel)
-                            }
-                          }}
-                          disabled={isSending}
+                          onClick={() => setIsVisibleToReporter(!isVisibleToReporter)}
+                          className={`w-full justify-start border-[#DAA520]/20 ${
+                            isVisibleToReporter
+                              ? "bg-green-50 text-green-700 hover:bg-green-100 border-green-200"
+                              : "bg-red-50 text-red-700 hover:bg-red-100 border-red-200"
+                          }`}
                         >
-                          Reset
-                        </Button>
-                        <Button
-                          onClick={handleSendUpdate}
-                          disabled={!updateMessage.trim() || !updatedBy.trim() || !status || isSending}
-                          className="bg-primary hover:bg-primary/90"
-                        >
-                          {isSending ? (
+                          {isVisibleToReporter ? (
                             <>
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                              Sending...
+                              <Eye className="h-4 w-4 mr-2" />
+                              Visible to reporter
                             </>
                           ) : (
-                            "Save Changes"
+                            <>
+                              <EyeOff className="h-4 w-4 mr-2" />
+                              Not visible to reporter
+                            </>
                           )}
                         </Button>
                       </div>
-                    </CardContent>
-                  </Card>
-                </div>
+                    </div>
 
-                <div className="space-y-6">
-                  {/* Reporter Information */}
-                  <Card>
-                    <CardHeader className="bg-gray-50 border-b pb-3">
-                      <CardTitle className="text-base font-medium flex items-center">
-                        <User className="h-4 w-4 mr-2 text-primary" />
-                        Reporter Information
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-0">
-                      <div className="divide-y">
-                        <div className="px-6 py-3 flex items-center">
-                          <User className="h-4 w-4 mr-3 text-muted-foreground" />
-                          <div>
-                            <p className="text-xs text-muted-foreground">Name</p>
-                            <p className="text-sm font-medium">{incident.submittedByFullName}</p>
-                          </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-[#8B0000]">Update Message</label>
+                      <Textarea
+                        value={updateMessage}
+                        onChange={(e) => setUpdateMessage(e.target.value)}
+                        placeholder="Provide an update on the incident investigation..."
+                        className="min-h-[120px] resize-none border-[#DAA520]/20 focus:ring-[#8B0000]/20 focus:border-[#8B0000]"
+                      />
+                    </div>
+
+                    <div className="flex justify-end gap-3 pt-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setUpdateMessage("")
+                          setUpdatedBy("")
+                          setIsVisibleToReporter(true)
+                          if (incident) {
+                            setStatus(incident.status)
+                            setPriorityLevel(incident.priorityLevel)
+                          }
+                        }}
+                        disabled={isSending}
+                        className="border-[#DAA520]/30 text-[#8B0000] hover:bg-[#8B0000]/5"
+                      >
+                        Reset
+                      </Button>
+                      <Button
+                        onClick={handleSendUpdate}
+                        disabled={!updateMessage.trim() || !updatedBy.trim() || !status || isSending}
+                        className="bg-[#8B0000] hover:bg-[#6B0000] text-white"
+                      >
+                        {isSending ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Sending...
+                          </>
+                        ) : (
+                          "Save Changes"
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+
+              <div className="space-y-6">
+                {/* Reporter Information */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: 0.2 }}
+                  className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden"
+                >
+                  <div className="p-4 border-b border-[#DAA520]/20">
+                    <div className="flex items-center gap-2">
+                      <div className="bg-[#8B0000]/10 p-2 rounded-lg">
+                        <User className="h-5 w-5 text-[#8B0000]" />
+                      </div>
+                      <h2 className="text-lg font-semibold text-[#8B0000]">Reporter Information</h2>
+                    </div>
+                  </div>
+                  <div className="p-0">
+                    <div className="divide-y divide-[#DAA520]/20">
+                      <div className="px-6 py-3 flex items-center">
+                        <div className="bg-[#8B0000]/10 p-2 rounded-lg mr-3">
+                          <User className="h-4 w-4 text-[#8B0000]" />
                         </div>
-                        <div className="px-6 py-3 flex items-center">
-                          <Mail className="h-4 w-4 mr-3 text-muted-foreground" />
-                          <div>
-                            <p className="text-xs text-muted-foreground">Email</p>
-                            <p className="text-sm font-medium">{incident.submittedByEmail}</p>
-                          </div>
-                        </div>
-                        <div className="px-6 py-3 flex items-center">
-                          <Phone className="h-4 w-4 mr-3 text-muted-foreground" />
-                          <div>
-                            <p className="text-xs text-muted-foreground">Phone</p>
-                            <p className="text-sm font-medium">{incident.submittedByPhone || "Not provided"}</p>
-                          </div>
-                        </div>
-                        <div className="px-6 py-3 flex items-center">
-                          <Briefcase className="h-4 w-4 mr-3 text-muted-foreground" />
-                          <div>
-                            <p className="text-xs text-muted-foreground">Role</p>
-                            <p className="text-sm font-medium">{incident.submittedByRole || "Student"}</p>
-                          </div>
-                        </div>
-                        <div className="px-6 py-3 flex items-center">
-                          <FileText className="h-4 w-4 mr-3 text-muted-foreground" />
-                          <div>
-                            <p className="text-xs text-muted-foreground">ID Number</p>
-                            <p className="text-sm font-medium">{incident.submittedByIdNumber || "Not provided"}</p>
-                          </div>
+                        <div>
+                          <p className="text-xs text-gray-500">Name</p>
+                          <p className="text-sm font-medium text-[#8B0000]">{incident.submittedByFullName}</p>
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Update History */}
-                  <Card>
-                    <CardHeader className="bg-gray-50 border-b pb-3">
-                      <CardTitle className="text-base font-medium flex items-center">
-                        <Clock className="h-4 w-4 mr-2 text-primary" />
-                        Update History
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-0 max-h-[500px] overflow-y-auto">
-                      {updates.length === 0 ? (
-                        <div className="p-6 text-center">
-                          <p className="text-sm text-muted-foreground">No updates yet</p>
+                      <div className="px-6 py-3 flex items-center">
+                        <div className="bg-[#8B0000]/10 p-2 rounded-lg mr-3">
+                          <Mail className="h-4 w-4 text-[#8B0000]" />
                         </div>
-                      ) : (
-                        <div className="divide-y">
-                          {updates.map((update) => (
-                            <div key={update.id} className="p-4">
-                              <div className="flex items-start gap-3">
-                                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                                  <User className="h-4 w-4 text-primary" />
+                        <div>
+                          <p className="text-xs text-gray-500">Email</p>
+                          <p className="text-sm font-medium text-[#8B0000]">{incident.submittedByEmail}</p>
+                        </div>
+                      </div>
+                      <div className="px-6 py-3 flex items-center">
+                        <div className="bg-[#8B0000]/10 p-2 rounded-lg mr-3">
+                          <Phone className="h-4 w-4 text-[#8B0000]" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500">Phone</p>
+                          <p className="text-sm font-medium text-[#8B0000]">
+                            {incident.submittedByPhone || "Not provided"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="px-6 py-3 flex items-center">
+                        <div className="bg-[#8B0000]/10 p-2 rounded-lg mr-3">
+                          <Briefcase className="h-4 w-4 text-[#8B0000]" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500">Role</p>
+                          <p className="text-sm font-medium text-[#8B0000]">{incident.submittedByRole || "Student"}</p>
+                        </div>
+                      </div>
+                      <div className="px-6 py-3 flex items-center">
+                        <div className="bg-[#8B0000]/10 p-2 rounded-lg mr-3">
+                          <Tag className="h-4 w-4 text-[#8B0000]" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500">ID Number</p>
+                          <p className="text-sm font-medium text-[#8B0000]">
+                            {incident.submittedByIdNumber || "Not provided"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+
+                {/* Update History */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: 0.3 }}
+                  className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden"
+                >
+                  <div className="p-4 border-b border-[#DAA520]/20">
+                    <div className="flex items-center gap-2">
+                      <div className="bg-[#8B0000]/10 p-2 rounded-lg">
+                        <Clock className="h-5 w-5 text-[#8B0000]" />
+                      </div>
+                      <h2 className="text-lg font-semibold text-[#8B0000]">Update History</h2>
+                    </div>
+                  </div>
+                  <div className="p-0 max-h-[500px] overflow-y-auto">
+                    {updates.length === 0 ? (
+                      <div className="p-6 text-center">
+                        <div className="w-16 h-16 bg-[#8B0000]/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <Clock className="h-8 w-8 text-[#8B0000]" />
+                        </div>
+                        <p className="text-sm text-gray-500">No updates yet</p>
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-[#DAA520]/20">
+                        {updates.map((update, index) => (
+                          <motion.div
+                            key={update.id}
+                            className="p-4"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.2, delay: index * 0.05 }}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className="h-8 w-8 rounded-full bg-[#8B0000]/10 flex items-center justify-center flex-shrink-0">
+                                <User className="h-4 w-4 text-[#8B0000]" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                                  <p className="text-sm font-medium text-[#8B0000]">
+                                    {update.updatedByName || update.updatedByFullName}
+                                  </p>
+                                  <p className="text-xs text-gray-500">{formatDateTime(update.updatedAt)}</p>
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
-                                    <p className="text-sm font-medium">
-                                      {update.updatedByName || update.updatedByFullName}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">{formatDateTime(update.updatedAt)}</p>
-                                  </div>
-                                  <div className="mt-2 text-sm text-gray-700 whitespace-pre-wrap bg-gray-50 p-3 rounded-md border">
-                                    {update.message}
-                                  </div>
-                                  <div className="mt-2">
-                                    <Badge
-                                      variant="outline"
-                                      className={`text-xs ${
-                                        update.visibleToReporter
-                                          ? "bg-green-50 text-green-600"
-                                          : "bg-red-50 text-red-600"
-                                      }`}
-                                    >
-                                      {update.visibleToReporter ? (
-                                        <>
-                                          <Eye className="inline-block h-3 w-3 mr-1" />
-                                          Visible to reporter
-                                        </>
-                                      ) : (
-                                        <>
-                                          <EyeOff className="inline-block h-3 w-3 mr-1" />
-                                          Not visible to reporter
-                                        </>
-                                      )}
-                                    </Badge>
-                                  </div>
+                                <div className="mt-2 text-sm text-gray-700 whitespace-pre-wrap bg-[#8B0000]/5 p-3 rounded-md border border-[#DAA520]/20">
+                                  {update.message}
+                                </div>
+                                <div className="mt-2">
+                                  <Badge
+                                    variant="outline"
+                                    className={`text-xs ${
+                                      update.visibleToReporter
+                                        ? "bg-green-50 text-green-600 border-green-200"
+                                        : "bg-red-50 text-red-600 border-red-200"
+                                    }`}
+                                  >
+                                    {update.visibleToReporter ? (
+                                      <>
+                                        <Eye className="inline-block h-3 w-3 mr-1" />
+                                        Visible to reporter
+                                      </>
+                                    ) : (
+                                      <>
+                                        <EyeOff className="inline-block h-3 w-3 mr-1" />
+                                        Not visible to reporter
+                                      </>
+                                    )}
+                                  </Badge>
                                 </div>
                               </div>
                             </div>
-                          ))}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
               </div>
             </div>
           </div>
@@ -1023,67 +1105,94 @@ export default function UpdateApprovedCasePage() {
 
       {/* Transfer Modal */}
       <AlertDialog open={showTransferModal} onOpenChange={setShowTransferModal}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>Transfer Case</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="text-xl font-bold text-[#8B0000]">Transfer Case</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-600">
               Transfer this case to another office. This will notify both the new office and the case reporter.
             </AlertDialogDescription>
           </AlertDialogHeader>
 
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Transfer To</label>
-              <Select value={selectedOffice} onValueChange={setSelectedOffice}>
-                <SelectTrigger>
-                  <SelectValue placeholder={officesLoading ? 'Loading offices...' : 'Select office'} />
-                </SelectTrigger>
-                <SelectContent>
-                  {officesLoading ? (
-                    <div className="px-4 py-2 text-gray-500">Loading...</div>
-                  ) : officesError ? (
-                    <div className="px-4 py-2 text-red-500">{officesError}</div>
-                  ) : (
-                    offices.map((office) => (
-                      <SelectItem key={office.code} value={office.code} className="flex items-center justify-between gap-2">
-                        <span>{office.fullName}</span>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="ml-2 cursor-pointer">
-                                <Info className="h-4 w-4 text-gray-400 hover:text-primary" />
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <div className="font-semibold">{office.fullName}</div>
-                              <div className="text-xs text-gray-500 max-w-xs whitespace-pre-line">{office.description}</div>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
+          <div className="space-y-6 py-4">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-[#8B0000] flex items-center gap-2">
+                  <ArrowRightLeft className="h-4 w-4" />
+                  Transfer To
+                </label>
+                <Select value={selectedOffice} onValueChange={setSelectedOffice}>
+                  <SelectTrigger className="border-[#DAA520]/20 focus:ring-[#8B0000]/20 focus:border-[#8B0000] h-12">
+                    <SelectValue placeholder={officesLoading ? "Loading offices..." : "Select office"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {officesLoading ? (
+                      <div className="px-4 py-2 text-gray-500">Loading...</div>
+                    ) : officesError ? (
+                      <div className="px-4 py-2 text-red-500">{officesError}</div>
+                    ) : (
+                      offices.map((office) => (
+                        <SelectItem
+                          key={office.code}
+                          value={office.code}
+                          className="flex items-center justify-between gap-2 py-3"
+                        >
+                          <span className="font-medium">{office.fullName}</span>
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {selectedOffice && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="bg-[#8B0000]/5 rounded-lg border border-[#DAA520]/20 p-4"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="bg-[#8B0000]/10 p-2 rounded-lg">
+                      <Info className="h-5 w-5 text-[#8B0000]" />
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-[#8B0000] mb-1">
+                        {offices.find(o => o.code === selectedOffice)?.fullName}
+                      </h4>
+                      <p className="text-sm text-gray-600 whitespace-pre-line">
+                        {offices.find(o => o.code === selectedOffice)?.description}
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Transfer Notes</label>
+              <label className="text-sm font-medium text-[#8B0000] flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Transfer Notes
+              </label>
               <Textarea
                 value={transferNotes}
                 onChange={(e) => setTransferNotes(e.target.value)}
                 placeholder="Provide a reason for transferring this case..."
-                className="min-h-[100px] resize-none"
+                className="min-h-[120px] resize-none border-[#DAA520]/20 focus:ring-[#8B0000]/20 focus:border-[#8B0000]"
               />
             </div>
           </div>
 
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isTransferring}>Cancel</AlertDialogCancel>
+          <AlertDialogFooter className="gap-3">
+            <AlertDialogCancel 
+              disabled={isTransferring}
+              className="border-[#DAA520]/30 text-[#8B0000] hover:bg-[#8B0000]/5"
+            >
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleTransfer}
-              disabled={isTransferring}
-              className="bg-[#8B0000] hover:bg-[#700000] text-white"
+              disabled={isTransferring || !selectedOffice}
+              className="bg-[#8B0000] hover:bg-[#6B0000] text-white"
             >
               {isTransferring ? (
                 <>
@@ -1091,7 +1200,10 @@ export default function UpdateApprovedCasePage() {
                   Transferring...
                 </>
               ) : (
-                "Transfer Case"
+                <>
+                  <ArrowRightLeft className="h-4 w-4 mr-2" />
+                  Transfer Case
+                </>
               )}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -1106,6 +1218,16 @@ export default function UpdateApprovedCasePage() {
         type="office"
         onSuccess={handleRatingSuccess}
       />
+
+      {/* Add custom styles for animation delays */}
+      <style jsx global>{`
+        .animation-delay-150 {
+          animation-delay: 150ms;
+        }
+        .animation-delay-300 {
+          animation-delay: 300ms;
+        }
+      `}</style>
     </>
   )
 }
