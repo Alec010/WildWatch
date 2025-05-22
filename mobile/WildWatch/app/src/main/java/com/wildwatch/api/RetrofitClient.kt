@@ -3,6 +3,7 @@ package com.wildwatch.api
 import android.content.Context
 import android.util.Log
 import com.google.gson.GsonBuilder
+import com.wildwatch.BuildConfig
 import com.wildwatch.network.ActivityLogService
 import com.wildwatch.network.CustomDateTypeAdapter
 import com.wildwatch.utils.TokenManager
@@ -16,8 +17,8 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
-    //private const val BASE_URL = "https://wildwatch-9djc.onrender.com/api/"
-    private const val BASE_URL = "http://10.0.2.2:8080/api/"
+    private const val API_PATH = "/api/"
+    private val BASE_URL = BuildConfig.API_BASE_URL + API_PATH
 
     val authApi: AuthApiService by lazy {
         Retrofit.Builder()
