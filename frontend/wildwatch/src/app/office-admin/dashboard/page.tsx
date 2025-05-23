@@ -184,7 +184,7 @@ export default function OfficeAdminDashboard() {
     <div className={`min-h-screen flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9] ${inter.className}`}>
       <OfficeAdminSidebar />
       <OfficeAdminNavbar
-        title="Office Dashboard - Incidents"
+        title="Office Dashboard"
         subtitle="View and manage reported incidents"
         showSearch={true}
         searchPlaceholder="Search incidents..."
