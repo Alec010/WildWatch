@@ -1,490 +1,986 @@
-"use client";
+"use client"
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Sidebar } from "@/components/Sidebar";
-import Image from "next/image";
-import { CheckCircle2, ArrowLeft, Info, Edit2, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Sidebar } from "@/components/Sidebar"
+import { useSidebar } from "@/contexts/SidebarContext"
+import { Navbar } from "@/components/Navbar"
+import Image from "next/image"
+import {
+  CheckCircle2,
+  ArrowLeft,
+  Info,
+  Edit2,
+  Loader2,
+  FileText,
+  MapPin,
+  Calendar,
+  Building,
+  Tag,
+  User,
+  Phone,
+  MessageSquare,
+  Camera,
+  AlertTriangle,
+  Shield,
+  Eye,
+  EyeOff,
+  ArrowRight,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react"
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from "@/components/ui/dialog";
-import { Switch } from '@/components/ui/switch';
+  DialogFooter,
+} from "@/components/ui/dialog"
+import { Switch } from "@/components/ui/switch"
+import { Toaster, toast } from "sonner"
+import { motion, AnimatePresence } from "framer-motion"
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 
 export default function ReviewSubmissionPage() {
-  const router = useRouter();
-  const [incidentData, setIncidentData] = useState<any>(null);
-  const [evidenceData, setEvidenceData] = useState<any>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isAssigningOffice, setIsAssigningOffice] = useState(false);
-  const [assignedOffice, setAssignedOffice] = useState<string | null>(null);
+  const router = useRouter()
+  const { collapsed } = useSidebar()
+  const [incidentData, setIncidentData] = useState<any>(null)
+  const [evidenceData, setEvidenceData] = useState<any>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isAssigningOffice, setIsAssigningOffice] = useState(false)
+  const [assignedOffice, setAssignedOffice] = useState<string | null>(null)
   const [confirmations, setConfirmations] = useState({
     accurateInfo: false,
     contactConsent: false,
-  });
-  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
-  const [trackingNumber, setTrackingNumber] = useState("");
-  const [preferAnonymous, setPreferAnonymous] = useState<boolean>(false);
-  const [showLoadingDialog, setShowLoadingDialog] = useState(false);
+  })
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false)
+  const [trackingNumber, setTrackingNumber] = useState("")
+  const [preferAnonymous, setPreferAnonymous] = useState<boolean>(false)
+  const [showLoadingDialog, setShowLoadingDialog] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [expandedSection, setExpandedSection] = useState<string | null>("incident")
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
 
   useEffect(() => {
-    const storedIncidentData = sessionStorage.getItem("incidentSubmissionData");
-    const storedEvidenceData = sessionStorage.getItem("evidenceSubmissionData");
+    const storedIncidentData = sessionStorage.getItem("incidentSubmissionData")
+    const storedEvidenceData = sessionStorage.getItem("evidenceSubmissionData")
 
     if (!storedIncidentData || !storedEvidenceData) {
-      router.push("/incidents/submit");
-      return;
+      router.push("/incidents/submit")
+      return
     }
-    const parsedIncidentData = JSON.parse(storedIncidentData);
-    setIncidentData(parsedIncidentData);
-    setEvidenceData(JSON.parse(storedEvidenceData));
-  }, [router]);
 
-  const handleSubmit = async () => {
-    setIsSubmitting(true);
-    setIsAssigningOffice(true);
-    setShowLoadingDialog(true);
+    const parsedIncidentData = JSON.parse(storedIncidentData)
+    setIncidentData(parsedIncidentData)
+    setEvidenceData(JSON.parse(storedEvidenceData))
+    setLoading(false)
+  }, [router])
+
+  const handleSubmit = () => {
+    if (!confirmations.accurateInfo || !confirmations.contactConsent) {
+      toast.error("Please confirm all required checkboxes", {
+        description: "You must agree to both statements before submitting your report.",
+      })
+      return
+    }
+
+    setShowConfirmDialog(true)
+  }
+
+  const processSubmission = async () => {
+    setShowConfirmDialog(false)
+    setIsSubmitting(true)
+    setIsAssigningOffice(true)
+    setShowLoadingDialog(true)
+
     try {
       const token = document.cookie
         .split("; ")
         .find((row) => row.startsWith("token="))
-        ?.split("=")[1];
-      if (!token) throw new Error("No authentication token found");
+        ?.split("=")[1]
 
-      const formData = new FormData();
+      if (!token) throw new Error("No authentication token found")
+
+      const formData = new FormData()
       formData.append(
         "incidentData",
-        JSON.stringify({ 
-          ...incidentData, 
-          witnesses: evidenceData.witnesses, 
+        JSON.stringify({
+          ...incidentData,
+          witnesses: evidenceData.witnesses,
           preferAnonymous: !!preferAnonymous,
-          tags: incidentData.tags || [] // Ensure tags are included in the submission
-        })
-      );
+          tags: incidentData.tags || [], // Ensure tags are included in the submission
+        }),
+      )
+
+      // Show progress toast
+      const loadingToast = toast.loading("Processing files...", {
+        description: "Uploading evidence files to secure storage.",
+      })
+
       for (const fileInfo of evidenceData.fileInfos) {
-        const response = await fetch(fileInfo.data);
-        const blob = await response.blob();
-        formData.append("files", blob, fileInfo.name);
+        const response = await fetch(fileInfo.data)
+        const blob = await response.blob()
+        formData.append("files", blob, fileInfo.name)
       }
+
+      toast.dismiss(loadingToast)
+
+      const submissionToast = toast.loading("Submitting report...", {
+        description: "Your report is being securely transmitted.",
+      })
 
       const response = await fetch("/api/incidents", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
-      });
+      })
 
-      if (!response.ok)
-        throw new Error(`HTTP error! status: ${response.status}`);
+      toast.dismiss(submissionToast)
 
-      const responseData = await response.json();
-      setTrackingNumber(responseData.trackingNumber);
-      setAssignedOffice(responseData.assignedOffice);
-      setShowSuccessDialog(true);
-      sessionStorage.removeItem("incidentSubmissionData");
-      sessionStorage.removeItem("evidenceSubmissionData");
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+
+      const responseData = await response.json()
+      setTrackingNumber(responseData.trackingNumber)
+      setAssignedOffice(responseData.assignedOffice)
+      setShowSuccessDialog(true)
+
+      // Clear session storage
+      sessionStorage.removeItem("incidentSubmissionData")
+      sessionStorage.removeItem("evidenceSubmissionData")
+
+      toast.success("Report submitted successfully!", {
+        description: `Your tracking number is ${responseData.trackingNumber}`,
+      })
     } catch (error) {
-      console.error("Submission failed:", error);
-      alert("Failed to submit report. Please try again.");
+      console.error("Submission failed:", error)
+      toast.error("Submission failed", {
+        description: "Please try again or contact support if the problem persists.",
+      })
     } finally {
-      setIsSubmitting(false);
-      setIsAssigningOffice(false);
-      setShowLoadingDialog(false);
+      setIsSubmitting(false)
+      setIsAssigningOffice(false)
+      setShowLoadingDialog(false)
     }
-  };
+  }
 
   const handleCloseDialog = () => {
-    setShowSuccessDialog(false);
-    router.push("/dashboard");
-  };
+    setShowSuccessDialog(false)
+    router.push("/dashboard")
+  }
 
-  if (!incidentData || !evidenceData) return null;
+  const toggleSection = (section: string) => {
+    setExpandedSection(expandedSection === section ? null : section)
+  }
+
+  const getFileIcon = (fileType: string) => {
+    if (fileType.startsWith("image/")) {
+      return <Camera className="h-5 w-5 text-blue-500" />
+    } else if (fileType.startsWith("video/")) {
+      return <Camera className="h-5 w-5 text-purple-500" />
+    } else {
+      return <FileText className="h-5 w-5 text-gray-500" />
+    }
+  }
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return bytes + " B"
+    else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB"
+    else return (bytes / 1048576).toFixed(2) + " MB"
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex bg-[#f8f8f8]">
+        <Sidebar />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="relative">
+              <div className="absolute inset-0 rounded-full bg-gradient-to-r from-[#800000] to-[#D4AF37] opacity-30 blur-lg animate-pulse"></div>
+              <div className="relative animate-spin rounded-full h-16 w-16 border-4 border-[#D4AF37] border-t-transparent"></div>
+            </div>
+            <p className="mt-6 text-gray-600 font-medium">Loading your report...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="flex min-h-screen bg-[#f5f5f5]">
+    <div className="min-h-screen flex bg-[#f8f8f8]">
       <Sidebar />
-      <div className="flex-1 p-6 max-w-[1700px] mx-auto ml-64">
-        <h1 className="text-2xl font-bold text-[#8B0000] mb-1">
-          Report an Incident
-        </h1>
-        <p className="text-gray-600 mb-6">
-          Please review your report before submission.
-        </p>
+      <Toaster
+        position="top-right"
+        richColors
+        className="!top-24"
+        toastOptions={{
+          classNames: {
+            toast: "bg-white",
+            success: "bg-[#dcfce7] border-[#86efac] text-[#166534]",
+            error: "bg-[#fee2e2] border-[#fca5a5] text-[#991b1b]",
+            warning: "bg-[#fee2e2] border-[#fca5a5] text-[#991b1b]",
+            info: "bg-[#fee2e2] border-[#fca5a5] text-[#991b1b]",
+          },
+        }}
+        theme="light"
+      />
 
-        {/* Steps Indicator */}
-        <div className="flex items-center mb-8">
-          <StepItem label="Incident Details" completed />
-          <StepItem label="Evidence & Witnesses" completed />
-          <StepItem label="Review & Submit" active isLast />
-        </div>
+      {/* Main Content */}
+      <div className={`flex-1 transition-all duration-300 ${collapsed ? "ml-20" : "ml-64"}`}>
+        {/* Navbar */}
+        <Navbar title="Report an Incident" subtitle="Review and submit your report" showSearch={false} />
 
-        {/* Incident Details */}
-        <Card className="p-6 bg-white shadow-sm border-0">
-          <div className="flex items-center gap-3 border-b pb-5 mb-6">
-            <div className="bg-[#8B0000] rounded-full w-10 h-10 flex items-center justify-center">
-              <CheckCircle2 className="text-white w-5 h-5" />
+        {/* Content */}
+        <div className="pt-24 px-6 pb-10">
+          {/* Progress Indicator */}
+          <div className="mb-8 bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+            <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-6">
+              <div className="flex-shrink-0">
+                <div className="w-16 h-16 rounded-full bg-[#800000]/10 flex items-center justify-center">
+                  <CheckCircle2 className="h-8 w-8 text-[#800000]" />
+                </div>
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-[#800000] mb-1">Review & Submit</h1>
+                <p className="text-gray-600">Please review all information before submitting your incident report</p>
+              </div>
+              <div className="md:ml-auto flex-shrink-0 bg-[#800000]/5 rounded-full px-4 py-2 flex items-center">
+                <div className="mr-2 text-sm font-medium text-[#800000]">Step 3 of 3</div>
+              </div>
             </div>
-            <div>
-              <h2 className="text-lg font-semibold text-gray-800">
-                Review & Submit
-              </h2>
-              <p className="text-sm text-gray-500">
-                Please review your report before submission
-              </p>
+
+            <div className="relative">
+              <div className="absolute top-0 left-0 w-full h-2 bg-gray-200 rounded-full">
+                <div className="h-full w-full bg-[#800000] rounded-full"></div>
+              </div>
+
+              <div className="pt-8 grid grid-cols-3 gap-4">
+                <div className="flex flex-col items-center">
+                  <div className="bg-green-500 text-white rounded-full w-10 h-10 flex items-center justify-center text-sm font-medium mb-2">
+                    <CheckCircle2 className="h-5 w-5" />
+                  </div>
+                  <span className="text-sm font-medium text-green-600">Incident Details</span>
+                </div>
+
+                <div className="flex flex-col items-center">
+                  <div className="bg-green-500 text-white rounded-full w-10 h-10 flex items-center justify-center text-sm font-medium mb-2">
+                    <CheckCircle2 className="h-5 w-5" />
+                  </div>
+                  <span className="text-sm font-medium text-green-600">Evidence & Witnesses</span>
+                </div>
+
+                <div className="flex flex-col items-center">
+                  <div className="bg-[#800000] text-white rounded-full w-10 h-10 flex items-center justify-center text-sm font-medium mb-2">
+                    3
+                  </div>
+                  <span className="text-sm font-medium text-[#800000]">Review & Submit</span>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="space-y-8">
-            {/* Incident Details */}
-            <div>
-              <div className="flex justify-between items-center border-b pb-3 mb-4">
-                <h3 className="text-base font-semibold text-gray-800">
-                  Incident Details
-                </h3>
-                <Button
-                  onClick={() => router.push("/incidents/submit")}
-                  className="h-8 text-xs"
+          {/* Main Content Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr,320px] gap-6">
+            {/* Left Column - Review Sections */}
+            <div className="space-y-6">
+              {/* Incident Details Section */}
+              <Card className="bg-white shadow-sm border-0 rounded-xl overflow-hidden">
+                <div
+                  className={`border-b border-gray-100 p-6 flex items-center justify-between cursor-pointer ${expandedSection === "incident" ? "bg-[#800000]/5" : ""}`}
+                  onClick={() => toggleSection("incident")}
                 >
-                  <Edit2 size={14} className="mr-1" /> Edit
-                </Button>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
-                <SummaryRow
-                  label="Incident Type"
-                  value={incidentData.incidentType}
-                />
-                <SummaryRow
-                  label="Date & Time"
-                  value={`${new Date(
-                    incidentData.dateOfIncident
-                  ).toLocaleDateString()} at ${incidentData.timeOfIncident}`}
-                />
-                <SummaryRow label="Location" value={incidentData.location} />
-                <SummaryRow
-                  label="Assigned Office"
-                  value={isAssigningOffice ? "AI is assigning to appropriate office..." : (assignedOffice || "Will be assigned automatically")}
-                />
-              </div>
-              <div className="mt-4">
-                <p className="text-sm text-gray-500">Description</p>
-                <p className="mt-1 text-sm">{incidentData.description}</p>
-              </div>
-              {incidentData.tags && incidentData.tags.length > 0 && (
-                <div className="mt-4">
-                  <p className="text-sm text-gray-500">Tags</p>
-                  <div className="flex flex-wrap gap-2 mt-1">
-                    {incidentData.tags.map((tag: string) => (
-                      <span
-                        key={tag}
-                        className="px-2 py-1 text-xs bg-[#8B0000] text-white rounded-full"
-                      >
-                        {tag}
-                      </span>
-                    ))}
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`p-2 rounded-full ${expandedSection === "incident" ? "bg-[#800000]/20" : "bg-gray-100"}`}
+                    >
+                      <FileText
+                        className={`h-5 w-5 ${expandedSection === "incident" ? "text-[#800000]" : "text-gray-500"}`}
+                      />
+                    </div>
+                    <h2 className="text-lg font-semibold text-gray-800">Incident Details</h2>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        router.push("/incidents/submit")
+                      }}
+                      className="h-8 text-xs border-gray-200 text-gray-600 hover:text-[#800000] hover:border-[#800000]/20 rounded-full"
+                    >
+                      <Edit2 size={14} className="mr-1.5" /> Edit
+                    </Button>
+                    {expandedSection === "incident" ? (
+                      <ChevronUp className="h-5 w-5 text-gray-500" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5 text-gray-500" />
+                    )}
                   </div>
                 </div>
-              )}
-            </div>
 
-            {/* Evidence & Witnesses */}
-            <div>
-              <div className="flex justify-between items-center border-b pb-3 mb-4">
-                <h3 className="text-base font-semibold text-gray-800">
-                  Evidence & Witnesses
-                </h3>
-                <Button
-                  onClick={() => router.push("/incidents/submit/evidence")}
-                  className="h-8 text-xs"
-                >
-                  <Edit2 size={14} className="mr-1" /> Edit
-                </Button>
-              </div>
+                <AnimatePresence>
+                  {expandedSection === "incident" && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <div className="p-6 space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                            <div className="flex items-center gap-2 mb-3">
+                              <AlertTriangle className="h-4 w-4 text-[#800000]" />
+                              <h3 className="text-sm font-medium text-gray-700">Incident Type</h3>
+                            </div>
+                            <p className="text-base font-semibold text-gray-900">{incidentData.incidentType}</p>
+                          </div>
 
-              {/* Evidence Files */}
-              {evidenceData.fileInfos && evidenceData.fileInfos.length > 0 && (
-                <div className="mb-6">
-                  <p className="text-sm text-gray-500 mb-2">Evidence Files</p>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {evidenceData.fileInfos.map((file: any, index: number) => (
-                      <div
-                        key={index}
-                        className="relative aspect-square rounded-lg overflow-hidden border border-gray-200"
-                      >
-                        <Image
-                          src={file.data}
-                          alt={file.name}
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+                          <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                            <div className="flex items-center gap-2 mb-3">
+                              <MapPin className="h-4 w-4 text-[#800000]" />
+                              <h3 className="text-sm font-medium text-gray-700">Location</h3>
+                            </div>
+                            <p className="text-base font-semibold text-gray-900">{incidentData.location}</p>
+                          </div>
 
-              {/* Witnesses */}
-              <div>
-                <p className="text-sm text-gray-500 mb-2">Witnesses</p>
-                {evidenceData.witnesses && evidenceData.witnesses.length > 0 ? (
-                  <div className="space-y-4">
-                    {evidenceData.witnesses.map((witness: any, index: number) => (
-                      <div
-                        key={index}
-                        className="bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-3"
-                      >
-                        <div>
-                          <p className="text-xs text-gray-500 mb-1">Full Name</p>
-                          <p className="font-medium text-gray-900">{witness.name}</p>
+                          <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                            <div className="flex items-center gap-2 mb-3">
+                              <Calendar className="h-4 w-4 text-[#800000]" />
+                              <h3 className="text-sm font-medium text-gray-700">Date & Time</h3>
+                            </div>
+                            <p className="text-base font-semibold text-gray-900">
+                              {`${new Date(incidentData.dateOfIncident).toLocaleDateString('en-US', { weekday: 'long' })} ${new Date(incidentData.dateOfIncident).toLocaleDateString()} at ${new Date(`2000-01-01T${incidentData.timeOfIncident}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`}
+                            </p>
+                          </div>
+
+                          <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                            <div className="flex items-center gap-2 mb-3">
+                              <Building className="h-4 w-4 text-[#800000]" />
+                              <h3 className="text-sm font-medium text-gray-700">Assigned Office</h3>
+                            </div>
+                            <p className="text-base font-semibold text-gray-900">
+                              {isAssigningOffice ? (
+                                <span className="flex items-center gap-2">
+                                  <Loader2 className="h-4 w-4 animate-spin text-[#800000]" />
+                                  AI is assigning to appropriate office...
+                                </span>
+                              ) : (
+                                assignedOffice || "Will be assigned automatically"
+                              )}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-xs text-gray-500 mb-1">Contact Information</p>
-                          <p className="text-sm text-gray-700">{witness.contactInformation}</p>
+
+                        <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                          <div className="flex items-center gap-2 mb-3">
+                            <MessageSquare className="h-4 w-4 text-[#800000]" />
+                            <h3 className="text-sm font-medium text-gray-700">Description</h3>
+                          </div>
+                          <p className="text-sm text-gray-700 whitespace-pre-line">{incidentData.description}</p>
                         </div>
-                        {witness.additionalNotes && (
+
+                        {incidentData.tags && incidentData.tags.length > 0 && (
                           <div>
-                            <p className="text-xs text-gray-500 mb-1">Additional Notes</p>
-                            <p className="text-sm text-gray-700">{witness.additionalNotes}</p>
+                            <div className="flex items-center gap-2 mb-3">
+                              <Tag className="h-4 w-4 text-[#800000]" />
+                              <h3 className="text-sm font-medium text-gray-700">Tags</h3>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              {incidentData.tags.map((tag: string, index: number) => (
+                                <span
+                                  key={index}
+                                  className="px-3 py-1 text-xs bg-gradient-to-r from-[#800000] to-[#9a0000] text-white rounded-full"
+                                >
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
                           </div>
                         )}
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 text-center">
-                    <p className="text-sm text-gray-600">No witnesses provided</p>
-                  </div>
-                )}
-              </div>
-            </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </Card>
 
-            {/* Anonymous Option */}
-            <div className="flex items-start space-x-3">
-              <Switch
-                id="preferAnonymous"
-                checked={preferAnonymous}
-                onCheckedChange={setPreferAnonymous}
-              />
-              <label
-                htmlFor="preferAnonymous"
-                className="text-sm text-gray-600"
-              >
-                <span className="font-medium">
-                  Prefer to remain anonymous?
-                </span>
-              </label>
-              <p className="text-xs text-gray-500 ml-9">
-                If enabled, your identity will be hidden to the public. This is just a preference and may be reviewed by the admin.
-              </p>
-            </div>
-
-            {/* Confirmations */}
-            <div className="space-y-4 border-t pt-6">
-              <div className="flex items-start space-x-2">
-                <Checkbox
-                  id="accurateInfo"
-                  checked={confirmations.accurateInfo}
-                  onCheckedChange={(checked: boolean) =>
-                    setConfirmations((prev) => ({
-                      ...prev,
-                      accurateInfo: checked,
-                    }))
-                  }
-                  className="mt-1"
-                />
-                <label htmlFor="accurateInfo" className="text-sm text-gray-600">
-                  I confirm that all information provided is accurate to the
-                  best of my knowledge.
-                </label>
-              </div>
-              <div className="flex items-start space-x-2">
-                <Checkbox
-                  id="contactConsent"
-                  checked={confirmations.contactConsent}
-                  onCheckedChange={(checked: boolean) =>
-                    setConfirmations((prev) => ({
-                      ...prev,
-                      contactConsent: checked,
-                    }))
-                  }
-                  className="mt-1"
-                />
-                <label
-                  htmlFor="contactConsent"
-                  className="text-sm text-gray-600"
+              {/* Evidence & Witnesses Section */}
+              <Card className="bg-white shadow-sm border-0 rounded-xl overflow-hidden">
+                <div
+                  className={`border-b border-gray-100 p-6 flex items-center justify-between cursor-pointer ${expandedSection === "evidence" ? "bg-[#800000]/5" : ""}`}
+                  onClick={() => toggleSection("evidence")}
                 >
-                  I understand that campus security may contact me for
-                  additional information.
-                </label>
-              </div>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-start space-x-3">
-                <Info className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
-                <p className="text-sm text-blue-700">
-                  Your report will be reviewed by campus office personnel. You
-                  will receive a confirmation email with a tracking number once
-                  your report is submitted.
-                </p>
-              </div>
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`p-2 rounded-full ${expandedSection === "evidence" ? "bg-[#800000]/20" : "bg-gray-100"}`}
+                    >
+                      <Camera
+                        className={`h-5 w-5 ${expandedSection === "evidence" ? "text-[#800000]" : "text-gray-500"}`}
+                      />
+                    </div>
+                    <h2 className="text-lg font-semibold text-gray-800">Evidence & Witnesses</h2>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        router.push("/incidents/submit/evidence")
+                      }}
+                      className="h-8 text-xs border-gray-200 text-gray-600 hover:text-[#800000] hover:border-[#800000]/20 rounded-full"
+                    >
+                      <Edit2 size={14} className="mr-1.5" /> Edit
+                    </Button>
+                    {expandedSection === "evidence" ? (
+                      <ChevronUp className="h-5 w-5 text-gray-500" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5 text-gray-500" />
+                    )}
+                  </div>
+                </div>
+
+                <AnimatePresence>
+                  {expandedSection === "evidence" && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <div className="p-6 space-y-6">
+                        {/* Evidence Files */}
+                        <div>
+                          <div className="flex items-center gap-2 mb-4">
+                            <Camera className="h-4 w-4 text-[#800000]" />
+                            <h3 className="text-sm font-medium text-gray-700">
+                              Evidence Files ({evidenceData.fileInfos.length})
+                            </h3>
+                          </div>
+
+                          {evidenceData.fileInfos && evidenceData.fileInfos.length > 0 ? (
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                              {evidenceData.fileInfos.map((file: any, index: number) => (
+                                <div
+                                  key={index}
+                                  className="group relative rounded-lg overflow-hidden border border-gray-200 bg-white shadow-sm hover:shadow-md transition-all duration-200"
+                                >
+                                  {file.type.startsWith("image/") ? (
+                                    <div className="relative aspect-square">
+                                      <Image
+                                        src={file.data || "/placeholder.svg"}
+                                        alt={file.name}
+                                        fill
+                                        className="object-cover"
+                                      />
+                                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                        <div className="bg-white rounded-full p-2">
+                                          <Camera className="h-5 w-5 text-[#800000]" />
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ) : file.type.startsWith("video/") ? (
+                                    <div className="relative aspect-video bg-black">
+                                      <video src={file.data} controls className="w-full h-full" />
+                                    </div>
+                                  ) : (
+                                    <div className="aspect-square flex items-center justify-center bg-gray-100">
+                                      <FileText className="h-16 w-16 text-gray-400" />
+                                    </div>
+                                  )}
+
+                                  <div className="p-2 border-t border-gray-100">
+                                    <div className="flex items-start gap-2">
+                                      {getFileIcon(file.type)}
+                                      <div className="min-w-0 flex-1">
+                                        <p className="text-xs font-medium text-gray-700 truncate" title={file.name}>
+                                          {file.name}
+                                        </p>
+                                        <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 text-center">
+                              <p className="text-sm text-gray-600">No evidence files provided</p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Witnesses */}
+                        <div>
+                          <div className="flex items-center gap-2 mb-4">
+                            <User className="h-4 w-4 text-[#800000]" />
+                            <h3 className="text-sm font-medium text-gray-700">
+                              Witnesses ({evidenceData.witnesses.length})
+                            </h3>
+                          </div>
+
+                          {evidenceData.witnesses && evidenceData.witnesses.length > 0 ? (
+                            <div className="space-y-4">
+                              <Accordion type="single" collapsible className="w-full">
+                                {evidenceData.witnesses.map((witness: any, index: number) => (
+                                  <AccordionItem
+                                    key={index}
+                                    value={`witness-${index}`}
+                                    className="border border-gray-200 rounded-lg mb-3 overflow-hidden"
+                                  >
+                                    <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-gray-50">
+                                      <div className="flex items-center gap-3 text-left">
+                                        <div className="bg-[#800000]/10 p-2 rounded-full">
+                                          <User className="h-4 w-4 text-[#800000]" />
+                                        </div>
+                                        <div>
+                                          <p className="font-medium text-gray-900">
+                                            {witness.name || `Witness #${index + 1}`}
+                                          </p>
+                                          {witness.contactInformation && (
+                                            <p className="text-xs text-gray-500">{witness.contactInformation}</p>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </AccordionTrigger>
+                                    <AccordionContent className="px-4 pb-4 pt-2">
+                                      <div className="space-y-3">
+                                        <div>
+                                          <div className="flex items-center gap-2 mb-1">
+                                            <User className="h-3.5 w-3.5 text-[#800000]/70" />
+                                            <p className="text-xs text-gray-500">Full Name</p>
+                                          </div>
+                                          <p className="font-medium text-gray-900 pl-5">
+                                            {witness.name || "Not provided"}
+                                          </p>
+                                        </div>
+                                        <div>
+                                          <div className="flex items-center gap-2 mb-1">
+                                            <Phone className="h-3.5 w-3.5 text-[#800000]/70" />
+                                            <p className="text-xs text-gray-500">Contact Information</p>
+                                          </div>
+                                          <p className="text-sm text-gray-700 pl-5">
+                                            {witness.contactInformation || "Not provided"}
+                                          </p>
+                                        </div>
+                                        {witness.additionalNotes && (
+                                          <div>
+                                            <div className="flex items-center gap-2 mb-1">
+                                              <MessageSquare className="h-3.5 w-3.5 text-[#800000]/70" />
+                                              <p className="text-xs text-gray-500">Additional Notes</p>
+                                            </div>
+                                            <p className="text-sm text-gray-700 pl-5 whitespace-pre-line">
+                                              {witness.additionalNotes}
+                                            </p>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </AccordionContent>
+                                  </AccordionItem>
+                                ))}
+                              </Accordion>
+                            </div>
+                          ) : (
+                            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 text-center">
+                              <p className="text-sm text-gray-600">No witnesses provided</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </Card>
+
+              {/* Submission Options */}
+              <Card className="bg-white shadow-sm border-0 rounded-xl overflow-hidden">
+                <div className="p-6 space-y-6">
+                  <div className="flex items-center gap-3 border-b pb-5 mb-2">
+                    <div className="bg-[#800000]/10 p-2 rounded-full">
+                      <Shield className="h-5 w-5 text-[#800000]" />
+                    </div>
+                    <h2 className="text-lg font-semibold text-gray-800">Submission Options</h2>
+                  </div>
+
+                  {/* Anonymous Option */}
+                  <div className="flex items-start space-x-3 bg-gray-50 p-4 rounded-xl border border-gray-100">
+                    <div className="pt-0.5">
+                      <Switch
+                        id="preferAnonymous"
+                        checked={preferAnonymous}
+                        onCheckedChange={setPreferAnonymous}
+                        className="data-[state=checked]:bg-[#800000]"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label
+                        htmlFor="preferAnonymous"
+                        className="text-sm font-medium text-gray-800 flex items-center gap-2"
+                      >
+                        {preferAnonymous ? (
+                          <EyeOff className="h-4 w-4 text-[#800000]" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-gray-500" />
+                        )}
+                        <span>Prefer to remain anonymous</span>
+                      </label>
+                      <p className="text-xs text-gray-500">
+                        If enabled, your identity will be hidden to the public. This is just a preference and may be
+                        reviewed by the admin.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Confirmations */}
+                  <div className="space-y-4 pt-4">
+                    <div className="flex items-start space-x-3 p-4 rounded-xl border border-gray-100 bg-gray-50">
+                      <Checkbox
+                        id="accurateInfo"
+                        checked={confirmations.accurateInfo}
+                        onCheckedChange={(checked: boolean) =>
+                          setConfirmations((prev) => ({
+                            ...prev,
+                            accurateInfo: checked,
+                          }))
+                        }
+                        className="mt-1 data-[state=checked]:bg-[#800000] data-[state=checked]:border-[#800000]"
+                      />
+                      <div>
+                        <label htmlFor="accurateInfo" className="text-sm font-medium text-gray-800">
+                          Information Accuracy
+                        </label>
+                        <p className="text-xs text-gray-600 mt-1">
+                          I confirm that all information provided is accurate to the best of my knowledge.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start space-x-3 p-4 rounded-xl border border-gray-100 bg-gray-50">
+                      <Checkbox
+                        id="contactConsent"
+                        checked={confirmations.contactConsent}
+                        onCheckedChange={(checked: boolean) =>
+                          setConfirmations((prev) => ({
+                            ...prev,
+                            contactConsent: checked,
+                          }))
+                        }
+                        className="mt-1 data-[state=checked]:bg-[#800000] data-[state=checked]:border-[#800000]"
+                      />
+                      <div>
+                        <label htmlFor="contactConsent" className="text-sm font-medium text-gray-800">
+                          Contact Permission
+                        </label>
+                        <p className="text-xs text-gray-600 mt-1">
+                          I understand that campus security may contact me for additional information regarding this
+                          incident.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Information Notice */}
+                  <div className="bg-[#FFF8E1] border border-[#D4AF37]/30 rounded-xl p-4 flex items-start space-x-3">
+                    <Info className="h-5 w-5 text-[#D4AF37] mt-0.5 flex-shrink-0" />
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-800 mb-1">What happens next?</h3>
+                      <p className="text-xs text-gray-700">
+                        Your report will be reviewed by campus office personnel. You will receive a confirmation email
+                        with a tracking number once your report is submitted. This tracking number can be used to check
+                        the status of your report.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex justify-between pt-4 border-t">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => router.push("/incidents/submit/evidence")}
+                      className="border-gray-300 text-gray-700 hover:bg-gray-50 rounded-full px-4 flex items-center gap-2"
+                    >
+                      <ArrowLeft className="h-4 w-4" /> Back to Evidence
+                    </Button>
+
+                    <Button
+                      onClick={handleSubmit}
+                      disabled={isSubmitting}
+                      className="bg-gradient-to-r from-[#800000] to-[#9a0000] hover:from-[#700000] hover:to-[#800000] text-white rounded-full px-6 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" /> Submitting...
+                        </>
+                      ) : (
+                        <>
+                          Submit Report <ArrowRight className="h-4 w-4" />
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </Card>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex justify-between pt-6 border-t">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => router.push("/incidents/submit/evidence")}
-                className="flex items-center gap-2"
-              >
-                <ArrowLeft className="h-4 w-4" /> Back to Evidence & Witnesses
-              </Button>
-              <Button
-                onClick={handleSubmit}
-                disabled={
-                  !confirmations.accurateInfo ||
-                  !confirmations.contactConsent ||
-                  isSubmitting
-                }
-                className="bg-[#8B0000] hover:bg-[#8B0000]/90 text-white disabled:opacity-50"
-              >
-                {isSubmitting ? "Submitting..." : "Submit Report"}
-              </Button>
+            {/* Right Column - Summary */}
+            <div className="space-y-6">
+              {/* Report Summary Card */}
+              <Card className="bg-white shadow-sm border-0 rounded-xl overflow-hidden">
+                <div className="p-6">
+                  <h3 className="text-base font-medium text-gray-800 mb-4 flex items-center gap-2 border-b pb-3">
+                    <FileText className="h-4 w-4 text-[#800000]" />
+                    Report Summary
+                  </h3>
+
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-[#800000]/10 p-2 rounded-full">
+                          <AlertTriangle className="h-4 w-4 text-[#800000]" />
+                        </div>
+                        <span className="text-sm font-medium">Incident Type</span>
+                      </div>
+                      <span className="text-sm font-bold text-gray-800">{incidentData.incidentType}</span>
+                    </div>
+
+                    <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-[#800000]/10 p-2 rounded-full">
+                          <Calendar className="h-4 w-4 text-[#800000]" />
+                        </div>
+                        <span className="text-sm font-medium">Date</span>
+                      </div>
+                      <span className="text-sm font-bold text-gray-800">
+                        {`${new Date(incidentData.dateOfIncident).toLocaleDateString('en-US', { weekday: 'long' })} ${new Date(incidentData.dateOfIncident).toLocaleDateString()}`}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-[#800000]/10 p-2 rounded-full">
+                          <Camera className="h-4 w-4 text-[#800000]" />
+                        </div>
+                        <span className="text-sm font-medium">Evidence Files</span>
+                      </div>
+                      <span className="text-sm font-bold text-gray-800">{evidenceData.fileInfos.length}</span>
+                    </div>
+
+                    <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-[#800000]/10 p-2 rounded-full">
+                          <User className="h-4 w-4 text-[#800000]" />
+                        </div>
+                        <span className="text-sm font-medium">Witnesses</span>
+                      </div>
+                      <span className="text-sm font-bold text-gray-800">{evidenceData.witnesses.length}</span>
+                    </div>
+
+                    <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-[#800000]/10 p-2 rounded-full">
+                          <Eye className="h-4 w-4 text-[#800000]" />
+                        </div>
+                        <span className="text-sm font-medium">Anonymity</span>
+                      </div>
+                      <span
+                        className={`text-sm font-medium px-2.5 py-1 rounded-full ${
+                          preferAnonymous ? "bg-[#800000]/10 text-[#800000]" : "bg-gray-200 text-gray-700"
+                        }`}
+                      >
+                        {preferAnonymous ? "Anonymous" : "Public"}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-[#800000]/10 p-2 rounded-full">
+                          <CheckCircle2 className="h-4 w-4 text-[#800000]" />
+                        </div>
+                        <span className="text-sm font-medium">Status</span>
+                      </div>
+                      <span
+                        className={`text-sm font-medium px-2.5 py-1 rounded-full ${
+                          confirmations.accurateInfo && confirmations.contactConsent
+                            ? "bg-green-100 text-green-800"
+                            : "bg-amber-100 text-amber-800"
+                        }`}
+                      >
+                        {confirmations.accurateInfo && confirmations.contactConsent
+                          ? "Ready to Submit"
+                          : "Confirmation Required"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+
+              {/* Help Card */}
+              <Card className="bg-gradient-to-br from-[#800000] to-[#9a0000] text-white rounded-xl shadow-md overflow-hidden border-0">
+                <div className="p-6">
+                  <h3 className="flex items-center gap-2 text-lg font-semibold mb-4 pb-3 border-b border-white/20">
+                    <Info size={18} /> Need Help?
+                  </h3>
+
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="text-sm font-medium text-white/90 mb-2">Submission Tips</h4>
+                      <ul className="space-y-3">
+                        {[
+                          {
+                            icon: <CheckCircle2 size={16} />,
+                            text: "Review all information for accuracy before submitting",
+                          },
+                          {
+                            icon: <Shield size={16} />,
+                            text: "Your report will be handled confidentially",
+                          },
+                          {
+                            icon: <FileText size={16} />,
+                            text: "Save your tracking number for future reference",
+                          },
+                        ].map((tip, index) => (
+                          <li key={index} className="flex items-start gap-2 text-sm text-white/80">
+                            <div className="mt-0.5 bg-white/10 p-1.5 rounded-full">{tip.icon}</div>
+                            <span>{tip.text}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div className="pt-4 border-t border-white/20">
+                      <h4 className="text-sm font-medium text-white/90 mb-2">Contact Support</h4>
+                      <p className="text-sm text-white/80">
+                        If you need assistance with your report, please contact campus security at{" "}
+                        <span className="font-medium text-white">security@campus.edu</span> or call{" "}
+                        <span className="font-medium text-white">(555) 123-4567</span>.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </Card>
             </div>
           </div>
-        </Card>
+        </div>
+      </div>
 
-        {/* Loading Dialog */}
-        <Dialog open={showLoadingDialog} onOpenChange={setShowLoadingDialog}>
-          <DialogContent className="sm:max-w-md">
-            <div className="flex flex-col items-center justify-center py-8 space-y-4">
-              <div className="animate-spin">
-                <Loader2 className="h-8 w-8 text-[#8B0000]" />
-              </div>
-              <DialogTitle className="text-center">Processing Your Report</DialogTitle>
-              <DialogDescription className="text-center">
-                Our AI system is analyzing your report and assigning it to the most appropriate office for review. This may take a moment...
+      {/* Loading Dialog */}
+      <Dialog open={showLoadingDialog} onOpenChange={setShowLoadingDialog}>
+        <DialogContent className="sm:max-w-md">
+          <div className="flex flex-col items-center justify-center py-8 space-y-6">
+            <div className="relative">
+              <div className="absolute inset-0 rounded-full bg-gradient-to-r from-[#800000] to-[#D4AF37] opacity-30 blur-lg animate-pulse"></div>
+              <div className="relative animate-spin rounded-full h-16 w-16 border-4 border-[#D4AF37] border-t-transparent"></div>
+            </div>
+            <div className="text-center">
+              <DialogTitle className="text-xl font-bold text-[#800000] mb-2">Processing Your Report</DialogTitle>
+              <DialogDescription className="text-gray-600">
+                Our AI system is analyzing your report and assigning it to the most appropriate office for review. This
+                may take a moment...
               </DialogDescription>
             </div>
-          </DialogContent>
-        </Dialog>
 
-        {/* Success Dialog */}
-        <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-green-600">
-                <CheckCircle2 className="h-6 w-6" /> Report Submitted
-                Successfully
-              </DialogTitle>
-              <DialogDescription>
-                Your incident has been reported and will be reviewed by security
-                personnel.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                <p className="text-sm text-gray-500">Tracking Number</p>
-                <p className="text-lg font-semibold text-[#8B0000]">
-                  {trackingNumber}
+            <div className="w-full bg-gray-200 rounded-full h-2.5">
+              <div className="bg-[#800000] h-2.5 rounded-full animate-pulse w-3/4"></div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm Dialog */}
+      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-[#800000]">Confirm Submission</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to submit this incident report? Once submitted, you cannot edit the information.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="bg-[#FFF8E1] border border-[#D4AF37]/30 rounded-lg p-4 my-4">
+            <div className="flex items-start gap-3">
+              <Info className="h-5 w-5 text-[#D4AF37] mt-0.5" />
+              <div>
+                <p className="text-sm text-gray-700">
+                  Your report will be reviewed by campus security personnel. You will receive a confirmation email with
+                  a tracking number for future reference.
                 </p>
               </div>
-              {assignedOffice && (
-                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                  <p className="text-sm text-gray-500">Assigned Office</p>
-                  <p className="text-lg font-semibold text-[#8B0000]">
-                    {assignedOffice}
-                  </p>
-                </div>
-              )}
-              <p className="text-sm text-gray-600">
-                Please save this tracking number for your records. You can use
-                it to check the status of your report.
-              </p>
             </div>
-            <div className="flex justify-end">
-              <Button
-                onClick={handleCloseDialog}
-                className="bg-[#8B0000] hover:bg-[#8B0000]/90 text-white"
-              >
-                Return to Dashboard
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
-    </div>
-  );
-}
+          </div>
 
-// Reusable summary row component
-function SummaryRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-xs text-gray-500">{label}</p>
-      <p className="font-medium text-sm">{value || "Not provided"}</p>
-    </div>
-  );
-}
-
-// Step Progress Indicator
-function StepItem({
-  label,
-  completed = false,
-  active = false,
-  isLast = false,
-}: {
-  label: string;
-  completed?: boolean;
-  active?: boolean;
-  isLast?: boolean;
-}) {
-  return (
-    <>
-      <div
-        className={`flex items-center ${
-          completed
-            ? "text-green-500"
-            : active
-            ? "text-[#8B0000]"
-            : "opacity-50 text-gray-600"
-        }`}
-      >
-        <div
-          className={`${
-            completed ? "bg-green-500" : active ? "bg-[#8B0000]" : "bg-gray-300"
-          } text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-medium`}
-        >
-          {completed ? (
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5"
-              viewBox="0 0 20 20"
-              fill="currentColor"
+          <DialogFooter className="flex gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setShowConfirmDialog(false)}
+              className="border-gray-300 text-gray-700 hover:bg-gray-50"
             >
-              <path
-                fillRule="evenodd"
-                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                clipRule="evenodd"
-              />
-            </svg>
-          ) : active ? (
-            "3"
-          ) : (
-            ""
-          )}
-        </div>
-        <span className="ml-2 font-medium">{label}</span>
-      </div>
-      {!isLast && (
-        <div
-          className={`flex-1 h-1 ${
-            completed || active ? "bg-green-500" : "bg-gray-300"
-          } mx-4`}
-        ></div>
-      )}
-    </>
-  );
+              Cancel
+            </Button>
+            <Button onClick={processSubmission} className="bg-[#800000] hover:bg-[#600000] text-white">
+              Confirm Submission
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Success Dialog */}
+      <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+        <DialogContent className="sm:max-w-md">
+          <div className="text-center mb-4">
+            <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+              <CheckCircle2 className="h-8 w-8 text-green-600" />
+            </div>
+            <DialogTitle className="text-xl font-bold text-green-600 mb-2">Report Submitted Successfully</DialogTitle>
+            <DialogDescription>
+              Your incident has been reported and will be reviewed by security personnel.
+            </DialogDescription>
+          </div>
+
+          <div className="space-y-4 py-4">
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <div className="flex items-center gap-2 mb-1">
+                <FileText className="h-4 w-4 text-[#800000]" />
+                <p className="text-sm text-gray-500">Tracking Number</p>
+              </div>
+              <p className="text-lg font-semibold text-[#800000]">{trackingNumber}</p>
+            </div>
+
+            {assignedOffice && (
+              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <div className="flex items-center gap-2 mb-1">
+                  <Building className="h-4 w-4 text-[#800000]" />
+                  <p className="text-sm text-gray-500">Assigned Office</p>
+                </div>
+                <p className="text-lg font-semibold text-[#800000]">{assignedOffice}</p>
+              </div>
+            )}
+
+            <div className="bg-[#FFF8E1] border border-[#D4AF37]/30 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <Info className="h-5 w-5 text-[#D4AF37] mt-0.5" />
+                <p className="text-sm text-gray-700">
+                  Please save this tracking number for your records. You can use it to check the status of your report
+                  in the dashboard.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              onClick={handleCloseDialog}
+              className="bg-gradient-to-r from-[#800000] to-[#9a0000] hover:from-[#700000] hover:to-[#800000] text-white w-full sm:w-auto"
+            >
+              Return to Dashboard
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
 }

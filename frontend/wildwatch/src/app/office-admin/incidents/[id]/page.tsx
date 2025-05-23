@@ -1,9 +1,9 @@
 "use client"
 
-import React, { useState, useEffect, use, JSX } from "react"
+import { useState, useEffect, use, type JSX } from "react"
 import { useRouter } from "next/navigation"
 import { OfficeAdminSidebar } from "@/components/OfficeAdminSidebar"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { OfficeAdminNavbar } from "@/components/OfficeAdminNavbar"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
@@ -34,7 +34,11 @@ import { API_BASE_URL } from "@/utils/api"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
-import { Switch } from '@/components/ui/switch'
+import { Switch } from "@/components/ui/switch"
+import { useSidebar } from "@/contexts/SidebarContext"
+import { motion } from "framer-motion"
+import { toast } from "sonner"
+import { Toaster } from "sonner"
 
 interface Witness {
   id: string
@@ -79,11 +83,12 @@ interface Incident {
 }
 
 interface PageProps {
-  params: Promise<{ id: string }>
+  params: { id: string }
 }
 
 export default function IncidentDetailsPage({ params }: PageProps) {
   const router = useRouter()
+  const { collapsed } = useSidebar()
   const [incident, setIncident] = useState<Incident | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -111,7 +116,6 @@ export default function IncidentDetailsPage({ params }: PageProps) {
   const [priorityError, setPriorityError] = useState("")
   const [isAnonymous, setIsAnonymous] = useState<boolean>(false)
   const [verifyError, setVerifyError] = useState("")
-  const { id } = use(params)
 
   useEffect(() => {
     const fetchIncident = async () => {
@@ -125,7 +129,7 @@ export default function IncidentDetailsPage({ params }: PageProps) {
           throw new Error("No authentication token found")
         }
 
-        const response = await fetch(`${API_BASE_URL}/api/incidents/${id}`, {
+        const response = await fetch(`${API_BASE_URL}/api/incidents/${params.id}`, {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
@@ -136,35 +140,35 @@ export default function IncidentDetailsPage({ params }: PageProps) {
           throw new Error(`HTTP error! status: ${response.status}`)
         }
 
-        const data = await response.json()
+        const data: Incident = await response.json()
         setIncident(data)
         setAdministrativeNotes(data.administrativeNotes || "")
         setVerificationNotes(data.verificationNotes || "")
         setIsVerified(data.verified)
         setStatus(data.status)
         setPriorityLevel(data.priorityLevel)
-      } catch (error) {
-        console.error("Error fetching incident:", error)
-        setError(error instanceof Error ? error.message : "Failed to load incident")
+      } catch (err) {
+        console.error("Error fetching incident:", err)
+        setError(err instanceof Error ? err.message : "Failed to load incident")
       } finally {
         setLoading(false)
       }
     }
 
     fetchIncident()
-  }, [id])
+  }, [params.id])
 
   useEffect(() => {
     if (showTransferModal) {
       setOfficesLoading(true)
       fetch(`${API_BASE_URL}/api/offices`)
-        .then(res => res.json())
-        .then(data => {
+        .then((res) => res.json())
+        .then((data: { code: string; fullName: string; description: string }[]) => {
           setOffices(data)
           setOfficesLoading(false)
         })
-        .catch(err => {
-          setOfficesError('Failed to load offices')
+        .catch((err: Error) => {
+          setOfficesError("Failed to load offices")
           setOfficesLoading(false)
         })
     }
@@ -172,15 +176,15 @@ export default function IncidentDetailsPage({ params }: PageProps) {
 
   const handleApproveIncident = async () => {
     if (!isVerified) {
-      setVerifyError("You must confirm this incident has been verified.");
-      return;
+      setVerifyError("You must confirm this incident has been verified.")
+      return
     }
-    setVerifyError("");
+    setVerifyError("")
     if (!priorityLevel) {
-      setPriorityError("Please select a priority before approving.");
-      return;
+      setPriorityError("Please select a priority before approving.")
+      return
     }
-    setPriorityError("");
+    setPriorityError("")
     setIsProcessing(true)
     try {
       const token = document.cookie
@@ -192,7 +196,7 @@ export default function IncidentDetailsPage({ params }: PageProps) {
         throw new Error("No authentication token found")
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/incidents/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/incidents/${params.id}`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -214,7 +218,7 @@ export default function IncidentDetailsPage({ params }: PageProps) {
 
       const updatedIncident = await response.json()
       setIncident(updatedIncident)
-      
+
       // Show success modal
       setModalContent({
         title: "Incident Approved",
@@ -265,7 +269,7 @@ export default function IncidentDetailsPage({ params }: PageProps) {
         throw new Error("No authentication token found")
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/incidents/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/incidents/${params.id}`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -287,7 +291,7 @@ export default function IncidentDetailsPage({ params }: PageProps) {
 
       const updatedIncident = await response.json()
       setIncident(updatedIncident)
-      
+
       // Show success modal
       setModalContent({
         title: "Incident Dismissed",
@@ -327,7 +331,7 @@ export default function IncidentDetailsPage({ params }: PageProps) {
         throw new Error("No authentication token found")
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/incidents/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/incidents/${params.id}`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -349,7 +353,7 @@ export default function IncidentDetailsPage({ params }: PageProps) {
 
       const updatedIncident = await response.json()
       setIncident(updatedIncident)
-      
+
       // Show success modal
       setModalContent({
         title: "Status Updated",
@@ -400,7 +404,7 @@ export default function IncidentDetailsPage({ params }: PageProps) {
         throw new Error("No authentication token found")
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/incidents/${id}/transfer`, {
+      const response = await fetch(`${API_BASE_URL}/api/incidents/${params.id}/transfer`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -422,7 +426,7 @@ export default function IncidentDetailsPage({ params }: PageProps) {
       setShowTransferModal(false)
       setTransferNotes("")
       setSelectedOffice("")
-      
+
       setModalContent({
         title: "Success",
         message: "Incident has been transferred successfully.",
@@ -464,31 +468,31 @@ export default function IncidentDetailsPage({ params }: PageProps) {
     switch (status) {
       case "Pending":
         return (
-          <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+          <Badge variant="outline" className="bg-yellow-100 text-yellow-700 border-yellow-200">
             Pending
           </Badge>
         )
       case "In Progress":
         return (
-          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+          <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-200">
             In Progress
           </Badge>
         )
       case "Resolved":
         return (
-          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+          <Badge variant="outline" className="bg-green-100 text-green-700 border-green-200">
             Resolved
           </Badge>
         )
       case "Dismissed":
         return (
-          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+          <Badge variant="outline" className="bg-red-100 text-red-700 border-red-200">
             Dismissed
           </Badge>
         )
       case "Closed":
         return (
-          <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200">
+          <Badge variant="outline" className="bg-gray-100 text-gray-700 border-gray-200">
             Closed
           </Badge>
         )
@@ -503,19 +507,19 @@ export default function IncidentDetailsPage({ params }: PageProps) {
     switch (priority) {
       case "LOW":
         return (
-          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+          <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-200">
             Low Priority
           </Badge>
         )
       case "MEDIUM":
         return (
-          <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+          <Badge variant="outline" className="bg-orange-100 text-orange-700 border-orange-200">
             Medium Priority
           </Badge>
         )
       case "HIGH":
         return (
-          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+          <Badge variant="outline" className="bg-red-100 text-red-700 border-red-200">
             High Priority
           </Badge>
         )
@@ -526,14 +530,47 @@ export default function IncidentDetailsPage({ params }: PageProps) {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen bg-gray-50">
+      <div className="min-h-screen flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9]">
+        <Toaster richColors position="top-right" />
         <OfficeAdminSidebar />
-        <div className="flex-1 p-8">
-          <div className="max-w-[1200px] mx-auto">
-            <div className="flex items-center justify-center h-64">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#8B0000] mx-auto mb-4"></div>
-                <p className="text-gray-600">Loading incident details...</p>
+        <div
+          className={`flex-1 flex items-center justify-center transition-all duration-300 ${collapsed ? "ml-[5rem]" : "ml-64"}`}
+        >
+          <div className="text-center">
+            <div className="relative w-20 h-20 mx-auto">
+              <div className="absolute inset-0 rounded-full border-t-2 border-b-2 border-[#8B0000] animate-spin"></div>
+              <div className="absolute inset-2 rounded-full border-r-2 border-l-2 border-[#DAA520] animate-spin animation-delay-150"></div>
+              <div className="absolute inset-4 rounded-full border-t-2 border-b-2 border-[#8B0000] animate-spin animation-delay-300"></div>
+            </div>
+            <p className="mt-6 text-gray-600 font-medium">Loading incident details...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9]">
+        <Toaster richColors position="top-right" />
+        <OfficeAdminSidebar />
+        <div className={`flex-1 p-8 transition-all duration-300 ${collapsed ? "ml-[5rem]" : "ml-64"}`}>
+          <div className="max-w-7xl mx-auto">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-6 shadow-sm">
+              <div className="flex items-start gap-4">
+                <div className="bg-red-100 p-3 rounded-full">
+                  <AlertTriangle className="h-6 w-6 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-red-800 mb-2">Error Loading Incident</h3>
+                  <p className="text-red-700">{error}</p>
+                  <Button
+                    className="mt-4 bg-[#8B0000] hover:bg-[#6B0000] text-white"
+                    onClick={() => window.location.reload()}
+                  >
+                    <AlertTriangle className="mr-2 h-4 w-4" /> Try Again
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
@@ -542,35 +579,26 @@ export default function IncidentDetailsPage({ params }: PageProps) {
     )
   }
 
-  if (error || !incident) {
-    return (
-      <div className="flex min-h-screen bg-gray-50">
-        <OfficeAdminSidebar />
-        <div className="flex-1 p-8">
-          <div className="max-w-[1200px] mx-auto">
-            <Card className="border-red-200 bg-red-50">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-3">
-                  <AlertTriangle className="h-6 w-6 text-red-500" />
-                  <p className="text-red-700 font-medium">Error: {error || "Incident not found"}</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
-    )
+  if (!incident) {
+    return null
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="min-h-screen flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9]">
       <OfficeAdminSidebar />
-      <div className="flex-1 p-6 overflow-auto ml-64">
-        <div className="max-w-[1200px] mx-auto">
+      <OfficeAdminNavbar
+        title="Incident Details"
+        subtitle="Review and manage incident information"
+        showSearch={false}
+        showQuickActions={true}
+      />
+      <Toaster richColors position="top-right" className="z-50" style={{ top: '80px' }} />
+      <div className={`flex-1 overflow-auto transition-all duration-300 ${collapsed ? "ml-[5rem]" : "ml-64"} pt-24`}>
+        <div className={`p-6 -mt-3 mx-8 ${collapsed ? "max-w-[95vw]" : "max-w-[calc(100vw-8rem)]"}`}>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold text-gray-900">Review Incident</h1>
+                <h1 className="text-2xl font-bold text-[#8B0000]">Review Incident</h1>
                 {getStatusBadge(incident.status)}
                 {getPriorityBadge(incident.priorityLevel)}
               </div>
@@ -579,15 +607,19 @@ export default function IncidentDetailsPage({ params }: PageProps) {
               </p>
             </div>
             <div className="flex gap-2">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => setShowTransferModal(true)}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 border-[#DAA520]/30 text-[#8B0000] hover:bg-[#8B0000] hover:text-white"
               >
                 <ArrowRightLeft className="h-4 w-4" />
                 Transfer Case
               </Button>
-              <Button variant="outline" onClick={() => router.back()} className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={() => router.back()}
+                className="flex items-center gap-2 border-[#DAA520]/30 text-[#8B0000] hover:bg-[#8B0000] hover:text-white"
+              >
                 <ArrowLeft className="h-4 w-4" />
                 Back to Incidents
               </Button>
@@ -599,37 +631,54 @@ export default function IncidentDetailsPage({ params }: PageProps) {
             {/* Main content - takes up 2/3 of the space */}
             <div className="md:col-span-2 space-y-6">
               {/* Incident Summary Card */}
-              <Card className="overflow-hidden border-none shadow-md">
-                <CardHeader className="bg-gradient-to-r from-[#8B0000]/90 to-[#8B0000] text-white p-6">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="text-white/80 text-sm mb-1">Incident Report</p>
-                      <h2 className="text-xl font-semibold">{incident.incidentType}</h2>
-                    </div>
-                    <div className="flex flex-col items-end">
-                      <p className="text-white/80 text-sm">Reported</p>
-                      <p className="font-medium">{new Date(incident.submittedAt).toLocaleDateString()}</p>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+                className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden"
+              >
+                <div className="bg-gradient-to-r from-[#8B0000] via-[#9a0000] to-[#8B0000] text-white p-6 relative">
+                  {/* Decorative elements */}
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
+                  <div className="absolute bottom-0 left-0 w-64 h-64 bg-[#DAA520]/10 rounded-full translate-y-1/2 -translate-x-1/2"></div>
+                  <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNEMUFGMzciIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzRjMC0yLjIgMS44LTQgNC00czQgMS44IDQgNC0xLjggNC00IDQtNC0xLjgtNC00eiIvPjwvZz48L2c+PC9zdmc+')] opacity-20"></div>
+                  <div className="relative">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-white/80 text-sm mb-1">Incident Report</p>
+                        <h2 className="text-xl font-semibold">{incident.incidentType}</h2>
+                      </div>
+                      <div className="flex flex-col items-end">
+                        <p className="text-white/80 text-sm">Reported</p>
+                        <p className="font-medium">{new Date(incident.submittedAt).toLocaleDateString()}</p>
+                      </div>
                     </div>
                   </div>
-                </CardHeader>
-                <CardContent className="p-6">
+                </div>
+                <div className="p-6">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                     <div className="flex items-start gap-3">
-                      <Calendar className="h-5 w-5 text-gray-500 mt-0.5" />
+                      <div className="bg-[#8B0000]/10 p-2 rounded-lg">
+                        <Calendar className="h-5 w-5 text-[#8B0000]" />
+                      </div>
                       <div>
                         <p className="text-sm text-gray-500">Date of Incident</p>
                         <p className="font-medium">{new Date(incident.dateOfIncident).toLocaleDateString()}</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
-                      <Clock className="h-5 w-5 text-gray-500 mt-0.5" />
+                      <div className="bg-[#8B0000]/10 p-2 rounded-lg">
+                        <Clock className="h-5 w-5 text-[#8B0000]" />
+                      </div>
                       <div>
                         <p className="text-sm text-gray-500">Time of Incident</p>
                         <p className="font-medium">{incident.timeOfIncident}</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
-                      <MapPin className="h-5 w-5 text-gray-500 mt-0.5" />
+                      <div className="bg-[#8B0000]/10 p-2 rounded-lg">
+                        <MapPin className="h-5 w-5 text-[#8B0000]" />
+                      </div>
                       <div>
                         <p className="text-sm text-gray-500">Location</p>
                         <p className="font-medium">{incident.location}</p>
@@ -640,11 +689,11 @@ export default function IncidentDetailsPage({ params }: PageProps) {
                   <Separator className="my-6" />
 
                   <div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-3">Description</h3>
+                    <h3 className="text-lg font-medium text-[#8B0000] mb-3">Description</h3>
                     <p className="text-gray-700 whitespace-pre-line">{incident.description}</p>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </motion.div>
 
               {/* Evidence & Witnesses */}
               <Tabs defaultValue="evidence" className="w-full">
@@ -659,16 +708,27 @@ export default function IncidentDetailsPage({ params }: PageProps) {
                   </TabsTrigger>
                 </TabsList>
                 <TabsContent value="evidence" className="mt-4">
-                  <Card>
-                    <CardContent className="p-6">
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: 0.1 }}
+                    className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden"
+                  >
+                    <div className="p-6">
                       {incident.evidence && incident.evidence.length > 0 ? (
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                          {incident.evidence.map((file) => (
-                            <div key={file.id} className="group relative">
+                          {incident.evidence.map((file, index) => (
+                            <motion.div
+                              key={file.id}
+                              className="group relative"
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ duration: 0.2, delay: index * 0.05 }}
+                            >
                               {file.fileType.startsWith("image/") ? (
-                                <div className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 shadow-sm group-hover:shadow-md transition-shadow">
+                                <div className="relative aspect-square rounded-lg overflow-hidden border border-[#DAA520]/20 shadow-sm group-hover:shadow-md transition-shadow">
                                   <Image
-                                    src={file.fileUrl}
+                                    src={file.fileUrl || "/placeholder.svg"}
                                     alt={file.fileName}
                                     fill
                                     style={{ objectFit: "cover" }}
@@ -677,51 +737,58 @@ export default function IncidentDetailsPage({ params }: PageProps) {
                                   />
                                 </div>
                               ) : file.fileType.startsWith("video/") ? (
-                                <div className="relative aspect-video rounded-lg overflow-hidden border border-gray-200 shadow-sm group-hover:shadow-md transition-shadow">
-                                  <video
-                                    src={file.fileUrl}
-                                    controls
-                                    className="w-full h-full"
-                                  />
+                                <div className="relative aspect-video rounded-lg overflow-hidden border border-[#DAA520]/20 shadow-sm group-hover:shadow-md transition-shadow">
+                                  <video src={file.fileUrl} controls className="w-full h-full" />
                                 </div>
                               ) : (
-                                <div className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 shadow-sm group-hover:shadow-md transition-shadow bg-gray-50 flex items-center justify-center">
-                                  <FileText className="h-12 w-12 text-gray-400" />
+                                <div className="relative aspect-square rounded-lg overflow-hidden border border-[#DAA520]/20 shadow-sm group-hover:shadow-md transition-shadow bg-[#8B0000]/5 flex items-center justify-center">
+                                  <FileText className="h-12 w-12 text-[#8B0000]" />
                                 </div>
                               )}
                               <div className="mt-2">
-                                <p className="text-sm font-medium text-gray-700 truncate">{file.fileName}</p>
+                                <p className="text-sm font-medium text-[#8B0000] truncate">{file.fileName}</p>
                                 <p className="text-xs text-gray-500">
                                   {(file.fileSize / 1024 / 1024).toFixed(2)} MB •{" "}
                                   {new Date(file.uploadedAt).toLocaleDateString()}
                                 </p>
                               </div>
-                            </div>
+                            </motion.div>
                           ))}
                         </div>
                       ) : (
                         <div className="text-center py-8">
-                          <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                          <FileText className="h-12 w-12 text-[#8B0000]/30 mx-auto mb-3" />
                           <p className="text-gray-500">No evidence files have been uploaded</p>
                         </div>
                       )}
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </motion.div>
                 </TabsContent>
                 <TabsContent value="witnesses" className="mt-4">
-                  <Card>
-                    <CardContent className="p-6">
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: 0.1 }}
+                    className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden"
+                  >
+                    <div className="p-6">
                       {incident.witnesses && incident.witnesses.length > 0 ? (
                         <div className="space-y-4">
-                          {incident.witnesses.map((witness) => (
-                            <Card key={witness.id} className="overflow-hidden">
-                              <div className="bg-gray-50 p-4 border-b">
+                          {incident.witnesses.map((witness, index) => (
+                            <motion.div
+                              key={witness.id}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ duration: 0.2, delay: index * 0.05 }}
+                              className="bg-white rounded-lg border border-[#DAA520]/20 overflow-hidden hover:border-[#DAA520]/40 transition-colors"
+                            >
+                              <div className="bg-[#8B0000]/5 p-4 border-b border-[#DAA520]/20">
                                 <div className="flex items-center gap-3">
-                                  <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
-                                    <User className="h-5 w-5 text-gray-500" />
+                                  <div className="h-10 w-10 rounded-full bg-[#8B0000]/10 flex items-center justify-center">
+                                    <User className="h-5 w-5 text-[#8B0000]" />
                                   </div>
                                   <div>
-                                    <p className="font-medium">{witness.name}</p>
+                                    <p className="font-medium text-[#8B0000]">{witness.name}</p>
                                     <p className="text-sm text-gray-500">{witness.contactInformation}</p>
                                   </div>
                                 </div>
@@ -729,17 +796,17 @@ export default function IncidentDetailsPage({ params }: PageProps) {
                               <div className="p-4">
                                 <p className="text-gray-700 whitespace-pre-line">{witness.additionalNotes}</p>
                               </div>
-                            </Card>
+                            </motion.div>
                           ))}
                         </div>
                       ) : (
                         <div className="text-center py-8">
-                          <User className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                          <User className="h-12 w-12 text-[#8B0000]/30 mx-auto mb-3" />
                           <p className="text-gray-500">No witness information available</p>
                         </div>
                       )}
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </motion.div>
                 </TabsContent>
               </Tabs>
             </div>
@@ -747,21 +814,28 @@ export default function IncidentDetailsPage({ params }: PageProps) {
             {/* Right sidebar - takes up 1/3 of the space */}
             <div className="space-y-6">
               {/* Administrative Actions */}
-              <Card className="overflow-hidden border-none shadow-md">
-                <CardHeader className="bg-gray-50 p-4 border-b">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Shield className="h-5 w-5 text-[#8B0000]" />
-                    Administrative Actions
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-4">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 0.2 }}
+                className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden"
+              >
+                <div className="p-4 border-b border-[#DAA520]/20">
+                  <div className="flex items-center gap-2">
+                    <div className="bg-[#8B0000]/10 p-2 rounded-lg">
+                      <Shield className="h-5 w-5 text-[#8B0000]" />
+                    </div>
+                    <h2 className="text-lg font-semibold text-[#8B0000]">Administrative Actions</h2>
+                  </div>
+                </div>
+                <div className="p-4">
                   {/* Status */}
                   <div className="mb-4">
-                    <Label className="text-sm font-medium">Status</Label>
+                    <Label className="text-sm font-medium text-[#8B0000]">Status</Label>
                     <select
                       value={status}
                       onChange={(e) => setStatus(e.target.value)}
-                      className="w-full mt-1 px-3 py-2 border rounded-md bg-white focus:ring-2 focus:ring-[#8B0000]/20 focus:border-[#8B0000] transition-all"
+                      className="w-full mt-1 px-3 py-2 border border-[#DAA520]/20 rounded-md bg-white focus:ring-2 focus:ring-[#8B0000]/20 focus:border-[#8B0000] transition-all"
                     >
                       <option value="Pending">Pending</option>
                       <option value="In Progress">In Progress</option>
@@ -771,32 +845,35 @@ export default function IncidentDetailsPage({ params }: PageProps) {
 
                   {/* Priority Level */}
                   <div className="mb-4">
-                    <Label className="text-sm font-medium">
+                    <Label className="text-sm font-medium text-[#8B0000]">
                       Set Priority <span className="text-red-600">*</span>
                     </Label>
                     <select
                       value={priorityLevel || ""}
-                      onChange={(e) => { setPriorityLevel(e.target.value || null); setPriorityError(""); }}
-                      className={`w-full mt-1 px-3 py-2 border rounded-md bg-white focus:ring-2 focus:ring-[#8B0000]/20 focus:border-[#8B0000] transition-all ${priorityError ? 'border-red-500' : ''}`}
+                      onChange={(e) => {
+                        setPriorityLevel(e.target.value || null)
+                        setPriorityError("")
+                      }}
+                      className={`w-full mt-1 px-3 py-2 border border-[#DAA520]/20 rounded-md bg-white focus:ring-2 focus:ring-[#8B0000]/20 focus:border-[#8B0000] transition-all ${
+                        priorityError ? "border-red-500" : ""
+                      }`}
                     >
                       <option value="">Select Priority</option>
                       <option value="LOW">Low</option>
                       <option value="MEDIUM">Medium</option>
                       <option value="HIGH">High</option>
                     </select>
-                    {priorityError && (
-                      <div className="text-red-600 text-xs mt-1">{priorityError}</div>
-                    )}
+                    {priorityError && <div className="text-red-600 text-xs mt-1">{priorityError}</div>}
                   </div>
 
                   {/* Administrative Notes */}
                   <div className="mb-4">
-                    <Label className="text-sm font-medium">Administrative Notes</Label>
+                    <Label className="text-sm font-medium text-[#8B0000]">Administrative Notes</Label>
                     <Textarea
                       value={administrativeNotes}
                       onChange={(e) => setAdministrativeNotes(e.target.value)}
                       placeholder="Add your notes about this incident..."
-                      className="mt-1 min-h-[100px] focus:ring-2 focus:ring-[#8B0000]/20 focus:border-[#8B0000] transition-all"
+                      className="mt-1 min-h-[100px] border-[#DAA520]/20 focus:ring-2 focus:ring-[#8B0000]/20 focus:border-[#8B0000] transition-all"
                     />
                   </div>
 
@@ -806,129 +883,141 @@ export default function IncidentDetailsPage({ params }: PageProps) {
                       <Switch
                         id="is-anonymous"
                         checked={isAnonymous}
-                        onCheckedChange={checked => setIsAnonymous(checked)}
+                        onCheckedChange={(checked) => setIsAnonymous(checked)}
                       />
-                      <span className="text-sm font-medium text-gray-900">
-                        Mark this report as anonymous
-                      </span>
+                      <span className="text-sm font-medium text-[#8B0000]">Mark this report as anonymous</span>
                     </label>
                     <p className="text-xs text-gray-500 ml-9">
                       If enabled, this report will not be displayed in public listings.
                     </p>
                   </div>
-
-                  {/* Update Button */}
-                  {/*
-                  <Button
-                    onClick={handleStatusUpdate}
-                    disabled={isProcessing}
-                    className="w-full bg-[#8B0000] hover:bg-[#700000] text-white"
-                  >
-                    {isProcessing ? "Updating..." : "Update Status"}
-                  </Button>
-                  */}
-                </CardContent>
-              </Card>
+                </div>
+              </motion.div>
 
               {/* Reporter Information */}
-              <Card className="overflow-hidden border-none shadow-md">
-                <CardHeader className="bg-gray-50 p-4 border-b">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <User className="h-5 w-5 text-[#8B0000]" />
-                    Reporter Information
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-4">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 0.3 }}
+                className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden"
+              >
+                <div className="p-4 border-b border-[#DAA520]/20">
+                  <div className="flex items-center gap-2">
+                    <div className="bg-[#8B0000]/10 p-2 rounded-lg">
+                      <User className="h-5 w-5 text-[#8B0000]" />
+                    </div>
+                    <h2 className="text-lg font-semibold text-[#8B0000]">Reporter Information</h2>
+                  </div>
+                </div>
+                <div className="p-4">
                   <div className="space-y-4">
                     <div className="flex items-start gap-3">
-                      <User className="h-5 w-5 text-gray-400 mt-0.5" />
+                      <div className="bg-[#8B0000]/10 p-2 rounded-lg">
+                        <User className="h-5 w-5 text-[#8B0000]" />
+                      </div>
                       <div>
                         <p className="text-sm text-gray-500">Name</p>
-                        <p className="font-medium">{incident.submittedByFullName}</p>
+                        <p className="font-medium text-[#8B0000]">{incident.submittedByFullName}</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
-                      <Tag className="h-5 w-5 text-gray-400 mt-0.5" />
+                      <div className="bg-[#8B0000]/10 p-2 rounded-lg">
+                        <Tag className="h-5 w-5 text-[#8B0000]" />
+                      </div>
                       <div>
                         <p className="text-sm text-gray-500">ID Number</p>
-                        <p className="font-medium">{incident.submittedByIdNumber}</p>
+                        <p className="font-medium text-[#8B0000]">{incident.submittedByIdNumber}</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
-                      <Mail className="h-5 w-5 text-gray-400 mt-0.5" />
+                      <div className="bg-[#8B0000]/10 p-2 rounded-lg">
+                        <Mail className="h-5 w-5 text-[#8B0000]" />
+                      </div>
                       <div>
                         <p className="text-sm text-gray-500">Email</p>
-                        <p className="font-medium">{incident.submittedByEmail}</p>
+                        <p className="font-medium text-[#8B0000]">{incident.submittedByEmail}</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
-                      <Phone className="h-5 w-5 text-gray-400 mt-0.5" />
+                      <div className="bg-[#8B0000]/10 p-2 rounded-lg">
+                        <Phone className="h-5 w-5 text-[#8B0000]" />
+                      </div>
                       <div>
                         <p className="text-sm text-gray-500">Phone</p>
-                        <p className="font-medium">{incident.submittedByPhone}</p>
+                        <p className="font-medium text-[#8B0000]">{incident.submittedByPhone}</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
-                      <Calendar className="h-5 w-5 text-gray-400 mt-0.5" />
+                      <div className="bg-[#8B0000]/10 p-2 rounded-lg">
+                        <Calendar className="h-5 w-5 text-[#8B0000]" />
+                      </div>
                       <div>
                         <p className="text-sm text-gray-500">Submission Date</p>
-                        <p className="font-medium">{new Date(incident.submittedAt).toLocaleString()}</p>
+                        <p className="font-medium text-[#8B0000]">{new Date(incident.submittedAt).toLocaleString()}</p>
                       </div>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </motion.div>
 
               {/* Verification */}
-              <Card className="overflow-hidden border-none shadow-md">
-                <CardHeader className="bg-gray-50 p-4 border-b">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <CheckCircle2 className="h-5 w-5 text-[#8B0000]" />
-                    Verification
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2 mb-4 p-3 bg-gray-50 rounded-md border">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 0.4 }}
+                className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden"
+              >
+                <div className="p-4 border-b border-[#DAA520]/20">
+                  <div className="flex items-center gap-2">
+                    <div className="bg-[#8B0000]/10 p-2 rounded-lg">
+                      <CheckCircle2 className="h-5 w-5 text-[#8B0000]" />
+                    </div>
+                    <h2 className="text-lg font-semibold text-[#8B0000]">Verification</h2>
+                  </div>
+                </div>
+                <div className="p-4">
+                  <div className="flex items-center gap-2 mb-4 p-3 bg-[#8B0000]/5 rounded-md border border-[#DAA520]/20">
                     <input
                       type="checkbox"
                       id="verified"
                       checked={isVerified}
-                      onChange={(e) => { setIsVerified(e.target.checked); setVerifyError(""); }}
-                      className="h-4 w-4 rounded border-gray-300 text-[#8B0000] focus:ring-[#8B0000]"
+                      onChange={(e) => {
+                        setIsVerified(e.target.checked)
+                        setVerifyError("")
+                      }}
+                      className="h-4 w-4 rounded border-[#DAA520]/20 text-[#8B0000] focus:ring-[#8B0000]"
                     />
-                    <Label htmlFor="verified" className="text-sm font-medium cursor-pointer">
+                    <Label htmlFor="verified" className="text-sm font-medium text-[#8B0000] cursor-pointer">
                       I confirm this incident has been verified <span className="text-red-600">*</span>
                     </Label>
                   </div>
-                  {verifyError && (
-                    <div className="text-red-600 text-xs mb-2 ml-1">{verifyError}</div>
-                  )}
+                  {verifyError && <div className="text-red-600 text-xs mb-2 ml-1">{verifyError}</div>}
 
                   <div className="mb-4">
-                    <Label className="text-sm font-medium">Verification Notes</Label>
+                    <Label className="text-sm font-medium text-[#8B0000]">Verification Notes</Label>
                     <Textarea
                       value={verificationNotes}
                       onChange={(e) => setVerificationNotes(e.target.value)}
                       placeholder="Add verification notes here..."
-                      className="mt-1 min-h-[100px] focus:ring-2 focus:ring-[#8B0000]/20 focus:border-[#8B0000] transition-all"
+                      className="mt-1 min-h-[100px] border-[#DAA520]/20 focus:ring-2 focus:ring-[#8B0000]/20 focus:border-[#8B0000] transition-all"
                     />
                   </div>
 
                   {incident.verifiedBy && (
-                    <div className="text-sm bg-green-50 text-green-700 p-3 rounded-md border border-green-200 flex items-start gap-2">
+                    <div className="text-sm bg-[#8B0000]/5 text-[#8B0000] p-3 rounded-md border border-[#DAA520]/20 flex items-start gap-2">
                       <CheckCircle2 className="h-4 w-4 mt-0.5" />
                       <span>
                         Verified by {incident.verifiedBy} on {new Date(incident.verifiedAt!).toLocaleString()}
                       </span>
                     </div>
                   )}
-                </CardContent>
-              </Card>
+                </div>
+              </motion.div>
 
               {/* Action Buttons */}
               <div className="grid grid-cols-2 gap-4">
                 <Button
-                  className="bg-[#8B0000] hover:bg-[#8B0000]/90 text-white flex items-center gap-2"
+                  className="bg-[#8B0000] hover:bg-[#6B0000] text-white flex items-center gap-2"
                   onClick={handleApproveIncident}
                   disabled={isProcessing || !priorityLevel || !isVerified}
                 >
@@ -959,7 +1048,7 @@ export default function IncidentDetailsPage({ params }: PageProps) {
                   <label className="text-sm font-medium">Transfer to Office</label>
                   <Select value={selectedOffice} onValueChange={setSelectedOffice}>
                     <SelectTrigger>
-                      <SelectValue placeholder={officesLoading ? 'Loading offices...' : 'Select an office'} />
+                      <SelectValue placeholder={officesLoading ? "Loading offices..." : "Select an office"} />
                     </SelectTrigger>
                     <SelectContent>
                       {officesLoading ? (
@@ -968,18 +1057,24 @@ export default function IncidentDetailsPage({ params }: PageProps) {
                         <div className="px-4 py-2 text-red-500">{officesError}</div>
                       ) : (
                         offices.map((office) => (
-                          <SelectItem key={office.code} value={office.code} className="flex items-center justify-between gap-2">
+                          <SelectItem
+                            key={office.code}
+                            value={office.code}
+                            className="flex items-center justify-between gap-2"
+                          >
                             <span>{office.fullName}</span>
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <span className="ml-2 cursor-pointer">
-                                    <Info className="h-4 w-4 text-gray-400 hover:text-primary" />
+                                    <Info className="h-4 w-4 text-gray-400 hover:text-[#8B0000]" />
                                   </span>
                                 </TooltipTrigger>
                                 <TooltipContent>
                                   <div className="font-semibold">{office.fullName}</div>
-                                  <div className="text-xs text-gray-500 max-w-xs whitespace-pre-line">{office.description}</div>
+                                  <div className="text-xs text-gray-500 max-w-xs whitespace-pre-line">
+                                    {office.description}
+                                  </div>
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
@@ -996,6 +1091,7 @@ export default function IncidentDetailsPage({ params }: PageProps) {
                     value={transferNotes}
                     onChange={(e) => setTransferNotes(e.target.value)}
                     rows={4}
+                    className="focus:ring-2 focus:ring-[#8B0000]/20 focus:border-[#8B0000]"
                   />
                 </div>
               </div>
@@ -1003,10 +1099,10 @@ export default function IncidentDetailsPage({ params }: PageProps) {
                 <Button variant="outline" onClick={() => setShowTransferModal(false)}>
                   Cancel
                 </Button>
-                <Button 
-                  onClick={handleTransfer} 
+                <Button
+                  onClick={handleTransfer}
                   disabled={isTransferring}
-                  className="bg-[#8B0000] hover:bg-[#700000]"
+                  className="bg-[#8B0000] hover:bg-[#6B0000] text-white"
                 >
                   {isTransferring ? "Transferring..." : "Transfer"}
                 </Button>
@@ -1018,16 +1114,14 @@ export default function IncidentDetailsPage({ params }: PageProps) {
         {/* Modal */}
         {showModal && modalContent && (
           <div className="fixed inset-0 backdrop-blur-sm bg-black/30 flex items-center justify-center z-50">
-            <div className={`bg-white rounded-lg shadow-xl max-w-md w-full mx-4 ${modalContent.color} animate-in fade-in zoom-in duration-300`}>
+            <div
+              className={`bg-white rounded-lg shadow-xl max-w-md w-full mx-4 ${modalContent.color} animate-in fade-in zoom-in duration-300`}
+            >
               <div className="p-6">
                 <div className="flex flex-col items-center text-center">
                   {modalContent.icon}
-                  <h3 className="mt-4 text-xl font-semibold text-gray-900">
-                    {modalContent.title}
-                  </h3>
-                  <p className="mt-2 text-gray-600">
-                    {modalContent.message}
-                  </p>
+                  <h3 className="mt-4 text-xl font-semibold text-gray-900">{modalContent.title}</h3>
+                  <p className="mt-2 text-gray-600">{modalContent.message}</p>
                   <div className="mt-4 text-sm text-gray-500">
                     Redirecting to dashboard in <span className="font-bold text-[#8B0000]">{countdown}</span> seconds...
                   </div>
@@ -1037,6 +1131,16 @@ export default function IncidentDetailsPage({ params }: PageProps) {
           </div>
         )}
       </div>
+
+      {/* Add custom styles for animation delays */}
+      <style jsx global>{`
+        .animation-delay-150 {
+          animation-delay: 150ms;
+        }
+        .animation-delay-300 {
+          animation-delay: 300ms;
+        }
+      `}</style>
     </div>
   )
 }
