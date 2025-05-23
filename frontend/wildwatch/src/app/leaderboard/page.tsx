@@ -45,6 +45,20 @@ export default function LeaderboardPage() {
   const [showInfoModal, setShowInfoModal] = useState(false)
   const [expandedSection, setExpandedSection] = useState<"top3" | "others" | null>(null)
 
+  const getContentMargin = () => {
+    if (userRole === 'OFFICE_ADMIN') {
+      return collapsed ? 'ml-20' : 'ml-72'
+    }
+    return collapsed ? 'ml-18' : 'ml-64'
+  }
+
+  const getContentWidth = () => {
+    if (userRole === 'OFFICE_ADMIN') {
+      return collapsed ? 'w-[calc(100%-5rem)]' : 'w-[calc(100%-18rem)]'
+    }
+    return collapsed ? 'w-[calc(100%-4.5rem)]' : 'w-[calc(100%-16rem)]'
+  }
+
   useEffect(() => {
     const fetchLeaderboardData = async () => {
       setLoading(true)
@@ -369,7 +383,7 @@ export default function LeaderboardPage() {
       <Navbar title="Recognition Leaderboard" subtitle="Celebrating our top contributors and offices" />
 
       <div className="flex flex-1">
-        <div className={`flex-1 p-8 transition-all duration-300 ease-in-out ${collapsed ? "ml-[5rem]" : "ml-64"}`}>
+        <div className={`flex-1 p-8 transition-all duration-300 ease-in-out ${getContentMargin()} ${getContentWidth()}`}>
           <div className="pt-24 max-w-7xl mx-auto">
             {/* Header with animated gradient */}
             <div className="relative mb-12 overflow-hidden rounded-xl bg-gradient-to-r from-[#8B0000] to-[#6B0000] p-8 shadow-lg">
