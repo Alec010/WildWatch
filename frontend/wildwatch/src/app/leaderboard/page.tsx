@@ -47,9 +47,9 @@ export default function LeaderboardPage() {
 
   const getContentMargin = () => {
     if (userRole === 'OFFICE_ADMIN') {
-      return collapsed ? 'ml-[5rem]' : 'ml-[18rem]'
+      return collapsed ? 'ml-20' : 'ml-72'
     }
-    return collapsed ? 'ml-[4.5rem]' : 'ml-[16rem]'
+    return collapsed ? 'ml-18' : 'ml-64'
   }
 
   const getContentWidth = () => {
@@ -378,61 +378,60 @@ export default function LeaderboardPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9]">
+    <div className="min-h-screen flex bg-[#f5f5f5]">
       {userRole === "OFFICE_ADMIN" ? <OfficeAdminSidebar /> : <Sidebar />}
-      <Navbar title="Recognition Leaderboard" subtitle="Celebrating our top contributors and offices" />
-
-      <div className="flex flex-1 w-full">
-        <div className={`flex-1 p-4 sm:p-6 md:p-8 transition-all duration-300 ease-in-out ${getContentMargin()} ${getContentWidth()}`}>
-          <div className="pt-16 sm:pt-20 md:pt-24 max-w-full sm:max-w-3xl md:max-w-4xl lg:max-w-5xl xl:max-w-7xl mx-auto">
+      <div className={`flex-1 transition-all duration-300 ${getContentMargin()}`}>
+        <Navbar title="Recognition Leaderboard" subtitle="Celebrating our top contributors and offices" />
+        <main className="p-6 pt-24">
+          <div className="max-w-7xl mx-auto">
             {/* Header with animated gradient */}
             <div className="relative mb-12 overflow-hidden rounded-xl bg-gradient-to-r from-[#8B0000] to-[#6B0000] p-8 shadow-lg">
               <div className="absolute -top-24 -right-24 w-64 h-64 bg-gradient-to-br from-[#DAA520]/30 to-transparent rounded-full blur-2xl"></div>
               <div className="absolute -bottom-16 -left-16 w-48 h-48 bg-gradient-to-br from-[#DAA520]/20 to-transparent rounded-full blur-xl"></div>
 
-              <div className="relative flex items-center justify-between">
+              <div className="relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
                 <div>
-                  <h1 className="text-3xl font-bold text-white flex items-center">
-                    <Trophy className="w-8 h-8 mr-3" />
+                  <h1 className="text-2xl sm:text-3xl font-bold text-white flex items-center">
+                    <Trophy className="w-6 h-6 sm:w-8 sm:h-8 mr-2 sm:mr-3" />
                     Recognition Leaderboard
                   </h1>
-                  <p className="mt-2 text-white/80 max-w-xl">
+                  <p className="mt-2 text-sm sm:text-base text-white/80 max-w-xl">
                     Celebrating excellence in our community. Points are awarded based on quality reports and exceptional
                     service.
                   </p>
-          </div>
-          <button
-            onClick={() => setShowInfoModal(true)}
-                  className="bg-white/10 hover:bg-white/20 transition-colors p-3 rounded-full"
-            aria-label="Show recognition info"
-          >
-                  <Info className="w-6 h-6 text-white" />
-          </button>
+                </div>
+                <button
+                  onClick={() => setShowInfoModal(true)}
+                  className="bg-white/10 hover:bg-white/20 transition-colors p-2 sm:p-3 rounded-full"
+                  aria-label="Show recognition info"
+                >
+                  <Info className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                </button>
               </div>
-        </div>
+            </div>
 
-        {/* Tabs */}
-            <div className="flex gap-4 mb-8">
-          <button
-            onClick={() => setActiveTab("students")}
-                className={`flex items-center gap-2 px-6 py-3 rounded-lg transition-all duration-300 ${
-              activeTab === "students"
+            {/* Tabs */}
+            <div className="flex gap-2 sm:gap-4 mb-8">
+              <button
+                onClick={() => setActiveTab("students")}
+                className={`flex items-center gap-1 sm:gap-2 px-3 sm:px-6 py-2 sm:py-3 rounded-lg transition-all duration-300 text-sm sm:text-base ${
+                  activeTab === "students"
                     ? "bg-gradient-to-r from-[#8B0000] to-[#6B0000] text-white shadow-md transform scale-105"
-                : "bg-white text-gray-600 hover:bg-gray-50"
-            }`}
-          >
-            <Users className="w-5 h-5" />
+                    : "bg-white text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                <Users className="w-4 h-4 sm:w-5 sm:h-5" />
                 <span className="font-medium">Top Students</span>
-          </button>
-          <button
-            onClick={() => setActiveTab("offices")}
-                className={`flex items-center gap-2 px-6 py-3 rounded-lg transition-all duration-300 ${
-              activeTab === "offices"
+              </button>
+              <button
+                onClick={() => setActiveTab("offices")}
+                className={`flex items-center gap-1 sm:gap-2 px-3 sm:px-6 py-2 sm:py-3 rounded-lg transition-all duration-300 text-sm sm:text-base ${
+                  activeTab === "offices"
                     ? "bg-gradient-to-r from-[#8B0000] to-[#6B0000] text-white shadow-md transform scale-105"
-                : "bg-white text-gray-600 hover:bg-gray-50"
-            }`}
-          >
-            <Building2 className="w-5 h-5" />
+                    : "bg-white text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                <Building2 className="w-4 h-4 sm:w-5 sm:h-5" />
                 <span className="font-medium">Top Offices</span>
               </button>
             </div>
@@ -440,20 +439,20 @@ export default function LeaderboardPage() {
             {/* Top 3 Podium Section */}
             <div className="mb-12">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-[#8B0000] flex items-center">
-                  <Award className="mr-2 h-6 w-6" />
+                <h2 className="text-lg sm:text-xl font-bold text-[#8B0000] flex items-center">
+                  <Award className="mr-2 h-5 w-5 sm:h-6 sm:w-6" />
                   Top 3 Champions
                 </h2>
               </div>
 
-              <div className="relative bg-gradient-to-b from-white to-gray-50 rounded-xl p-6 shadow-md overflow-hidden">
+              <div className="relative bg-gradient-to-b from-white to-gray-50 rounded-xl p-4 sm:p-6 shadow-md overflow-hidden">
                 <div className="absolute inset-0 bg-[url('/abstract-geometric-flow.png')] opacity-5"></div>
 
                 {/* Decorative elements */}
-                <div className="absolute top-1/2 left-1/4 w-12 h-12 rounded-full bg-[#8B0000]/5"></div>
-                <div className="absolute top-1/3 right-1/4 w-16 h-16 rounded-full bg-[#DAA520]/5"></div>
+                <div className="absolute top-1/2 left-1/4 w-8 sm:w-12 h-8 sm:h-12 rounded-full bg-[#8B0000]/5"></div>
+                <div className="absolute top-1/3 right-1/4 w-12 sm:w-16 h-12 sm:h-16 rounded-full bg-[#DAA520]/5"></div>
 
-                <div className="relative h-[180px] -mb-6">
+                <div className="relative h-[140px] sm:h-[160px] md:h-[180px] -mb-4 sm:-mb-6">
                   {loading ? (
                     <div className="flex items-center justify-center h-full">
                       <Loader2 className="w-8 h-8 text-[#8B0000] animate-spin" />
@@ -540,7 +539,7 @@ export default function LeaderboardPage() {
               </div>
             </div>
           </div>
-        </div>
+        </main>
       </div>
 
       <RecognitionInfoModal isOpen={showInfoModal} onClose={() => setShowInfoModal(false)} />
