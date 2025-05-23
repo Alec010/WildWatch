@@ -47,9 +47,9 @@ export default function LeaderboardPage() {
 
   const getContentMargin = () => {
     if (userRole === 'OFFICE_ADMIN') {
-      return collapsed ? 'ml-20' : 'ml-72'
+      return collapsed ? 'ml-[5rem]' : 'ml-[18rem]'
     }
-    return collapsed ? 'ml-18' : 'ml-64'
+    return collapsed ? 'ml-[4.5rem]' : 'ml-[16rem]'
   }
 
   const getContentWidth = () => {
@@ -382,9 +382,9 @@ export default function LeaderboardPage() {
       {userRole === "OFFICE_ADMIN" ? <OfficeAdminSidebar /> : <Sidebar />}
       <Navbar title="Recognition Leaderboard" subtitle="Celebrating our top contributors and offices" />
 
-      <div className="flex flex-1">
-        <div className={`flex-1 p-8 transition-all duration-300 ease-in-out ${getContentMargin()} ${getContentWidth()}`}>
-          <div className="pt-24 max-w-7xl mx-auto">
+      <div className="flex flex-1 w-full">
+        <div className={`flex-1 p-4 sm:p-6 md:p-8 transition-all duration-300 ease-in-out ${getContentMargin()} ${getContentWidth()}`}>
+          <div className="pt-16 sm:pt-20 md:pt-24 max-w-full sm:max-w-3xl md:max-w-4xl lg:max-w-5xl xl:max-w-7xl mx-auto">
             {/* Header with animated gradient */}
             <div className="relative mb-12 overflow-hidden rounded-xl bg-gradient-to-r from-[#8B0000] to-[#6B0000] p-8 shadow-lg">
               <div className="absolute -top-24 -right-24 w-64 h-64 bg-gradient-to-br from-[#DAA520]/30 to-transparent rounded-full blur-2xl"></div>
