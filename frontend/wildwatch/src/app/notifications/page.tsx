@@ -3,12 +3,28 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Sidebar } from "@/components/Sidebar"
-import { AlertCircle, Bell, CheckCircle, ChevronRight, BellOff } from "lucide-react"
+import { Navbar } from "@/components/Navbar"
+import { CustomLoader } from "@/components/ui/custom-loader"
+import {
+  Bell,
+  CheckCircle,
+  ChevronRight,
+  BellOff,
+  AlertTriangle,
+  Info,
+  Shield,
+  TrendingUp,
+  FileText,
+  User,
+  Calendar,
+} from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
-import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 import { API_BASE_URL } from "@/utils/api"
+import { useSidebar } from "@/contexts/SidebarContext"
+import { useUser } from "@/contexts/UserContext"
+import { Inter } from "next/font/google"
 
 interface ActivityLog {
   id: string
@@ -22,11 +38,22 @@ interface ActivityLog {
   }
 }
 
+const inter = Inter({ subsets: ["latin"] })
+
 export default function NotificationsPage() {
   const [logs, setLogs] = useState<ActivityLog[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
+  const { collapsed } = useSidebar()
+  const { userRole } = useUser()
+
+  const getContentMargin = () => {
+    if (userRole === "OFFICE_ADMIN") {
+      return collapsed ? "ml-20" : "ml-72"
+    }
+    return collapsed ? "ml-18" : "ml-64"
+  }
 
   useEffect(() => {
     const fetchLogs = async () => {
@@ -76,6 +103,91 @@ export default function NotificationsPage() {
     }
   }
 
+  const getNotificationIcon = (activityType: string) => {
+    const type = activityType.toLowerCase()
+    if (type.includes("incident") || type.includes("report")) {
+      return <AlertTriangle className="h-5 w-5" />
+    }
+    if (type.includes("status") || type.includes("update")) {
+      return <TrendingUp className="h-5 w-5" />
+    }
+    if (type.includes("comment") || type.includes("message")) {
+      return <FileText className="h-5 w-5" />
+    }
+    if (type.includes("user") || type.includes("profile")) {
+      return <User className="h-5 w-5" />
+    }
+    return <Info className="h-5 w-5" />
+  }
+
+  const getNotificationColor = (activityType: string, isRead: boolean) => {
+    const type = activityType.toLowerCase()
+    const opacity = isRead ? "50" : "100"
+
+    if (type.includes("points") || type.includes("reward")) {
+      return {
+        bg: isRead ? "bg-emerald-50" : "bg-emerald-100",
+        border: `border-emerald-${isRead ? "200" : "300"}`,
+        icon: `text-emerald-${isRead ? "400" : "600"}`,
+        accent: "border-l-emerald-500",
+      }
+    }
+    if (type.includes("verification") || type.includes("verify")) {
+      return {
+        bg: isRead ? "bg-amber-50" : "bg-amber-100",
+        border: `border-amber-${isRead ? "200" : "300"}`,
+        icon: `text-amber-${isRead ? "400" : "600"}`,
+        accent: "border-l-amber-500",
+      }
+    }
+    if (type.includes("new report") || type.includes("new incident")) {
+      return {
+        bg: isRead ? "bg-rose-50" : "bg-rose-100",
+        border: `border-rose-${isRead ? "200" : "300"}`,
+        icon: `text-rose-${isRead ? "400" : "600"}`,
+        accent: "border-l-rose-500",
+      }
+    }
+    if (type.includes("incident") || type.includes("report")) {
+      return {
+        bg: isRead ? "bg-red-50" : "bg-red-100",
+        border: `border-red-${isRead ? "200" : "300"}`,
+        icon: `text-red-${isRead ? "400" : "600"}`,
+        accent: "border-l-red-500",
+      }
+    }
+    if (type.includes("status") || type.includes("update")) {
+      return {
+        bg: isRead ? "bg-blue-50" : "bg-blue-100",
+        border: `border-blue-${isRead ? "200" : "300"}`,
+        icon: `text-blue-${isRead ? "400" : "600"}`,
+        accent: "border-l-blue-500",
+      }
+    }
+    if (type.includes("comment") || type.includes("message")) {
+      return {
+        bg: isRead ? "bg-green-50" : "bg-green-100",
+        border: `border-green-${isRead ? "200" : "300"}`,
+        icon: `text-green-${isRead ? "400" : "600"}`,
+        accent: "border-l-green-500",
+      }
+    }
+    if (type.includes("user") || type.includes("profile")) {
+      return {
+        bg: isRead ? "bg-purple-50" : "bg-purple-100",
+        border: `border-purple-${isRead ? "200" : "300"}`,
+        icon: `text-purple-${isRead ? "400" : "600"}`,
+        accent: "border-l-purple-500",
+      }
+    }
+    return {
+      bg: isRead ? "bg-gray-50" : "bg-gray-100",
+      border: `border-gray-${isRead ? "200" : "300"}`,
+      icon: `text-gray-${isRead ? "400" : "600"}`,
+      accent: "border-l-gray-500",
+    }
+  }
+
   const formatActivityType = (type: string) => {
     return type
       .replace(/_/g, " ")
@@ -87,9 +199,8 @@ export default function NotificationsPage() {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
     const now = new Date()
-    // Convert both to Asia/Manila time
-    const datePH = new Date(date.toLocaleString('en-US', { timeZone: 'Asia/Manila' }))
-    const nowPH = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Manila' }))
+    const datePH = new Date(date.toLocaleString("en-US", { timeZone: "Asia/Manila" }))
+    const nowPH = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Manila" }))
     const diffMs = nowPH.getTime() - datePH.getTime()
     const diffMins = Math.round(diffMs / 60000)
     const diffHours = Math.round(diffMins / 60)
@@ -112,102 +223,215 @@ export default function NotificationsPage() {
 
   const unreadCount = logs.filter((log) => !log.isRead).length
 
+  if (loading) {
+    return (
+      <div className={`min-h-screen flex bg-gradient-to-br from-[#fafafa] via-white to-[#f8f9fa] ${inter.className}`}>
+        <Sidebar />
+        <div className={`flex-1 relative transition-all duration-300 ${getContentMargin()}`}>
+          <Navbar
+            title="Notifications"
+            subtitle="Loading your notifications..."
+            showSearch={false}
+            showNewIncident={false}
+          />
+          <div className="pt-24">
+            <CustomLoader
+              title="Loading notifications..."
+              subtitle="Fetching your latest activity updates"
+              contentOnly
+            />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className={`min-h-screen flex bg-gradient-to-br from-[#fafafa] via-white to-[#f8f9fa] ${inter.className}`}>
+        <Sidebar />
+        <div className={`flex-1 transition-all duration-300 ${getContentMargin()}`}>
+          <Navbar
+            title="Notifications"
+            subtitle="Error loading notifications"
+            showSearch={false}
+            showNewIncident={false}
+          />
+          <div className="pt-24 px-6 pb-10">
+            <div className="max-w-4xl mx-auto">
+              <div className="bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-2xl p-8 shadow-xl">
+                <div className="flex items-center gap-6">
+                  <div className="p-4 bg-red-500 rounded-full shadow-lg">
+                    <AlertTriangle className="h-8 w-8 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-red-800 font-bold text-xl mb-2">Unable to Load Notifications</h3>
+                    <p className="text-red-700 text-lg">{error}</p>
+                    <button
+                      onClick={() => window.location.reload()}
+                      className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                    >
+                      Try Again
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="min-h-screen flex bg-gray-50 dark:bg-gray-900">
+    <div className={`min-h-screen flex bg-gradient-to-br from-[#fafafa] via-white to-[#f8f9fa] ${inter.className}`}>
       <Sidebar />
-      <main className="flex-1 p-4 md:p-8 max-w-5xl mx-auto w-full ml-64">
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <Bell className="h-6 w-6 text-[#8B0000] dark:text-red-400" />
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Notifications</h1>
-            {unreadCount > 0 && (
-              <Badge variant="destructive" className="bg-[#8B0000] hover:bg-[#8B0000]/90">
-                {unreadCount} new
-              </Badge>
+
+      <div className={`flex-1 transition-all duration-300 ${getContentMargin()}`}>
+        <Navbar
+          title="Notifications"
+          subtitle={`${unreadCount > 0 ? `${unreadCount} unread notifications` : "All caught up!"}`}
+          showSearch={false}
+          showNewIncident={false}
+        />
+
+        <div className="pt-24 px-4 pb-6">
+          {/* Notifications Content */}
+          <div className="max-w-[60vw] mx-auto mt-4">
+            {logs.length === 0 ? (
+              <div className="text-center py-20">
+                <div className="max-w-lg mx-auto">
+                  <div className="w-32 h-32 bg-gradient-to-br from-slate-100 to-slate-200 rounded-full flex items-center justify-center mx-auto mb-8 shadow-lg">
+                    <BellOff className="h-16 w-16 text-slate-400" />
+                  </div>
+                  <h3 className="text-3xl font-bold text-slate-800 mb-4">All Caught Up!</h3>
+                  <p className="text-slate-600 text-lg leading-relaxed">
+                    You don't have any notifications at the moment.
+                    <br />
+                    We'll notify you when there's new activity or updates.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {logs.map((log, index) => {
+                  const colors = getNotificationColor(log.activityType, log.isRead)
+                  return (
+                    <Card
+                      key={log.id}
+                      className={cn(
+                        "transition-all duration-300 hover:shadow-xl cursor-pointer group border-l-4 overflow-hidden",
+                        colors.bg,
+                        colors.border,
+                        colors.accent,
+                        log.isRead ? "opacity-75" : "opacity-100",
+                      )}
+                      onClick={() => handleLogClick(log)}
+                      style={{
+                        animationName: "fadeInUp",
+                        animationDuration: "0.6s",
+                        animationTimingFunction: "ease-out",
+                        animationFillMode: "forwards",
+                        animationDelay: `${index * 100}ms`,
+                      }}
+                    >
+                      <div className="p-4">
+                        <div className="flex items-start gap-3">
+                          {/* Notification Icon */}
+                          <div
+                            className={cn(
+                              "p-2 rounded-lg shadow-md transition-all duration-300 group-hover:scale-110",
+                              colors.icon.includes("red")
+                                ? "bg-red-500 text-white"
+                                : colors.icon.includes("blue")
+                                  ? "bg-blue-500 text-white"
+                                  : colors.icon.includes("green")
+                                    ? "bg-green-500 text-white"
+                                    : colors.icon.includes("purple")
+                                      ? "bg-purple-500 text-white"
+                                      : "bg-gray-500 text-white",
+                            )}
+                          >
+                            {getNotificationIcon(log.activityType)}
+                          </div>
+
+                          {/* Notification Content */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex justify-between items-start mb-1">
+                              <h3 className={cn("font-bold text-base", log.isRead ? "text-slate-700" : "text-slate-900")}>
+                                {formatActivityType(log.activityType)}
+                              </h3>
+                              <div className="flex items-center gap-2 ml-4">
+                                {!log.isRead && (
+                                  <div className="w-2 h-2 bg-[#800000] rounded-full animate-pulse shadow-lg"></div>
+                                )}
+                                <div className="flex items-center gap-1 text-slate-500 text-xs bg-white/50 px-2 py-0.5 rounded-lg">
+                                  <Calendar className="h-3 w-3" />
+                                  <span className="whitespace-nowrap">{formatDate(log.createdAt)}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <p
+                              className={cn(
+                                "text-sm leading-relaxed mb-2",
+                                log.isRead ? "text-slate-600" : "text-slate-800",
+                              )}
+                            >
+                              {log.description}
+                            </p>
+
+                            {/* Action Area */}
+                            {log.incident && log.incident.trackingNumber && (
+                              <div className="flex items-center justify-between pt-2 border-t border-white/50">
+                                <div className="flex items-center gap-2 text-xs text-slate-600">
+                                  <FileText className="h-3 w-3" />
+                                  <span>Incident #{log.incident.trackingNumber.slice(-6)}</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-[#800000] font-semibold text-sm group-hover:text-[#600000] transition-colors">
+                                  <span>View Details</span>
+                                  <ChevronRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Read Status Indicator */}
+                          <div className="flex flex-col items-center gap-2">
+                            {log.isRead ? (
+                              <CheckCircle className="h-4 w-4 text-green-500" />
+                            ) : (
+                              <div className="h-4 w-4 rounded-full bg-[#800000] flex items-center justify-center shadow-lg">
+                                <div className="h-2 w-2 rounded-full bg-white animate-pulse" />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Hover Effect Overlay */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-[#800000]/5 to-[#D4AF37]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+                    </Card>
+                  )
+                })}
+              </div>
             )}
           </div>
-          <p className="text-gray-500 dark:text-gray-400">Stay updated with the latest activity and incidents</p>
         </div>
+      </div>
 
-        {loading ? (
-          <div className="space-y-3">
-            {[...Array(5)].map((_, i) => (
-              <Card key={i} className="p-4">
-                <div className="flex items-start gap-3">
-                  <Skeleton className="h-5 w-5 rounded-full" />
-                  <div className="space-y-2 flex-1">
-                    <Skeleton className="h-4 w-1/3" />
-                    <Skeleton className="h-3 w-full" />
-                    <Skeleton className="h-3 w-1/4" />
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        ) : error ? (
-          <Card className="p-6 flex flex-col items-center justify-center text-center">
-            <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
-            <h3 className="text-lg font-medium mb-2">Failed to load notifications</h3>
-            <p className="text-gray-500 dark:text-gray-400 mb-4">{error}</p>
-          </Card>
-        ) : logs.length === 0 ? (
-          <Card className="p-8 flex flex-col items-center justify-center text-center">
-            <BellOff className="h-12 w-12 text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium mb-2">No notifications</h3>
-            <p className="text-gray-500 dark:text-gray-400">You don't have any notifications at the moment</p>
-          </Card>
-        ) : (
-          <div className="space-y-3">
-            {logs.map((log) => (
-              <Card
-                key={log.id}
-                className={cn(
-                  "p-4 transition-all hover:shadow-md cursor-pointer group",
-                  log.isRead
-                    ? "bg-white dark:bg-gray-800"
-                    : "bg-[#fff7f7] dark:bg-[#2a1515] border-l-4 border-l-[#8B0000]",
-                )}
-                onClick={() => handleLogClick(log)}
-              >
-                <div className="flex items-start gap-3">
-                  {log.isRead ? (
-                    <CheckCircle className="h-5 w-5 text-gray-400 dark:text-gray-500 mt-0.5" />
-                  ) : (
-                    <div className="h-5 w-5 rounded-full bg-[#8B0000] flex items-center justify-center">
-                      <div className="h-2.5 w-2.5 rounded-full bg-white animate-pulse" />
-                    </div>
-                  )}
-
-                  <div className="flex-1">
-                    <div className="flex justify-between items-start mb-1">
-                      <h3
-                        className={cn(
-                          "font-medium text-sm",
-                          log.isRead ? "text-gray-700 dark:text-gray-300" : "text-gray-900 dark:text-gray-100",
-                        )}
-                      >
-                        {formatActivityType(log.activityType)}
-                      </h3>
-                      <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap ml-2">
-                        {formatDate(log.createdAt)}
-                      </span>
-                    </div>
-
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{log.description}</p>
-
-                    {log.incident && log.incident.trackingNumber && (
-                      <div className="flex items-center mt-2 text-xs font-medium text-[#8B0000] dark:text-red-400 group-hover:underline">
-                        View Incident Details
-                        <ChevronRight className="h-3 w-3 ml-1 transition-transform group-hover:translate-x-0.5" />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        )}
-      </main>
+      <style jsx>{`
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(30px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
     </div>
   )
 }

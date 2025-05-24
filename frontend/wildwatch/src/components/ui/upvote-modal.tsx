@@ -1,6 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ArrowUp, Frown } from "lucide-react";
+import { Frown } from "lucide-react";
 
 interface UpvoteModalProps {
   isOpen: boolean;
@@ -24,7 +24,14 @@ export function UpvoteModal({ isOpen, onClose, onConfirm, incidentType, isUpvote
             {isUpvoted ? (
               <Frown className="h-8 w-8 text-[#800000]" />
             ) : (
-              <ArrowUp className="h-8 w-8 text-[#800000]" />
+              <img
+                src="/upvote.svg"
+                alt="Upvote"
+                className="h-8 w-8"
+                style={{
+                  filter: "brightness(0) saturate(100%) invert(13%) sepia(100%) saturate(1000%) hue-rotate(357deg) brightness(95%) contrast(100%)"
+                }}
+              />
             )}
           </div>
           <p className="text-center text-gray-600">
@@ -41,7 +48,7 @@ export function UpvoteModal({ isOpen, onClose, onConfirm, incidentType, isUpvote
               Cancel
             </Button>
             <Button
-              className="flex-1 bg-[#800000] hover:bg-[#600000]"
+              className={`flex-1 ${isUpvoted ? "bg-[#800000] hover:bg-[#600000]" : "bg-green-500 hover:bg-green-600"}`}
               onClick={() => {
                 onConfirm();
                 onClose();

@@ -12,6 +12,9 @@ import {
   RefreshCw,
   ArrowRightLeft,
   ArrowUp,
+  TrendingUp,
+  User,
+  Info,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
@@ -293,29 +296,95 @@ export default function NotificationDropdown({
     }, 1000);
   };
 
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
-      case "STATUS_CHANGE":
-        return <Clock className="h-5 w-5 text-blue-500" />;
-      case "UPDATE":
-        return <AlertCircle className="h-5 w-5 text-purple-500" />;
-      case "NEW_REPORT":
-        return <FileText className="h-5 w-5 text-red-500" />;
-      case "CASE_RESOLVED":
-        return <CheckCircle className="h-5 w-5 text-green-500" />;
-      case "VERIFICATION":
-        return <CheckCircle className="h-5 w-5 text-green-500" />;
-      case "TRANSFER":
-        return <ArrowRightLeft className="h-5 w-5 text-orange-500" />;
-      case "TRANSFER_RECEIVED":
-        return <ArrowRightLeft className="h-5 w-5 text-orange-500" />;
-      case "TRANSFER_APPROVED":
-        return <CheckCircle className="h-5 w-5 text-green-500" />;
-      case "UPVOTE":
-        return <ArrowUp className="h-5 w-5 text-[#800000]" />;
-      default:
-        return <Bell className="h-5 w-5 text-gray-500" />;
+  const getNotificationColor = (type: string, isRead: boolean) => {
+    const activityType = type.toLowerCase();
+    const opacity = isRead ? "30" : "50";
+
+    if (activityType.includes("points") || activityType.includes("reward")) {
+      return {
+        bg: isRead ? "bg-emerald-50/30" : "bg-emerald-50/50",
+        border: `border-emerald-${isRead ? "100" : "200"}`,
+        icon: `text-emerald-${isRead ? "300" : "400"}`,
+        accent: "border-l-emerald-400",
+      };
     }
+    if (activityType.includes("verification") || activityType.includes("verify")) {
+      return {
+        bg: isRead ? "bg-amber-50/30" : "bg-amber-50/50",
+        border: `border-amber-${isRead ? "100" : "200"}`,
+        icon: `text-amber-${isRead ? "300" : "400"}`,
+        accent: "border-l-amber-400",
+      };
+    }
+    if (activityType.includes("new report") || activityType.includes("new incident")) {
+      return {
+        bg: isRead ? "bg-rose-50/30" : "bg-rose-50/50",
+        border: `border-rose-${isRead ? "100" : "200"}`,
+        icon: `text-rose-${isRead ? "300" : "400"}`,
+        accent: "border-l-rose-400",
+      };
+    }
+    if (activityType.includes("incident") || activityType.includes("report")) {
+      return {
+        bg: isRead ? "bg-red-50/30" : "bg-red-50/50",
+        border: `border-red-${isRead ? "100" : "200"}`,
+        icon: `text-red-${isRead ? "300" : "400"}`,
+        accent: "border-l-red-400",
+      };
+    }
+    if (activityType.includes("status") || activityType.includes("update")) {
+      return {
+        bg: isRead ? "bg-blue-50/30" : "bg-blue-50/50",
+        border: `border-blue-${isRead ? "100" : "200"}`,
+        icon: `text-blue-${isRead ? "300" : "400"}`,
+        accent: "border-l-blue-400",
+      };
+    }
+    if (activityType.includes("comment") || activityType.includes("message")) {
+      return {
+        bg: isRead ? "bg-green-50/30" : "bg-green-50/50",
+        border: `border-green-${isRead ? "100" : "200"}`,
+        icon: `text-green-${isRead ? "300" : "400"}`,
+        accent: "border-l-green-400",
+      };
+    }
+    if (activityType.includes("user") || activityType.includes("profile")) {
+      return {
+        bg: isRead ? "bg-purple-50/30" : "bg-purple-50/50",
+        border: `border-purple-${isRead ? "100" : "200"}`,
+        icon: `text-purple-${isRead ? "300" : "400"}`,
+        accent: "border-l-purple-400",
+      };
+    }
+    return {
+      bg: isRead ? "bg-gray-50/30" : "bg-gray-50/50",
+      border: `border-gray-${isRead ? "100" : "200"}`,
+      icon: `text-gray-${isRead ? "300" : "400"}`,
+      accent: "border-l-gray-400",
+    };
+  };
+
+  const getNotificationIcon = (type: string) => {
+    const activityType = type.toLowerCase();
+    if (activityType.includes("incident") || activityType.includes("report")) {
+      return <AlertTriangle className="h-5 w-5 text-red-400" />;
+    }
+    if (activityType.includes("status") || activityType.includes("update")) {
+      return <TrendingUp className="h-5 w-5 text-blue-400" />;
+    }
+    if (activityType.includes("verification") || activityType.includes("verify")) {
+      return <CheckCircle className="h-5 w-5 text-amber-400" />;
+    }
+    if (activityType.includes("points") || activityType.includes("reward")) {
+      return <TrendingUp className="h-5 w-5 text-emerald-400" />;
+    }
+    if (activityType.includes("comment") || activityType.includes("message")) {
+      return <FileText className="h-5 w-5 text-green-400" />;
+    }
+    if (activityType.includes("user") || activityType.includes("profile")) {
+      return <User className="h-5 w-5 text-purple-400" />;
+    }
+    return <Info className="h-5 w-5 text-gray-400" />;
   };
 
   const formatActivityType = (type: string) => {
@@ -389,7 +458,7 @@ export default function NotificationDropdown({
 
       {/* Notification Dropdown */}
       {showNotifications && (
-        <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+        <div className="absolute right-0 mt-2 w-[400px] sm:w-[450px] md:w-[500px] bg-white rounded-lg shadow-lg border border-gray-200 z-50">
           <div className="p-3 border-b border-gray-200 flex justify-between items-center">
             <h3 className="font-semibold text-gray-800">Notifications</h3>
             <div className="flex items-center gap-2">
@@ -416,40 +485,49 @@ export default function NotificationDropdown({
               </Button>
             </div>
           </div>
-          <div className="max-h-96 overflow-y-auto">
+          <div className="max-h-[60vh] overflow-y-auto">
             {notifications.length === 0 ? (
               <div className="p-4 text-center text-gray-500">
                 No notifications
               </div>
             ) : (
-              notifications.map((notification) => (
-                <div
-                  key={notification.id}
-                  className={`p-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer ${
-                    !notification.isRead ? "bg-blue-50" : ""
-                  }`}
-                  onClick={() => handleNotificationItemClick(notification)}
-                >
-                  <div className="flex items-start">
-                    <div className="bg-gray-100 rounded-full p-2 mr-3">
-                      {getNotificationIcon(notification.activityType)}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex justify-between items-start">
-                        <h4 className="font-medium text-sm text-gray-900">
-                          {formatActivityType(notification.activityType)}
-                        </h4>
-                        <span className="text-xs text-gray-500">
-                          {formatNotificationTime(notification.createdAt)}
-                        </span>
+              notifications.map((notification) => {
+                const colors = getNotificationColor(notification.activityType, notification.isRead ?? false);
+                return (
+                  <div
+                    key={notification.id}
+                    className={`p-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-all duration-300 ${
+                      !notification.isRead ? colors.bg : ""
+                    }`}
+                    onClick={() => handleNotificationItemClick(notification)}
+                  >
+                    <div className="flex items-start">
+                      <div className={`p-2 rounded-lg ${colors.icon} bg-opacity-10`}>
+                        {getNotificationIcon(notification.activityType)}
                       </div>
-                      <p className="text-xs text-gray-600 mt-1">
-                        {notification.description}
-                      </p>
+                      <div className="flex-1">
+                        <div className="flex justify-between items-start">
+                          <h4 className={`font-medium text-sm ${notification.isRead ? "text-gray-900" : "text-gray-900"}`}>
+                            {formatActivityType(notification.activityType)}
+                          </h4>
+                          <span className="text-xs text-gray-500">
+                            {formatNotificationTime(notification.createdAt)}
+                          </span>
+                        </div>
+                        <p className={`text-xs mt-1 ${notification.isRead ? "text-gray-600" : "text-gray-800"}`}>
+                          {notification.description}
+                        </p>
+                        {!notification.isRead && (
+                          <div className="mt-2 flex items-center gap-2">
+                            <div className={`w-2 h-2 rounded-full ${colors.accent.replace('border-l-', 'bg-')}`}></div>
+                            <span className="text-xs text-gray-500">New</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
           <div className="p-2 border-t border-gray-200 text-center">

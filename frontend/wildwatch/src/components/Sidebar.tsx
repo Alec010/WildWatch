@@ -14,6 +14,7 @@ import {
   Shield,
   Menu,
   X,
+  Globe,
 } from "lucide-react"
 import Cookies from "js-cookie"
 import { useEffect, useState } from "react"
@@ -125,6 +126,16 @@ export function Sidebar() {
       icon: <Trophy size={20} />,
       label: "Leaderboard",
     },
+    {
+      href: "/incidents/public",
+      icon: <Globe size={20} />,
+      label: (
+        <div className="flex items-center">
+          <span className="text-sm ml-1">Community</span>
+          <span className="text-sm ml-1">Reports</span>
+        </div>
+      ),
+    }
   ]
 
   // Function to get initials from name

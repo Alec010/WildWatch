@@ -129,7 +129,7 @@ export default function Chatbot() {
               opacity: 1,
               y: 0,
               scale: 1,
-              height: minimized ? "auto" : "600px",
+              height: minimized ? "auto" : "min(600px, 80vh)",
             }}
             exit={{ opacity: 0, y: 40, scale: 0.95 }}
             transition={{ duration: 0.3, ease: "easeOut" }}
@@ -188,7 +188,7 @@ export default function Chatbot() {
                   {/* Messages area */}
                   <div
                     className="flex-1 p-5 overflow-y-auto bg-gradient-to-b from-gray-50 to-white"
-                    style={{ maxHeight: "350px" }}
+                    style={{ maxHeight: "min(350px, 60vh)" }}
                   >
                     <div className="space-y-6">
                       {messages.map((msg, i) => (

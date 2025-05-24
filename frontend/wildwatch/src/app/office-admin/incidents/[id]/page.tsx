@@ -590,7 +590,6 @@ export default function IncidentDetailsPage({ params }: PageProps) {
         title="Incident Details"
         subtitle="Review and manage incident information"
         showSearch={false}
-        showQuickActions={true}
       />
       <Toaster richColors position="top-right" className="z-50" style={{ top: '80px' }} />
       <div className={`flex-1 overflow-auto transition-all duration-300 ${collapsed ? "ml-[5rem]" : "ml-64"} pt-24`}>
