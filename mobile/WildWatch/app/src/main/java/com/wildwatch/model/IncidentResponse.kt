@@ -20,7 +20,8 @@ data class IncidentResponse(
     val finishedDate: String? = null,
     val verified: Boolean? = null,
     val evidence: List<EvidenceDTO>? = null,
-    val witnesses: List<WitnessDTO>? = null
+    val witnesses: List<WitnessDTO>? = null,
+    val upvoteCount: Int? = null
 )
 
 data class EvidenceDTO(

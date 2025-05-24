@@ -15,13 +15,14 @@ fun IncidentResponse.toIncidentInfo(): IncidentInfo {
     }
 
     return IncidentInfo(
-        id = this.trackingNumber,
+        id = this.id,
         title = this.incidentType,
         location = this.location,
         locationDetail = this.assignedOffice ?: "",
         description = this.description ?: "",
         status = status,
-        timestamp = formatDate(this.dateOfIncident)
+        timestamp = formatDate(this.dateOfIncident),
+        upvoteCount = this.upvoteCount ?: 0
     )
 }
 

@@ -1,10 +1,12 @@
 package com.wildwatch.ui.components.dashboard
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.ThumbUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -28,14 +30,18 @@ data class IncidentInfo(
     val locationDetail: String,
     val description: String,
     val status: IncidentStatus,
-    val timestamp: String
+    val timestamp: String,
+    val upvoteCount: Int = 0
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun IncidentCard(
     incident: IncidentInfo,
-    onViewDetailsClick: () -> Unit = {}
+    onViewDetailsClick: () -> Unit = {},
+    isUpvoted: Boolean = false,
+    onUpvoteClick: () -> Unit = {},
+    showUpvote: Boolean = false
 ) {
     val (borderColor, statusColor, statusText) = when (incident.status) {
         IncidentStatus.IN_PROGRESS -> Triple(InProgressYellow, InProgressYellow, "In Progress")
@@ -179,7 +185,7 @@ fun IncidentCard(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Status chip and View Details button
+                // Status chip, Upvote button, and View Details button
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -219,30 +225,51 @@ fun IncidentCard(
                         }
                     }
 
-                    OutlinedButton(
-                        onClick = onViewDetailsClick,
-                        border = ButtonDefaults.outlinedButtonBorder.copy(
-                            brush = SolidColor(WildWatchRed)
-                        ),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = WildWatchRed
-                        ),
-                        shape = RoundedCornerShape(8.dp),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Visibility,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
-
-                        Spacer(modifier = Modifier.width(4.dp))
-
-                        Text(
-                            text = "View Details",
-                            fontWeight = FontWeight.Medium,
-                            fontSize = 12.sp
-                        )
+                        if (showUpvote) {
+                            IconButton(
+                                onClick = onUpvoteClick,
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (isUpvoted) Icons.Default.ThumbUp else Icons.Outlined.ThumbUp,
+                                    contentDescription = "Upvote",
+                                    tint = if (isUpvoted) WildWatchRed else Color.Gray
+                                )
+                            }
+                            Text(
+                                text = incident.upvoteCount.toString(),
+                                fontSize = 12.sp,
+                                color = if (isUpvoted) WildWatchRed else Color.Gray
+                            )
+                        }
+                        // View Details button (always shown)
+                        OutlinedButton(
+                            onClick = onViewDetailsClick,
+                            border = ButtonDefaults.outlinedButtonBorder.copy(
+                                brush = SolidColor(WildWatchRed)
+                            ),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = WildWatchRed
+                            ),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Visibility,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "View Details",
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 12.sp
+                            )
+                        }
                     }
                 }
             }
