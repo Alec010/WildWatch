@@ -444,7 +444,7 @@ export default function CaseDetailsPage() {
               </div>
             </div>
           ) : (
-            <div className="p-8 pt-32 max-w-7xl mx-auto">
+            <div className="pt-24 px-6 pb-10">
               {/* Header Section */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}

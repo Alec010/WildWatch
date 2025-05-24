@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card"
 import {
   MapPin,
   Clock,
-  AlertCircle,
+  AlertCircle, 
   AlertTriangle,
   CheckCircle,
   Search,

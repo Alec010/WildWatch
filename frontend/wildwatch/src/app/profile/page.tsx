@@ -44,6 +44,7 @@ import { API_BASE_URL } from "@/utils/api"
 import NotificationDropdown from "@/components/ui/notificationdropdown"
 import { useSidebar } from "@/contexts/SidebarContext"
 import { Navbar } from "@/components/Navbar"
+import { OfficeAdminNavbar } from "@/components/OfficeAdminNavbar"
 import { useUser } from "@/contexts/UserContext"
 
 // Add keyframe animation for gradients
@@ -427,7 +428,20 @@ function ProfileContent({ user }: { user: UserProfile }) {
     <div className="min-h-screen bg-[#f5f5f5]">
       {userRole === 'OFFICE_ADMIN' ? <OfficeAdminSidebar /> : <Sidebar />}
       <div className={`transition-all duration-300 ${getContentMargin()}`}>
-        <Navbar title="Profile" subtitle="Manage your account settings and preferences" />
+        {userRole === 'OFFICE_ADMIN' ? (
+          <OfficeAdminNavbar 
+            title="Office Profile" 
+            subtitle="Manage your account settings and preferences"
+            showSearch={false}
+          />
+        ) : (
+          <Navbar 
+            title="Profile" 
+            subtitle="Manage your account settings and preferences"
+            showSearch={false}
+            showNewIncident={false}
+          />
+        )}
         <main className="p-6 pt-24">
           {/* User Profile Header Card */}
           <Card className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden mb-6">

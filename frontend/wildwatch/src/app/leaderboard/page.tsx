@@ -46,13 +46,6 @@ export default function LeaderboardPage() {
   const [showInfoModal, setShowInfoModal] = useState(false)
   const [expandedSection, setExpandedSection] = useState<"top3" | "others" | null>(null)
 
-  const getContentMargin = () => {
-    if (userRole === 'OFFICE_ADMIN') {
-      return collapsed ? 'ml-20' : 'ml-72'
-    }
-    return collapsed ? 'ml-18' : 'ml-64'
-  }
-
   useEffect(() => {
     const fetchLeaderboardData = async () => {
       setLoading(true)
@@ -371,22 +364,34 @@ export default function LeaderboardPage() {
     )
   }
 
-  return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9]">
-      {userRole === "OFFICE_ADMIN" ? <OfficeAdminSidebar /> : <Sidebar />}
-      {userRole === "OFFICE_ADMIN" ? (
-        <OfficeAdminNavbar 
-          title="Leaderboard" 
-          subtitle="Celebrating our top contributors and offices"
-          showQuickActions={true}
-        />
-      ) : (
-        <Navbar title="Recognition Leaderboard" subtitle="Celebrating our top contributors and offices" />
-      )}
+  const getContentMargin = () => {
+    if (userRole === 'OFFICE_ADMIN') {
+      return collapsed ? 'ml-20' : 'ml-72'
+    }
+    return collapsed ? 'ml-18' : 'ml-64'
+  }
+  
 
-      <div className="flex flex-1">
-        <div className={`flex-1 p-8 transition-all duration-300 ease-in-out ${getContentMargin()}`}>
-          <div className="pt-24 max-w-7xl mx-auto">
+  return (
+    <div className="min-h-screen bg-[#f5f5f5]">
+      {userRole === 'OFFICE_ADMIN' ? <OfficeAdminSidebar /> : <Sidebar />}
+      <div className={`transition-all duration-300 ${getContentMargin()}`}>
+        {userRole === 'OFFICE_ADMIN' ? (
+          <OfficeAdminNavbar 
+            title="Office Leaderboard" 
+            subtitle="Celebrating our top contributors and offices"
+            showSearch={false}
+          />
+        ) : (
+          <Navbar 
+            title="Leaderboard" 
+            subtitle="Celebrating our top contributors and offices"
+            showSearch={false}
+            showNewIncident={false}
+          />
+        )}
+      <div className="pt-24 px-6 pb-10 ">
+        <div className="mb-8  rounded-xl shadow-lg overflow-hidden">
             {/* Header with animated gradient */}
             <div className="relative mb-12 overflow-hidden rounded-xl bg-gradient-to-r from-[#8B0000] to-[#6B0000] p-8 shadow-lg">
               <div className="absolute -top-24 -right-24 w-64 h-64 bg-gradient-to-br from-[#DAA520]/30 to-transparent rounded-full blur-2xl"></div>
@@ -541,9 +546,9 @@ export default function LeaderboardPage() {
                 </div>
               </div>
             </div>
-          </div>
         </div>
       </div>
+    </div>
 
       <RecognitionInfoModal isOpen={showInfoModal} onClose={() => setShowInfoModal(false)} />
 

@@ -1,32 +1,32 @@
 "use client"
 
 import type React from "react"
+
 import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Search, Plus, FileText, CheckCircle, History } from "lucide-react"
+import { Search, Plus } from "lucide-react"
 import NotificationDropdown from "@/components/ui/notificationdropdown"
 import { useSidebar } from "@/contexts/SidebarContext"
 import { motion, AnimatePresence } from "framer-motion"
 import { useUser } from "@/contexts/UserContext"
 
-interface OfficeAdminNavbarProps {
+interface NavbarProps { 
   title: string
   subtitle?: string
   showSearch?: boolean
+  showNewIncident?: boolean
   searchPlaceholder?: string
   onSearch?: (query: string) => void
-  showQuickActions?: boolean
 }
 
 export function OfficeAdminNavbar({
   title,
   subtitle,
   showSearch = true,
-  searchPlaceholder = "Search cases...",
+  searchPlaceholder = "Search incidents...",
   onSearch,
-  showQuickActions = true,
-}: OfficeAdminNavbarProps) {
+}: NavbarProps) {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")
   const [scrolled, setScrolled] = useState(false)
@@ -48,9 +48,12 @@ export function OfficeAdminNavbar({
     onSearch?.(value)
   }
 
-  // Office Admin specific sidebar position
+  // Determine sidebar position based on user role
   const getSidebarPosition = () => {
-    return collapsed ? 'left-18' : 'left-69'
+    if (userRole === 'OFFICE_ADMIN') {
+      return collapsed ? 'left-20' : 'left-72'
+    }
+    return collapsed ? 'left-18' : 'left-64'
   }
 
   return (
@@ -152,39 +155,6 @@ export function OfficeAdminNavbar({
                 </AnimatePresence>
               )}
 
-              {/* Quick Actions for Office Admin */}
-              {showQuickActions && (
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    className="border-[#D4AF37]/30 text-[#800000] hover:bg-[#800000] hover:text-white whitespace-nowrap rounded-full px-3 py-2 h-9"
-                    onClick={() => router.push("/office-admin/incidents")}
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    <span className="hidden sm:inline">View Incidents</span>
-                    <span className="sm:hidden">Incidents</span>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="border-[#D4AF37]/30 text-[#800000] hover:bg-[#800000] hover:text-white whitespace-nowrap rounded-full px-3 py-2 h-9"
-                    onClick={() => router.push("/office-admin/approved-cases")}
-                  >
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    <span className="hidden sm:inline">Approved Cases</span>
-                    <span className="sm:hidden">Approved</span>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="border-[#D4AF37]/30 text-[#800000] hover:bg-[#800000] hover:text-white whitespace-nowrap rounded-full px-3 py-2 h-9"
-                    onClick={() => router.push("/office-admin/history")}
-                  >
-                    <History className="h-4 w-4 mr-2" />
-                    <span className="hidden sm:inline">History</span>
-                    <span className="sm:hidden">History</span>
-                  </Button>
-                </div>
-              )}
-
               {/* Notification dropdown */}
               <div>
                 <NotificationDropdown />
@@ -202,4 +172,4 @@ export function OfficeAdminNavbar({
       ></div>
     </div>
   )
-} 
+}

@@ -616,12 +616,11 @@ export default function OfficeAdminIncidentHistoryPage() {
         theme="light"
       />
       <OfficeAdminNavbar
-        title="Incident History"
+        title="Office  Incident History"
         subtitle="View and access past incident reports"
         showSearch={true}
         searchPlaceholder="Search incidents..."
         onSearch={setSearch}
-        showQuickActions={true}
       />
 
       {/* Loading Modal */}

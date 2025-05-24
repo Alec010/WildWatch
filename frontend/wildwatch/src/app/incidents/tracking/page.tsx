@@ -203,14 +203,16 @@ export default function CaseTrackingPage() {
     return (
       <div className="min-h-screen flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9]">
         <Sidebar />
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <div className="relative w-20 h-20 mx-auto">
-              <div className="absolute inset-0 rounded-full border-t-2 border-b-2 border-[#8B0000] animate-spin"></div>
-              <div className="absolute inset-2 rounded-full border-r-2 border-l-2 border-[#DAA520] animate-spin animation-delay-150"></div>
-              <div className="absolute inset-4 rounded-full border-t-2 border-b-2 border-[#8B0000] animate-spin animation-delay-300"></div>
+        <div className={`flex-1 transition-all duration-300 ease-in-out ${collapsed ? "ml-20" : "ml-64"}`}>
+          <div className="flex items-center justify-center h-screen">
+            <div className="text-center">
+              <div className="relative w-20 h-20 mx-auto">
+                <div className="absolute inset-0 rounded-full border-t-2 border-b-2 border-[#8B0000] animate-spin"></div>
+                <div className="absolute inset-2 rounded-full border-r-2 border-l-2 border-[#DAA520] animate-spin animation-delay-150"></div>
+                <div className="absolute inset-4 rounded-full border-t-2 border-b-2 border-[#8B0000] animate-spin animation-delay-300"></div>
+              </div>
+              <p className="mt-6 text-gray-600 font-medium">Loading your cases...</p>
             </div>
-            <p className="mt-6 text-gray-600 font-medium">Loading your cases...</p>
           </div>
         </div>
       </div>
@@ -221,23 +223,25 @@ export default function CaseTrackingPage() {
     return (
       <div className="min-h-screen flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9]">
         <Sidebar />
-        <div className="flex-1 p-8">
-          <div className="max-w-5xl mx-auto">
-            <h1 className="text-2xl font-bold text-[#8B0000] mb-4">Case Tracking</h1>
-            <div className="bg-red-50 border border-red-200 text-red-800 p-6 rounded-xl shadow-sm">
-              <div className="flex items-start gap-4">
-                <div className="bg-red-100 p-3 rounded-full">
-                  <AlertTriangle className="h-6 w-6 text-red-600" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold mb-2">Error Loading Cases</h3>
-                  <p>{error}</p>
-                  <Button
-                    className="mt-4 bg-[#8B0000] hover:bg-[#6B0000] text-white"
-                    onClick={() => window.location.reload()}
-                  >
-                    <RefreshCw className="mr-2 h-4 w-4" /> Try Again
-                  </Button>
+        <div className={`flex-1 transition-all duration-300 ease-in-out ${collapsed ? "ml-20" : "ml-64"}`}>
+          <div className="p-8">
+            <div className="max-w-5xl mx-auto">
+              <h1 className="text-2xl font-bold text-[#8B0000] mb-4">Case Tracking</h1>
+              <div className="bg-red-50 border border-red-200 text-red-800 p-6 rounded-xl shadow-sm">
+                <div className="flex items-start gap-4">
+                  <div className="bg-red-100 p-3 rounded-full">
+                    <AlertTriangle className="h-6 w-6 text-red-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">Error Loading Cases</h3>
+                    <p>{error}</p>
+                    <Button
+                      className="mt-4 bg-[#8B0000] hover:bg-[#6B0000] text-white"
+                      onClick={() => window.location.reload()}
+                    >
+                      <RefreshCw className="mr-2 h-4 w-4" /> Try Again
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -248,12 +252,11 @@ export default function CaseTrackingPage() {
   }
 
   return (
-    <div className={`min-h-screen flex flex-col bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9] ${inter.className}`}>
-       <Sidebar />
-      <Navbar title="Case Tracking" subtitle="Track and manage your security incident reports" onSearch={setSearch} />
-      <div className="flex flex-1">
-        <div className={`flex-1 p-8 transition-all duration-300 ease-in-out ${collapsed ? "ml-[5rem]" : "ml-64"}`}>
-          <div className="pt-24 max-w-7xl mx-auto">
+    <div className={`min-h-screen flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9] ${inter.className}`}>
+      <Sidebar />
+      <div className={`flex-1 transition-all duration-300 ${collapsed ? "ml-20" : "ml-64"}`}>
+        <Navbar title="Case Tracking" subtitle="Track and manage your security incident reports" onSearch={setSearch} />
+          <div className="pt-32 px-6 pb-10">
             {/* Dashboard Stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
               <motion.div
@@ -614,7 +617,6 @@ export default function CaseTrackingPage() {
               </div>
             </div>
           </div>
-        </div>
       </div>
 
       {/* Add custom styles for animation delays */}

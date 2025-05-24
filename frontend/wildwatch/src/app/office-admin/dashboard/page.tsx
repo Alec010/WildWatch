@@ -5,7 +5,7 @@ import { OfficeAdminSidebar } from "@/components/OfficeAdminSidebar"
 import { OfficeAdminNavbar } from "@/components/OfficeAdminNavbar"
 import { Button } from "@/components/ui/button"
 import {
-  AlertCircle,
+  AlertCircle, 
   CheckCircle,
   Clock,
   AlertTriangle,
@@ -162,7 +162,7 @@ export default function OfficeAdminDashboard() {
                 <div className="bg-red-100 p-3 rounded-full">
                   <AlertTriangle className="h-6 w-6 text-red-600" />
                 </div>
-                <div>
+                <div> 
                   <h3 className="text-lg font-semibold text-red-800 mb-2">Error Loading Dashboard</h3>
                   <p className="text-red-700">{error}</p>
                   <Button
@@ -183,18 +183,15 @@ export default function OfficeAdminDashboard() {
   return (
     <div className={`min-h-screen flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9] ${inter.className}`}>
       <OfficeAdminSidebar />
-      <OfficeAdminNavbar
-        title="Office Dashboard"
-        subtitle="View and manage reported incidents"
-        showSearch={true}
-        searchPlaceholder="Search incidents..."
-        onSearch={setSearchQuery}
-        showQuickActions={true}
-      />
+
 
       {/* Main Content */}
-      <div className={`flex-1 overflow-auto transition-all duration-300 ${collapsed ? "ml-[5rem]" : "ml-64"} pt-24`}>
-        <div className={`p-6 -mt-3 mx-8 ${collapsed ? "max-w-7xl" : "max-w-[calc(100vw-20rem)]"}`}>
+      <div className={`flex-1 transition-all duration-300 ${collapsed ? "ml-20" : "ml-72"}`}>
+        {/* Navbar */}
+        <OfficeAdminNavbar title="Office Dashboard" subtitle="View and manage reported incidents" onSearch={setSearchQuery} />
+
+        {/* Content */}
+        <div className="pt-24 px-6 pb-10">
           {/* Dashboard Tabs */}
           <div className="flex border-b border-gray-200 mb-6">
             <button
