@@ -14,5 +14,6 @@ data class IncidentRequest(
     val witnesses: List<WitnessDTO>,
     val additionalNotes: String,  // Include this field
     val evidenceUris: List<String>,  // Include this field
-    val evidenceFiles: List<File>? = null
+    val evidenceFiles: List<File>? = null,
+    val preferAnonymous: Boolean = false
 )

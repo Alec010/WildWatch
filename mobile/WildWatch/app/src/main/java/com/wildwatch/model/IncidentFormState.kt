@@ -14,5 +14,6 @@ data class IncidentFormState(
     val evidenceUris: List<String> = emptyList(),
     val evidenceFiles: List<File> = emptyList(),
     val additionalNotes: String = "",
-    val tags: List<String> = emptyList()
+    val tags: List<String> = emptyList(),
+    val preferAnonymous: Boolean = false
 )

@@ -61,6 +61,7 @@ fun ReviewSubmitScreen(
     // Confirmation checkboxes
     var confirmAccurate by remember { mutableStateOf(false) }
     var confirmContact by remember { mutableStateOf(false) }
+    var preferAnonymous by remember { mutableStateOf(formState.preferAnonymous) }
 
     // Date and time pickers
     var showDatePicker by remember { mutableStateOf(false) }
@@ -757,6 +758,74 @@ fun ReviewSubmitScreen(
                             onCheckedChange = { confirmContact = it },
                             darkRed = darkRed
                         )
+
+                        // Anonymous Option
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = Color.White
+                            ),
+                            elevation = CardDefaults.cardElevation(
+                                defaultElevation = 2.dp
+                            )
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Visibility,
+                                            contentDescription = null,
+                                            tint = darkRed,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = "Anonymity",
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 16.sp,
+                                            color = darkRed
+                                        )
+                                    }
+
+                                    Switch(
+                                        checked = preferAnonymous,
+                                        onCheckedChange = { 
+                                            preferAnonymous = it
+                                            formViewModel.updateFormState(
+                                                formViewModel.formState.value.copy(
+                                                    preferAnonymous = it
+                                                )
+                                            )
+                                        },
+                                        colors = SwitchDefaults.colors(
+                                            checkedThumbColor = Color.White,
+                                            checkedTrackColor = darkRed,
+                                            uncheckedThumbColor = Color.White,
+                                            uncheckedTrackColor = Color.Gray
+                                        )
+                                    )
+                                }
+
+                                Text(
+                                    text = "If enabled, your identity and incident will be hidden to the public. This is just a preference and may be reviewed by the admin.",
+                                    color = Color.Gray,
+                                    fontSize = 12.sp,
+                                    modifier = Modifier.padding(top = 8.dp)
+                                )
+                            }
+                        }
                     }
                 }
 

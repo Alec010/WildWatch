@@ -153,7 +153,8 @@ class IncidentFormViewModel(
                 witnesses = form.witnesses,
                 additionalNotes = form.additionalNotes,
                 evidenceUris = form.evidenceUris,
-                evidenceFiles = form.evidenceFiles
+                evidenceFiles = form.evidenceFiles,
+                preferAnonymous = form.preferAnonymous
             )
 
             viewModelScope.launch {
