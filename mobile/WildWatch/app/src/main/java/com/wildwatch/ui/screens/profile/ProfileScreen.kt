@@ -39,7 +39,8 @@ fun ProfileScreen(
     onBackClick: () -> Unit = {},
     onEditProfileClick: () -> Unit = {},
     onUpdateAccountClick: () -> Unit = {},
-    onLogoutClick: () -> Unit = {}
+    onLogoutClick: () -> Unit = {},
+    onAskKatClick: () -> Unit = {}
 ) {
     // Define colors
     val primaryColor = Color(0xFF8B0000) // Original WildWatchRed
@@ -405,6 +406,30 @@ fun ProfileScreen(
                         .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    // Ask Kat Button (always visible)
+                    OutlinedButton(
+                        onClick = {
+                            onAskKatClick()
+                        },
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = primaryColor
+                        ),
+                        border = BorderStroke(1.dp, primaryColor),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        contentPadding = PaddingValues(vertical = 12.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Chat,
+                            contentDescription = "Ask Kat",
+                            modifier = Modifier.padding(end = 8.dp)
+                        )
+                        Text(
+                            text = "Ask Kat",
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+
                     if (isEditing) {
                         // Show both Save and Cancel buttons when editing
                         Row(
