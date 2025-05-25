@@ -116,6 +116,7 @@ export default function IncidentDetailsPage({ params }: PageProps) {
   const [priorityError, setPriorityError] = useState("")
   const [isAnonymous, setIsAnonymous] = useState<boolean>(false)
   const [verifyError, setVerifyError] = useState("")
+  const [statusError, setStatusError] = useState("")
 
   useEffect(() => {
     const fetchIncident = async () => {
@@ -180,6 +181,11 @@ export default function IncidentDetailsPage({ params }: PageProps) {
       return
     }
     setVerifyError("")
+    if (!status) {
+      setStatusError("Please select a status before approving.")
+      return
+    }
+    setStatusError("")
     if (!priorityLevel) {
       setPriorityError("Please select a priority before approving.")
       return
@@ -466,12 +472,6 @@ export default function IncidentDetailsPage({ params }: PageProps) {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "Pending":
-        return (
-          <Badge variant="outline" className="bg-yellow-100 text-yellow-700 border-yellow-200">
-            Pending
-          </Badge>
-        )
       case "In Progress":
         return (
           <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-200">
@@ -830,16 +830,25 @@ export default function IncidentDetailsPage({ params }: PageProps) {
                 <div className="p-4">
                   {/* Status */}
                   <div className="mb-4">
-                    <Label className="text-sm font-medium text-[#8B0000]">Status</Label>
+                    <Label className="text-sm font-medium text-[#8B0000]">
+                      Status <span className="text-red-600">*</span>
+                    </Label>
                     <select
                       value={status}
-                      onChange={(e) => setStatus(e.target.value)}
-                      className="w-full mt-1 px-3 py-2 border border-[#DAA520]/20 rounded-md bg-white focus:ring-2 focus:ring-[#8B0000]/20 focus:border-[#8B0000] transition-all"
+                      onChange={(e) => {
+                        setStatus(e.target.value)
+                        setStatusError("")
+                      }}
+                      className={`w-full mt-1 px-3 py-2 border border-[#DAA520]/20 rounded-md bg-white focus:ring-2 focus:ring-[#8B0000]/20 focus:border-[#8B0000] transition-all ${
+                        statusError ? "border-red-500" : ""
+                      }`}
+                      required
                     >
-                      <option value="Pending">Pending</option>
+                      <option value="">Select Status</option>
                       <option value="In Progress">In Progress</option>
                       <option value="Closed">Closed</option>
                     </select>
+                    {statusError && <div className="text-red-600 text-xs mt-1">{statusError}</div>}
                   </div>
 
                   {/* Priority Level */}
@@ -856,11 +865,12 @@ export default function IncidentDetailsPage({ params }: PageProps) {
                       className={`w-full mt-1 px-3 py-2 border border-[#DAA520]/20 rounded-md bg-white focus:ring-2 focus:ring-[#8B0000]/20 focus:border-[#8B0000] transition-all ${
                         priorityError ? "border-red-500" : ""
                       }`}
+                      required
                     >
                       <option value="">Select Priority</option>
-                      <option value="LOW">Low</option>
-                      <option value="MEDIUM">Medium</option>
                       <option value="HIGH">High</option>
+                      <option value="MEDIUM">Medium</option>
+                      <option value="LOW">Low</option>
                     </select>
                     {priorityError && <div className="text-red-600 text-xs mt-1">{priorityError}</div>}
                   </div>
@@ -1018,7 +1028,7 @@ export default function IncidentDetailsPage({ params }: PageProps) {
                 <Button
                   className="bg-[#8B0000] hover:bg-[#6B0000] text-white flex items-center gap-2"
                   onClick={handleApproveIncident}
-                  disabled={isProcessing || !priorityLevel || !isVerified}
+                  disabled={isProcessing || !priorityLevel || !isVerified || !status}
                 >
                   <CheckCircle2 className="h-4 w-4" />
                   {isProcessing ? "Processing..." : "Approve"}
