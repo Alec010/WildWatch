@@ -39,6 +39,7 @@ sealed class Screen(val route: String) {
     object ViewAllNotifications : Screen("viewAllNotifications")
     object ViewAllCases : Screen("viewAllCases")
     object Settings : Screen("settings")
+    object Chatbot : Screen("chatbot")
 }
 
 private fun navigateBackToMain(
@@ -174,7 +175,17 @@ fun AppNavGraph(navController: NavHostController) {
                                 popUpTo(Screen.Main.route) { inclusive = true }
                             }
                         }
+                    },
+                    onAskKatClick = {
+                        navController.navigate(Screen.Chatbot.route)
                     }
+                )
+            }
+
+            // Add ChatbotScreen route
+            composable(Screen.Chatbot.route) {
+                com.wildwatch.ui.screens.chatbot.ChatbotScreen(
+                    onBackClick = { navController.popBackStack() }
                 )
             }
         }

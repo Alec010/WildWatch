@@ -8,4 +8,5 @@ sealed class Screen(val route: String) {
         fun createRoute(trackingNumber: String) = "caseDetails/$trackingNumber"
     }
     object Leaderboards : Screen("leaderboards")
+    object Chatbot : Screen("chatbot")
 } 

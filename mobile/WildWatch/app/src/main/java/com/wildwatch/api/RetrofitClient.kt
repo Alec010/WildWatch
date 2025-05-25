@@ -18,6 +18,7 @@ import java.util.concurrent.TimeUnit
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wildwatch.ui.components.casetracking.WitnessCardCaseDetail
 import coil.compose.AsyncImage
+import com.wildwatch.network.ApiService
 
 object RetrofitClient {
     private const val API_PATH = "/api/"
@@ -160,5 +161,25 @@ object RetrofitClient {
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(LeaderboardApiService::class.java)
+    }
+
+    fun getChatbotApi(context: Context): ApiService {
+        val client = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                val token = runBlocking { TokenManager.getToken(context) }
+                val requestBuilder = chain.request().newBuilder()
+                if (token != null) {
+                    requestBuilder.addHeader("Authorization", "Bearer $token")
+                }
+                chain.proceed(requestBuilder.build())
+            }
+            .build()
+
+        return Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(ApiService::class.java)
     }
 }

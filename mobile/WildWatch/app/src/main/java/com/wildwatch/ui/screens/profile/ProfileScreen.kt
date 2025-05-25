@@ -407,20 +407,17 @@ fun ProfileScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     // Ask Kat Button (always visible)
-                    OutlinedButton(
-                        onClick = {
-                            onAskKatClick()
-                        },
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = primaryColor
+                    Button(
+                        onClick = { onAskKatClick() },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = primaryColor
                         ),
-                        border = BorderStroke(1.dp, primaryColor),
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                         contentPadding = PaddingValues(vertical = 12.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Outlined.Chat,
+                            imageVector = Icons.Outlined.SmartToy,
                             contentDescription = "Ask Kat",
                             modifier = Modifier.padding(end = 8.dp)
                         )
@@ -519,11 +516,12 @@ fun ProfileScreen(
                         }
                     } else {
                         // Edit Profile Button (only when not editing)
-                        Button(
+                        OutlinedButton(
                             onClick = { isEditing = true },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = primaryColor
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = primaryColor
                             ),
+                            border = BorderStroke(1.dp, primaryColor),
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
                             contentPadding = PaddingValues(vertical = 12.dp)
