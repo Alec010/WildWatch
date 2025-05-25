@@ -629,7 +629,7 @@ export default function ReviewSubmissionPage() {
                         <span>Prefer to remain anonymous</span>
                       </label>
                       <p className="text-xs text-gray-500">
-                        If enabled, your identity will be hidden to the public. This is just a preference and may be
+                        If enabled, your identity and incident will be hidden to the public. This is just a preference and may be
                         reviewed by the admin.
                       </p>
                     </div>

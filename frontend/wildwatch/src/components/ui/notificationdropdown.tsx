@@ -19,6 +19,8 @@ import {
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
 import { API_BASE_URL, WS_BASE_URL } from "@/utils/api";
+import { Client } from '@stomp/stompjs';
+import SockJS from 'sockjs-client';
 
 interface ActivityLog {
   id: string;
@@ -45,7 +47,14 @@ export default function NotificationDropdown({
   const [showNotifications, setShowNotifications] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [hasNewNotification, setHasNewNotification] = useState(false);
+  const [wsConnected, setWsConnected] = useState(false);
   const notificationRef = useRef<HTMLDivElement>(null);
+  const stompClientRef = useRef<Client | null>(null);
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const notificationAudio = typeof window !== "undefined"
+    ? new Audio("/notification_sound.mp3")
+    : null;
 
   // Close notifications when clicking outside
   useEffect(() => {
@@ -60,49 +69,6 @@ export default function NotificationDropdown({
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
-
-  // Fetch notifications
-  useEffect(() => {
-    fetchNotifications();
-    // Poll every 2 seconds
-    const interval = setInterval(fetchNotifications, 2000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Setup WebSocket for real-time notifications
-  useEffect(() => {
-    const ws = new WebSocket(`${WS_BASE_URL}/ws/notifications`);
-    
-    ws.onmessage = (event) => {
-      const newActivity = JSON.parse(event.data);
-      setNotifications(prev => {
-        // Check if notification already exists
-        const exists = prev.some(n => n.id === newActivity.id);
-        if (exists) {
-          // Update existing notification
-          const updatedNotifications = prev.map(n => n.id === newActivity.id ? newActivity : n);
-          // Recalculate unread count
-          const newUnreadCount = updatedNotifications.filter(n => !n.isRead).length;
-          setUnreadCount(newUnreadCount);
-          return updatedNotifications;
-        } else {
-          // Add new notification at the beginning
-          const updatedNotifications = [newActivity, ...prev];
-          // Recalculate unread count
-          const newUnreadCount = updatedNotifications.filter(n => !n.isRead).length;
-          setUnreadCount(newUnreadCount);
-          // Show pulse animation for new notification
-          setHasNewNotification(true);
-          setTimeout(() => setHasNewNotification(false), 3000);
-          return updatedNotifications;
-        }
-      });
-    };
-
-    return () => {
-      ws.close();
     };
   }, []);
 
@@ -129,8 +95,6 @@ export default function NotificationDropdown({
       }
 
       const data = await response.json();
-      
-      // Update notifications and calculate unread count
       setNotifications(data.content);
       const unreadCount = data.content.filter((notification: ActivityLog) => !notification.isRead).length;
       setUnreadCount(unreadCount);
@@ -139,18 +103,77 @@ export default function NotificationDropdown({
     }
   };
 
-  // Add polling for notifications
+  // Setup STOMP over SockJS and fallback polling
   useEffect(() => {
-    // Initial fetch
+    let pollInterval: NodeJS.Timeout | null = null;
+    let reconnectAttempts = 0;
+    const MAX_RECONNECT_ATTEMPTS = 5;
+    const RECONNECT_DELAY = 5000;
+
+    const connectStomp = () => {
+      const socket = new SockJS(`${API_BASE_URL.replace(/\/api$/, '')}/ws`);
+      const stompClient = new Client({
+        webSocketFactory: () => socket as any,
+        reconnectDelay: RECONNECT_DELAY,
+        onConnect: () => {
+          setWsConnected(true);
+          reconnectAttempts = 0;
+          if (pollInterval) {
+            clearInterval(pollInterval);
+            pollInterval = null;
+          }
+          stompClient.subscribe('/topic/notifications', (message) => {
+            const notification = JSON.parse(message.body);
+            setNotifications(prev => {
+              const exists = prev.some(n => n.id === notification.id);
+              if (exists) {
+                const updatedNotifications = prev.map(n => n.id === notification.id ? notification : n);
+                const newUnreadCount = updatedNotifications.filter(n => !n.isRead).length;
+                setUnreadCount(newUnreadCount);
+                return updatedNotifications;
+              } else {
+                // Play sound for new notification
+                if (notificationAudio) {
+                  notificationAudio.play();
+                  console.log('Notification sound played');
+                }
+                const updatedNotifications = [notification, ...prev];
+                const newUnreadCount = updatedNotifications.filter(n => !n.isRead).length;
+                setUnreadCount(newUnreadCount);
+                setHasNewNotification(true);
+                setTimeout(() => setHasNewNotification(false), 3000);
+                return updatedNotifications;
+              }
+            });
+          });
+        },
+        onStompError: () => {
+          setWsConnected(false);
+          if (!pollInterval) {
+            pollInterval = setInterval(fetchNotifications, 5000);
+          }
+        },
+        onWebSocketClose: () => {
+          setWsConnected(false);
+          if (!pollInterval) {
+            pollInterval = setInterval(fetchNotifications, 5000);
+          }
+          if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+            reconnectAttempts++;
+            setTimeout(connectStomp, RECONNECT_DELAY);
+          }
+        },
+      });
+      stompClient.activate();
+      stompClientRef.current = stompClient;
+    };
+
+    connectStomp();
     fetchNotifications();
 
-    // Set up polling interval
-    const pollInterval = setInterval(() => {
-      fetchNotifications();
-    }, 5000); // Poll every 5 seconds
-
     return () => {
-      clearInterval(pollInterval);
+      stompClientRef.current?.deactivate();
+      if (pollInterval) clearInterval(pollInterval);
     };
   }, []);
 
@@ -316,7 +339,7 @@ export default function NotificationDropdown({
         accent: "border-l-amber-400",
       };
     }
-    if (activityType.includes("new report") || activityType.includes("new incident")) {
+    if (activityType.includes("new report") || activityType.includes("new incident") || activityType.includes("new_report_received")) {
       return {
         bg: isRead ? "bg-rose-50/30" : "bg-rose-50/50",
         border: `border-rose-${isRead ? "100" : "200"}`,
@@ -366,7 +389,7 @@ export default function NotificationDropdown({
 
   const getNotificationIcon = (type: string) => {
     const activityType = type.toLowerCase();
-    if (activityType.includes("incident") || activityType.includes("report")) {
+    if (activityType.includes("incident") || activityType.includes("report") || activityType.includes("new_report_received")) {
       return <AlertTriangle className="h-5 w-5 text-red-400" />;
     }
     if (activityType.includes("status") || activityType.includes("update")) {
@@ -395,6 +418,8 @@ export default function NotificationDropdown({
         return "Case Update";
       case "NEW_REPORT":
         return "New Report";
+      case "NEW_REPORT_RECEIVED":
+        return "New Report Received";
       case "CASE_RESOLVED":
         return "Case Resolved";
       case "VERIFICATION":

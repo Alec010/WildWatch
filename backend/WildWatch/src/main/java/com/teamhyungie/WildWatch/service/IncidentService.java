@@ -89,21 +89,19 @@ public class IncidentService {
             user
         );
 
-        // Notify all admins of the assigned office
-        if (request.getAssignedOffice() != null) {
-            List<OfficeAdmin> officeAdmins = officeAdminService.findAllActive().stream()
-                .filter(admin -> admin.getOfficeCode().equals(request.getAssignedOffice().name()))
-                .collect(Collectors.toList());
-            for (OfficeAdmin admin : officeAdmins) {
+        // Fix for 'effectively final' error
+        final Office finalAssignedOffice = assignedOffice;
+        // Notify the office admin of the assigned office
+        officeAdminService.findByOfficeCode(finalAssignedOffice.name())
+            .ifPresent(admin -> {
                 User adminUser = admin.getUser();
                 activityLogService.logActivity(
-                    "NEW_CASE_ASSIGNED",
-                    "A new case has been reported and assigned to your office.",
+                    "NEW_REPORT_RECEIVED",
+                    "New incident report #" + savedIncident.getTrackingNumber() + " has been assigned to your office (" + finalAssignedOffice.name() + ")",
                     savedIncident,
                     adminUser
                 );
-            }
-        }
+            });
 
         return IncidentResponse.fromIncident(savedIncident);
     }
