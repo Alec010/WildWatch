@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
@@ -47,14 +48,12 @@ import com.wildwatch.viewmodel.UserProfileViewModel
 @Composable
 fun DashboardScreen(
     navController: NavController,
+    viewModel: PublicIncidentsViewModel,
     onIncidentClick: (String) -> Unit = {},
     onViewAllClick: () -> Unit = {},
     onViewAllNotifications: () -> Unit = {}
 ) {
     val context = LocalContext.current
-    val viewModel: PublicIncidentsViewModel = viewModel(
-        factory = PublicIncidentsViewModelFactory(context)
-    )
     val userProfileViewModel: UserProfileViewModel = viewModel()
     val userProfile by userProfileViewModel.user.collectAsState()
 
@@ -79,7 +78,6 @@ fun DashboardScreen(
     LaunchedEffect(Unit) {
         userProfileViewModel.fetchProfile(context)
         viewModel.fetchPublicIncidents()
-        viewModel.fetchUserIncidents()
     }
 
     Scaffold(
@@ -97,33 +95,46 @@ fun DashboardScreen(
                     }
                 },
                 actions = {
-                    Box {
-                        IconButton(onClick = { showNotifications = true }) {
-                            BadgedBox(
-                                badge = {
-                                    if (hasUnreadNotifications) {
-                                        Badge(
-                                            containerColor = Color(0xFFE53935)
-                                        )
+                    Row {
+                        Box {
+                            IconButton(onClick = { showNotifications = true }) {
+                                BadgedBox(
+                                    badge = {
+                                        if (hasUnreadNotifications) {
+                                            Badge(
+                                                containerColor = Color(0xFFE53935)
+                                            )
+                                        }
                                     }
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Notifications,
+                                        contentDescription = "Notifications",
+                                        tint = WildWatchRed
+                                    )
                                 }
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Notifications,
-                                    contentDescription = "Notifications",
-                                    tint = WildWatchRed
-                                )
                             }
-                        }
 
-                        NotificationDropdown(
-                            showDropdown = showNotifications,
-                            onDismiss = { showNotifications = false },
-                            navController = navController,
-                            onNotificationClick = { notification ->
-                                showNotifications = false
+                            NotificationDropdown(
+                                showDropdown = showNotifications,
+                                onDismiss = { showNotifications = false },
+                                navController = navController,
+                                onNotificationClick = { notification ->
+                                    showNotifications = false
+                                }
+                            )
+                        }
+                        IconButton(onClick = { 
+                            navController.navigate(Screen.Settings.route) {
+                                popUpTo(Screen.Main.route)
                             }
-                        )
+                        }) {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = "Profile",
+                                tint = WildWatchRed
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -234,6 +245,22 @@ fun DashboardScreen(
                         }
                     }
                     Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = onViewAllClick,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = WildWatchRed)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.List,
+                            contentDescription = null,
+                            tint = Color.White
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("View All Cases", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
 
                 item {
@@ -276,11 +303,23 @@ fun DashboardScreen(
                                 }
                             }
                         } else {
-                            val filteredPublicIncidents = publicIncidents.filter { it.submittedByEmail != userProfile?.email }
+                            val filteredPublicIncidents = publicIncidents.filter { 
+                                it.submittedByEmail != userProfile?.email && !it.submittedByEmail.isNullOrBlank() && !it.id.isNullOrBlank()
+                            }.also { list ->
+                                list.forEach { incident ->
+                                    android.util.Log.d("DashboardScreen", "IncidentResponse.id: ${incident.id}, trackingNumber: ${incident.trackingNumber}")
+                                }
+                            }
                             items(filteredPublicIncidents) { incident ->
+                                val info = incident.toIncidentInfo().also {
+                                    android.util.Log.d("DashboardScreen", "IncidentInfo.id: ${it.id}, trackingNumber: ${it.trackingNumber}")
+                                }
                                 IncidentCard(
-                                    incident = incident.toIncidentInfo(),
-                                    onViewDetailsClick = { onIncidentClick(incident.id) },
+                                    incident = info,
+                                    onViewDetailsClick = { 
+                                        android.util.Log.d("DashboardScreen", "Navigating to details for incident tracking number: ${info.trackingNumber}")
+                                        onIncidentClick(info.trackingNumber) 
+                                    },
                                     isUpvoted = upvotedIncidents.contains(incident.id),
                                     onUpvoteClick = {
                                         upvoteDialogIncidentId = incident.id
@@ -306,9 +345,13 @@ fun DashboardScreen(
                             }
                         } else {
                             items(userIncidents) { incident ->
+                                val info = incident.toIncidentInfo()
                                 IncidentCard(
-                                    incident = incident.toIncidentInfo(),
-                                    onViewDetailsClick = { onIncidentClick(incident.id) }
+                                    incident = info,
+                                    onViewDetailsClick = { 
+                                        android.util.Log.d("DashboardScreen", "Navigating to details for incident id: ${info.id}")
+                                        onIncidentClick(info.id) 
+                                    }
                                 )
                             }
                         }

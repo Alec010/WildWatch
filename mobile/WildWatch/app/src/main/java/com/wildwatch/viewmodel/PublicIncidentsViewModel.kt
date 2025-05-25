@@ -28,6 +28,7 @@ import java.io.IOException
 import java.net.UnknownHostException
 import java.net.SocketTimeoutException
 import java.net.ConnectException
+import kotlinx.coroutines.async
 
 class PublicIncidentsViewModel(
     private val repository: CaseRepository
@@ -53,77 +54,91 @@ class PublicIncidentsViewModel(
 
     fun fetchPublicIncidents() {
         viewModelScope.launch {
-            flow {
-                emit(repository.getPublicIncidents())
+            flow<Unit> {
+                try {
+                    withTimeout(30000) { // 30 second timeout
+                        // Fetch public incidents
+                        val publicIncidents = repository.getPublicIncidents()
+                        _publicIncidents.value = publicIncidents
+                        
+                        // Fetch upvote statuses for public incidents
+                        val upvotedIds = publicIncidents.mapNotNull { incident ->
+                            try {
+                                if (repository.getUpvoteStatus(incident.id)) incident.id else null
+                            } catch (e: Exception) {
+                                null
+                            }
+                        }.toSet()
+                        _upvotedIncidents.value = upvotedIds
+                    }
+                } catch (e: TimeoutCancellationException) {
+                    _error.value = "Request timed out. Please try again."
+                    throw e
+                }
             }
-            .onStart { 
+            .onStart<Unit> { 
                 _loading.value = true
                 _error.value = null
             }
-            .retry(3) { cause ->
+            .retry<Unit>(3) { cause ->
                 cause is IOException || cause is UnknownHostException || 
                 cause is SocketTimeoutException || cause is ConnectException
             }
-            .catch { e ->
+            .catch<Unit> { e ->
                 _error.value = when (e) {
                     is UnknownHostException -> "No internet connection. Please check your network."
                     is SocketTimeoutException -> "Connection timed out. Please try again."
                     is ConnectException -> "Could not connect to server. Please try again."
                     is IOException -> "Network error. Please check your connection."
+                    is TimeoutCancellationException -> "Request timed out. Please try again."
                     else -> "An error occurred: ${e.message}"
                 }
             }
-            .onCompletion { 
+            .onCompletion<Unit> { 
                 _loading.value = false
                 _isRefreshing.value = false
             }
-            .collect { incidents ->
-                _publicIncidents.value = incidents
-                
-                // Batch fetch upvote statuses
-                viewModelScope.launch {
-                    val upvotedIds = incidents.mapNotNull { incident ->
-                        try {
-                            if (repository.getUpvoteStatus(incident.id)) incident.id else null
-                        } catch (e: Exception) {
-                            null
-                        }
-                    }.toSet()
-                    _upvotedIncidents.value = upvotedIds
-                }
-            }
+            .collect()
         }
     }
 
     fun fetchUserIncidents() {
         viewModelScope.launch {
-            flow {
-                emit(repository.getUserIncidents())
+            flow<Unit> {
+                try {
+                    withTimeout(30000) { // 30 second timeout
+                        // Fetch user incidents
+                        val userIncidents = repository.getUserIncidents()
+                        _userIncidents.value = userIncidents
+                    }
+                } catch (e: TimeoutCancellationException) {
+                    _error.value = "Request timed out. Please try again."
+                    throw e
+                }
             }
-            .onStart { 
+            .onStart<Unit> { 
                 _loading.value = true
                 _error.value = null
             }
-            .retry(3) { cause ->
+            .retry<Unit>(3) { cause ->
                 cause is IOException || cause is UnknownHostException || 
                 cause is SocketTimeoutException || cause is ConnectException
             }
-            .catch { e ->
+            .catch<Unit> { e ->
                 _error.value = when (e) {
                     is UnknownHostException -> "No internet connection. Please check your network."
                     is SocketTimeoutException -> "Connection timed out. Please try again."
                     is ConnectException -> "Could not connect to server. Please try again."
                     is IOException -> "Network error. Please check your connection."
+                    is TimeoutCancellationException -> "Request timed out. Please try again."
                     else -> "An error occurred: ${e.message}"
                 }
             }
-            .onCompletion { 
+            .onCompletion<Unit> { 
                 _loading.value = false
                 _isRefreshing.value = false
             }
-            .collect { incidents ->
-                _userIncidents.value = incidents
-            }
+            .collect()
         }
     }
 

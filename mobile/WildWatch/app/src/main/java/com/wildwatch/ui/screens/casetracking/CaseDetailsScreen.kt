@@ -28,6 +28,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.wildwatch.R
@@ -35,9 +36,19 @@ import com.wildwatch.model.EvidenceDTO
 import com.wildwatch.ui.theme.WildWatchRed
 import com.wildwatch.viewmodel.CaseDetailsViewModel
 import com.wildwatch.viewmodel.CaseDetailsUiState
-import coil.compose.AsyncImage
-import com.wildwatch.ui.components.WitnessCard
+import com.wildwatch.viewmodel.UserProfileViewModel
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.TextField
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wildwatch.ui.components.casetracking.WitnessCardCaseDetail
+import coil.compose.AsyncImage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,11 +57,18 @@ fun CaseDetailsScreen(
     trackingNumber: String,
     onBackClick: () -> Unit
 ) {
+    val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
+    var showRatingDialog by remember { mutableStateOf(false) }
+    val ratingStatus by viewModel.ratingStatus.collectAsState()
+    val userProfileViewModel: UserProfileViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+    val user by userProfileViewModel.user.collectAsState()
 
     LaunchedEffect(trackingNumber) {
-        viewModel.fetchCaseDetails(trackingNumber)
+        viewModel.fetchIncidentById(trackingNumber)
+        viewModel.fetchRatingStatus(trackingNumber)
+        userProfileViewModel.fetchProfile(context)
     }
 
     Scaffold(
@@ -108,6 +126,19 @@ fun CaseDetailsScreen(
             }
             is CaseDetailsUiState.Success -> {
                 val incident = (uiState as CaseDetailsUiState.Success).incident
+                val isResolved = incident.status?.equals("RESOLVED", ignoreCase = true) == true
+                val isReporter = user?.email != null && user?.email == incident.submittedByEmail
+                val shouldShowRatingDialog = isResolved && isReporter && (ratingStatus?.reporterRating == null)
+                if (showRatingDialog || shouldShowRatingDialog) {
+                    RatingDialog(
+                        onDismiss = { showRatingDialog = false },
+                        onSubmit = { rating, feedback ->
+                            viewModel.submitRating(trackingNumber, rating, feedback)
+                            showRatingDialog = false
+                        }
+                    )
+                }
+
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -1152,6 +1183,102 @@ private fun NextStepItem(
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.Gray
             )
+        }
+    }
+}
+
+@Composable
+private fun RatingDialog(
+    onDismiss: () -> Unit,
+    onSubmit: (Int, String) -> Unit
+) {
+    var rating by remember { mutableStateOf(0) }
+    var feedback by remember { mutableStateOf(TextFieldValue("")) }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Rate Your Experience",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = WildWatchRed
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    for (i in 1..5) {
+                        IconButton(
+                            onClick = { rating = i },
+                            modifier = Modifier.size(48.dp)
+                        ) {
+                            Icon(
+                                imageVector = when {
+                                    i <= rating -> Icons.Filled.Star
+                                    else -> Icons.Outlined.StarBorder
+                                },
+                                contentDescription = "Rate $i stars",
+                                tint = if (i <= rating) WildWatchRed else Color.Gray,
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                TextField(
+                    value = feedback,
+                    onValueChange = { feedback = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    placeholder = { Text("Share your feedback (optional)") },
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White
+                    )
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    Button(
+                        onClick = onDismiss,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.Gray
+                        )
+                    ) {
+                        Text("Cancel")
+                    }
+                    
+                    Button(
+                        onClick = { onSubmit(rating, feedback.text) },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = WildWatchRed
+                        ),
+                        enabled = rating > 0
+                    ) {
+                        Text("Submit")
+                    }
+                }
+            }
         }
     }
 }

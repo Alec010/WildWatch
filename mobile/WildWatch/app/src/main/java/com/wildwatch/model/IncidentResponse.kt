@@ -32,3 +32,12 @@ data class EvidenceDTO(
     val fileSize: Long,
     val uploadedAt: String
 )
+
+data class IncidentRatingResponse(
+    val incidentId: String,
+    val reporterRating: Int?,
+    val reporterFeedback: String?,
+    val officeRating: Int?,
+    val officeFeedback: String?,
+    val pointsAwarded: Boolean?
+)

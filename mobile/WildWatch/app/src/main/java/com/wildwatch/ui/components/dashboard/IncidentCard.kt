@@ -24,6 +24,7 @@ enum class IncidentStatus {
 }
 
 data class IncidentInfo(
+    val trackingNumber: String,
     val id: String,
     val title: String,
     val location: String,
@@ -61,7 +62,7 @@ fun IncidentCard(
         elevation = CardDefaults.cardElevation(
             defaultElevation = 1.dp
         ),
-        onClick = onViewDetailsClick
+        onClick = { onViewDetailsClick() }
     ) {
         Row(
             modifier = Modifier

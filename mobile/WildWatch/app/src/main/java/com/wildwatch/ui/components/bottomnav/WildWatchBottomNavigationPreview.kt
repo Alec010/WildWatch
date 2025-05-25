@@ -33,9 +33,9 @@ fun WildWatchBottomNavigationPreview() {
             icon = Icons.Default.Assignment
         ),
         BottomNavItem(
-            route = "settings",
-            title = "Settings",
-            icon = Icons.Default.Settings
+            route = "leaderboards",
+            title = "Leaderboards",
+            icon = Icons.Default.EmojiEvents
         )
     )
 

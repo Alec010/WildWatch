@@ -15,6 +15,10 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.*
 import java.util.concurrent.TimeUnit
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.wildwatch.ui.components.casetracking.WitnessCardCaseDetail
+import coil.compose.AsyncImage
+import com.wildwatch.network.ApiService
 
 object RetrofitClient {
     private const val API_PATH = "/api/"
@@ -66,6 +70,10 @@ object RetrofitClient {
                 }
                 chain.proceed(requestBuilder.build())
             }
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .retryOnConnectionFailure(true)
             .build()
 
         return Retrofit.Builder()
@@ -111,5 +119,67 @@ object RetrofitClient {
             .addConverterFactory(GsonConverterFactory.create(gson))
             .build()
             .create(ActivityLogService::class.java)
+    }
+
+    private var _leaderboardApi: LeaderboardApiService? = null
+    fun getLeaderboardApi(context: Context): LeaderboardApiService {
+        if (_leaderboardApi == null) {
+            val client = OkHttpClient.Builder()
+                .addInterceptor { chain ->
+                    val token = runBlocking { TokenManager.getToken(context) }
+                    val requestBuilder = chain.request().newBuilder()
+                    if (token != null) {
+                        requestBuilder.addHeader("Authorization", "Bearer $token")
+                    }
+                    chain.proceed(requestBuilder.build())
+                }
+                .build()
+            _leaderboardApi = Retrofit.Builder()
+                .baseUrl(BASE_URL)
+                .client(client)
+                .addConverterFactory(GsonConverterFactory.create())
+                .build()
+                .create(LeaderboardApiService::class.java)
+        }
+        return _leaderboardApi!!
+    }
+
+    fun resetLeaderboardApi(context: Context) {
+        val client = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                val token = runBlocking { TokenManager.getToken(context) }
+                val requestBuilder = chain.request().newBuilder()
+                if (token != null) {
+                    requestBuilder.addHeader("Authorization", "Bearer $token")
+                }
+                chain.proceed(requestBuilder.build())
+            }
+            .build()
+        _leaderboardApi = Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(LeaderboardApiService::class.java)
+    }
+
+    fun getChatbotApi(context: Context): ApiService {
+        val client = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                val token = runBlocking { TokenManager.getToken(context) }
+                val requestBuilder = chain.request().newBuilder()
+                if (token != null) {
+                    requestBuilder.addHeader("Authorization", "Bearer $token")
+                }
+                chain.proceed(requestBuilder.build())
+            }
+            .build()
+
+        return Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(ApiService::class.java)
     }
 }

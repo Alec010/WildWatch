@@ -15,6 +15,7 @@ fun IncidentResponse.toIncidentInfo(): IncidentInfo {
     }
 
     return IncidentInfo(
+        trackingNumber = this.trackingNumber,
         id = this.id,
         title = this.incidentType,
         location = this.location,
