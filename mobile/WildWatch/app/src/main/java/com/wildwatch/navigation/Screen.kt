@@ -7,4 +7,5 @@ sealed class Screen(val route: String) {
     object CaseDetails : Screen("caseDetails/{trackingNumber}") {
         fun createRoute(trackingNumber: String) = "caseDetails/$trackingNumber"
     }
+    object Leaderboards : Screen("leaderboards")
 } 

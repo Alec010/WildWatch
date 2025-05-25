@@ -21,8 +21,10 @@ import com.wildwatch.ui.screens.casetracking.CaseDetailsScreen
 import com.wildwatch.viewmodel.CaseDetailsViewModel
 import com.wildwatch.viewmodel.CaseDetailsViewModelFactory
 import com.wildwatch.utils.TokenManager
+import com.wildwatch.utils.TokenManager.Companion.clearToken
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
@@ -36,6 +38,7 @@ sealed class Screen(val route: String) {
     }
     object ViewAllNotifications : Screen("viewAllNotifications")
     object ViewAllCases : Screen("viewAllCases")
+    object Settings : Screen("settings")
 }
 
 private fun navigateBackToMain(
@@ -97,15 +100,15 @@ fun AppNavGraph(navController: NavHostController) {
             composable(Screen.Main.route) {
                 MainScreen(
                     navController = navController,
-                    currentTab = mainScreenTab,
-                    onTabChange = { mainScreenTab = it }
+                    onTabChange = { tab ->
+                        // Handle tab changes here
+                    }
                 )
             }
 
             composable(Screen.Dashboard.route) {
                 MainScreen(
                     navController = navController,
-                    currentTab = "dashboard",
                     onTabChange = { mainScreenTab = it }
                 )
             }
@@ -152,6 +155,26 @@ fun AppNavGraph(navController: NavHostController) {
                 com.wildwatch.ui.screens.casetracking.ViewAllCasesScreen(
                     navController = navController,
                     onBackClick = { navController.popBackStack() }
+                )
+            }
+
+            composable(Screen.Settings.route) {
+                val coroutineScope = rememberCoroutineScope()
+                com.wildwatch.ui.screens.profile.ProfileScreen(
+                    onBackClick = {
+                        navController.navigate(Screen.Main.route) {
+                            launchSingleTop = true
+                            popUpTo(Screen.Main.route) { inclusive = false }
+                        }
+                    },
+                    onLogoutClick = {
+                        coroutineScope.launch {
+                            clearToken(context)
+                            navController.navigate(Screen.Login.route) {
+                                popUpTo(Screen.Main.route) { inclusive = true }
+                            }
+                        }
+                    }
                 )
             }
         }
