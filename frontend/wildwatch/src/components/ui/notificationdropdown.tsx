@@ -83,7 +83,7 @@ export default function NotificationDropdown({
         throw new Error("No authentication token found");
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/activity-logs`, {
+      const response = await fetch(`${API_BASE_URL}/api/activity-logs?page=0&size=10`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -95,11 +95,18 @@ export default function NotificationDropdown({
       }
 
       const data = await response.json();
+      if (!data || !Array.isArray(data.content)) {
+        throw new Error("Invalid response format");
+      }
+
       setNotifications(data.content);
       const unreadCount = data.content.filter((notification: ActivityLog) => !notification.isRead).length;
       setUnreadCount(unreadCount);
     } catch (error) {
       console.error("Error fetching notifications:", error);
+      // Set empty notifications and zero unread count on error
+      setNotifications([]);
+      setUnreadCount(0);
     }
   };
 

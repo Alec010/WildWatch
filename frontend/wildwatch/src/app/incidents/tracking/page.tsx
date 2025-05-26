@@ -19,11 +19,9 @@ import {
   ChevronUp,
   Calendar,
   MapPin,
-  Shield,
-  Activity,
-  ArrowUpRight,
-  BarChart3,
   Layers,
+  ArrowUpRight,
+  Activity,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Inter } from "next/font/google"
@@ -43,27 +41,14 @@ interface Incident {
   priorityLevel?: "HIGH" | "MEDIUM" | "LOW" | null
 }
 
-interface ActivityLog {
-  id: string
-  activityType: string
-  description: string
-  createdAt: string
-  incident: {
-    id: string
-    trackingNumber: string
-  } | null
-}
-
 export default function CaseTrackingPage() {
   const router = useRouter()
   const { collapsed } = useSidebar()
   const [incidents, setIncidents] = useState<Incident[]>([])
-  const [activities, setActivities] = useState<ActivityLog[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedStatus, setSelectedStatus] = useState<string>("All")
   const [selectedPriority, setSelectedPriority] = useState<string>("All")
-  const [showAllActivities, setShowAllActivities] = useState(false)
   const [search, setSearch] = useState("")
   const [showFilters, setShowFilters] = useState(false)
 
@@ -98,19 +83,6 @@ export default function CaseTrackingPage() {
         const incidentsData = await incidentsResponse.json()
         // Only show PENDING and IN PROGRESS status (case-insensitive, with space)
         setIncidents(incidentsData.filter((i: Incident) => ["pending", "in progress"].includes(i.status.toLowerCase())))
-
-        // Fetch activity logs
-        const activitiesResponse = await fetch(`${API_BASE_URL}/api/activity-logs`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        })
-
-        if (!activitiesResponse.ok) throw new Error(`HTTP error! status: ${activitiesResponse.status}`)
-
-        const activitiesData = await activitiesResponse.json()
-        setActivities(activitiesData.content)
       } catch (error: any) {
         console.error("Error fetching data:", error)
         setError(error.message || "Failed to load data.")
@@ -513,108 +485,6 @@ export default function CaseTrackingPage() {
                   ))}
                 </div>
               )}
-            </div>
-
-            {/* Recent Activity */}
-            <div className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden mb-8">
-              <div className="p-5 border-b border-gray-100 flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <Shield className="h-5 w-5 text-[#8B0000]" />
-                  <h2 className="text-lg font-semibold text-gray-800">Recent Activity</h2>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowAllActivities(!showAllActivities)}
-                  className="text-[#8B0000] hover:text-[#6B0000] hover:bg-[#8B0000]/5"
-                >
-                  {showAllActivities ? "Show Less" : `View All (${activities.length})`}
-                </Button>
-              </div>
-
-              <div className="divide-y divide-gray-100">
-                {activities.length === 0 ? (
-                  <div className="text-center py-10 px-5">
-                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Activity className="h-8 w-8 text-gray-400" />
-                    </div>
-                    <h3 className="text-lg font-medium text-gray-800 mb-2">No recent activity</h3>
-                    <p className="text-gray-500 max-w-md mx-auto">
-                      There hasn't been any activity on your cases recently.
-                    </p>
-                  </div>
-                ) : (
-                  (showAllActivities ? activities : activities.slice(0, 3)).map((activity, index) => (
-                    <motion.div
-                      key={activity.id}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ duration: 0.3, delay: index * 0.1 }}
-                      className="p-4 hover:bg-gray-50"
-                    >
-                      <div className="flex items-start gap-4">
-                        <div
-                          className={`w-10 h-10 rounded-full flex items-center justify-center text-white ${getActivityColor(
-                            activity.activityType,
-                          )}`}
-                        >
-                          {getActivityIcon(activity.activityType)}
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                            <div className="font-semibold text-gray-800">
-                              {activity.activityType.replace(/_/g, " ")}
-                            </div>
-                            <div className="text-xs text-gray-400">{formatDate(activity.createdAt)}</div>
-                          </div>
-                          <div className="text-gray-600 mt-1">{activity.description}</div>
-                          {activity.incident && (
-                            <div className="mt-2">
-                              <Button
-                                variant="link"
-                                size="sm"
-                                className="p-0 h-auto text-[#8B0000] hover:text-[#6B0000]"
-                                onClick={() =>
-                                  activity.incident &&
-                                  router.push(`/incidents/tracking/${activity.incident.trackingNumber}`)
-                                }
-                              >
-                                View Case
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))
-                )}
-              </div>
-            </div>
-
-            {/* Activity Summary */}
-            <div className="bg-gradient-to-br from-[#8B0000] to-[#6B0000] rounded-xl shadow-md p-6 text-white">
-              <div className="flex items-center gap-3 mb-4">
-                <BarChart3 className="h-6 w-6" />
-                <h2 className="text-xl font-semibold">Activity Summary</h2>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <div className="bg-white/10 rounded-lg p-4">
-                  <div className="text-3xl font-bold">{incidents.length}</div>
-                  <div className="text-white/80 text-sm">Total Cases</div>
-                </div>
-                <div className="bg-white/10 rounded-lg p-4">
-                  <div className="text-3xl font-bold">{pendingCount}</div>
-                  <div className="text-white/80 text-sm">Pending</div>
-                </div>
-                <div className="bg-white/10 rounded-lg p-4">
-                  <div className="text-3xl font-bold">{inProgressCount}</div>
-                  <div className="text-white/80 text-sm">In Progress</div>
-                </div>
-                <div className="bg-white/10 rounded-lg p-4">
-                  <div className="text-3xl font-bold">{activities.length}</div>
-                  <div className="text-white/80 text-sm">Recent Activities</div>
-                </div>
-              </div>
             </div>
           </div>
       </div>

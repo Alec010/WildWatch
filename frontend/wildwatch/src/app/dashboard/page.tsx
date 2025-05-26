@@ -56,12 +56,10 @@ export default function DashboardPage() {
     inProgress: 0,
     resolved: 0,
   })
-  const [allIncidents, setAllIncidents] = useState<Incident[]>([])
   const [myIncidents, setMyIncidents] = useState<Incident[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
-  const [filteredAllIncidents, setFilteredAllIncidents] = useState<Incident[]>([])
   const [filteredMyIncidents, setFilteredMyIncidents] = useState<Incident[]>([])
   const [upvotedIncidents, setUpvotedIncidents] = useState<Set<string>>(new Set())
   const [upvoteModalOpen, setUpvoteModalOpen] = useState(false)
@@ -80,42 +78,6 @@ export default function DashboardPage() {
         if (!token) {
           throw new Error("No authentication token found")
         }
-
-        // Fetch all incidents
-        const allResponse = await fetch(`${API_BASE_URL}/api/incidents/public`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        })
-
-        if (!allResponse.ok) {
-          throw new Error(`HTTP error! status: ${allResponse.status}`)
-        }
-
-        const allIncidentsData = await allResponse.json()
-        // Filter out anonymous incidents
-        const filteredAllIncidents = allIncidentsData.filter((inc: Incident) => !inc.isAnonymous)
-        setAllIncidents(filteredAllIncidents)
-
-        // Fetch upvote status for each incident
-        const upvotePromises = filteredAllIncidents.map((incident: Incident) =>
-          fetch(`${API_BASE_URL}/api/incidents/${incident.id}/upvote-status`, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          }).then((res) => res.json()),
-        )
-
-        const upvoteResults = await Promise.all(upvotePromises)
-        const upvoted = new Set<string>()
-        filteredAllIncidents.forEach((incident: Incident, index: number) => {
-          if (upvoteResults[index] === true) {
-            upvoted.add(incident.id)
-          }
-        })
-        setUpvotedIncidents(upvoted)
 
         // Fetch user's incidents
         const myResponse = await fetch(`${API_BASE_URL}/api/incidents/my-incidents`, {
@@ -154,16 +116,6 @@ export default function DashboardPage() {
 
   useEffect(() => {
     // Filter incidents based on search query
-    const filteredAll = allIncidents.filter((incident) => {
-      const searchLower = searchQuery.toLowerCase()
-      return (
-        incident.incidentType.toLowerCase().includes(searchLower) ||
-        incident.trackingNumber.toLowerCase().includes(searchLower) ||
-        incident.location.toLowerCase().includes(searchLower)
-      )
-    })
-    setFilteredAllIncidents(filteredAll)
-
     const filteredMy = myIncidents.filter((incident) => {
       const searchLower = searchQuery.toLowerCase()
       return (
@@ -173,7 +125,7 @@ export default function DashboardPage() {
       )
     })
     setFilteredMyIncidents(filteredMy)
-  }, [searchQuery, allIncidents, myIncidents])
+  }, [searchQuery, myIncidents])
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -209,28 +161,20 @@ export default function DashboardPage() {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
 
-      const isUpvoted = await response.json()
+      const { isUpvoted, updatedIncident } = await response.json()
 
-      // Always fetch the updated incident from the backend and update the local state
-      const incidentRes = await fetch(`${API_BASE_URL}/api/incidents/${incidentId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      })
-      if (incidentRes.ok) {
-        const updatedIncident = await incidentRes.json()
-        setAllIncidents((prevIncidents) =>
-          prevIncidents.map((incident) =>
-            incident.id === incidentId
-              ? {
-                  ...incident,
-                  upvoteCount: typeof updatedIncident.upvoteCount === "number" ? updatedIncident.upvoteCount : 0,
-                }
-              : incident,
-          ),
-        )
-      }
+      // Update local state with the updated incident data
+      setMyIncidents((prevIncidents) =>
+        prevIncidents.map((incident) =>
+          incident.id === incidentId
+            ? {
+                ...incident,
+                upvoteCount: typeof updatedIncident.upvoteCount === "number" ? updatedIncident.upvoteCount : 0,
+              }
+            : incident,
+        ),
+      )
+
       // Update upvotedIncidents set based on backend response
       setUpvotedIncidents((prev) => {
         const newSet = new Set(prev)
@@ -244,7 +188,7 @@ export default function DashboardPage() {
     } catch (error) {
       // Revert optimistic update if backend fails
       if (selectedIncident && wasUpvoted !== undefined) {
-        setAllIncidents((prevIncidents) =>
+        setMyIncidents((prevIncidents) =>
           prevIncidents.map((incident) => {
             if (incident.id === incidentId) {
               const safeCount = typeof incident.upvoteCount === "number" ? incident.upvoteCount : 0
@@ -280,7 +224,7 @@ export default function DashboardPage() {
     if (selectedIncident) {
       const isCurrentlyUpvoted = upvotedIncidents.has(selectedIncident.id)
       // Optimistically update UI
-      setAllIncidents((prevIncidents) =>
+      setMyIncidents((prevIncidents) =>
         prevIncidents.map((incident) => {
           if (incident.id === selectedIncident.id) {
             const safeCount = typeof incident.upvoteCount === "number" ? incident.upvoteCount : 0
@@ -534,124 +478,6 @@ export default function DashboardPage() {
                 <div className="h-1 w-full bg-gradient-to-r from-green-400 to-green-300"></div>
               </motion.div>
             </div>
-          </div>
-
-          {/* All Incidents Section */}
-          <div className="mb-10">
-            <div className="flex items-center gap-2 mb-4">
-              <Shield className="h-5 w-5 text-[#800000]" />
-              <h2 className="text-xl font-bold text-[#800000]">All Incidents</h2>
-            </div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-            >
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {(searchQuery ? filteredAllIncidents : allIncidents).length > 0 ? (
-                  (searchQuery ? filteredAllIncidents : allIncidents).slice(0, 3).map((incident, index) => (
-                    <motion.div
-                      key={incident.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3, delay: index * 0.1 }}
-                    >
-                      <Card className="bg-white border border-gray-100 rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-200 h-[220px]">
-                        <div className="p-5 h-full flex flex-col">
-                          <div className="flex justify-between items-start mb-3">
-                            <div className="flex items-center gap-2">
-                              <div
-                                className={`px-2.5 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${getStatusColor(incident.status).bg} ${getStatusColor(incident.status).text}`}
-                              >
-                                {getStatusColor(incident.status).icon}
-                                {incident.status}
-                              </div>
-                              <button
-                                onClick={() => handleUpvoteClick(incident)}
-                                className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium transition-colors ${
-                                  pendingUpvote[incident.id] !== undefined
-                                    ? pendingUpvote[incident.id]
-                                      ? "bg-[#800000]/10 text-[#800000]"
-                                      : "bg-gray-100 text-gray-500"
-                                    : upvotedIncidents.has(incident.id)
-                                      ? "bg-[#800000]/10 text-[#800000]"
-                                      : "bg-gray-100 text-gray-500 hover:bg-[#800000]/10 hover:text-[#800000]"
-                                }`}
-                              >
-                                <ArrowUp
-                                  className={`h-3.5 w-3.5 ${
-                                    pendingUpvote[incident.id] !== undefined
-                                      ? pendingUpvote[incident.id]
-                                        ? "fill-[#800000]"
-                                        : "fill-none"
-                                      : upvotedIncidents.has(incident.id)
-                                        ? "fill-[#800000]"
-                                        : "fill-none"
-                                  }`}
-                                  strokeWidth={1.5}
-                                />
-                                <span>{typeof incident.upvoteCount === "number" ? incident.upvoteCount : 0}</span>
-                              </button>
-                            </div>
-                            <div className="flex items-center text-xs text-gray-500">
-                              <Clock className="h-3.5 w-3.5 mr-1" />
-                              {formatDate(incident.submittedAt)}
-                            </div>
-                          </div>
-
-                          <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-1">
-                            {incident.incidentType}
-                          </h3>
-
-                          <div className="flex items-start mb-3">
-                            <MapPin className="h-4 w-4 text-[#800000] mr-2 mt-0.5 flex-shrink-0" />
-                            <p className="text-sm text-gray-600 line-clamp-1">{incident.location}</p>
-                          </div>
-
-                          <div className="mb-4 flex-grow">
-                            <p className="text-sm text-gray-700 line-clamp-1">{incident.description}</p>
-                          </div>
-
-                          <div className="flex justify-end mt-auto">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="text-xs border-[#800000] text-[#800000] hover:bg-[#800000]/5 rounded-full px-4 flex items-center gap-1.5"
-                              onClick={() => router.push(`/incidents/tracking/${incident.trackingNumber}`)}
-                            >
-                              View Details
-                              <ChevronRight className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        </div>
-                        <div className={`h-1 w-full ${getStatusColor(incident.status).border}`}></div>
-                      </Card>
-                    </motion.div>
-                  ))
-                ) : (
-                  <div className="col-span-3 p-8 text-center bg-white rounded-xl border border-gray-200 shadow-sm">
-                    <div className="flex flex-col items-center gap-3">
-                      <div className="p-3 bg-gray-100 rounded-full">
-                        <Frown className="h-6 w-6 text-gray-400" />
-                      </div>
-                      <p className="text-gray-500 font-medium">No incidents found</p>
-                      <p className="text-gray-400 text-sm">Try adjusting your search criteria</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-              <div className="mt-4 flex justify-end">
-                <Button
-                  variant="link"
-                  className="text-[#800000] font-medium hover:text-[#600000] flex items-center gap-1"
-                  onClick={() => router.push("/incidents/public")}
-                >
-                  View All Incidents
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </motion.div>
           </div>
 
           {/* My Incidents Section */}
