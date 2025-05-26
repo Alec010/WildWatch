@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, use, type JSX } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useParams } from "next/navigation"
 import { OfficeAdminSidebar } from "@/components/OfficeAdminSidebar"
 import { OfficeAdminNavbar } from "@/components/OfficeAdminNavbar"
 import { Button } from "@/components/ui/button"
@@ -82,12 +82,10 @@ interface Incident {
   submittedByPhone: string
 }
 
-interface PageProps {
-  params: { id: string }
-}
-
-export default function IncidentDetailsPage({ params }: PageProps) {
+export default function IncidentDetailsPage() {
   const router = useRouter()
+  const params = useParams();
+  const id = params.id as string;
   const { collapsed } = useSidebar()
   const [incident, setIncident] = useState<Incident | null>(null)
   const [loading, setLoading] = useState(true)
@@ -130,7 +128,7 @@ export default function IncidentDetailsPage({ params }: PageProps) {
           throw new Error("No authentication token found")
         }
 
-        const response = await fetch(`${API_BASE_URL}/api/incidents/${params.id}`, {
+        const response = await fetch(`${API_BASE_URL}/api/incidents/${id}`, {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
@@ -157,7 +155,7 @@ export default function IncidentDetailsPage({ params }: PageProps) {
     }
 
     fetchIncident()
-  }, [params.id])
+  }, [id])
 
   useEffect(() => {
     if (showTransferModal) {
@@ -202,7 +200,7 @@ export default function IncidentDetailsPage({ params }: PageProps) {
         throw new Error("No authentication token found")
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/incidents/${params.id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/incidents/${id}`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -275,7 +273,7 @@ export default function IncidentDetailsPage({ params }: PageProps) {
         throw new Error("No authentication token found")
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/incidents/${params.id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/incidents/${id}`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -337,7 +335,7 @@ export default function IncidentDetailsPage({ params }: PageProps) {
         throw new Error("No authentication token found")
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/incidents/${params.id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/incidents/${id}`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -410,7 +408,7 @@ export default function IncidentDetailsPage({ params }: PageProps) {
         throw new Error("No authentication token found")
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/incidents/${params.id}/transfer`, {
+      const response = await fetch(`${API_BASE_URL}/api/incidents/${id}/transfer`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
