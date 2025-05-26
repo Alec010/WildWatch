@@ -320,7 +320,7 @@ export default function IncidentSubmissionPage() {
           title="Report an Incident"
           subtitle="Submit details about a security incident or concern"
           showSearch={false}
-        />
+        /> 
 
         {/* Content */}
         <div className="pt-24 px-6 pb-10">

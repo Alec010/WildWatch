@@ -11,7 +11,7 @@ import { Navbar } from "@/components/Navbar"
 import Image from "next/image"
 import {
   CheckCircle2,
-  ArrowLeft,
+  ArrowLeft, 
   Info,
   Edit2,
   Loader2,

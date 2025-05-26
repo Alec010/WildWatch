@@ -18,7 +18,7 @@ import { toast } from "sonner"
 import {
   AlertTriangle,
   Upload,
-  ArrowLeft,
+  ArrowLeft, 
   Camera,
   X,
   HelpCircle,
