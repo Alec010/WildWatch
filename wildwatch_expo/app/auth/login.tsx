@@ -1,0 +1,135 @@
+import { View, Text, TextInput, Pressable, Image, ScrollView } from 'react-native';
+import { Stack, router } from 'expo-router';
+import { useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+
+export default function LoginScreen() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+
+  const handleLogin = () => {
+    // For now, just navigate to tabs without authentication
+    router.replace('/(tabs)');
+  };
+
+  return (
+    <ScrollView className="flex-1 bg-[#f5f5f7]">
+      <Stack.Screen options={{ title: 'Login' }} />
+      
+      <View className="flex-1 justify-center px-4 py-8">
+        {/* Logo */}
+        <View className="items-center mb-8">
+          <Image
+            source={require('../../assets/images/logos/logo.png')}
+            className="w-32 h-32"
+            resizeMode="contain"
+          />
+          <Text className="text-3xl font-bold text-[#800000] mt-4">Sign In</Text>
+          <Text className="text-sm text-gray-500 mt-2">Access your WILD WATCH account</Text>
+        </View>
+
+        {/* Login Form */}
+        <View className="space-y-4">
+          {/* Email Input */}
+          <View>
+            <Text className="text-[#800000] font-medium mb-2">Email *</Text>
+            <View className="flex-row items-center border border-gray-300 rounded-lg bg-gray-50">
+              <Ionicons name="mail-outline" size={20} color="#800000" style={{ marginLeft: 12 }} />
+              <TextInput
+                className="flex-1 p-4"
+                placeholder="Enter your email"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+            </View>
+          </View>
+
+          {/* Password Input */}
+          <View>
+            <Text className="text-[#800000] font-medium mb-2">Password *</Text>
+            <View className="flex-row items-center border border-gray-300 rounded-lg bg-gray-50">
+              <Ionicons name="lock-closed-outline" size={20} color="#800000" style={{ marginLeft: 12 }} />
+              <TextInput
+                className="flex-1 p-4"
+                placeholder="Enter your password"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+              />
+              <Pressable
+                onPress={() => setShowPassword(!showPassword)}
+                className="pr-4"
+              >
+                <Ionicons
+                  name={showPassword ? "eye-off-outline" : "eye-outline"}
+                  size={20}
+                  color="#800000"
+                />
+              </Pressable>
+            </View>
+          </View>
+
+          {/* Forgot Password Link */}
+          <Pressable
+            onPress={() => {}}
+            className="self-end"
+          >
+            <Text className="text-[#800000] text-sm">Forgot password?</Text>
+          </Pressable>
+
+          {/* Login Button */}
+          <Pressable
+            onPress={handleLogin}
+            className="bg-[#800000] p-4 rounded-lg mt-6"
+          >
+            <Text className="text-white text-center font-semibold text-lg">Sign In</Text>
+          </Pressable>
+
+          {/* Divider */}
+          <View className="flex-row items-center my-4">
+            <View className="flex-1 h-[1px] bg-gray-300" />
+            <Text className="mx-4 text-gray-500">or</Text>
+            <View className="flex-1 h-[1px] bg-gray-300" />
+          </View>
+
+          {/* Microsoft Login Button */}
+          <Pressable
+            onPress={handleLogin}
+            className="flex-row items-center justify-center border border-gray-300 p-4 rounded-lg bg-white"
+          >
+            <Image
+              source={require('../../assets/images/logos/microsoft_logo.png')}
+              className="w-6 h-6 mr-2"
+              resizeMode="contain"
+            />
+            <Text className="text-gray-700 font-medium">Sign in with Microsoft</Text>
+          </Pressable>
+
+          {/* Sign Up Link */}
+          <View className="mt-6">
+            <Text className="text-gray-600 text-center">
+              Don't have an account?{' '}
+              <Text 
+                className="text-[#800000] font-medium"
+                onPress={() => router.push('/auth/signup')}
+              >
+                Sign up
+              </Text>
+            </Text>
+          </View>
+
+          {/* Terms and Privacy */}
+          <Text className="text-xs text-gray-500 text-center mt-8">
+            By signing in, you agree to our{' '}
+            <Text className="text-[#800000]">Terms of Service</Text>
+            {' '}and{' '}
+            <Text className="text-[#800000]">Privacy Policy</Text>
+          </Text>
+        </View>
+      </View>
+    </ScrollView>
+  );
+} 
