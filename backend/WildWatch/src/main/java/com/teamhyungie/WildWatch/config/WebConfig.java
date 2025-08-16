@@ -15,6 +15,10 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addMapping("/**")
                 .allowedOriginPatterns(
                     "http://localhost:3000",
+                    "http://localhost:*",
+                    "http://192.168.1.11:*",
+                    "exp://192.168.1.11:*",
+                    "exp://localhost:*",
                     "https://jcldwuryjuqtrbsqlgoi.supabase.co",
                     "https://*.onrender.com",
                     "https://wildwatch.onrender.com",
