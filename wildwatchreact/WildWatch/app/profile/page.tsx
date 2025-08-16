@@ -109,35 +109,35 @@ const ProfileSection: React.FC<ProfileSectionProps> = ({
   children 
 }) => (
   <View 
-    className="bg-white rounded-2xl mb-6 shadow-sm"
+    className="bg-white rounded-2xl mb-4 shadow-sm"
     style={{ 
       backgroundColor,
       marginHorizontal: spacing.large,
       shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
+      shadowOffset: { width: 0, height: 1 },
       shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 3,
+      shadowRadius: 2,
+      elevation: 2,
     }}
   >
-    <View className="p-6">
+    <View className="p-4">
       {/* Section Header */}
-      <View className="flex-row items-center mb-4">
+      <View className="flex-row items-center mb-3">
         <Ionicons 
           name={icon} 
-          size={28} 
+          size={24} 
           color={iconTint} 
         />
-        <View style={{ width: 16 }} />
+        <View style={{ width: 12 }} />
         <Text 
           className="font-bold text-gray-900"
-          style={{ fontSize: 18, color: textPrimaryColor }}
+          style={{ fontSize: 16, color: textPrimaryColor }}
         >
           {title}
         </Text>
       </View>
       
-      <View className="h-px bg-gray-200 mb-4" />
+      <View className="h-px bg-gray-200 mb-3" />
       
       {/* Section Content */}
       {children}
@@ -168,21 +168,21 @@ const ProfileTextField: React.FC<ProfileTextFieldProps> = ({
   autoCapitalize = 'sentences',
   style
 }) => (
-  <View className="mb-4" style={style}>
+  <View className="mb-3" style={style}>
     <Text 
-      className="text-sm font-semibold mb-3 text-gray-700"
-      style={{ fontSize: 14, color: textSecondaryColor }}
+      className="text-sm font-medium mb-2"
+      style={{ fontSize: 12, color: textSecondaryColor }}
     >
       {label}
     </Text>
     <View className="relative">
       {leadingIcon && (
-        <View className="absolute left-4 top-4 z-10">
+        <View className="absolute left-3 top-3 z-10">
           {leadingIcon}
         </View>
       )}
       <TextInput
-        className={`w-full h-14 pl-${leadingIcon ? '14' : '4'} pr-4 border rounded-xl text-base ${
+        className={`w-full h-12 pl-${leadingIcon ? '12' : '4'} pr-4 border rounded-xl text-base ${
           readOnly 
             ? 'border-gray-200 bg-gray-50 text-gray-600' 
             : 'border-gray-300 focus:border-[#8B0000] text-gray-900'
@@ -195,15 +195,10 @@ const ProfileTextField: React.FC<ProfileTextFieldProps> = ({
         keyboardType={keyboardType}
         autoCapitalize={autoCapitalize}
         autoCorrect={false}
-        textAlignVertical="center"
         style={{
           backgroundColor: readOnly ? '#FAFAFA' : 'white',
           borderColor: readOnly ? '#E5E7EB' : '#D1D5DB',
           color: readOnly ? textSecondaryColor : textPrimaryColor,
-          fontSize: 16,
-          textAlign: 'left',
-          paddingHorizontal: 16,
-          paddingVertical: 8,
         }}
       />
     </View>
@@ -364,7 +359,7 @@ export default function ProfileScreen() {
   };
 
   const handleAskKat = () => {
-    // Navigate to dashboard
+    // Navigate to chatbot or open chat interface
     router.push('/dashboard');
   };
 
@@ -374,7 +369,7 @@ export default function ProfileScreen() {
         <View className="flex-1 justify-center items-center">
           <ActivityIndicator size="large" color="#8B0000" />
           <Text 
-            className="text-[#8B0000] mt-4 text-center"
+            className="text-[#8B0000] mt-2"
             style={{ fontSize: fontSize.medium }}
           >
             Loading profile...
@@ -387,31 +382,31 @@ export default function ProfileScreen() {
   if (!userProfile) {
     return (
       <SafeAreaView className="flex-1 bg-white">
-        <View className="flex-1 justify-center items-center px-6">
+        <View className="flex-1 justify-center items-center px-4">
           <Ionicons 
             name="person-circle-outline" 
             size={iconSize.xlarge} 
             color="#9CA3AF" 
           />
           <Text 
-            className="text-gray-500 mt-6 text-center"
+            className="text-gray-500 mt-4 text-center"
             style={{ fontSize: fontSize.medium }}
           >
             Failed to load profile. Please try again.
           </Text>
           {error && (
             <Text 
-              className="text-red-500 mt-3 text-center"
+              className="text-red-500 mt-2 text-center"
               style={{ fontSize: fontSize.small }}
             >
               {error}
             </Text>
           )}
           <TouchableOpacity
-            className="bg-[#8B0000] rounded-xl px-8 py-4 mt-6"
+            className="bg-[#8B0000] rounded-xl px-6 py-3 mt-4"
             onPress={fetchUserProfile}
           >
-            <Text className="text-white font-semibold text-base">Retry</Text>
+            <Text className="text-white font-medium">Retry</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -420,20 +415,39 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor }}>
+      {/* Top App Bar */}
+      <View 
+        className="flex-row justify-between items-center"
+        style={{ 
+          paddingHorizontal: spacing.large,
+          paddingVertical: isSmallIPhone ? 6 : isMediumIPhone ? 8 : isLargeIPhone ? 10 : isXLargeIPhone ? 12 : isIPhone15Pro ? 14 : 16,
+          height: isSmallIPhone ? 45 : isMediumIPhone ? 55 : isLargeIPhone ? 65 : isXLargeIPhone ? 70 : isIPhone15Pro ? 75 : 80
+        }}
+      >
+        <TouchableOpacity onPress={() => router.back()}>
+          <Ionicons 
+            name="arrow-back" 
+            size={iconSize.large} 
+            color={primaryColor} 
+          />
+        </TouchableOpacity>
+        
+        <View style={{ width: iconSize.large }} />
+      </View>
+
       <ScrollView 
         className="flex-1"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: spacing.xlarge }}
       >
         {/* Profile Header */}
         <View 
           style={{ 
-            height: 220,
-            marginBottom: spacing.xlarge
+            height: 200,
+            marginBottom: spacing.large
           }}
         >
-          {/* Background */}
-          <View style={{ height: 160 }}>
+          {/* Gradient Background */}
+          <View style={{ height: 140 }}>
             <View
               style={{
                 flex: 1,
@@ -447,81 +461,81 @@ export default function ProfileScreen() {
             className="bg-white rounded-2xl shadow-sm"
             style={{ 
               marginHorizontal: spacing.large,
-              marginTop: 80,
+              marginTop: 70,
               shadowColor: '#000',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.15,
-              shadowRadius: 8,
-              elevation: 6,
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.1,
+              shadowRadius: 4,
+              elevation: 4,
             }}
           >
-            <View className="p-6">
-              <View style={{ height: 50 }} />
+            <View className="p-4">
+              <View style={{ height: 40 }} />
               
               {/* Name */}
-              <View className="items-center mb-2">
+              <View className="items-center mb-1">
                 <Text 
-                  className="font-bold text-center"
-                  style={{ fontSize: 24, color: textPrimaryColor }}
+                  className="font-bold"
+                  style={{ fontSize: 22, color: textPrimaryColor }}
                 >
-                  {firstName} {lastName}
+                  {firstName}
                 </Text>
               </View>
               
-              <View style={{ height: 6 }} />
+              <View style={{ height: 4 }} />
               
               {/* ID and Role */}
               <View className="items-center">
                 <View 
-                  className="rounded-full px-4 py-2"
-                  style={{ backgroundColor: `${accentColor}20` }}
+                  className="rounded-full px-3 py-1.5"
+                  style={{ backgroundColor: `${accentColor}26` }}
                 >
                   <Text 
-                    className="font-medium text-center"
-                    style={{ fontSize: 14, color: `${accentColor}CC` }}
+                    className="font-medium"
+                    style={{ fontSize: 12, color: `${accentColor}CC` }}
                   >
                     ID: {userProfile.schoolIdNumber} • {userProfile.role}
                   </Text>
                 </View>
               </View>
               
-              <View style={{ height: 12 }} />
+              <View style={{ height: 8 }} />
             </View>
           </View>
 
           {/* Profile Image */}
           <View 
-            className="absolute top-32 left-1/2"
+            className="absolute top-30 left-1/2"
             style={{ 
-              width: 100,
-              height: 100,
-              marginLeft: -50,
+              width: 90,
+              height: 90,
+              marginLeft: -45,
             }}
           >
             {/* Profile Image Background */}
             <View 
-              className="rounded-full items-center justify-center border-4"
+              className="rounded-full items-center justify-center border-3"
               style={{ 
-                width: 100,
-                height: 100,
+                width: 90,
+                height: 90,
                 backgroundColor: cardColor,
                 borderColor: cardColor,
-                borderWidth: 4,
-                padding: 4,
+                borderWidth: 3,
+                padding: 3,
               }}
             >
               {/* Profile Image */}
               <View 
                 className="rounded-full items-center justify-center"
                 style={{ 
-                  width: 92,
-                  height: 92,
+                  width: 84,
+                  height: 84,
                   backgroundColor,
                 }}
               >
                 <Ionicons 
                   name="person" 
-                  size={56} 
+                  size={50} 
                   color={primaryColor} 
                 />
               </View>
@@ -539,7 +553,9 @@ export default function ProfileScreen() {
           <View 
             className="flex-row"
             style={{ 
-              gap: 12
+              paddingHorizontal: spacing.large,
+              paddingVertical: 8,
+              gap: 8
             }}
           >
             {/* First Name */}
@@ -550,12 +566,11 @@ export default function ProfileScreen() {
                 label="First Name"
                 readOnly={!isEditing}
                 placeholder="Enter first name"
-                style={{ marginBottom: 0 }}
               />
             </View>
 
             {/* Middle Initial */}
-            <View style={{ width: 80 }}>
+            <View style={{ width: 60 }}>
               <ProfileTextField
                 value={middleInitial}
                 onValueChange={(text) => setMiddleInitial(text.toUpperCase().slice(0, 1))}
@@ -563,7 +578,6 @@ export default function ProfileScreen() {
                 readOnly={!isEditing}
                 placeholder="I"
                 autoCapitalize="characters"
-                style={{ marginBottom: 0 }}
               />
             </View>
 
@@ -575,7 +589,6 @@ export default function ProfileScreen() {
                 label="Last Name"
                 readOnly={!isEditing}
                 placeholder="Enter last name"
-                style={{ marginBottom: 0 }}
               />
             </View>
           </View>
@@ -591,10 +604,14 @@ export default function ProfileScreen() {
             leadingIcon={
               <Ionicons 
                 name="call-outline" 
-                size={iconSize.medium} 
+                size={iconSize.small} 
                 color={textSecondaryColor} 
               />
             }
+            style={{
+              paddingHorizontal: spacing.large,
+              paddingVertical: 8
+            }}
           />
         </ProfileSection>
 
@@ -605,80 +622,88 @@ export default function ProfileScreen() {
           iconTint={primaryColor}
         >
           {/* Institutional Email */}
-          <View className="mb-6">
+          <View 
+            style={{ 
+              paddingHorizontal: spacing.large,
+              paddingVertical: 8
+            }}
+          >
             <Text 
-              className="font-semibold mb-3"
-              style={{ fontSize: 14, color: textSecondaryColor }}
+              className="font-medium"
+              style={{ fontSize: 12, color: textSecondaryColor }}
             >
               Institutional Email
             </Text>
             
-            <View style={{ height: 6 }} />
+            <View style={{ height: 4 }} />
             
             <View className="relative">
-              <View className="absolute left-4 top-4 z-10">
+              <View className="absolute left-3 top-3 z-10">
                 <Ionicons 
                   name="mail-outline" 
-                  size={iconSize.medium} 
+                  size={iconSize.small} 
                   color={textSecondaryColor} 
                 />
               </View>
               <TextInput
-                className="w-full h-14 pl-14 pr-4 border rounded-xl text-base"
+                className="w-full h-12 pl-12 pr-4 border rounded-xl text-base"
                 value={userProfile.email}
                 editable={false}
                 style={{
                   backgroundColor: `${backgroundColor}80`,
                   borderColor: '#E5E7EB',
                   color: textSecondaryColor,
-                  fontSize: 16,
                 }}
               />
             </View>
             
             <Text 
-              className="text-xs mt-2 ml-1"
-              style={{ fontSize: 11, color: textSecondaryColor }}
+              className="text-xs mt-1 ml-1"
+              style={{ fontSize: 10, color: textSecondaryColor }}
             >
               Email cannot be changed
             </Text>
           </View>
 
           {/* Role */}
-          <View>
+          <View 
+            style={{ 
+              paddingHorizontal: spacing.large,
+              paddingVertical: 8
+            }}
+          >
             <Text 
-              className="font-semibold mb-3"
-              style={{ fontSize: 14, color: textSecondaryColor }}
+              className="font-medium"
+              style={{ fontSize: 12, color: textSecondaryColor }}
             >
               Role
             </Text>
             
-            <View style={{ height: 6 }} />
+            <View style={{ height: 4 }} />
             
             <View className="relative">
-              <View className="absolute left-4 top-4 z-10">
+              <View className="absolute left-3 top-3 z-10">
                 <Ionicons 
                   name="school-outline" 
-                  size={iconSize.medium} 
+                  size={iconSize.small} 
                   color={textSecondaryColor} 
                 />
               </View>
               <TextInput
-                className="w-full h-14 pl-14 pr-4 border rounded-xl text-base"
+                className="w-full h-12 pl-12 pr-4 border rounded-xl text-base"
                 value={userProfile.role}
                 editable={false}
                 style={{
                   backgroundColor: `${backgroundColor}80`,
                   borderColor: '#E5E7EB',
                   color: textSecondaryColor,
-                  fontSize: 16,
                 }}
               />
             </View>
             
             <Text 
-              className="text-xs mt-2 ml-1"
-              style={{ fontSize: 11, color: textSecondaryColor }}
+              className="text-xs mt-1 ml-1"
+              style={{ fontSize: 10, color: textSecondaryColor }}
             >
               Role is assigned by the system
             </Text>
@@ -694,25 +719,26 @@ export default function ProfileScreen() {
           {/* Action buttons */}
           <View 
             style={{ 
-              gap: 16
+              padding: spacing.large,
+              gap: 12
             }}
           >
             {/* Ask Kat Button (always visible) */}
             <TouchableOpacity
               className="bg-[#8B0000] rounded-xl flex-row items-center justify-center"
               style={{ 
-                paddingVertical: 16,
+                paddingVertical: 12,
                 backgroundColor: primaryColor
               }}
               onPress={handleAskKat}
             >
               <Ionicons 
                 name="chatbubble-ellipses" 
-                size={iconSize.large} 
+                size={iconSize.medium} 
                 color="white" 
               />
               <Text 
-                className="text-white font-semibold ml-3"
+                className="text-white font-medium ml-2"
                 style={{ fontSize: fontSize.medium }}
               >
                 Ask Kat
@@ -721,24 +747,24 @@ export default function ProfileScreen() {
 
             {isEditing ? (
               // Show both Save and Cancel buttons when editing
-              <View className="flex-row" style={{ gap: 12 }}>
+              <View className="flex-row" style={{ gap: 8 }}>
                 {/* Cancel Button */}
                 <TouchableOpacity
                   className="flex-1 border rounded-xl flex-row items-center justify-center"
                   style={{ 
-                    paddingVertical: 16,
+                    paddingVertical: 12,
                     borderColor: '#E5E7EB',
-                    borderWidth: 2,
+                    borderWidth: 1,
                   }}
                   onPress={handleCancelEdit}
                 >
                   <Ionicons 
                     name="close" 
-                    size={iconSize.large} 
+                    size={iconSize.medium} 
                     color={textSecondaryColor} 
                   />
                   <Text 
-                    className="font-semibold ml-3"
+                    className="font-medium ml-2"
                     style={{ fontSize: fontSize.medium, color: textSecondaryColor }}
                   >
                     Cancel
@@ -749,7 +775,7 @@ export default function ProfileScreen() {
                 <TouchableOpacity
                   className="flex-1 bg-[#8B0000] rounded-xl flex-row items-center justify-center"
                   style={{ 
-                    paddingVertical: 16,
+                    paddingVertical: 12,
                     backgroundColor: primaryColor
                   }}
                   onPress={handleSaveProfile}
@@ -761,11 +787,11 @@ export default function ProfileScreen() {
                     <>
                       <Ionicons 
                         name="save" 
-                        size={iconSize.large} 
+                        size={iconSize.medium} 
                         color="white" 
                       />
                       <Text 
-                        className="text-white font-semibold ml-3"
+                        className="text-white font-medium ml-2"
                         style={{ fontSize: fontSize.medium }}
                       >
                         Save Changes
@@ -779,19 +805,19 @@ export default function ProfileScreen() {
               <TouchableOpacity
                 className="border rounded-xl flex-row items-center justify-center"
                 style={{ 
-                  paddingVertical: 16,
+                  paddingVertical: 12,
                   borderColor: primaryColor,
-                  borderWidth: 2,
+                  borderWidth: 1,
                 }}
                 onPress={() => setIsEditing(true)}
               >
                 <Ionicons 
                   name="create-outline" 
-                  size={iconSize.large} 
+                  size={iconSize.medium} 
                   color={primaryColor} 
                 />
                 <Text 
-                  className="font-semibold ml-3"
+                  className="font-medium ml-2"
                   style={{ fontSize: fontSize.medium, color: primaryColor }}
                 >
                   Edit Profile
@@ -804,19 +830,19 @@ export default function ProfileScreen() {
               <TouchableOpacity
                 className="border rounded-xl flex-row items-center justify-center"
                 style={{ 
-                  paddingVertical: 16,
+                  paddingVertical: 12,
                   borderColor: primaryColor,
-                  borderWidth: 2,
+                  borderWidth: 1,
                 }}
                 onPress={handleLogout}
               >
                 <Ionicons 
                   name="log-out-outline" 
-                  size={iconSize.large} 
+                  size={iconSize.medium} 
                   color={primaryColor} 
                 />
                 <Text 
-                  className="font-semibold ml-3"
+                  className="font-medium ml-2"
                   style={{ fontSize: fontSize.medium, color: primaryColor }}
                 >
                   Logout
@@ -826,7 +852,7 @@ export default function ProfileScreen() {
           </View>
         </ProfileSection>
 
-        <View style={{ height: spacing.large }} />
+        <View style={{ height: 24 }} />
       </ScrollView>
     </SafeAreaView>
   );

@@ -288,7 +288,12 @@ export default function LoginScreen() {
                 onPress={handleMicrosoftLogin}
               >
                 <View className="flex-row items-center">
-                  <View className="w-5 h-5 bg-[#8B0000] rounded mr-2" />
+                  <Ionicons
+                    name="logo-microsoft"
+                    size={20}
+                    color="#8B0000"
+                    style={{ marginRight: 8 }}
+                  />
                   <Text className="text-[#8B0000] font-medium">
                     Sign in with Microsoft
                   </Text>

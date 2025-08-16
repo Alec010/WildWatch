@@ -588,16 +588,16 @@ export default function DashboardScreen() {
         className="bg-white flex-row justify-between items-center border-b border-gray-200"
         style={{ 
           paddingHorizontal: spacing.large,
-          paddingVertical: isSmallIPhone ? 8 : isMediumIPhone ? 10 : isLargeIPhone ? 12 : isXLargeIPhone ? 14 : isIPhone15Pro ? 16 : 18,
-          height: isSmallIPhone ? 60 : isMediumIPhone ? 70 : isLargeIPhone ? 80 : isXLargeIPhone ? 85 : isIPhone15Pro ? 90 : 95
+          paddingVertical: isSmallIPhone ? 6 : isMediumIPhone ? 8 : isLargeIPhone ? 10 : isXLargeIPhone ? 12 : isIPhone15Pro ? 14 : 16,
+          height: isSmallIPhone ? 45 : isMediumIPhone ? 55 : isLargeIPhone ? 65 : isXLargeIPhone ? 70 : isIPhone15Pro ? 75 : 80
         }}
       >
         <View className="flex-row items-center">
           <Image
             source={require('../../assets/images/WildWatch.png')}
             style={{ 
-              width: isSmallIPhone ? 80 : isMediumIPhone ? 90 : isLargeIPhone ? 100 : isXLargeIPhone ? 105 : isIPhone15Pro ? 110 : 115,
-              height: isSmallIPhone ? 60 : isMediumIPhone ? 68 : isLargeIPhone ? 75 : isXLargeIPhone ? 79 : isIPhone15Pro ? 83 : 87
+              width: isSmallIPhone ? 55 : isMediumIPhone ? 65 : isLargeIPhone ? 75 : isXLargeIPhone ? 80 : isIPhone15Pro ? 85 : 90,
+              height: isSmallIPhone ? 40 : isMediumIPhone ? 50 : isLargeIPhone ? 60 : isXLargeIPhone ? 65 : isIPhone15Pro ? 70 : 75
             }}
             resizeMode="contain"
           />
@@ -626,18 +626,6 @@ export default function DashboardScreen() {
                 }}
               />
             )}
-          </TouchableOpacity>
-          
-          {/* Profile */}
-          <TouchableOpacity 
-            style={{ padding: spacing.small }}
-            onPress={handleLogout}
-          >
-            <Ionicons 
-              name="person" 
-              size={iconSize.medium} 
-              color="#8B0000" 
-            />
           </TouchableOpacity>
         </View>
       </View>
@@ -749,7 +737,7 @@ export default function DashboardScreen() {
               style={{ 
                 paddingVertical: isSmallIPhone ? 16 : isMediumIPhone ? 18 : isLargeIPhone ? 20 : isXLargeIPhone ? 22 : isIPhone15Pro ? 24 : 26,
                 paddingHorizontal: spacing.large,
-                minHeight: isSmallIPhone ? 60 : isMediumIPhone ? 70 : isLargeIPhone ? 80 : isXLargeIPhone ? 85 : isIPhone15Pro ? 90 : 95
+                minHeight: isSmallIPhone ? 45 : isMediumIPhone ? 55 : isLargeIPhone ? 65 : isXLargeIPhone ? 70 : isIPhone15Pro ? 75 : 80
               }}
               onPress={() => setSelectedTab(0)}
             >
@@ -780,7 +768,7 @@ export default function DashboardScreen() {
               style={{ 
                 paddingVertical: isSmallIPhone ? 16 : isMediumIPhone ? 18 : isLargeIPhone ? 20 : isXLargeIPhone ? 22 : isIPhone15Pro ? 24 : 26,
                 paddingHorizontal: spacing.large,
-                minHeight: isSmallIPhone ? 60 : isMediumIPhone ? 70 : isLargeIPhone ? 80 : isXLargeIPhone ? 85 : isIPhone15Pro ? 90 : 95
+                minHeight: isSmallIPhone ? 45 : isMediumIPhone ? 55 : isLargeIPhone ? 65 : isXLargeIPhone ? 70 : isIPhone15Pro ? 75 : 80
               }}
               onPress={() => setSelectedTab(1)}
             >
