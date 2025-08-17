@@ -584,35 +584,28 @@ export default function DashboardScreen() {
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       {/* Top App Bar */}
-      <View 
-        className="bg-white flex-row justify-between items-center border-b border-gray-200"
-        style={{ 
-          paddingHorizontal: spacing.large,
-          paddingVertical: isSmallIPhone ? 6 : isMediumIPhone ? 8 : isLargeIPhone ? 10 : isXLargeIPhone ? 12 : isIPhone15Pro ? 14 : 16,
-          height: isSmallIPhone ? 45 : isMediumIPhone ? 55 : isLargeIPhone ? 65 : isXLargeIPhone ? 70 : isIPhone15Pro ? 75 : 80
-        }}
-      >
+      <View className="bg-white px-4 py-4 border-b border-gray-200 flex-row justify-between items-center">
         <View className="flex-row items-center">
           <Image
             source={require('../../assets/images/WildWatch.png')}
             style={{ 
-              width: isSmallIPhone ? 55 : isMediumIPhone ? 65 : isLargeIPhone ? 75 : isXLargeIPhone ? 80 : isIPhone15Pro ? 85 : 90,
-              height: isSmallIPhone ? 40 : isMediumIPhone ? 50 : isLargeIPhone ? 60 : isXLargeIPhone ? 65 : isIPhone15Pro ? 70 : 75
+              width: 120,
+              height: 50
             }}
             resizeMode="contain"
           />
         </View>
         
-        <View className="flex-row items-center space-x-2">
+        <View className="flex-row items-center space-x-4">
           {/* Notifications */}
           <TouchableOpacity 
             className="relative"
-            style={{ padding: spacing.small }}
+            style={{ padding: 8, marginLeft: 16 }}
             onPress={() => setShowNotifications(!showNotifications)}
           >
             <Ionicons 
               name="notifications" 
-              size={iconSize.medium} 
+              size={28} 
               color="#8B0000" 
             />
             {hasUnreadNotifications && (
@@ -621,11 +614,24 @@ export default function DashboardScreen() {
                 style={{ 
                   top: -2, 
                   right: -2, 
-                  width: isSmallIPhone ? 8 : 12, 
-                  height: isSmallIPhone ? 8 : 12 
+                  width: 12, 
+                  height: 12 
                 }}
               />
             )}
+          </TouchableOpacity>
+
+          {/* Profile Button */}
+          <TouchableOpacity 
+            className="relative"
+            style={{ padding: 8 }}
+            onPress={() => router.push('/profile')}
+          >
+            <Ionicons 
+              name="person-circle" 
+              size={30} 
+              color="#8B0000" 
+            />
           </TouchableOpacity>
         </View>
       </View>

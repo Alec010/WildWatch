@@ -108,9 +108,13 @@ export default function ReportScreen() {
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       {/* Header */}
-      <View className="bg-white px-4 py-4 border-b border-gray-200">
-        <Text className="text-2xl font-bold text-[#8B0000]">Report Incident</Text>
-        <Text className="text-gray-600 mt-1">Report a new incident here</Text>
+      <View className="bg-white px-4 py-4 border-b border-gray-200 flex-row justify-between items-center">
+        <View>
+          <Text className="text-2xl font-bold text-[#8B0000]">Report Incident</Text>
+          <Text className="text-gray-600 mt-1">Report a new incident here</Text>
+        </View>
+        
+        {/* Profile Button - Removed from Report */}
       </View>
 
       <ScrollView className="flex-1 px-4" showsVerticalScrollIndicator={false}>

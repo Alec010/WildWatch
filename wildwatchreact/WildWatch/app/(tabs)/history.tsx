@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../contexts/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
@@ -31,15 +31,22 @@ interface Incident {
 export default function HistoryScreen() {
   const { token } = useAuth();
   const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [filteredIncidents, setFilteredIncidents] = useState<Incident[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('All');
 
   useEffect(() => {
     if (token) {
       fetchHistory();
     }
   }, [token]);
+
+  useEffect(() => {
+    filterIncidents();
+  }, [incidents, searchQuery, selectedStatus]);
 
   const fetchHistory = async () => {
     if (!token) return;
@@ -70,6 +77,27 @@ export default function HistoryScreen() {
     }
   };
 
+  const filterIncidents = () => {
+    let filtered = incidents;
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      filtered = filtered.filter(incident =>
+        incident.trackingNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        incident.description?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    // Apply status filter
+    if (selectedStatus !== 'All') {
+      filtered = filtered.filter(incident =>
+        incident.status.toLowerCase() === selectedStatus.toLowerCase()
+      );
+    }
+
+    setFilteredIncidents(filtered);
+  };
+
   const onRefresh = async () => {
     setIsRefreshing(true);
     await fetchHistory();
@@ -98,16 +126,11 @@ export default function HistoryScreen() {
     if (!dateString) return 'N/A';
     try {
       const date = new Date(dateString);
-      const now = new Date();
-      const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-      
-      if (diffInHours < 1) return 'Just now';
-      if (diffInHours < 24) return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
-      
-      const diffInDays = Math.floor(diffInHours / 24);
-      if (diffInDays < 7) return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
-      
-      return date.toLocaleDateString();
+      return date.toLocaleDateString('en-US', {
+        month: '2-digit',
+        day: '2-digit',
+        year: 'numeric'
+      });
     } catch (error) {
       return 'N/A';
     }
@@ -127,6 +150,54 @@ export default function HistoryScreen() {
     }
   };
 
+  const getIncidentTypeIcon = (incidentType: string) => {
+    switch (incidentType.toLowerCase()) {
+      case 'theft':
+        return 'shield-outline';
+      case 'vandalism':
+        return 'hammer-outline';
+      case 'assault':
+        return 'warning-outline';
+      case 'harassment':
+        return 'person-remove-outline';
+      default:
+        return 'alert-circle-outline';
+    }
+  };
+
+  const getIncidentTypeColor = (incidentType: string) => {
+    switch (incidentType.toLowerCase()) {
+      case 'theft':
+        return '#EF4444';
+      case 'vandalism':
+        return '#F59E0B';
+      case 'assault':
+        return '#DC2626';
+      case 'harassment':
+        return '#8B5CF6';
+      default:
+        return '#6B7280';
+    }
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority.toLowerCase()) {
+      case 'high':
+        return '#DC2626';
+      case 'medium':
+        return '#F59E0B';
+      case 'low':
+        return '#10B981';
+      default:
+        return '#6B7280';
+    }
+  };
+
+  // Calculate counts
+  const allCount = incidents.length;
+  const resolvedCount = incidents.filter(i => i.status.toLowerCase() === 'resolved').length;
+  const dismissedCount = incidents.filter(i => i.status.toLowerCase() === 'dismissed').length;
+
   if (isLoading) {
     return (
       <SafeAreaView className="flex-1 bg-gray-50">
@@ -142,8 +213,10 @@ export default function HistoryScreen() {
     <SafeAreaView className="flex-1 bg-gray-50">
       {/* Header */}
       <View className="bg-white px-4 py-4 border-b border-gray-200">
-        <Text className="text-2xl font-bold text-[#8B0000]">Incident History</Text>
-        <Text className="text-gray-600 mt-1">Your incident history will appear here</Text>
+        <View>
+          <Text className="text-2xl font-bold text-[#8B0000]">History</Text>
+          <Text className="text-gray-600 mt-1">View and manage your incident history.</Text>
+        </View>
       </View>
 
       <ScrollView 
@@ -153,6 +226,45 @@ export default function HistoryScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
+        {/* Search Bar */}
+        <View className="bg-white rounded-3xl border border-gray-200 flex-row items-center px-4 py-3 mt-4 mb-4">
+          <Ionicons name="search" size={20} color="#6B7280" />
+          <TextInput
+            className="flex-1 ml-3 text-base"
+            placeholder="Search incidents..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholderTextColor="#9CA3AF"
+          />
+        </View>
+
+        {/* Status Cards */}
+        <View className="flex-row mb-4">
+          {[
+            { status: 'All', count: allCount, title: 'All Cases' },
+            { status: 'Resolved', count: resolvedCount, title: 'Resolved' },
+            { status: 'Dismissed', count: dismissedCount, title: 'Dismissed' }
+          ].map((item, index) => (
+            <TouchableOpacity
+              key={item.status}
+              className={`flex-1 bg-white rounded-xl p-3 items-center ${
+                selectedStatus === item.status ? 'bg-gray-100' : ''
+              } ${index > 0 ? 'ml-2' : ''}`}
+              style={{
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+                elevation: 4,
+              }}
+              onPress={() => setSelectedStatus(item.status)}
+            >
+              <Text className="text-2xl font-bold text-[#8B0000]">{item.count}</Text>
+              <Text className="text-xs text-gray-600 mt-1">{item.title}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
         {error ? (
           <View className="bg-red-50 border border-red-200 rounded-lg p-4 mt-4">
             <Text className="text-red-800 text-center">{error}</Text>
@@ -163,19 +275,19 @@ export default function HistoryScreen() {
               <Text className="text-white text-center font-medium">Retry</Text>
             </TouchableOpacity>
           </View>
-        ) : incidents.length === 0 ? (
+        ) : filteredIncidents.length === 0 ? (
           <View className="bg-white rounded-lg p-8 mt-4 items-center">
-            <Ionicons name="time-outline" size={48} color="#9CA3AF" />
+            <Ionicons name="document-outline" size={48} color="#9CA3AF" />
             <Text className="text-gray-500 mt-4 text-center text-lg">
-              No history found
+              No incidents found
             </Text>
             <Text className="text-gray-400 mt-2 text-center">
-              You haven't submitted any incidents yet.
+              Try adjusting your search or filters
             </Text>
           </View>
         ) : (
           <View className="mt-4">
-            {incidents.map((incident) => (
+            {filteredIncidents.map((incident) => (
               <TouchableOpacity
                 key={incident.id}
                 className="bg-white rounded-lg mb-3 shadow-sm"
