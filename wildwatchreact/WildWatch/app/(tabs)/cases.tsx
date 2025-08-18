@@ -116,7 +116,7 @@ export default function CasesScreen() {
   };
 
   const handleCaseClick = (trackingNumber: string) => {
-    router.push(`/tracking/${trackingNumber}` as any);
+    router.push(`/caseDetails/${trackingNumber}` as any);
   };
 
   const getStatusColor = (status: string) => {

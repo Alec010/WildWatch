@@ -540,7 +540,7 @@ export default function DashboardScreen() {
   };
 
   const handleIncidentClick = (trackingNumber: string) => {
-    router.push(`/(tabs)/tracking/${trackingNumber}` as any);
+    router.push(`/caseDetails/${trackingNumber}` as any);
   };
 
   const handleUpvote = (incidentId: string) => {

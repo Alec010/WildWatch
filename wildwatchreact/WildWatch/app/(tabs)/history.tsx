@@ -105,7 +105,7 @@ export default function HistoryScreen() {
   };
 
   const handleIncidentClick = (trackingNumber: string) => {
-    router.push(`/tracking/${trackingNumber}` as any);
+    router.push(`/caseDetails/${trackingNumber}` as any);
   };
 
   const getStatusColor = (status: string) => {
