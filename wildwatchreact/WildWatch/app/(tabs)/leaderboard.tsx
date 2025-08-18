@@ -8,11 +8,13 @@ import {
   ActivityIndicator,
   Dimensions,
   Platform,
+  FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
+
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -64,144 +66,251 @@ const iconSize = getResponsiveIconSize();
 // API Base URL - same as AuthContext
 const API_BASE_URL = 'http://192.168.1.11:8080/api';
 
+// Leaderboard Entry interface - matching Android Studio exactly
 interface LeaderboardEntry {
-  id: number | string; // Backend uses Long, can be converted to string
+  id: number;
   name: string;
-  totalIncidents: number | null;
-  averageRating: number | null;
-  points: number | null;
-  activeIncidents?: number | null;
-  resolvedIncidents?: number | null;
+  totalIncidents?: number;
+  averageRating?: number;
+  points?: number;
+  activeIncidents?: number;
+  resolvedIncidents?: number;
 }
+
+// Custom Tab Component
+interface CustomTabProps {
+  text: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  isSelected: boolean;
+  onClick: () => void;
+}
+
+const CustomTab: React.FC<CustomTabProps> = ({ text, icon, isSelected, onClick }) => (
+  <TouchableOpacity
+    className="flex-1 items-center"
+    onPress={onClick}
+    style={{ 
+      paddingVertical: 12,
+      borderRadius: 8,
+    }}
+  >
+    <Ionicons 
+      name={icon} 
+      size={24} 
+      color={isSelected ? '#8B0000' : '#6B7280'} 
+    />
+    <View style={{ height: 4 }} />
+    <Text 
+      className={`${isSelected ? 'font-semibold' : 'font-normal'}`}
+      style={{ 
+        fontSize: 14,
+        color: isSelected ? '#8B0000' : '#6B7280'
+      }}
+    >
+      {text}
+    </Text>
+    <View style={{ height: 8 }} />
+    {isSelected && (
+      <View 
+        className="bg-[#8B0000] rounded"
+        style={{ 
+          width: 40, 
+          height: 3,
+          borderRadius: 2
+        }}
+      />
+    )}
+  </TouchableOpacity>
+);
+
+// Leaderboard Item Component
+interface LeaderboardItemProps {
+  entry: LeaderboardEntry;
+  rank: number;
+  isTopThree: boolean;
+}
+
+const LeaderboardItem: React.FC<LeaderboardItemProps> = ({ entry, rank, isTopThree }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const getRankColor = (rank: number) => {
+    switch (rank) {
+      case 1:
+        return '#FFD700'; // Gold
+      case 2:
+        return '#C0C0C0'; // Silver
+      case 3:
+        return '#CD7F32'; // Bronze
+      default:
+        return '#4A5568'; // Gray
+    }
+  };
+
+  const RankIcon: React.FC<{ rank: number; color: string }> = ({ rank, color }) => (
+    <View 
+      className="rounded-full items-center justify-center"
+      style={{ 
+        width: 32, 
+        height: 32,
+        backgroundColor: `${color}20` 
+      }}
+    >
+      <Text 
+        className="font-bold"
+        style={{ 
+          fontSize: 18,
+          color: color 
+        }}
+      >
+        {rank}
+      </Text>
+    </View>
+  );
+
+  return (
+    <View 
+      className="bg-white rounded-xl mb-2 shadow-sm"
+      style={{
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: isTopThree ? 4 : 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: isTopThree ? 4 : 2,
+        elevation: isTopThree ? 4 : 2,
+        borderRadius: 12,
+        marginBottom: 8,
+      }}
+    >
+      <View>
+        <TouchableOpacity
+          className="flex-row items-center"
+          style={{ padding: 16 }}
+          onPress={() => setIsExpanded(!isExpanded)}
+        >
+          {/* Rank and Trophy/Medal */}
+          <View 
+            className="items-center justify-center"
+            style={{ width: 40, height: 40 }}
+          >
+            {rank <= 3 ? (
+              <RankIcon rank={rank} color={getRankColor(rank)} />
+            ) : (
+              <Text 
+                className="font-bold"
+                style={{ 
+                  fontSize: 18,
+                  color: '#4A5568' 
+                }}
+              >
+                {rank}
+              </Text>
+            )}
+          </View>
+
+          <View style={{ width: 16 }} />
+
+          {/* Name and Score */}
+          <View className="flex-1">
+            <Text 
+              className="font-semibold"
+              style={{ 
+                fontSize: 16,
+                color: '#2D3748'
+              }}
+            >
+              {entry.name}
+            </Text>
+            <Text 
+              className="text-gray-600"
+              style={{ 
+                fontSize: 14,
+                color: '#718096'
+              }}
+            >
+              Score: {entry.points || 0}
+            </Text>
+          </View>
+
+          {/* Expand/Collapse Icon */}
+          <TouchableOpacity onPress={() => setIsExpanded(!isExpanded)}>
+            <Ionicons 
+              name={isExpanded ? "chevron-up" : "chevron-down"} 
+              size={24} 
+              color="#718096" 
+            />
+          </TouchableOpacity>
+        </TouchableOpacity>
+
+        {/* Expanded Details */}
+        {isExpanded && (
+          <View>
+            <View className="border-t border-gray-200" style={{ borderTopColor: '#E2E8F0' }} />
+            <View style={{ padding: 16 }}>
+              {entry.averageRating !== undefined && (
+                <View className="flex-row justify-between items-center mb-2">
+                  <Text 
+                    className="text-gray-600"
+                    style={{ 
+                      fontSize: 14,
+                      color: '#718096'
+                    }}
+                  >
+                    Average Rating
+                  </Text>
+                  <Text 
+                    className="font-medium text-gray-800"
+                    style={{ 
+                      fontSize: 14,
+                      color: '#2D3748'
+                    }}
+                  >
+                    {entry.averageRating.toFixed(1)}
+                  </Text>
+                </View>
+              )}
+              {entry.totalIncidents !== undefined && (
+                <View className="flex-row justify-between items-center mb-2">
+                  <Text 
+                    className="text-gray-600"
+                    style={{ 
+                      fontSize: 14,
+                      color: '#718096'
+                    }}
+                  >
+                    Total Reports
+                  </Text>
+                  <Text 
+                    className="font-medium text-gray-800"
+                    style={{ 
+                      fontSize: 14,
+                      color: '#2D3748'
+                    }}
+                  >
+                    {entry.totalIncidents}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
+      </View>
+    </View>
+  );
+};
 
 export default function LeaderboardScreen() {
   const { user, token } = useAuth();
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedTab, setSelectedTab] = useState(0); // 0: Students, 1: Offices
   const [topReporters, setTopReporters] = useState<LeaderboardEntry[]>([]);
   const [topOffices, setTopOffices] = useState<LeaderboardEntry[]>([]);
-
-  // Debug logging
-  console.log('LeaderboardScreen render:', {
-    hasUser: !!user,
-    hasToken: !!token,
-    tokenLength: token?.length || 0,
-    isLoading,
-    error,
-    reportersCount: topReporters.length,
-    officesCount: topOffices.length
-  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedTab, setSelectedTab] = useState(0);
 
   useEffect(() => {
-    if (token && user) {
-      // Validate token format
-      if (token.length < 10) {
-        setError('Invalid token format');
-        setIsLoading(false);
-        return;
-      }
-      
-      console.log('Token validation passed, fetching leaderboard...');
+    if (token) {
       fetchLeaderboard();
-    } else if (!token) {
-      setError('Authentication required. Please login again.');
-      setIsLoading(false);
-    } else if (!user) {
-      setError('User data not available. Please wait...');
-      setIsLoading(false);
     }
-  }, [token, user]);
-
-  const fetchLeaderboard = async () => {
-    if (!token) {
-      setError('No authentication token available');
-      setIsLoading(false);
-      return;
-    }
-    
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      console.log('Fetching leaderboard with token:', token.substring(0, 20) + '...');
-      
-      // Test connection first
-      const connectionTest = await fetch(`${API_BASE_URL}/ping`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      if (!connectionTest.ok) {
-        throw new Error(`Cannot connect to server: ${connectionTest.status}`);
-      }
-      
-      console.log('Connection test passed, proceeding with API calls...');
-      
-      // Fetch top reporters
-      const reportersResponse = await fetch(`${API_BASE_URL}/ratings/leaderboard/reporters/top`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      console.log('Reporters response status:', reportersResponse.status);
-      
-      if (!reportersResponse.ok) {
-        const errorText = await reportersResponse.text();
-        console.error('Reporters API error:', errorText);
-        throw new Error(`Failed to fetch top reporters: ${reportersResponse.status} - ${errorText}`);
-      }
-
-      const reportersData = await reportersResponse.json();
-      console.log('Reporters data received:', reportersData);
-      setTopReporters(reportersData);
-
-      // Fetch top offices
-      const officesResponse = await fetch(`${API_BASE_URL}/ratings/leaderboard/offices/top`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      console.log('Offices response status:', officesResponse.status);
-      
-      if (!officesResponse.ok) {
-        const errorText = await officesResponse.text();
-        console.error('Offices API error:', errorText);
-        throw new Error(`Failed to fetch top offices: ${officesResponse.status} - ${errorText}`);
-      }
-
-      const officesData = await officesResponse.json();
-      console.log('Offices data received:', officesData);
-      setTopOffices(officesData);
-      
-    } catch (error: any) {
-      console.error('Error fetching leaderboard:', error);
-      
-      // Handle different types of errors
-      if (error.name === 'TypeError' && error.message.includes('fetch')) {
-        setError('Network error: Cannot connect to server. Please check your internet connection.');
-      } else if (error.message.includes('401') || error.message.includes('403')) {
-        setError('Authentication failed. Please login again.');
-      } else if (error.message.includes('500')) {
-        setError('Server error. Please try again later.');
-      } else if (error.message.includes('404')) {
-        setError('Leaderboard data not found. Please try again later.');
-      } else {
-        setError(error.message || 'Failed to load leaderboard');
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [token]);
 
   const onRefresh = async () => {
     setIsRefreshing(true);
@@ -209,91 +318,114 @@ export default function LeaderboardScreen() {
     setIsRefreshing(false);
   };
 
-  const getRankIcon = (rank: number) => {
-    switch (rank) {
-      case 1: return '🏆';
-      case 2: return '🥈';
-      case 3: return '🥉';
-      default: return `${rank}`;
+  const fetchLeaderboard = async () => {
+    if (!token) return;
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      // Fetch both top reporters and top offices in parallel - matching Android Studio exactly
+      const [reportersResponse, officesResponse] = await Promise.all([
+        fetch(`${API_BASE_URL}/ratings/leaderboard/reporters/top`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }),
+        fetch(`${API_BASE_URL}/ratings/leaderboard/offices/top`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        })
+      ]);
+
+      if (!reportersResponse.ok) {
+        throw new Error(`Failed to fetch top reporters: ${reportersResponse.status}`);
+      }
+
+      if (!officesResponse.ok) {
+        throw new Error(`Failed to fetch top offices: ${officesResponse.status}`);
+      }
+
+      const reportersData: LeaderboardEntry[] = await reportersResponse.json();
+      const officesData: LeaderboardEntry[] = await officesResponse.json();
+      
+      setTopReporters(reportersData);
+      setTopOffices(officesData);
+
+    } catch (error: any) {
+      console.error('Error fetching leaderboard data:', error);
+      setError(error.message || 'Failed to fetch leaderboard');
+      
+      // For demo purposes, show mock data if API fails
+      if (error.message.includes('Failed to fetch')) {
+        setTopReporters([
+          {
+            id: 1,
+            name: 'John Doe',
+            totalIncidents: 15,
+            averageRating: 4.5,
+            points: 85
+          },
+          {
+            id: 2,
+            name: 'Jane Smith',
+            totalIncidents: 12,
+            averageRating: 4.2,
+            points: 78
+          },
+          {
+            id: 3,
+            name: 'Mike Johnson',
+            totalIncidents: 10,
+            averageRating: 4.0,
+            points: 72
+          }
+        ]);
+        
+        setTopOffices([
+          {
+            id: 1,
+            name: 'Main Office',
+            totalIncidents: 25,
+            averageRating: 4.3,
+            points: 92
+          },
+          {
+            id: 2,
+            name: 'North Branch',
+            totalIncidents: 18,
+            averageRating: 4.1,
+            points: 79
+          },
+          {
+            id: 3,
+            name: 'South Branch',
+            totalIncidents: 15,
+            averageRating: 3.9,
+            points: 68
+          }
+        ]);
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
-
-  const getRankColor = (rank: number) => {
-    switch (rank) {
-      case 1: return '#FFD700'; // Gold
-      case 2: return '#C0C0C0'; // Silver
-      case 3: return '#CD7F32'; // Bronze
-      default: return '#4A5568'; // Gray
-    }
-  };
-
-  if (!user || !token) {
-    return (
-      <SafeAreaView className="flex-1 bg-white">
-        <View className="flex-1 justify-center items-center px-6">
-          <Ionicons 
-            name="person-circle-outline" 
-            size={48} 
-            color="#8B0000" 
-          />
-          <Text 
-            className="text-[#8B0000] mt-4 text-center"
-            style={{ fontSize: fontSize.medium }}
-          >
-            {!token ? 'Authentication required' : 'User data not available'}
-          </Text>
-          <Text 
-            className="text-gray-500 mt-2 text-center"
-            style={{ fontSize: fontSize.small }}
-          >
-            {!token ? 'Please login again to access leaderboards' : 'Please wait while loading user data'}
-          </Text>
-          {!token && (
-            <TouchableOpacity
-              className="bg-[#8B0000] rounded-xl px-6 py-3 mt-4"
-              onPress={() => router.push('/login')}
-            >
-              <Text className="text-white font-medium">Go to Login</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </SafeAreaView>
-    );
-  }
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-gray-50">
-        {/* Top App Bar */}
-        <View 
-          className="bg-white flex-row justify-between items-center border-b border-gray-200"
-          style={{ 
-            paddingHorizontal: spacing.large,
-            paddingVertical: isSmallIPhone ? 6 : isMediumIPhone ? 8 : isLargeIPhone ? 10 : isXLargeIPhone ? 12 : isIPhone15Pro ? 14 : 16,
-            height: isSmallIPhone ? 45 : isMediumIPhone ? 55 : isLargeIPhone ? 65 : isXLargeIPhone ? 70 : isIPhone15Pro ? 75 : 80
-          }}
-        >
-          <View className="flex-row items-center">
-            <Text 
-              className="font-bold text-[#8B0000]"
-              style={{ fontSize: fontSize.title }}
-            >
-              Leaderboard
-            </Text>
-          </View>
-          
-          <View className="flex-row items-center space-x-3">
-            {/* Profile Button - Removed from Leaderboard */}
-          </View>
-        </View>
-
+      <SafeAreaView className="flex-1 bg-white">
         <View className="flex-1 justify-center items-center">
           <ActivityIndicator size="large" color="#8B0000" />
           <Text 
             className="text-[#8B0000] mt-2"
             style={{ fontSize: fontSize.medium }}
           >
-            Loading leaderboard...
+            Loading Leaderboard...
           </Text>
         </View>
       </SafeAreaView>
@@ -301,209 +433,87 @@ export default function LeaderboardScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
-      {/* Top App Bar */}
-      <View 
-        className="bg-white flex-row justify-between items-center border-b border-gray-200"
-        style={{ 
-          paddingHorizontal: spacing.large,
-          paddingVertical: isSmallIPhone ? 6 : isMediumIPhone ? 8 : isLargeIPhone ? 10 : isXLargeIPhone ? 12 : isIPhone15Pro ? 14 : 16,
-          height: isSmallIPhone ? 45 : isMediumIPhone ? 55 : isLargeIPhone ? 65 : isXLargeIPhone ? 70 : isIPhone15Pro ? 75 : 80
-        }}
-      >
-        <View className="flex-row items-center">
-          <View>
-            <Text 
-              className="font-bold text-[#8B0000]"
-              style={{ fontSize: fontSize.title }}
-            >
-              Leaderboard
-            </Text>
-            <Text 
-              className="text-gray-600"
-              style={{ fontSize: fontSize.small }}
-            >
-              See who's leading in incident reporting.
-            </Text>
-          </View>
-        </View>
-        
-        <View className="flex-row items-center space-x-2">
-          {/* Profile Button - Removed from Leaderboard */}
+    <SafeAreaView className="flex-1" style={{ backgroundColor: '#F8F9FA' }}>
+      {/* Header */}
+      <View className="bg-white px-4 py-4 border-b border-gray-200">
+        <View>
+          <Text className="text-2xl font-bold text-[#8B0000]">Leaderboard</Text>
+          <Text className="text-gray-600 mt-1">See who's leading in incident reporting.</Text>
         </View>
       </View>
 
-      {/* Custom Tab Row */}
-      <View className="bg-white shadow-sm">
-        <View className="flex-row px-4 py-2">
-          <TouchableOpacity 
-            className={`flex-1 items-center py-3 rounded-lg ${selectedTab === 0 ? 'bg-red-50' : ''}`}
-            onPress={() => setSelectedTab(0)}
-          >
-            <Ionicons 
-              name="school-outline" 
-              size={iconSize.medium} 
-              color={selectedTab === 0 ? '#8B0000' : '#6B7280'} 
+             <ScrollView
+         className="flex-1"
+         refreshControl={
+           <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
+         }
+         showsVerticalScrollIndicator={false}
+       >
+                 {/* Custom Tab Row - matching Android Studio exactly */}
+         <View 
+           className="bg-white mb-4 shadow-sm rounded-lg"
+           style={{
+             shadowColor: '#000',
+             shadowOffset: { width: 0, height: 2 },
+             shadowOpacity: 0.1,
+             shadowRadius: 2,
+             elevation: 2,
+           }}
+         >
+           <View className="flex-row" style={{ paddingVertical: 8 }}>
+            <CustomTab
+              text="Students"
+              icon="school-outline"
+              isSelected={selectedTab === 0}
+              onClick={() => setSelectedTab(0)}
             />
-            <Text 
-              className={`mt-1 font-medium ${selectedTab === 0 ? 'text-[#8B0000]' : 'text-gray-500'}`}
-              style={{ fontSize: fontSize.small }}
-            >
-              Students
-            </Text>
-            {selectedTab === 0 && (
-              <View className="w-10 h-0.5 bg-[#8B0000] rounded mt-2" />
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            className={`flex-1 items-center py-3 rounded-lg ${selectedTab === 1 ? 'bg-red-50' : ''}`}
-            onPress={() => setSelectedTab(1)}
-          >
-            <Ionicons 
-              name="business" 
-              size={iconSize.medium} 
-              color={selectedTab === 1 ? '#8B0000' : '#6B7280'} 
+            <CustomTab
+              text="Offices"
+              icon="business"
+              isSelected={selectedTab === 1}
+              onClick={() => setSelectedTab(1)}
             />
-            <Text 
-              className={`mt-1 font-medium ${selectedTab === 1 ? 'text-[#8B0000]' : 'text-gray-500'}`}
-              style={{ fontSize: fontSize.small }}
-            >
-              Offices
-            </Text>
-            {selectedTab === 1 && (
-              <View className="w-10 h-0.5 bg-[#8B0000] rounded mt-2" />
-            )}
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {error ? (
-        <View className="flex-1 justify-center items-center px-4">
-          <Ionicons name="alert-circle" size={48} color="#8B0000" />
-          <Text 
-            className="text-gray-600 mt-4 text-center"
-            style={{ fontSize: fontSize.large }}
-          >
-            {error}
-          </Text>
-          <TouchableOpacity
-            className="bg-[#8B0000] rounded-lg px-6 py-3 mt-4"
-            onPress={fetchLeaderboard}
-          >
-            <Text className="text-white font-medium">Retry</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (selectedTab === 0 ? topReporters : topOffices).length === 0 ? (
-        <View className="flex-1 justify-center items-center px-4">
-          <Ionicons name="trophy-outline" size={48} color="#9CA3AF" />
-          <Text 
-            className="text-gray-500 mt-4 text-center"
-            style={{ fontSize: fontSize.large }}
-          >
-            No leaderboard data available
-          </Text>
-          <Text 
-            className="text-gray-400 mt-2 text-center"
-            style={{ fontSize: fontSize.medium }}
-          >
-            {selectedTab === 0 ? 'No students have been rated yet' : 'No offices have been rated yet'}
-          </Text>
-          <TouchableOpacity
-            className="bg-[#8B0000] rounded-lg px-6 py-3 mt-4"
-            onPress={fetchLeaderboard}
-          >
-            <Text className="text-white font-medium">Refresh</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <ScrollView
-          className="flex-1"
-          style={{ paddingHorizontal: spacing.large }}
-          refreshControl={
-            <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
-          }
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Leaderboard List */}
-          <View className="py-4 space-y-3">
-            {(selectedTab === 0 ? topReporters : topOffices).map((entry, index) => {
-              const rank = index + 1;
-              const isTopThree = rank <= 3;
-              
-              // Debug logging
-              console.log(`Rendering entry ${index}:`, entry);
-              
-              return (
-                <View
-                  key={entry.id}
-                  className="bg-white rounded-2xl shadow-sm border border-gray-100"
-                  style={{ 
-                    padding: spacing.large,
-                    elevation: isTopThree ? 4 : 2,
-                    shadowOpacity: isTopThree ? 0.15 : 0.1
-                  }}
-                >
-                  <View className="flex-row items-center justify-between">
-                    {/* Rank and Trophy/Medal */}
-                    <View className="flex-row items-center space-x-3">
-                      <View 
-                        className="w-10 h-10 rounded-full items-center justify-center"
-                        style={{ backgroundColor: getRankColor(rank) }}
-                      >
-                        <Text 
-                          className="font-bold text-white"
-                          style={{ fontSize: fontSize.large }}
-                        >
-                          {getRankIcon(rank)}
-                        </Text>
-                      </View>
-                      
-                      <View>
-                        <Text 
-                          className="font-bold text-gray-900"
-                          style={{ fontSize: fontSize.large }}
-                        >
-                          {entry.name || 'Unknown'}
-                        </Text>
-                        <Text 
-                          className="text-gray-600"
-                          style={{ fontSize: fontSize.small }}
-                        >
-                          Score: {entry.points || 0}
-                        </Text>
-                      </View>
-                    </View>
-
-                    {/* Additional Stats */}
-                    <View className="items-end">
-                      {entry.averageRating && (
-                        <Text 
-                          className="text-gray-600 text-right"
-                          style={{ fontSize: fontSize.small }}
-                        >
-                          Rating: {entry.averageRating.toFixed(1)}
-                        </Text>
-                      )}
-                      {entry.totalIncidents && (
-                        <Text 
-                          className="text-gray-600 text-right"
-                          style={{ fontSize: fontSize.small }}
-                        >
-                          Reports: {entry.totalIncidents}
-                        </Text>
-                      )}
-                    </View>
-                  </View>
-                </View>
-              );
-            })}
           </View>
+        </View>
 
-          {/* Bottom Spacing */}
-          <View style={{ height: spacing.xlarge }} />
-        </ScrollView>
-      )}
+        {/* Error Display */}
+        {error && (
+          <View className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+            <Text className="text-red-800 text-center" style={{ fontSize: fontSize.medium }}>
+              {error}
+            </Text>
+          </View>
+        )}
+
+        {/* Leaderboard List */}
+        <View style={{ marginBottom: spacing.xlarge, paddingHorizontal: 16 }}>
+          {(selectedTab === 0 ? topReporters : topOffices).map((entry, index) => (
+            <LeaderboardItem
+              key={entry.id}
+              entry={entry}
+              rank={index + 1}
+              isTopThree={index < 3}
+            />
+          ))}
+          
+          {/* Empty State */}
+          {(selectedTab === 0 ? topReporters : topOffices).length === 0 && !error && (
+            <View className="bg-white rounded-lg p-8 items-center">
+              <Ionicons 
+                name="trophy-outline" 
+                size={iconSize.xlarge} 
+                color="#9CA3AF" 
+              />
+              <Text 
+                className="text-gray-500 mt-4 text-center"
+                style={{ fontSize: fontSize.medium }}
+              >
+                No leaderboard data available
+              </Text>
+            </View>
+          )}
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }

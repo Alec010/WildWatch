@@ -9,6 +9,8 @@ import {
   Alert,
   Dimensions,
   Platform,
+  Modal,
+  FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -66,6 +68,27 @@ const iconSize = getResponsiveIconSize();
 // API Base URL - same as AuthContext
 const API_BASE_URL = 'http://192.168.1.11:8080/api';
 
+// Notification interfaces
+interface NotificationItem {
+  id: string;
+  activityType: string;
+  description: string;
+  createdAt: string;
+  isRead: boolean;
+  incident?: {
+    id: string;
+    trackingNumber: string;
+  };
+}
+
+interface NotificationResponse {
+  content: NotificationItem[];
+  totalElements: number;
+  totalPages: number;
+  size: number;
+  number: number;
+}
+
 interface Incident {
   id: string;
   trackingNumber: string;
@@ -102,6 +125,27 @@ interface Witness {
   name: string;
   contactInformation: string;
   additionalNotes: string;
+}
+
+// Notification interfaces
+interface NotificationItem {
+  id: string;
+  activityType: string;
+  description: string;
+  createdAt: string;
+  isRead: boolean;
+  incident?: {
+    id: string;
+    trackingNumber: string;
+  };
+}
+
+interface NotificationResponse {
+  content: NotificationItem[];
+  totalElements: number;
+  totalPages: number;
+  size: number;
+  number: number;
 }
 
 interface StatCardProps {
@@ -378,6 +422,301 @@ const IncidentCard: React.FC<IncidentCardProps> = ({
   );
 };
 
+
+
+// Notification Popup Component
+interface NotificationPopupProps {
+  visible: boolean;
+  onClose: () => void;
+  notifications: NotificationItem[];
+  isLoading: boolean;
+  error: string | null;
+  onRefresh: () => void;
+  onMarkAllAsRead: () => void;
+  onMarkAsRead: (id: string) => void;
+  onNotificationClick: (notification: NotificationItem) => void;
+}
+
+const NotificationPopup: React.FC<NotificationPopupProps> = ({
+  visible,
+  onClose,
+  notifications,
+  isLoading,
+  error,
+  onRefresh,
+  onMarkAllAsRead,
+  onMarkAsRead,
+  onNotificationClick,
+}) => {
+  const getNotificationIcon = (activityType: string) => {
+    switch (activityType) {
+      case 'STATUS_CHANGE':
+        return 'time';
+      case 'UPDATE':
+        return 'information-circle';
+      case 'NEW_REPORT':
+        return 'document-text';
+      case 'CASE_RESOLVED':
+        return 'checkmark-circle';
+      case 'VERIFICATION':
+        return 'checkmark-circle';
+      default:
+        return 'notifications';
+    }
+  };
+
+  const getNotificationIconColor = (activityType: string) => {
+    switch (activityType) {
+      case 'STATUS_CHANGE':
+        return '#1976D2'; // Blue
+      case 'UPDATE':
+        return '#9C27B0'; // Purple
+      case 'NEW_REPORT':
+        return '#E53935'; // Red
+      case 'CASE_RESOLVED':
+        return '#4CAF50'; // Green
+      case 'VERIFICATION':
+        return '#4CAF50'; // Green
+      default:
+        return '#757575'; // Gray
+    }
+  };
+
+  const formatActivityType = (type: string) => {
+    switch (type) {
+      case 'STATUS_CHANGE':
+        return 'Status Update';
+      case 'UPDATE':
+        return 'Case Update';
+      case 'NEW_REPORT':
+        return 'New Report';
+      case 'CASE_RESOLVED':
+        return 'Case Resolved';
+      case 'VERIFICATION':
+        return 'Case Verified';
+      default:
+        return type.replace('_', ' ').toLowerCase().replace(/^\w/, c => c.toUpperCase());
+    }
+  };
+
+  const formatTimestamp = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diff = now.getTime() - date.getTime();
+      
+      if (diff < 60000) return 'Just now';
+      if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+      if (diff < 86400000) return `${Math.floor(diff / 86400000)}d ago`;
+      if (diff < 604800000) return `${Math.floor(diff / 86400000)}d ago`;
+      
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    } catch (error) {
+      return 'Unknown';
+    }
+  };
+
+  const renderNotificationItem = ({ item }: { item: NotificationItem }) => (
+    <TouchableOpacity
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        backgroundColor: !item.isRead ? '#F8F8F8' : 'transparent',
+      }}
+      onPress={() => {
+        onMarkAsRead(item.id);
+        onNotificationClick(item);
+      }}
+    >
+      {/* Icon */}
+      <View
+        style={{
+          width: 36,
+          height: 36,
+          borderRadius: 18,
+          backgroundColor: getNotificationIconColor(item.activityType),
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginRight: 12,
+        }}
+      >
+        <Ionicons
+          name={getNotificationIcon(item.activityType) as any}
+          size={20}
+          color="#FFFFFF"
+        />
+      </View>
+
+      {/* Content */}
+      <View style={{ flex: 1 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+          <Text
+            style={{
+              fontWeight: '500',
+              fontSize: 14,
+              color: '#333333',
+            }}
+          >
+            {formatActivityType(item.activityType)}
+          </Text>
+
+          <Text
+            style={{
+              fontSize: 12,
+              color: '#666666',
+            }}
+          >
+            {formatTimestamp(item.createdAt)}
+          </Text>
+        </View>
+
+        <Text
+          style={{
+            fontSize: 13,
+            color: '#666666',
+            lineHeight: 18,
+          }}
+          numberOfLines={2}
+        >
+          {item.description}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+
+  return (
+    <Modal
+      visible={visible}
+      transparent={true}
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <TouchableOpacity
+        style={{
+          flex: 1,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          justifyContent: 'flex-start',
+          alignItems: 'flex-end',
+        }}
+        activeOpacity={1}
+        onPress={onClose}
+      >
+        <View
+          style={{
+            width: 320,
+            backgroundColor: '#FFFFFF',
+            borderRadius: 12,
+            margin: 8,
+            marginTop: 100,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.3,
+            shadowRadius: 8,
+            elevation: 8,
+          }}
+        >
+          {/* Header */}
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              paddingHorizontal: 16,
+              paddingVertical: 12,
+              borderBottomWidth: 1,
+              borderBottomColor: '#EEEEEE',
+            }}
+          >
+            <Text
+              style={{
+                fontWeight: '600',
+                fontSize: 16,
+                color: '#333333',
+              }}
+            >
+              Notifications
+            </Text>
+
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <TouchableOpacity
+                style={{ padding: 8, marginRight: 8 }}
+                onPress={onRefresh}
+              >
+                <Ionicons name="refresh" size={18} color="#666666" />
+              </TouchableOpacity>
+
+              <TouchableOpacity onPress={onMarkAllAsRead}>
+                <Text
+                  style={{
+                    color: '#666666',
+                    fontSize: 14,
+                  }}
+                >
+                  Mark all as read
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Content */}
+          {isLoading ? (
+            <View style={{ padding: 20, alignItems: 'center' }}>
+              <ActivityIndicator size="large" color="#8B0000" />
+            </View>
+          ) : error ? (
+            <View style={{ padding: 16, alignItems: 'center' }}>
+              <Text style={{ color: '#8B0000', fontSize: 14 }}>
+                {error}
+              </Text>
+            </View>
+          ) : notifications.length === 0 ? (
+            <View style={{ padding: 16, alignItems: 'center' }}>
+              <Text style={{ color: '#666666', fontSize: 14 }}>
+                No notifications
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={notifications}
+              renderItem={renderNotificationItem}
+              keyExtractor={(item) => item.id}
+              style={{ maxHeight: 400 }}
+              showsVerticalScrollIndicator={false}
+            />
+          )}
+
+                                {/* Footer */}
+                      <View
+                        style={{
+                          borderTopWidth: 1,
+                          borderTopColor: '#EEEEEE',
+                          paddingVertical: 12,
+                          alignItems: 'center',
+                        }}
+                      >
+                                                                          <TouchableOpacity onPress={() => {
+                            onClose();
+                            router.push('/notifications' as any);
+                          }}>
+                          <Text
+                            style={{
+                              color: '#8B0000',
+                              fontWeight: '500',
+                              fontSize: 14,
+                            }}
+                          >
+                            View All Notifications
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
+};
+
 export default function DashboardScreen() {
   const { user, token, logout } = useAuth();
   const [incidents, setIncidents] = useState<Incident[]>([]);
@@ -389,16 +728,23 @@ export default function DashboardScreen() {
   const [hasUnreadNotifications, setHasUnreadNotifications] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [upvotedIncidents, setUpvotedIncidents] = useState<Set<string>>(new Set());
+  
+  // Notification states
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [notificationsError, setNotificationsError] = useState<string | null>(null);
 
   useEffect(() => {
     if (token) {
       fetchDashboardData();
+      fetchNotifications();
     }
   }, [token]);
 
   const onRefresh = async () => {
     setIsRefreshing(true);
     await fetchDashboardData();
+    await fetchNotifications();
     setIsRefreshing(false);
   };
 
@@ -454,6 +800,96 @@ export default function DashboardScreen() {
       setError(error.message || 'Failed to fetch incidents');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchNotifications = async () => {
+    if (!token) return;
+
+    setNotificationsLoading(true);
+    setNotificationsError(null);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/activity-logs?page=0&size=10`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch notifications: ${response.status}`);
+      }
+
+      const data: NotificationResponse = await response.json();
+      setNotifications(data.content);
+      
+      // Update unread count
+      const unreadCount = data.content.filter(n => !n.isRead).length;
+      setHasUnreadNotifications(unreadCount > 0);
+
+    } catch (error: any) {
+      console.error('Error fetching notifications:', error);
+      setNotificationsError(error.message || 'Failed to fetch notifications');
+    } finally {
+      setNotificationsLoading(false);
+    }
+  };
+
+  const markNotificationAsRead = async (id: string) => {
+    if (!token) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/activity-logs/${id}/read`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        // Update local state
+        setNotifications(prev => 
+          prev.map(n => n.id === id ? { ...n, isRead: true } : n)
+        );
+        
+        // Update unread count
+        const unreadCount = notifications.filter(n => !n.isRead).length - 1;
+        setHasUnreadNotifications(unreadCount > 0);
+      }
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  };
+
+  const markAllNotificationsAsRead = async () => {
+    if (!token) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/activity-logs/read-all`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        // Update local state
+        setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+        setHasUnreadNotifications(false);
+      }
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+    }
+  };
+
+  const handleNotificationClick = (notification: NotificationItem) => {
+    if (notification.incident?.trackingNumber) {
+      router.push(`/caseDetails/${notification.incident.trackingNumber}` as any);
+      setShowNotifications(false);
     }
   };
 
@@ -586,40 +1022,42 @@ export default function DashboardScreen() {
       {/* Top App Bar */}
       <View className="bg-white px-4 py-4 border-b border-gray-200 flex-row justify-between items-center">
         <View className="flex-row items-center">
-          <Image
-            source={require('../../assets/images/WildWatch.png')}
-            style={{ 
-              width: 120,
-              height: 50
-            }}
-            resizeMode="contain"
-          />
+                     <Image
+             source={require('../../assets/images/WildWatch.png')}
+             style={{ 
+               width: 50,
+               height: 50
+             }}
+             resizeMode="contain"
+           />
         </View>
         
         <View className="flex-row items-center space-x-4">
-          {/* Notifications */}
-          <TouchableOpacity 
-            className="relative"
-            style={{ padding: 8, marginLeft: 16 }}
-            onPress={() => setShowNotifications(!showNotifications)}
-          >
-            <Ionicons 
-              name="notifications" 
-              size={28} 
-              color="#8B0000" 
-            />
-            {hasUnreadNotifications && (
-              <View 
-                className="absolute rounded-full bg-red-500"
-                style={{ 
-                  top: -2, 
-                  right: -2, 
-                  width: 12, 
-                  height: 12 
-                }}
-              />
-            )}
-          </TouchableOpacity>
+                     {/* Notifications */}
+           <TouchableOpacity 
+             className="relative"
+             style={{ padding: 8, marginLeft: 16 }}
+             onPress={() => setShowNotifications(true)}
+           >
+             <Ionicons 
+               name="notifications" 
+               size={28} 
+               color="#8B0000" 
+             />
+             {hasUnreadNotifications && (
+               <View 
+                 className="absolute rounded-full bg-red-500"
+                 style={{ 
+                   top: -2, 
+                   right: -2, 
+                   width: 12, 
+                   height: 12 
+                 }}
+               />
+             )}
+           </TouchableOpacity>
+
+           
 
           {/* Profile Button */}
           <TouchableOpacity 
@@ -843,6 +1281,19 @@ export default function DashboardScreen() {
           )}
         </View>
       </ScrollView>
+
+      {/* Notification Popup */}
+      <NotificationPopup
+        visible={showNotifications}
+        onClose={() => setShowNotifications(false)}
+        notifications={notifications}
+        isLoading={notificationsLoading}
+        error={notificationsError}
+        onRefresh={fetchNotifications}
+        onMarkAllAsRead={markAllNotificationsAsRead}
+        onMarkAsRead={markNotificationAsRead}
+        onNotificationClick={handleNotificationClick}
+      />
     </SafeAreaView>
   );
 }

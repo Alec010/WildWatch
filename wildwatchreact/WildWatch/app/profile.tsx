@@ -15,6 +15,7 @@ import { router } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 
+
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 // Device-specific constants for iPhone compatibility
@@ -109,35 +110,36 @@ const ProfileSection: React.FC<ProfileSectionProps> = ({
   children 
 }) => (
   <View 
-    className="bg-white rounded-2xl mb-6 shadow-sm"
+    className="bg-white rounded-2xl mb-4 shadow-sm"
     style={{ 
       backgroundColor,
-      marginHorizontal: spacing.large,
+      marginHorizontal: 16,
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.1,
       shadowRadius: 4,
-      elevation: 3,
+      elevation: 2,
+      borderRadius: 16,
     }}
   >
-    <View className="p-6">
+    <View>
       {/* Section Header */}
-      <View className="flex-row items-center mb-4">
+      <View className="flex-row items-center p-4">
         <Ionicons 
           name={icon} 
-          size={28} 
+          size={24} 
           color={iconTint} 
         />
-        <View style={{ width: 16 }} />
+        <View style={{ width: 12 }} />
         <Text 
           className="font-bold text-gray-900"
-          style={{ fontSize: 18, color: textPrimaryColor }}
+          style={{ fontSize: 16, color: textPrimaryColor }}
         >
           {title}
         </Text>
       </View>
       
-      <View className="h-px bg-gray-200 mb-4" />
+      <View className="h-px bg-gray-200" style={{ backgroundColor: '#EEEEEE' }} />
       
       {/* Section Content */}
       {children}
@@ -170,8 +172,8 @@ const ProfileTextField: React.FC<ProfileTextFieldProps> = ({
 }) => (
   <View className="mb-4" style={style}>
     <Text 
-      className="text-sm font-semibold mb-3 text-gray-700"
-      style={{ fontSize: 14, color: textSecondaryColor }}
+      className="text-sm font-medium mb-2 text-gray-700"
+      style={{ fontSize: 12, color: textSecondaryColor }}
     >
       {label}
     </Text>
@@ -204,6 +206,7 @@ const ProfileTextField: React.FC<ProfileTextFieldProps> = ({
           textAlign: 'left',
           paddingHorizontal: 16,
           paddingVertical: 8,
+          borderRadius: 12,
         }}
       />
     </View>
@@ -426,114 +429,144 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor }}>
+      {/* Top Navigation Bar */}
+      <View className="bg-white px-4 py-4 border-b border-gray-200 flex-row justify-between items-center">
+        <View className="flex-row items-center">
+          <TouchableOpacity
+            className="mr-3"
+            onPress={() => router.back()}
+          >
+            <Ionicons 
+              name="arrow-back" 
+              size={28} 
+              color="#8B0000" 
+            />
+          </TouchableOpacity>
+          <Text 
+            className="font-bold text-[#8B0000] text-xl"
+            style={{ fontSize: 20 }}
+          >
+            Profile
+          </Text>
+        </View>
+        
+        
+      </View>
+
       <ScrollView 
         className="flex-1"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: spacing.xlarge }}
+        contentContainerStyle={{ paddingBottom: 24 }}
       >
-        {/* Profile Header */}
-        <View 
-          style={{ 
-            height: 220,
-            marginBottom: spacing.xlarge
-          }}
-        >
-          {/* Background */}
-          <View style={{ height: 160 }}>
-            <View
-              style={{
-                flex: 1,
-                backgroundColor: primaryColor,
-              }}
-            />
-          </View>
+                 {/* Profile Header */}
+         <View 
+           style={{ 
+             height: 200,
+             marginBottom: 16
+           }}
+         >
+           {/* Solid Background */}
+           <View style={{ height: 140 }}>
+             <View
+               style={{
+                 flex: 1,
+                 backgroundColor: primaryColor,
+               }}
+             />
+           </View>
 
-          {/* Profile Card */}
-          <View 
-            className="bg-white rounded-2xl shadow-sm"
-            style={{ 
-              marginHorizontal: spacing.large,
-              marginTop: 80,
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.15,
-              shadowRadius: 8,
-              elevation: 6,
-            }}
-          >
-            <View className="p-6">
-              <View style={{ height: 50 }} />
-              
-              {/* Name */}
-              <View className="items-center mb-2">
-                <Text 
-                  className="font-bold text-center"
-                  style={{ fontSize: 24, color: textPrimaryColor }}
-                >
-                  {firstName} {lastName}
-                </Text>
-              </View>
-              
-              <View style={{ height: 6 }} />
-              
-              {/* ID and Role */}
-              <View className="items-center">
-                <View 
-                  className="rounded-full px-4 py-2"
-                  style={{ backgroundColor: `${accentColor}20` }}
-                >
-                  <Text 
-                    className="font-medium text-center"
-                    style={{ fontSize: 14, color: `${accentColor}CC` }}
-                  >
-                    ID: {userProfile.schoolIdNumber} • {userProfile.role}
-                  </Text>
-                </View>
-              </View>
-              
-              <View style={{ height: 12 }} />
-            </View>
-          </View>
+           {/* Profile Card */}
+           <View 
+             className="bg-white rounded-2xl shadow-sm"
+             style={{ 
+               marginHorizontal: 16,
+               marginTop: 70,
+               shadowColor: '#000',
+               shadowOffset: { width: 0, height: 4 },
+               shadowOpacity: 0.1,
+               shadowRadius: 8,
+               elevation: 4,
+               borderRadius: 16,
+             }}
+           >
+             <View className="p-4">
+               <View style={{ height: 40 }} />
+               
+               {/* Name */}
+               <View className="items-center mb-2">
+                 <Text 
+                   className="font-bold text-center"
+                   style={{ fontSize: 22, color: textPrimaryColor }}
+                 >
+                   {firstName}
+                 </Text>
+               </View>
+               
+               <View style={{ height: 4 }} />
+               
+               {/* ID and Role */}
+               <View className="items-center">
+                 <View 
+                   className="rounded-full px-3 py-1"
+                   style={{ 
+                     backgroundColor: `${accentColor}26`,
+                     borderRadius: 20,
+                     paddingHorizontal: 12,
+                     paddingVertical: 6,
+                   }}
+                 >
+                   <Text 
+                     className="font-medium text-center"
+                     style={{ fontSize: 12, color: `${accentColor}CC` }}
+                   >
+                     ID: {userProfile.schoolIdNumber} • {userProfile.role}
+                   </Text>
+                 </View>
+               </View>
+               
+               <View style={{ height: 8 }} />
+             </View>
+           </View>
 
-          {/* Profile Image */}
-          <View 
-            className="absolute top-32 left-1/2"
-            style={{ 
-              width: 100,
-              height: 100,
-              marginLeft: -50,
-            }}
-          >
-            {/* Profile Image Background */}
-            <View 
-              className="rounded-full items-center justify-center border-4"
-              style={{ 
-                width: 100,
-                height: 100,
-                backgroundColor: cardColor,
-                borderColor: cardColor,
-                borderWidth: 4,
-                padding: 4,
-              }}
-            >
-              {/* Profile Image */}
-              <View 
-                className="rounded-full items-center justify-center"
-                style={{ 
-                  width: 92,
-                  height: 92,
-                  backgroundColor,
-                }}
-              >
-                <Ionicons 
-                  name="person" 
-                  size={56} 
-                  color={primaryColor} 
-                />
-              </View>
-            </View>
-          </View>
-        </View>
+           {/* Profile Image */}
+           <View 
+             className="absolute top-30 left-1/2"
+             style={{ 
+               width: 90,
+               height: 90,
+               marginLeft: -45,
+             }}
+           >
+             {/* Profile Image Background */}
+             <View 
+               className="rounded-full items-center justify-center border-3"
+               style={{ 
+                 width: 90,
+                 height: 90,
+                 backgroundColor: cardColor,
+                 borderColor: cardColor,
+                 borderWidth: 3,
+                 padding: 3,
+               }}
+             >
+               {/* Profile Image */}
+               <View 
+                 className="rounded-full items-center justify-center"
+                 style={{ 
+                   width: 84,
+                   height: 84,
+                   backgroundColor,
+                 }}
+               >
+                 <Ionicons 
+                   name="person" 
+                   size={50} 
+                   color={primaryColor} 
+                 />
+               </View>
+             </View>
+           </View>
+         </View>
 
         {/* Personal Information Section */}
         <ProfileSection
@@ -543,9 +576,9 @@ export default function ProfileScreen() {
         >
           {/* Name Fields Row */}
           <View 
-            className="flex-row"
+            className="flex-row px-4 py-2"
             style={{ 
-              gap: 12
+              gap: 8
             }}
           >
             {/* First Name */}
@@ -561,7 +594,7 @@ export default function ProfileScreen() {
             </View>
 
             {/* Middle Initial */}
-            <View style={{ width: 80 }}>
+            <View style={{ width: 60 }}>
               <ProfileTextField
                 value={middleInitial}
                 onValueChange={(text) => setMiddleInitial(text.toUpperCase().slice(0, 1))}
@@ -587,21 +620,23 @@ export default function ProfileScreen() {
           </View>
 
           {/* Contact Number */}
-          <ProfileTextField
-            value={contactNumber}
-            onValueChange={setContactNumber}
-            label="Contact Number"
-            readOnly={!isEditing}
-            placeholder="Enter contact number"
-            keyboardType="phone-pad"
-            leadingIcon={
-              <Ionicons 
-                name="call-outline" 
-                size={iconSize.medium} 
-                color={textSecondaryColor} 
-              />
-            }
-          />
+          <View className="px-4 py-2">
+            <ProfileTextField
+              value={contactNumber}
+              onValueChange={setContactNumber}
+              label="Contact Number"
+              readOnly={!isEditing}
+              placeholder="Enter contact number"
+              keyboardType="phone-pad"
+              leadingIcon={
+                <Ionicons 
+                  name="call-outline" 
+                  size={iconSize.medium} 
+                  color={textSecondaryColor} 
+                />
+              }
+            />
+          </View>
         </ProfileSection>
 
         {/* Account Information Section */}
@@ -611,15 +646,15 @@ export default function ProfileScreen() {
           iconTint={primaryColor}
         >
           {/* Institutional Email */}
-          <View className="mb-6">
+          <View className="px-4 py-2 mb-4">
             <Text 
-              className="font-semibold mb-3"
-              style={{ fontSize: 14, color: textSecondaryColor }}
+              className="font-medium mb-2"
+              style={{ fontSize: 12, color: textSecondaryColor }}
             >
               Institutional Email
             </Text>
             
-            <View style={{ height: 6 }} />
+            <View style={{ height: 4 }} />
             
             <View className="relative">
               <View className="absolute left-4 top-4 z-10">
@@ -638,28 +673,29 @@ export default function ProfileScreen() {
                   borderColor: '#E5E7EB',
                   color: textSecondaryColor,
                   fontSize: 16,
+                  borderRadius: 12,
                 }}
               />
             </View>
             
             <Text 
               className="text-xs mt-2 ml-1"
-              style={{ fontSize: 11, color: textSecondaryColor }}
+              style={{ fontSize: 10, color: textSecondaryColor }}
             >
               Email cannot be changed
             </Text>
           </View>
 
           {/* Role */}
-          <View>
+          <View className="px-4 py-2">
             <Text 
-              className="font-semibold mb-3"
-              style={{ fontSize: 14, color: textSecondaryColor }}
+              className="font-medium mb-2"
+              style={{ fontSize: 12, color: textSecondaryColor }}
             >
               Role
             </Text>
             
-            <View style={{ height: 6 }} />
+            <View style={{ height: 4 }} />
             
             <View className="relative">
               <View className="absolute left-4 top-4 z-10">
@@ -678,13 +714,14 @@ export default function ProfileScreen() {
                   borderColor: '#E5E7EB',
                   color: textSecondaryColor,
                   fontSize: 16,
+                  borderRadius: 12,
                 }}
               />
             </View>
             
             <Text 
               className="text-xs mt-2 ml-1"
-              style={{ fontSize: 11, color: textSecondaryColor }}
+              style={{ fontSize: 10, color: textSecondaryColor }}
             >
               Role is assigned by the system
             </Text>
@@ -699,140 +736,147 @@ export default function ProfileScreen() {
         >
           {/* Action buttons */}
           <View 
+            className="p-4"
             style={{ 
-              gap: 16
+              gap: 12
             }}
           >
-            {/* Ask Kat Button (always visible) */}
-            <TouchableOpacity
-              className="bg-[#8B0000] rounded-xl flex-row items-center justify-center"
-              style={{ 
-                paddingVertical: 16,
-                backgroundColor: primaryColor
-              }}
-              onPress={handleAskKat}
-            >
-              <Ionicons 
-                name="chatbubble-ellipses" 
-                size={iconSize.large} 
-                color="white" 
-              />
-              <Text 
-                className="text-white font-semibold ml-3"
-                style={{ fontSize: fontSize.medium }}
-              >
-                Ask Kat
-              </Text>
-            </TouchableOpacity>
+                         {/* Ask Kat Button (always visible) */}
+             <TouchableOpacity
+               className="bg-[#8B0000] rounded-xl flex-row items-center justify-center"
+               style={{ 
+                 paddingVertical: 16,
+                 backgroundColor: primaryColor,
+                 borderRadius: 12,
+               }}
+               onPress={handleAskKat}
+             >
+               <Ionicons 
+                 name="chatbubble-ellipses" 
+                 size={iconSize.large} 
+                 color="white" 
+               />
+               <Text 
+                 className="text-white font-medium ml-2"
+                 style={{ fontSize: fontSize.medium }}
+               >
+                 Ask Kat
+               </Text>
+             </TouchableOpacity>
 
             {isEditing ? (
               // Show both Save and Cancel buttons when editing
-              <View className="flex-row" style={{ gap: 12 }}>
-                {/* Cancel Button */}
-                <TouchableOpacity
-                  className="flex-1 border rounded-xl flex-row items-center justify-center"
-                  style={{ 
-                    paddingVertical: 16,
-                    borderColor: '#E5E7EB',
-                    borderWidth: 2,
-                  }}
-                  onPress={handleCancelEdit}
-                >
-                  <Ionicons 
-                    name="close" 
-                    size={iconSize.large} 
-                    color={textSecondaryColor} 
-                  />
-                  <Text 
-                    className="font-semibold ml-3"
-                    style={{ fontSize: fontSize.medium, color: textSecondaryColor }}
-                  >
-                    Cancel
-                  </Text>
-                </TouchableOpacity>
+              <View className="flex-row" style={{ gap: 8 }}>
+                                 {/* Cancel Button */}
+                 <TouchableOpacity
+                   className="flex-1 border rounded-xl flex-row items-center justify-center"
+                   style={{ 
+                     paddingVertical: 16,
+                     borderColor: '#E5E7EB',
+                     borderWidth: 1,
+                     borderRadius: 12,
+                   }}
+                   onPress={handleCancelEdit}
+                 >
+                   <Ionicons 
+                     name="close" 
+                     size={iconSize.large} 
+                     color={textSecondaryColor} 
+                   />
+                   <Text 
+                     className="font-medium ml-2"
+                     style={{ fontSize: fontSize.medium, color: textSecondaryColor }}
+                   >
+                     Cancel
+                   </Text>
+                 </TouchableOpacity>
 
-                {/* Save Button */}
-                <TouchableOpacity
-                  className="flex-1 bg-[#8B0000] rounded-xl flex-row items-center justify-center"
-                  style={{ 
-                    paddingVertical: 16,
-                    backgroundColor: primaryColor
-                  }}
-                  onPress={handleSaveProfile}
-                  disabled={isSaving}
-                >
-                  {isSaving ? (
-                    <ActivityIndicator color="white" size="small" />
-                  ) : (
-                    <>
-                      <Ionicons 
-                        name="save" 
-                        size={iconSize.large} 
-                        color="white" 
-                      />
-                      <Text 
-                        className="text-white font-semibold ml-3"
-                        style={{ fontSize: fontSize.medium }}
-                      >
-                        Save Changes
-                      </Text>
-                    </>
-                  )}
-                </TouchableOpacity>
+                 {/* Save Button */}
+                 <TouchableOpacity
+                   className="flex-1 bg-[#8B0000] rounded-xl flex-row items-center justify-center"
+                   style={{ 
+                     paddingVertical: 16,
+                     backgroundColor: primaryColor,
+                     borderRadius: 12,
+                   }}
+                   onPress={handleSaveProfile}
+                   disabled={isSaving}
+                 >
+                   {isSaving ? (
+                     <ActivityIndicator color="white" size="small" />
+                   ) : (
+                     <>
+                       <Ionicons 
+                         name="save" 
+                         size={iconSize.large} 
+                         color="white" 
+                       />
+                       <Text 
+                         className="text-white font-medium ml-2"
+                         style={{ fontSize: fontSize.medium }}
+                       >
+                         Save Changes
+                       </Text>
+                     </>
+                   )}
+                 </TouchableOpacity>
               </View>
             ) : (
-              // Edit Profile Button (only when not editing)
-              <TouchableOpacity
-                className="border rounded-xl flex-row items-center justify-center"
-                style={{ 
-                  paddingVertical: 16,
-                  borderColor: primaryColor,
-                  borderWidth: 2,
-                }}
-                onPress={() => setIsEditing(true)}
-              >
-                <Ionicons 
-                  name="create-outline" 
-                  size={iconSize.large} 
-                  color={primaryColor} 
-                />
-                <Text 
-                  className="font-semibold ml-3"
-                  style={{ fontSize: fontSize.medium, color: primaryColor }}
-                >
-                  Edit Profile
-                </Text>
-              </TouchableOpacity>
+                             // Edit Profile Button (only when not editing)
+               <TouchableOpacity
+                 className="border rounded-xl flex-row items-center justify-center"
+                 style={{ 
+                   paddingVertical: 16,
+                   borderColor: primaryColor,
+                   borderWidth: 1,
+                   borderRadius: 12,
+                 }}
+                 onPress={() => setIsEditing(true)}
+               >
+                 <Ionicons 
+                   name="create-outline" 
+                   size={iconSize.large} 
+                   color={primaryColor} 
+                 />
+                 <Text 
+                   className="font-medium ml-2"
+                   style={{ fontSize: fontSize.medium, color: primaryColor }}
+                 >
+                   Edit Profile
+                 </Text>
+               </TouchableOpacity>
             )}
 
-            {/* Logout Button (only show when not editing) */}
-            {!isEditing && (
-              <TouchableOpacity
-                className="border rounded-xl flex-row items-center justify-center"
-                style={{ 
-                  paddingVertical: 16,
-                  borderColor: primaryColor,
-                  borderWidth: 2,
-                }}
-                onPress={handleLogout}
-              >
-                <Ionicons 
-                  name="log-out-outline" 
-                  size={iconSize.large} 
-                  color={primaryColor} 
-                />
-                <Text 
-                  className="font-semibold ml-3"
-                  style={{ fontSize: fontSize.medium, color: primaryColor }}
-                >
-                  Logout
-                </Text>
-              </TouchableOpacity>
-            )}
+                         {/* Logout Button (only show when not editing) */}
+             {!isEditing && (
+               <TouchableOpacity
+                 className="border rounded-xl flex-row items-center justify-center"
+                 style={{ 
+                   paddingVertical: 16,
+                   borderColor: primaryColor,
+                   borderWidth: 1,
+                   borderRadius: 12,
+                 }}
+                 onPress={handleLogout}
+               >
+                 <Ionicons 
+                   name="log-out-outline" 
+                   size={iconSize.large} 
+                   color={primaryColor} 
+                 />
+                 <Text 
+                   className="text-white font-medium ml-2"
+                   style={{ fontSize: fontSize.medium, color: primaryColor }}
+                 >
+                   Logout
+                 </Text>
+                 
+               </TouchableOpacity>
+             )}
           </View>
         </ProfileSection>
 
-        <View style={{ height: spacing.large }} />
+        <View style={{ height: 24 }} />
       </ScrollView>
     </SafeAreaView>
   );

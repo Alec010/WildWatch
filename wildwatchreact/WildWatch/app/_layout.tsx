@@ -10,6 +10,8 @@ export default function RootLayout() {
         <Stack.Screen name="signup" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="profile" options={{ headerShown: false }} />
+        <Stack.Screen name="notifications" options={{ headerShown: false }} />
+
         <Stack.Screen name="caseDetails" options={{ headerShown: false }} />
         <Stack.Screen 
           name="caseDetails/[trackingNumber]" 
