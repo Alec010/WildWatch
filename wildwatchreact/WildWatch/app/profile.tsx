@@ -367,9 +367,9 @@ export default function ProfileScreen() {
   };
 
   const handleAskKat = () => {
-    // Navigate back to tabs
+    // Navigate to chatbot
     try {
-      router.push('/(tabs)/dashboard');
+      router.push('/chatbot');
     } catch (error) {
       console.log('Navigation error:', error);
       // Fallback: just go back
@@ -450,7 +450,9 @@ export default function ProfileScreen() {
           </Text>
         </View>
         
-        
+        {/* Right side (empty for consistency with dashboard) */}
+        <View className="flex-row items-center space-x-4">
+        </View>
       </View>
 
       <ScrollView 

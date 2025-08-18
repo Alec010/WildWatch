@@ -17,6 +17,7 @@ export default function RootLayout() {
           name="caseDetails/[trackingNumber]" 
           options={{ headerShown: false }} 
         />
+        <Stack.Screen name="chatbot" options={{ headerShown: false }} />
       </Stack>
     </AuthProvider>
   );

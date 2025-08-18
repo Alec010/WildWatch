@@ -1171,6 +1171,8 @@ export default function DashboardScreen() {
           </Text>
         </TouchableOpacity>
 
+
+
         {/* Tab Navigation */}
         <View className="bg-white mb-0">
           <View className="flex-row">
