@@ -1,7 +1,9 @@
-import { View, Text, TextInput, Pressable, Image, ScrollView } from 'react-native';
+import { View, Text, TextInput, Pressable, Image, ScrollView, Alert } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
+import { authAPI } from '../../lib/api';
+import { storage } from '../../lib/storage';
 
 export default function SignupScreen() {
   const [firstName, setFirstName] = useState('');
@@ -15,10 +17,64 @@ export default function SignupScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSignup = () => {
-    // For now, just navigate to tabs without authentication
-    router.replace('/(tabs)');
+  const handleSignup = async () => {
+    // Validation
+    if (!firstName.trim() || !lastName.trim() || !email.trim() || 
+        !schoolIdNumber.trim() || !password || !confirmPassword || !contactNumber.trim()) {
+      Alert.alert('Error', 'Please fill in all required fields');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      Alert.alert('Error', 'Passwords do not match');
+      return;
+    }
+
+    if (password.length < 8) {
+      Alert.alert('Error', 'Password must be at least 8 characters long');
+      return;
+    }
+
+    if (!acceptTerms) {
+      Alert.alert('Error', 'Please accept the Terms of Service and Privacy Policy');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // Debug: Log the contact number processing
+      const rawContactNumber = getRawContactNumber(contactNumber.trim());
+      console.log('Original contact number:', contactNumber);
+      console.log('Raw contact number (no spaces):', rawContactNumber);
+      
+      // Call the backend registration API
+      const response = await authAPI.register({
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        middleInitial: middleInitial.trim() || undefined,
+        email: email.trim(),
+        schoolIdNumber: schoolIdNumber.trim(),
+        password,
+        confirmPassword,
+        contactNumber: rawContactNumber,
+        termsAccepted: acceptTerms
+      });
+      
+      // Save the token
+      await storage.setToken(response.token);
+      
+      // Navigate to main app
+      router.replace('/(tabs)');
+      
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      const errorMessage = error.response?.data?.message || 'Registration failed. Please try again.';
+      Alert.alert('Registration Error', errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const formatSchoolId = (value: string) => {
@@ -37,7 +93,7 @@ export default function SignupScreen() {
     if (!inputValue.startsWith('639')) {
       inputValue = '639' + inputValue.replace(/^639/, '');
     }
-    // Format the number as +63### ### ####
+    // Format the number as +63### ### #### for display
     let formattedValue = '+63';
     if (inputValue.length > 2) {
       const remainingDigits = inputValue.slice(2);
@@ -52,6 +108,11 @@ export default function SignupScreen() {
       }
     }
     return formattedValue;
+  };
+
+  // Function to get the raw contact number (without spaces) for API calls
+  const getRawContactNumber = (formattedNumber: string) => {
+    return formattedNumber.replace(/\s/g, '');
   };
 
   return (
@@ -230,9 +291,12 @@ export default function SignupScreen() {
           {/* Sign Up Button */}
           <Pressable
             onPress={handleSignup}
-            className="bg-[#800000] p-4 rounded-lg mt-6"
+            disabled={isLoading}
+            className={`p-4 rounded-lg mt-6 ${isLoading ? 'bg-gray-400' : 'bg-[#800000]'}`}
           >
-            <Text className="text-white text-center font-semibold text-lg">Create Account</Text>
+            <Text className="text-white text-center font-semibold text-lg">
+              {isLoading ? 'Creating Account...' : 'Create Account'}
+            </Text>
           </Pressable>
 
           {/* Sign In Link */}

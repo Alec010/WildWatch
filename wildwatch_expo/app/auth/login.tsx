@@ -1,16 +1,73 @@
-import { View, Text, TextInput, Pressable, Image, ScrollView } from 'react-native';
+import { View, Text, TextInput, Pressable, Image, ScrollView, Alert } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
+import { authAPI } from '../../lib/api';
+import { storage } from '../../lib/storage';
+import { microsoftOAuthService } from '../../lib/microsoftOAuth';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = () => {
-    // For now, just navigate to tabs without authentication
-    router.replace('/(tabs)');
+  const handleLogin = async () => {
+    if (!email.trim() || !password.trim()) {
+      Alert.alert('Error', 'Please enter both email and password');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // Call the backend login API
+      const response = await authAPI.login(email, password);
+      
+      // Save the token
+      await storage.setToken(response.token);
+      
+      // Navigate to main app
+      router.replace('/(tabs)');
+      
+    } catch (error: any) {
+      console.error('Login error:', error);
+      const errorMessage = error.response?.data?.message || 'Login failed. Please try again.';
+      Alert.alert('Login Error', errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleMicrosoftLogin = async () => {
+    setIsLoading(true);
+    try {
+      console.log('Starting Microsoft OAuth login...');
+      
+      // Start Microsoft OAuth flow
+      const result = await microsoftOAuthService.signInWithMicrosoft();
+      
+      // If successful, save the token and navigate
+      if (result.token) {
+        console.log('Token received, saving and navigating...');
+        
+        // Save token and navigate simultaneously (don't wait for storage)
+        storage.setToken(result.token).catch(err => 
+          console.error('Failed to save token:', err)
+        );
+        
+        // Navigate immediately without waiting for storage
+        router.replace('/(tabs)');
+      } else {
+        throw new Error('No token received from Microsoft OAuth');
+      }
+      
+    } catch (error: any) {
+      console.error('Microsoft OAuth error:', error);
+      const errorMessage = error.message || 'Microsoft login failed. Please try again.';
+      Alert.alert('Microsoft Login Error', errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -83,9 +140,12 @@ export default function LoginScreen() {
           {/* Login Button */}
           <Pressable
             onPress={handleLogin}
-            className="bg-[#800000] p-4 rounded-lg mt-6"
+            disabled={isLoading}
+            className={`p-4 rounded-lg mt-6 ${isLoading ? 'bg-gray-400' : 'bg-[#800000]'}`}
           >
-            <Text className="text-white text-center font-semibold text-lg">Sign In</Text>
+            <Text className="text-white text-center font-semibold text-lg">
+              {isLoading ? 'Signing In...' : 'Sign In'}
+            </Text>
           </Pressable>
 
           {/* Divider */}
@@ -97,16 +157,21 @@ export default function LoginScreen() {
 
           {/* Microsoft Login Button */}
           <Pressable
-            onPress={handleLogin}
-            className="flex-row items-center justify-center border border-gray-300 p-4 rounded-lg bg-white"
+            onPress={handleMicrosoftLogin}
+            disabled={isLoading}
+            className={`flex-row items-center justify-center border border-gray-300 p-4 rounded-lg bg-white ${isLoading ? 'opacity-50' : ''}`}
           >
             <Image
               source={require('../../assets/images/logos/microsoft_logo.png')}
               className="w-6 h-6 mr-2"
               resizeMode="contain"
             />
-            <Text className="text-gray-700 font-medium">Sign in with Microsoft</Text>
+            <Text className="text-gray-700 font-medium">
+              {isLoading ? 'Signing in...' : 'Sign in with Microsoft'}
+            </Text>
           </Pressable>
+
+
 
           {/* Sign Up Link */}
           <View className="mt-6">

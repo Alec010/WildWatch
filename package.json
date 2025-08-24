@@ -1,6 +1,0 @@
-{
-  "dependencies": {
-    "@radix-ui/react-accordion": "^1.2.11",
-    "jspdf": "^3.0.1"
-  }
-}
