@@ -8,8 +8,14 @@ WebBrowser.maybeCompleteAuthSession();
 
 // Create the OAuth request
 const createMicrosoftAuthRequest = () => {
-  // Use the exact redirect URI that matches Azure configuration
-  const redirectUri = config.MICROSOFT.REDIRECT_URI;
+  // Use AuthSession.makeRedirectUri for proper deep linking
+  const redirectUri = AuthSession.makeRedirectUri({
+    scheme: 'wildwatchexpo',
+    path: 'auth/oauth2/callback'
+  });
+
+  console.log('Using redirect URI:', redirectUri);
+  console.log('Make sure this URI is configured in your Azure app registration!');
 
   return new AuthSession.AuthRequest({
     clientId: config.MICROSOFT.CLIENT_ID,

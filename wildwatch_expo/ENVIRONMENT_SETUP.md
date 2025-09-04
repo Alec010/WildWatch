@@ -1,19 +1,26 @@
-# Environment Variables Setup
+# Environment Setup for WildWatch Expo
 
-This document explains how to set up environment variables for the WildWatch Expo app.
+## Issue Resolution
 
-## Required Environment Variables
+The error "Unable to resolve '@env' from 'lib\config.ts'" occurs because the `.env` file is missing. This file contains environment variables needed for the app configuration.
 
-Create a `.env` file in the root of the `wildwatch_expo` directory with the following variables:
+## Solution
 
-```bash
+### Step 1: Create .env file
+
+Create a `.env` file in the root of the `wildwatch_expo` directory with the following content:
+
+```env
+# WildWatch Expo Environment Configuration
+
 # Backend API Configuration
-API_BASE_URL=http://192.168.1.34:8080/api
+# For physical device testing, use your local IP address instead of localhost
+API_BASE_URL=http://192.168.1.5:8080/api
 API_TIMEOUT=30000
 
 # Microsoft OAuth Configuration
-MICROSOFT_CLIENT_ID=39e32928-3be0-4723-b913-0ddd50c5d205
-MICROSOFT_TENANT_ID=823cde44-4433-456d-b801-bdf0ab3d41fc
+MICROSOFT_CLIENT_ID=your_microsoft_client_id_here
+MICROSOFT_TENANT_ID=your_microsoft_tenant_id_here
 MICROSOFT_REDIRECT_URI=wildwatchexpo://auth/oauth2/callback
 
 # App Configuration
@@ -21,30 +28,68 @@ APP_NAME=WildWatch
 APP_VERSION=1.0.0
 ```
 
-## Important Notes
+### Step 2: Fill in your values
 
-1. **Never commit the `.env` file** to version control
-2. **The `.env` file is already in `.gitignore`**
-3. **Use `.env.example` as a template** for team members
-4. **Restart the development server** after creating/modifying the `.env` file
+Replace the empty values with your actual configuration:
 
-## Development vs Production
+- `MICROSOFT_CLIENT_ID`: Your Microsoft Azure app registration client ID
+- `MICROSOFT_TENANT_ID`: Your Microsoft Azure tenant ID
 
-For different environments, you can create:
-- `.env.development` - Development environment
-- `.env.production` - Production environment
-- `.env.local` - Local overrides (already gitignored)
+### Step 3: Restart the development server
 
-## Troubleshooting
+After creating the `.env` file, restart your Expo development server:
 
-If environment variables are not loading:
-1. Make sure the `.env` file is in the root directory
-2. Restart the Expo development server
-3. Check that `react-native-dotenv` is properly configured in `babel.config.js`
-4. Verify the variable names match exactly (case-sensitive)
+```bash
+npm start
+# or
+expo start
+```
 
-## Security
+## Physical Device Testing
 
-- Keep your `.env` file secure and never share it publicly
-- Use different values for development and production
-- Consider using Expo's secure store for highly sensitive data
+When testing on a physical iPhone/Android device, you need to use your computer's local IP address instead of `localhost`:
+
+1. **Find your local IP address:**
+   - Windows: Run `ipconfig` in Command Prompt
+   - Mac/Linux: Run `ifconfig` in Terminal
+   - Look for your main network adapter's IPv4 address (usually starts with 192.168.x.x)
+
+2. **Update the API_BASE_URL in your .env file:**
+   ```env
+   API_BASE_URL=http://YOUR_LOCAL_IP:8080/api
+   ```
+
+3. **Configure Microsoft OAuth (if using Microsoft login):**
+   - Get your Microsoft Client ID and Tenant ID from Azure Portal
+   - Update the .env file with your Microsoft OAuth credentials
+   - The redirect URI is automatically configured as `wildwatchexpo://auth/oauth2/callback`
+
+4. **Make sure your backend server is running and accessible:**
+   - Ensure your backend server is running on port 8080
+   - Check that your firewall allows connections on port 8080
+   - Verify both your computer and phone are on the same WiFi network
+
+## Alternative: Using Default Values
+
+If you don't need to configure environment variables right now, the app will use default values. The configuration has been updated to handle missing environment variables gracefully and includes the local IP address for physical device testing.
+
+## File Structure
+
+```
+wildwatch_expo/
+├── .env                 # Environment variables (create this file)
+├── lib/
+│   ├── config.ts       # Configuration file
+│   └── env.d.ts        # TypeScript declarations for @env
+├── babel.config.js     # Babel configuration with react-native-dotenv
+└── tsconfig.json       # TypeScript configuration
+```
+
+## Dependencies
+
+The project uses `react-native-dotenv` to load environment variables. This is already configured in:
+
+- `package.json` - dependency installed
+- `babel.config.js` - babel plugin configured
+- `lib/env.d.ts` - TypeScript declarations
+- `tsconfig.json` - TypeScript configuration updated
