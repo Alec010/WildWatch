@@ -101,9 +101,38 @@ public class OAuth2Controller {
                 .build());
     }
 
+
+
     @PostMapping("/microsoft")
-    public void handleMicrosoftCallback(@RequestBody Map<String, String> body) {
-        // This endpoint is just a placeholder as Spring Security OAuth2 handles the actual authentication
-        // The OAuth2SuccessHandler will handle the response
+    public ResponseEntity<AuthResponse> handleMicrosoftCallback(@RequestBody Map<String, String> body) {
+        try {
+            String code = body.get("code");
+            if (code == null || code.isEmpty()) {
+                return ResponseEntity.badRequest().body(AuthResponse.builder()
+                    .message("Authorization code is required")
+                    .build());
+            }
+
+            System.out.println("Received Microsoft OAuth code: " + code);
+            
+            // Quick response - just return a test token without database operations
+            // This will help us test the OAuth flow first
+            String testToken = "test.oauth.token." + System.currentTimeMillis();
+            
+            System.out.println("Returning quick test token: " + testToken);
+            
+            return ResponseEntity.ok(AuthResponse.builder()
+                    .token(testToken)
+                    .termsAccepted(false)
+                    .message("Microsoft OAuth test successful")
+                    .build());
+                    
+        } catch (Exception e) {
+            System.out.println("Error in Microsoft OAuth callback: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.badRequest().body(AuthResponse.builder()
+                    .message("Failed to process Microsoft OAuth: " + e.getMessage())
+                    .build());
+        }
     }
 } 
