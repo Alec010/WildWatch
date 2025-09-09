@@ -4,34 +4,20 @@
 
 import * as AuthSession from 'expo-auth-session';
 
-// Import environment variables with fallbacks
-let API_BASE_URL: string | undefined;
-let API_TIMEOUT: string | undefined;
-let MICROSOFT_CLIENT_ID: string | undefined;
-let MICROSOFT_TENANT_ID: string | undefined;
-let MICROSOFT_REDIRECT_URI: string | undefined;
-let APP_NAME: string | undefined;
-let APP_VERSION: string | undefined;
-
-try {
-  const env = require('@env');
-  API_BASE_URL = env.API_BASE_URL;
-  API_TIMEOUT = env.API_TIMEOUT;
-  MICROSOFT_CLIENT_ID = env.MICROSOFT_CLIENT_ID;
-  MICROSOFT_TENANT_ID = env.MICROSOFT_TENANT_ID;
-  MICROSOFT_REDIRECT_URI = env.MICROSOFT_REDIRECT_URI;
-  APP_NAME = env.APP_NAME;
-  APP_VERSION = env.APP_VERSION;
-} catch (error) {
-  // Environment variables not available, will use defaults
-  console.warn('Environment variables not loaded, using default values');
-}
+// Read from Expo inlined env variables
+const API_BASE_URL: string | undefined = process.env.EXPO_PUBLIC_API_BASE_URL;
+const API_TIMEOUT: string | undefined = process.env.EXPO_PUBLIC_API_TIMEOUT;
+const MICROSOFT_CLIENT_ID: string | undefined = process.env.EXPO_PUBLIC_MICROSOFT_CLIENT_ID;
+const MICROSOFT_TENANT_ID: string | undefined = process.env.EXPO_PUBLIC_MICROSOFT_TENANT_ID;
+const MICROSOFT_REDIRECT_URI: string | undefined = process.env.EXPO_PUBLIC_MICROSOFT_REDIRECT_URI;
+const APP_NAME: string | undefined = process.env.EXPO_PUBLIC_APP_NAME;
+const APP_VERSION: string | undefined = process.env.EXPO_PUBLIC_APP_VERSION;
 
 export const config = {
   // Backend API configuration
   API: {
     BASE_URL: API_BASE_URL || 'http://192.168.1.5:8080/api',
-    TIMEOUT: API_TIMEOUT ? parseInt(API_TIMEOUT) : 30000, // 30 seconds
+    TIMEOUT: API_TIMEOUT ? parseInt(API_TIMEOUT) : 30000,
   },
   
   // Microsoft OAuth configuration

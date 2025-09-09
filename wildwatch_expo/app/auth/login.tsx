@@ -2,72 +2,24 @@ import { View, Text, TextInput, Pressable, Image, ScrollView, Alert } from 'reac
 import { Stack, router } from 'expo-router';
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { authAPI } from '../../lib/api';
-import { storage } from '../../lib/storage';
-import { microsoftOAuthService } from '../../lib/microsoftOAuth';
+import { useAuthLogin } from '../../src/features/auth/hooks/useAuthLogin';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const { isLoading, login, loginWithMicrosoft } = useAuthLogin();
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
       Alert.alert('Error', 'Please enter both email and password');
       return;
     }
-
-    setIsLoading(true);
-    try {
-      // Call the backend login API
-      const response = await authAPI.login(email, password);
-      
-      // Save the token
-      await storage.setToken(response.token);
-      
-      // Navigate to main app
-      router.replace('/(tabs)');
-      
-    } catch (error: any) {
-      console.error('Login error:', error);
-      const errorMessage = error.response?.data?.message || 'Login failed. Please try again.';
-      Alert.alert('Login Error', errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
+    try { await login(email, password); } catch {}
   };
 
   const handleMicrosoftLogin = async () => {
-    setIsLoading(true);
-    try {
-      console.log('Starting Microsoft OAuth login...');
-      
-      // Start Microsoft OAuth flow
-      const result = await microsoftOAuthService.signInWithMicrosoft();
-      
-      // If successful, save the token and navigate
-      if (result.token) {
-        console.log('Token received, saving and navigating...');
-        
-        // Save token and navigate simultaneously (don't wait for storage)
-        storage.setToken(result.token).catch(err => 
-          console.error('Failed to save token:', err)
-        );
-        
-        // Navigate immediately without waiting for storage
-        router.replace('/(tabs)');
-      } else {
-        throw new Error('No token received from Microsoft OAuth');
-      }
-      
-    } catch (error: any) {
-      console.error('Microsoft OAuth error:', error);
-      const errorMessage = error.message || 'Microsoft login failed. Please try again.';
-      Alert.alert('Microsoft Login Error', errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
+    try { await loginWithMicrosoft(); } catch (e: any) { Alert.alert('Microsoft Login Error', e?.message || 'Microsoft login failed. Please try again.'); }
   };
 
   return (

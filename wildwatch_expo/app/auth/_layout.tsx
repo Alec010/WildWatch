@@ -9,6 +9,8 @@ export default function AuthLayout() {
         },
         headerShadowVisible: false,
         headerBackTitle: 'Back',
+        headerBackVisible: false,
+        gestureEnabled: false,
       }}
     />
   );

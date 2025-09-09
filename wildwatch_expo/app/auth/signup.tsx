@@ -2,8 +2,7 @@ import { View, Text, TextInput, Pressable, Image, ScrollView, Alert } from 'reac
 import { Stack, router } from 'expo-router';
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { authAPI } from '../../lib/api';
-import { storage } from '../../lib/storage';
+import { useAuthSignup } from '../../src/features/auth/hooks/useAuthSignup';
 
 export default function SignupScreen() {
   const [firstName, setFirstName] = useState('');
@@ -17,7 +16,7 @@ export default function SignupScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const { isLoading, register } = useAuthSignup();
 
   const handleSignup = async () => {
     // Validation
@@ -42,15 +41,9 @@ export default function SignupScreen() {
       return;
     }
 
-    setIsLoading(true);
     try {
-      // Debug: Log the contact number processing
       const rawContactNumber = getRawContactNumber(contactNumber.trim());
-      console.log('Original contact number:', contactNumber);
-      console.log('Raw contact number (no spaces):', rawContactNumber);
-      
-      // Call the backend registration API
-      const response = await authAPI.register({
+      await register({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         middleInitial: middleInitial.trim() || undefined,
@@ -61,19 +54,9 @@ export default function SignupScreen() {
         contactNumber: rawContactNumber,
         termsAccepted: acceptTerms
       });
-      
-      // Save the token
-      await storage.setToken(response.token);
-      
-      // Navigate to main app
-      router.replace('/(tabs)');
-      
     } catch (error: any) {
-      console.error('Registration error:', error);
-      const errorMessage = error.response?.data?.message || 'Registration failed. Please try again.';
+      const errorMessage = error?.response?.data?.message || error?.message || 'Registration failed. Please try again.';
       Alert.alert('Registration Error', errorMessage);
-    } finally {
-      setIsLoading(false);
     }
   };
 

@@ -1,95 +1,61 @@
 # Environment Setup for WildWatch Expo
 
-## Issue Resolution
+We use Expo’s built-in environment variable support. Public variables are inlined at build time when prefixed with `EXPO_PUBLIC_` and referenced as `process.env.EXPO_PUBLIC_*` in the code. See: [Expo docs on environment variables](https://docs.expo.dev/guides/environment-variables).
 
-The error "Unable to resolve '@env' from 'lib\config.ts'" occurs because the `.env` file is missing. This file contains environment variables needed for the app configuration.
+## 1) Create .env file (public vars only)
 
-## Solution
-
-### Step 1: Create .env file
-
-Create a `.env` file in the root of the `wildwatch_expo` directory with the following content:
+Create `wildwatch_expo/.env`:
 
 ```env
-# WildWatch Expo Environment Configuration
-
 # Backend API Configuration
-# For physical device testing, use your local IP address instead of localhost
-API_BASE_URL=http://192.168.1.5:8080/api
-API_TIMEOUT=30000
+EXPO_PUBLIC_API_BASE_URL=http://192.168.1.5:8080/api
+EXPO_PUBLIC_API_TIMEOUT=30000
 
-# Microsoft OAuth Configuration
-MICROSOFT_CLIENT_ID=your_microsoft_client_id_here
-MICROSOFT_TENANT_ID=your_microsoft_tenant_id_here
-MICROSOFT_REDIRECT_URI=wildwatchexpo://auth/oauth2/callback
+# Microsoft OAuth Configuration (public identifiers)
+EXPO_PUBLIC_MICROSOFT_CLIENT_ID=your_microsoft_client_id_here
+EXPO_PUBLIC_MICROSOFT_TENANT_ID=your_microsoft_tenant_id_here
+EXPO_PUBLIC_MICROSOFT_REDIRECT_URI=wildwatchexpo://auth/oauth2/callback
 
 # App Configuration
-APP_NAME=WildWatch
-APP_VERSION=1.0.0
+EXPO_PUBLIC_APP_NAME=WildWatch
+EXPO_PUBLIC_APP_VERSION=1.0.0
 ```
 
-### Step 2: Fill in your values
+Do not put secrets in `EXPO_PUBLIC_` variables, they are bundled into the app.
 
-Replace the empty values with your actual configuration:
+## 2) Usage in code
 
-- `MICROSOFT_CLIENT_ID`: Your Microsoft Azure app registration client ID
-- `MICROSOFT_TENANT_ID`: Your Microsoft Azure tenant ID
+Values are read directly in code without extra plugins. Example in `lib/config.ts`:
 
-### Step 3: Restart the development server
+```ts
+const apiUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
+```
 
-After creating the `.env` file, restart your Expo development server:
+## 3) Restart the dev server
+
+After adding or changing `.env` values:
 
 ```bash
-npm start
-# or
-expo start
+npx expo start --clear
 ```
 
-## Physical Device Testing
+## Physical device testing
 
-When testing on a physical iPhone/Android device, you need to use your computer's local IP address instead of `localhost`:
+- Use your machine’s LAN IP in `EXPO_PUBLIC_API_BASE_URL` (e.g., `http://YOUR_LOCAL_IP:8080/api`).
+- Ensure your backend is reachable from the device and both are on the same network.
 
-1. **Find your local IP address:**
-   - Windows: Run `ipconfig` in Command Prompt
-   - Mac/Linux: Run `ifconfig` in Terminal
-   - Look for your main network adapter's IPv4 address (usually starts with 192.168.x.x)
-
-2. **Update the API_BASE_URL in your .env file:**
-   ```env
-   API_BASE_URL=http://YOUR_LOCAL_IP:8080/api
-   ```
-
-3. **Configure Microsoft OAuth (if using Microsoft login):**
-   - Get your Microsoft Client ID and Tenant ID from Azure Portal
-   - Update the .env file with your Microsoft OAuth credentials
-   - The redirect URI is automatically configured as `wildwatchexpo://auth/oauth2/callback`
-
-4. **Make sure your backend server is running and accessible:**
-   - Ensure your backend server is running on port 8080
-   - Check that your firewall allows connections on port 8080
-   - Verify both your computer and phone are on the same WiFi network
-
-## Alternative: Using Default Values
-
-If you don't need to configure environment variables right now, the app will use default values. The configuration has been updated to handle missing environment variables gracefully and includes the local IP address for physical device testing.
-
-## File Structure
+## File structure
 
 ```
 wildwatch_expo/
-├── .env                 # Environment variables (create this file)
+├── .env                 # Expo environment variables (create this)
 ├── lib/
-│   ├── config.ts       # Configuration file
-│   └── env.d.ts        # TypeScript declarations for @env
-├── babel.config.js     # Babel configuration with react-native-dotenv
-└── tsconfig.json       # TypeScript configuration
+│   ├── config.ts       # Reads process.env.EXPO_PUBLIC_*
+│   └── env.d.ts        # TypeScript declarations for process.env
+├── babel.config.js     # Babel config (no dotenv plugin required)
+└── tsconfig.json
 ```
 
-## Dependencies
+## Secrets
 
-The project uses `react-native-dotenv` to load environment variables. This is already configured in:
-
-- `package.json` - dependency installed
-- `babel.config.js` - babel plugin configured
-- `lib/env.d.ts` - TypeScript declarations
-- `tsconfig.json` - TypeScript configuration updated
+For sensitive values, use EAS Secrets and read them within `app.config.ts`, passing only necessary data to `extra`. Do not expose secrets via `EXPO_PUBLIC_*`.

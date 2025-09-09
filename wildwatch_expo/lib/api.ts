@@ -1,5 +1,6 @@
-import axios from 'axios';
+import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { config } from './config';
+import { storage } from './storage';
 
 export const api = axios.create({
   baseURL: config.API.BASE_URL,
@@ -9,47 +10,30 @@ export const api = axios.create({
   },
 });
 
-// Simple auth service
-export const authAPI = {
-  login: async (email: string, password: string) => {
-    console.log('Attempting login to:', config.API.BASE_URL + '/auth/login');
-    try {
-      const response = await api.post('/auth/login', { email, password });
-      console.log('Login successful:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error('Login API error:', error);
-      throw error;
+// Attach Authorization header from storage
+api.interceptors.request.use(async (request: InternalAxiosRequestConfig) => {
+  try {
+    const token = await storage.getToken();
+    if (token) {
+      request.headers = request.headers || {};
+      request.headers.Authorization = `Bearer ${token}`;
     }
-  },
-  
-  register: async (userData: {
-    firstName: string;
-    lastName: string;
-    middleInitial?: string;
-    email: string;
-    schoolIdNumber: string;
-    password: string;
-    confirmPassword: string;
-    contactNumber: string;
-    termsAccepted: boolean;
-  }) => {
-    console.log('Attempting registration to:', config.API.BASE_URL + '/auth/register');
-    console.log('Registration data being sent:', JSON.stringify(userData, null, 2));
-    try {
-      const response = await api.post('/auth/register', userData);
-      console.log('Registration successful:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error('Registration API error:', error);
-      throw error;
-    }
-  },
-  
-  getProfile: async (token: string) => {
-    const response = await api.get('/auth/profile', {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    return response.data;
+  } catch (error) {
+    // Ignore token errors
   }
-};
+  return request;
+});
+
+// Basic 401 handler hook point
+api.interceptors.response.use(
+  (response) => response,
+  async (error: AxiosError) => {
+    if (error.response?.status === 401) {
+      // Optionally clear token; UI should redirect due to guard
+      await storage.removeToken();
+    }
+    throw error;
+  }
+);
+
+// Domain-specific APIs now live under src/features/**/api/*.ts
