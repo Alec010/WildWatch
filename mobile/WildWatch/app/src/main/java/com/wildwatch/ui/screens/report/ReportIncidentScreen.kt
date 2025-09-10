@@ -37,6 +37,7 @@ import com.wildwatch.ui.components.*
 import com.wildwatch.utils.TokenManager
 import com.wildwatch.viewmodel.OfficeViewModel
 import com.wildwatch.viewmodel.OfficeViewModelFactory
+import com.wildwatch.ui.components.TagGenerationSection
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -95,7 +96,7 @@ fun ReportIncidentScreen(
     var incidentDate by rememberSaveable { mutableStateOf("") }
     var incidentTime by rememberSaveable { mutableStateOf("") }
     var location by rememberSaveable { mutableStateOf("") }
-    var selectedOffice by rememberSaveable { mutableStateOf("") }
+    var selectedOffice by rememberSaveable { mutableStateOf<String?>(null) }
     var description by rememberSaveable { mutableStateOf("") }
 
     // Sync values from ViewModel when formState changes
@@ -106,6 +107,20 @@ fun ReportIncidentScreen(
         location = formState.location
         selectedOffice = formState.assignedOffice
         description = formState.description
+    }
+
+    // Update ViewModel when local state changes
+    LaunchedEffect(incidentType, incidentDate, incidentTime, location, selectedOffice, description) {
+        formViewModel.updateFormState(
+            formState.copy(
+                incidentType = incidentType,
+                dateOfIncident = incidentDate,
+                timeOfIncident = incidentTime,
+                location = location,
+                assignedOffice = selectedOffice,
+                description = description
+            )
+        )
     }
 
     if (showDatePicker) {
@@ -310,18 +325,15 @@ fun ReportIncidentScreen(
                         )
 
                         // Incident Type
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Incident Type", fontWeight = FontWeight.Bold)
+                            Text(" *", color = darkRed, fontWeight = FontWeight.Bold)
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
                         OutlinedTextField(
                             value = incidentType,
                             onValueChange = { incidentType = it },
-                            label = {
-                                Row {
-                                    Text("Incident Type")
-                                    Text(
-                                        text = " *",
-                                        color = darkRed
-                                    )
-                                }
-                            },
+                            label = null,
                             placeholder = { Text("Incident type") },
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -338,75 +350,70 @@ fun ReportIncidentScreen(
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             // Date of Incident
-                            OutlinedTextField(
-                                value = incidentDate,
-                                onValueChange = { incidentDate = it },
-                                label = {
-                                    Row {
-                                        Text("Date of Incident")
-                                        Text(
-                                            text = " *",
-                                            color = darkRed
-                                        )
-                                    }
-                                },
-                                placeholder = { Text("mm/dd/yyyy") },
-                                modifier = Modifier.weight(1f),
-                                singleLine = true,
-                                readOnly = true,
-                                shape = RoundedCornerShape(8.dp),
-                                trailingIcon = {
-                                    IconButton(onClick = { showDatePicker = true }) {
-                                        Icon(
-                                            imageVector = Icons.Default.CalendarToday,
-                                            contentDescription = "Select date"
-                                        )
-                                    }
+                            Column(modifier = Modifier.weight(1f)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("Date of Incident", fontWeight = FontWeight.Bold)
+                                    Text(" *", color = darkRed, fontWeight = FontWeight.Bold)
                                 }
-                            )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                OutlinedTextField(
+                                    value = incidentDate,
+                                    onValueChange = { incidentDate = it },
+                                    label = null,
+                                    placeholder = { Text("mm/dd/yyyy") },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = true,
+                                    readOnly = true,
+                                    shape = RoundedCornerShape(8.dp),
+                                    trailingIcon = {
+                                        IconButton(onClick = { showDatePicker = true }) {
+                                            Icon(
+                                                imageVector = Icons.Default.CalendarToday,
+                                                contentDescription = "Select date"
+                                            )
+                                        }
+                                    }
+                                )
+                            }
 
                             // Time of Incident
-                            OutlinedTextField(
-                                value = incidentTime,
-                                onValueChange = { incidentTime = it },
-                                label = {
-                                    Row {
-                                        Text("Time of Incident")
-                                        Text(
-                                            text = " *",
-                                            color = darkRed
-                                        )
-                                    }
-                                },
-                                placeholder = { Text("--:--") },
-                                modifier = Modifier.weight(1f),
-                                singleLine = true,
-                                readOnly = true,
-                                shape = RoundedCornerShape(8.dp),
-                                trailingIcon = {
-                                    IconButton(onClick = { showTimePicker = true }) {
-                                        Icon(
-                                            imageVector = Icons.Default.Schedule,
-                                            contentDescription = "Select time"
-                                        )
-                                    }
+                            Column(modifier = Modifier.weight(1f)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("Time of Incident", fontWeight = FontWeight.Bold)
+                                    Text(" *", color = darkRed, fontWeight = FontWeight.Bold)
                                 }
-                            )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                OutlinedTextField(
+                                    value = incidentTime,
+                                    onValueChange = { incidentTime = it },
+                                    label = null,
+                                    placeholder = { Text("--:--") },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = true,
+                                    readOnly = true,
+                                    shape = RoundedCornerShape(8.dp),
+                                    trailingIcon = {
+                                        IconButton(onClick = { showTimePicker = true }) {
+                                            Icon(
+                                                imageVector = Icons.Default.Schedule,
+                                                contentDescription = "Select time"
+                                            )
+                                        }
+                                    }
+                                )
+                            }
                         }
 
                         // Location
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Location", fontWeight = FontWeight.Bold)
+                            Text(" *", color = darkRed, fontWeight = FontWeight.Bold)
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
                         OutlinedTextField(
                             value = location,
                             onValueChange = { location = it },
-                            label = {
-                                Row {
-                                    Text("Location")
-                                    Text(
-                                        text = " *",
-                                        color = darkRed
-                                    )
-                                }
-                            },
+                            label = null,
                             placeholder = { Text("Be as specific as possible") },
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -415,115 +422,12 @@ fun ReportIncidentScreen(
                             shape = RoundedCornerShape(8.dp)
                         )
 
-                        // Report to what Office
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = 20.dp)
-                        ) {
-                            // Report to what Office header with label and asterisk
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(bottom = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "Report to what Office",
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Medium
-                                )
-                                Text(
-                                    text = " *",
-                                    color = darkRed,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 16.sp
-                                )
-                            }
-
-                            // Office selection chips in a horizontal scrollable row
-                            val officeList by officeViewModel.offices.collectAsState() // Get the list of offices dynamically
-
-                            // Handle loading and error states
-                            if (loading) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(60.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    CircularProgressIndicator(color = darkRed)
-                                }
-                            } else if (error != null) {
-                                Text(
-                                    "Error loading offices: $error",
-                                    color = Color.Red,
-                                    modifier = Modifier.padding(vertical = 16.dp)
-                                )
-                            } else {
-                                // Horizontal scrollable row of office chips
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .horizontalScroll(rememberScrollState()),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    officeList.forEach { office ->
-                                        // Office chip with info button
-                                        OutlinedButton(
-                                            onClick = { selectedOffice = office.code },
-                                            shape = RoundedCornerShape(8.dp),
-                                            colors = ButtonDefaults.outlinedButtonColors(
-                                                containerColor = if (selectedOffice == office.code) darkRed else Color.White,
-                                                contentColor = if (selectedOffice == office.code) Color.White else Color.Black
-                                            ),
-                                            border = BorderStroke(1.dp, color = Color.Gray.copy(alpha = 0.2f)),
-                                            modifier = Modifier.height(36.dp)
-                                        ) {
-                                            Row(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                horizontalArrangement = Arrangement.SpaceBetween
-                                            ) {
-                                                // Text for office code
-                                                Text(
-                                                    text = office.code,
-                                                    fontSize = 14.sp
-                                                )
-                                                Spacer(modifier = Modifier.weight(5f))  // This will push the icon to the right
-
-                                                // Info icon button with Spacer between text and icon
-                                                IconButton(
-                                                    onClick = {
-                                                        selectedOfficeDetails = Pair(office.fullName, office.description)
-                                                        showOfficeDescription = true
-                                                    },
-                                                    modifier = Modifier.size(20.dp)
-                                                ) {
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .size(16.dp)
-                                                            .background(
-                                                                color = if (selectedOffice == office.code) Color.White.copy(alpha = 0.2f) else Color.Gray.copy(alpha = 0.2f),
-                                                                shape = CircleShape
-                                                            ),
-                                                        contentAlignment = Alignment.Center
-                                                    ) {
-                                                        Icon(
-                                                            imageVector = Icons.Outlined.Info,
-                                                            contentDescription = "Office information",
-                                                            tint = if (selectedOffice == office.code) Color.White else Color.Gray,
-                                                            modifier = Modifier.size(12.dp)
-                                                        )
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
                         // Description
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Description", fontWeight = FontWeight.Bold)
+                            Text(" *", color = darkRed, fontWeight = FontWeight.Bold)
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
                         OutlinedTextField(
                             value = description,
                             onValueChange = {
@@ -531,15 +435,7 @@ fun ReportIncidentScreen(
                                     description = it
                                 }
                             },
-                            label = {
-                                Row {
-                                    Text("Description")
-                                    Text(
-                                        text = " *",
-                                        color = darkRed
-                                    )
-                                }
-                            },
+                            label = null,
                             placeholder = { Text("Describe what happened in detail") },
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -547,6 +443,14 @@ fun ReportIncidentScreen(
                                 .padding(bottom = 8.dp),
                             maxLines = 10,
                             shape = RoundedCornerShape(8.dp)
+                        )
+
+                        // Add this after the description TextField and before the character counter
+                        TagGenerationSection(
+                            description = description,
+                            location = location,
+                            viewModel = formViewModel,
+                            modifier = Modifier.padding(vertical = 16.dp)
                         )
 
                         // Character counter
@@ -569,7 +473,6 @@ fun ReportIncidentScreen(
                                     incidentDate.isBlank() ||
                                     incidentTime.isBlank() ||
                                     location.isBlank() ||
-                                    selectedOffice.isBlank() ||
                                     description.isBlank()
                                 ) {
                                     Toast.makeText(

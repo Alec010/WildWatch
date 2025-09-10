@@ -2,14 +2,27 @@
 
 import { useEffect, useState } from "react"
 import { OfficeAdminSidebar } from "@/components/OfficeAdminSidebar"
-import { Card } from "@/components/ui/card"
+import { OfficeAdminNavbar } from "@/components/OfficeAdminNavbar"
 import { Button } from "@/components/ui/button"
-import { AlertCircle, CheckCircle, Clock, AlertTriangle, Search, Plus, FileText } from "lucide-react"
-import Link from "next/link"
+import {
+  AlertCircle, 
+  CheckCircle,
+  Clock,
+  AlertTriangle,
+  FileText,
+  BarChart3,
+  ArrowUpRight,
+  Calendar,
+  Shield,
+  Layers,
+  Activity,
+  Eye,
+} from "lucide-react"
 import { useRouter } from "next/navigation"
-import NotificationDropdown from "@/components/ui/notificationdropdown"
 import { Inter } from "next/font/google"
 import { API_BASE_URL } from "@/utils/api"
+import { useSidebar } from "@/contexts/SidebarContext"
+import { motion } from "framer-motion"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -28,6 +41,7 @@ interface Incident {
 
 export default function OfficeAdminDashboard() {
   const router = useRouter()
+  const { collapsed } = useSidebar()
   const [stats, setStats] = useState({
     totalAssigned: 0,
     pending: 0,
@@ -39,6 +53,7 @@ export default function OfficeAdminDashboard() {
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [filteredIncidents, setFilteredIncidents] = useState<Incident[]>([])
+  const [activeTab, setActiveTab] = useState("overview")
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -114,14 +129,22 @@ export default function OfficeAdminDashboard() {
     })
   }
 
+  const getContentMargin = () => {
+    return collapsed ? "ml-18" : "ml-64"
+  }
+
   if (loading) {
     return (
-      <div className="min-h-screen flex bg-[#f5f5f5]">
+      <div className="min-h-screen flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9]">
         <OfficeAdminSidebar />
-        <div className="flex-1 flex items-center justify-center">
+        <div className={`flex-1 flex items-center justify-center transition-all duration-300 ${getContentMargin()}`}>
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#8B0000] mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading...</p>
+            <div className="relative w-20 h-20 mx-auto">
+              <div className="absolute inset-0 rounded-full border-t-2 border-b-2 border-[#8B0000] animate-spin"></div>
+              <div className="absolute inset-2 rounded-full border-r-2 border-l-2 border-[#DAA520] animate-spin animation-delay-150"></div>
+              <div className="absolute inset-4 rounded-full border-t-2 border-b-2 border-[#8B0000] animate-spin animation-delay-300"></div>
+            </div>
+            <p className="mt-6 text-gray-600 font-medium">Loading dashboard data...</p>
           </div>
         </div>
       </div>
@@ -130,14 +153,25 @@ export default function OfficeAdminDashboard() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex bg-[#f5f5f5]">
+      <div className="min-h-screen flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9]">
         <OfficeAdminSidebar />
-        <div className="flex-1 p-8">
+        <div className={`flex-1 p-8 transition-all duration-300 ${getContentMargin()}`}>
           <div className="max-w-7xl mx-auto">
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <div className="flex items-center gap-3">
-                <AlertTriangle className="h-6 w-6 text-red-500" />
-                <p className="text-red-700 font-medium">{error}</p>
+            <div className="bg-red-50 border border-red-200 rounded-lg p-6 shadow-sm">
+              <div className="flex items-start gap-4">
+                <div className="bg-red-100 p-3 rounded-full">
+                  <AlertTriangle className="h-6 w-6 text-red-600" />
+                </div>
+                <div> 
+                  <h3 className="text-lg font-semibold text-red-800 mb-2">Error Loading Dashboard</h3>
+                  <p className="text-red-700">{error}</p>
+                  <Button
+                    className="mt-4 bg-[#8B0000] hover:bg-[#6B0000] text-white"
+                    onClick={() => window.location.reload()}
+                  >
+                    <AlertCircle className="mr-2 h-4 w-4" /> Try Again
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
@@ -147,190 +181,328 @@ export default function OfficeAdminDashboard() {
   }
 
   return (
-    <div className={`min-h-screen flex bg-[#f5f5f5] ${inter.className}`}>
+    <div className={`min-h-screen flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9] ${inter.className}`}>
       <OfficeAdminSidebar />
 
+
       {/* Main Content */}
-      <div className="flex-1 overflow-auto">
-        {/* Header */}
-        <div className="p-6">
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h1 className="text-2xl font-bold text-[#800000]">
-                Incident Dashboard
-              </h1>
-              <p className="text-sm text-gray-600">
-                View and manage reported incidents
-              </p>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <input
-                  type="text"
-                  placeholder="Search incidents..."
-                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg w-64 focus:outline-none focus:ring-1 focus:ring-[#800000] focus:border-[#800000]"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+      <div className={`flex-1 transition-all duration-300 ${collapsed ? "ml-20" : "ml-72"}`}>
+        {/* Navbar */}
+        <OfficeAdminNavbar title="Office Dashboard" subtitle="View and manage reported incidents" onSearch={setSearchQuery} />
+
+        {/* Content */}
+        <div className="pt-24 px-6 pb-10">
+          {/* Dashboard Tabs */}
+          <div className="flex border-b border-gray-200 mb-6">
+            <button
+              onClick={() => setActiveTab("overview")}
+              className={`px-4 py-2 font-medium text-sm transition-colors relative ${
+                activeTab === "overview" ? "text-[#8B0000]" : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              Overview
+              {activeTab === "overview" && (
+                <motion.div
+                  layoutId="activeTab"
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[#8B0000] to-[#DAA520]"
                 />
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab("incidents")}
+              className={`px-4 py-2 font-medium text-sm transition-colors relative ${
+                activeTab === "incidents" ? "text-[#8B0000]" : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              Recent Incidents
+              {activeTab === "incidents" && (
+                <motion.div
+                  layoutId="activeTab"
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[#8B0000] to-[#DAA520]"
+                />
+              )}
+            </button>
+          </div>
+
+          {activeTab === "overview" && (
+            <>
+              {/* Statistics Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden relative"
+                >
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-[#8B0000]/5 to-[#8B0000]/10 rounded-bl-full"></div>
+                  <div className="p-6">
+                    <div className="flex items-center gap-4">
+                      <div className="bg-gradient-to-br from-[#8B0000] to-[#6B0000] p-3 rounded-lg shadow-md">
+                        <FileText className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-gray-600 text-sm font-medium">Total Reports</p>
+                        <h3 className="text-3xl font-bold text-[#8B0000]">{stats.totalAssigned}</h3>
+                      </div>
+                    </div>
+                    <div className="mt-4 pt-4 border-t border-gray-100">
+                      <button
+                        onClick={() => router.push("/office-admin/approved-cases")}
+                        className="text-[#8B0000] text-sm font-medium flex items-center hover:underline"
+                      >
+                        View All Reports <ArrowUpRight className="ml-1 h-3 w-3" />
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: 0.1 }}
+                  className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden relative"
+                >
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-yellow-500/5 to-yellow-500/10 rounded-bl-full"></div>
+                  <div className="p-6">
+                    <div className="flex items-center gap-4">
+                      <div className="bg-gradient-to-br from-yellow-500 to-yellow-600 p-3 rounded-lg shadow-md">
+                        <Clock className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-gray-600 text-sm font-medium">Pending</p>
+                        <h3 className="text-3xl font-bold text-yellow-500">{stats.pending}</h3>
+                      </div>
+                    </div>
+                    <div className="mt-4 pt-4 border-t border-gray-100">
+                      <button
+                        onClick={() => router.push("/office-admin/incidents")}
+                        className="text-yellow-500 text-sm font-medium flex items-center hover:underline"
+                      >
+                        View Pending <ArrowUpRight className="ml-1 h-3 w-3" />
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: 0.2 }}
+                  className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden relative"
+                >
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-blue-500/5 to-blue-500/10 rounded-bl-full"></div>
+                  <div className="p-6">
+                    <div className="flex items-center gap-4">
+                      <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-3 rounded-lg shadow-md">
+                        <Activity className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-gray-600 text-sm font-medium">In Progress</p>
+                        <h3 className="text-3xl font-bold text-blue-500">{stats.inProgress}</h3>
+                      </div>
+                    </div>
+                    <div className="mt-4 pt-4 border-t border-gray-100">
+                      <button
+                        onClick={() => router.push("/office-admin/approved-cases")}
+                        className="text-blue-500 text-sm font-medium flex items-center hover:underline"
+                      >
+                        View In Progress <ArrowUpRight className="ml-1 h-3 w-3" />
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: 0.3 }}
+                  className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden relative"
+                >
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-green-500/5 to-green-500/10 rounded-bl-full"></div>
+                  <div className="p-6">
+                    <div className="flex items-center gap-4">
+                      <div className="bg-gradient-to-br from-green-500 to-green-600 p-3 rounded-lg shadow-md">
+                        <CheckCircle className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-gray-600 text-sm font-medium">Resolved</p>
+                        <h3 className="text-3xl font-bold text-green-500">{stats.resolved}</h3>
+                      </div>
+                    </div>
+                    <div className="mt-4 pt-4 border-t border-gray-100">
+                      <button
+                        onClick={() => router.push("/office-admin/history?status=Resolved")}
+                        className="text-green-500 text-sm font-medium flex items-center hover:underline"
+                      >
+                        View Resolved <ArrowUpRight className="ml-1 h-3 w-3" />
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
               </div>
-              {/* Removed Report New Incident button for office admins */}
-              {/* Using the NotificationDropdown component */}
-              <NotificationDropdown />
-            </div>
-          </div>
 
-          {/* Overview Section with Tab-like Underline */}
-          <div className="mb-8">
-            <div className="border-b border-gray-200 mb-4">
-              <h2 className="text-lg font-medium text-[#800000] pb-2 border-b-2 border-[#800000] inline-block">
-                Overview
-              </h2>
-            </div>
-            <div className="grid grid-cols-4 gap-4">
-              <Card className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
-                <div className="p-4 flex items-center">
-                  <div className="mr-4 bg-red-50 p-3 rounded-full">
-                    <FileText className="h-6 w-6 text-[#800000]" />
+              {/* Summary Section */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 0.4 }}
+                className="bg-gradient-to-br from-[#8B0000] to-[#6B0000] rounded-xl shadow-md p-6 text-white mb-8"
+              >
+                <div className="flex items-center gap-3 mb-4">
+                  <BarChart3 className="h-6 w-6" />
+                  <h2 className="text-xl font-semibold">Performance Summary</h2>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                  <div className="bg-white/10 rounded-lg p-4">
+                    <div className="text-3xl font-bold">{stats.totalAssigned}</div>
+                    <div className="text-white/80 text-sm">Total Cases</div>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-500 mb-1">Total Reports</p>
-                    <p className="text-2xl font-bold">{stats.totalAssigned}</p>
+                  <div className="bg-white/10 rounded-lg p-4">
+                    <div className="text-3xl font-bold">{stats.pending}</div>
+                    <div className="text-white/80 text-sm">Pending</div>
+                  </div>
+                  <div className="bg-white/10 rounded-lg p-4">
+                    <div className="text-3xl font-bold">{stats.inProgress}</div>
+                    <div className="text-white/80 text-sm">In Progress</div>
+                  </div>
+                  <div className="bg-white/10 rounded-lg p-4">
+                    <div className="text-3xl font-bold">{stats.resolved}</div>
+                    <div className="text-white/80 text-sm">Resolved</div>
                   </div>
                 </div>
-              </Card>
+              </motion.div>
+            </>
+          )}
 
-              <Card className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
-                <div className="p-4 flex items-center">
-                  <div className="mr-4 bg-yellow-50 p-3 rounded-full">
-                    <Clock className="h-6 w-6 text-yellow-500" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500 mb-1">Pending</p>
-                    <p className="text-2xl font-bold">{stats.pending}</p>
-                  </div>
-                </div>
-              </Card>
-
-              <Card className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
-                <div className="p-4 flex items-center">
-                  <div className="mr-4 bg-gray-50 p-3 rounded-full">
-                    <AlertCircle className="h-6 w-6 text-gray-500" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500 mb-1">In Progress</p>
-                    <p className="text-2xl font-bold">{stats.inProgress}</p>
-                  </div>
-                </div>
-              </Card>
-
-              <Card className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
-                <div className="p-4 flex items-center">
-                  <div className="mr-4 bg-green-50 p-3 rounded-full">
-                    <CheckCircle className="h-6 w-6 text-green-500" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500 mb-1">Resolved</p>
-                    <p className="text-2xl font-bold">{stats.resolved}</p>
-                  </div>
-                </div>
-              </Card>
-            </div>
-          </div>
-
-          {/* Recent Incidents */}
-          <div className="mb-6">
+          {/* Recent Incidents Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.5 }}
+            className="mb-6"
+          >
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-medium text-[#800000]">
-                Recent Incidents
-              </h2>
+              <div className="flex items-center gap-2">
+                <Shield className="h-5 w-5 text-[#8B0000]" />
+                <h2 className="text-lg font-semibold text-gray-800">
+                  Recent Incidents
+                  <span className="ml-2 text-sm bg-[#8B0000]/10 text-[#8B0000] px-2 py-0.5 rounded-full">
+                    {(searchQuery ? filteredIncidents : recentIncidents).length}
+                  </span>
+                </h2>
+              </div>
               <Button
-                variant="link"
-                className="text-[#800000] p-0 h-auto text-sm hover:underline"
+                variant="outline"
+                className="border-[#8B0000] text-[#8B0000] hover:bg-[#8B0000]/5"
                 onClick={() => router.push("/office-admin/approved-cases")}
               >
                 View All
               </Button>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {(searchQuery ? filteredIncidents : recentIncidents).length > 0 ? (
-                (searchQuery ? filteredIncidents : recentIncidents).slice(0, 3).map((incident) => (
-                  <Card
+                (searchQuery ? filteredIncidents : recentIncidents).map((incident, index) => (
+                  <motion.div
                     key={incident.id}
-                    className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: index * 0.1 }}
+                    className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 border border-gray-100 overflow-hidden"
                   >
-                    <div
-                      className={`p-4 border-l-4 ${
-                        incident.status === "Pending"
-                          ? "border-l-yellow-400"
-                          : incident.status === "In Progress"
-                          ? "border-l-blue-400"
-                          : "border-l-green-400"
-                      }`}
-                    >
-                      <div className="mb-3">
-                        <h3 className="font-medium text-gray-900 mb-1">
-                          {incident.incidentType}
-                        </h3>
-                        <div className="flex items-center">
-                          <Clock className="h-4 w-4 text-gray-400 mr-1" />
-                          <p className="text-xs text-gray-500">
-                            {formatDate(incident.submittedAt)}
-                          </p>
+                    <div className="flex flex-col h-full">
+                      <div
+                        className={`h-1.5 w-full ${
+                          incident.status === "Pending"
+                            ? "bg-yellow-400"
+                            : incident.status === "In Progress"
+                              ? "bg-blue-400"
+                              : "bg-green-400"
+                        }`}
+                      ></div>
+                      <div className="p-5 flex-1 flex flex-col">
+                        <div className="mb-3">
+                          <div className="flex items-center justify-between">
+                            <h3 className="font-semibold text-[#8B0000]">{incident.trackingNumber}</h3>
+                            <span
+                              className={`px-2 py-0.5 text-xs rounded-full ${
+                                incident.status === "Pending"
+                                  ? "bg-yellow-100 text-yellow-800"
+                                  : incident.status === "In Progress"
+                                    ? "bg-blue-100 text-blue-800"
+                                    : "bg-green-100 text-green-800"
+                              }`}
+                            >
+                              {incident.status}
+                            </span>
+                          </div>
+                          <h4 className="text-gray-800 font-medium mt-1">{incident.incidentType}</h4>
                         </div>
-                      </div>
 
-                      <div className="mb-3">
-                        <div className="flex items-start mb-1">
-                          <AlertCircle className="h-4 w-4 text-gray-400 mr-1 mt-0.5" />
-                          <p className="text-xs text-gray-700">
-                            {incident.location}
-                          </p>
+                        <div className="mb-3 flex-1">
+                          <div className="flex items-center text-sm text-gray-500 mb-2">
+                            <Clock className="h-4 w-4 mr-1" />
+                            <span>{formatDate(incident.submittedAt)}</span>
+                          </div>
+                          <div className="flex items-start mb-2">
+                            <AlertCircle className="h-4 w-4 text-gray-400 mr-1 mt-0.5 flex-shrink-0" />
+                            <p className="text-xs text-gray-700">{incident.location}</p>
+                          </div>
+                          <p className="text-sm text-gray-600 line-clamp-2">{incident.description}</p>
                         </div>
-                        <p className="text-sm text-gray-600 line-clamp-2 mt-1">
-                          {incident.description}
-                        </p>
-                      </div>
 
-                      <div className="flex justify-between items-center">
-                        <span
-                          className={`px-2 py-1 rounded-md text-xs font-medium
-                          ${
-                            incident.status === "Pending"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : incident.status === "In Progress"
-                              ? "bg-blue-100 text-blue-800"
-                              : "bg-green-100 text-green-800"
-                          }`}
-                        >
-                          {incident.status}
-                        </span>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-xs border-[#800000] text-[#800000] hover:bg-[#fff9f9]"
-                          onClick={() => {
-                            console.log("Verified:", incident.verified);
-                            incident.verified
-                              ? router.push(`/office-admin/approved-cases/${incident.id}/update`)
-                              : router.push(`/office-admin/incidents/${incident.id}`);
-                          }}
-                        >
-                          View Details
-                        </Button>
+                        <div className="mt-auto pt-3 border-t border-gray-100">
+                          <Button
+                            className="w-full bg-gradient-to-r from-[#8B0000] to-[#6B0000] text-white hover:opacity-90"
+                            onClick={() => {
+                              if (incident.status === "Resolved") {
+                                router.push(`/incidents/tracking/${incident.trackingNumber}`)
+                              } else if (incident.status === "In Progress") {
+                                router.push(`/office-admin/approved-cases/${incident.id}/update`)
+                              } else {
+                                router.push(`/office-admin/incidents/${incident.id}`)
+                              }
+                            }}
+                          >
+                            <Eye size={16} className="mr-2" /> View Details
+                          </Button>
+                        </div>
                       </div>
                     </div>
-                  </Card>
+                  </motion.div>
                 ))
               ) : (
-                <div className="col-span-3 p-8 text-center text-gray-500 bg-white rounded-lg border border-gray-200">
-                  No incidents found
+                <div className="col-span-3 p-8 text-center bg-white rounded-xl shadow-sm border border-gray-100">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Layers className="h-8 w-8 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-800 mb-2">No incidents found</h3>
+                  <p className="text-gray-500 max-w-md mx-auto">
+                    {searchQuery
+                      ? "No incidents match your search criteria. Try adjusting your search terms."
+                      : "There are no recent incidents to display at this time."}
+                  </p>
+                  {searchQuery && (
+                    <Button variant="outline" className="mt-4" onClick={() => setSearchQuery("")}>
+                      Clear Search
+                    </Button>
+                  )}
                 </div>
               )}
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
+
+      {/* Add custom styles for animation delays */}
+      <style jsx global>{`
+        .animation-delay-150 {
+          animation-delay: 150ms;
+        }
+        .animation-delay-300 {
+          animation-delay: 300ms;
+        }
+      `}</style>
     </div>
   )
 }

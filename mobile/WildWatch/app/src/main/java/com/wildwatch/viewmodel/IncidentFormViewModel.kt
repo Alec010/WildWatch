@@ -9,6 +9,7 @@ import com.wildwatch.model.WitnessDTO
 import com.wildwatch.repository.IncidentRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.io.File
 import java.time.LocalDate
@@ -25,6 +26,15 @@ class IncidentFormViewModel(
 
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage
+
+    private val _isGeneratingTags = MutableStateFlow(false)
+    val isGeneratingTags: StateFlow<Boolean> = _isGeneratingTags.asStateFlow()
+
+    private val _generatedTags = MutableStateFlow<List<String>>(emptyList())
+    val generatedTags: StateFlow<List<String>> = _generatedTags.asStateFlow()
+
+    private val _selectedTags = MutableStateFlow<Set<String>>(emptySet())
+    val selectedTags: StateFlow<Set<String>> = _selectedTags.asStateFlow()
 
     private var isSubmitting = false
 
@@ -143,7 +153,8 @@ class IncidentFormViewModel(
                 witnesses = form.witnesses,
                 additionalNotes = form.additionalNotes,
                 evidenceUris = form.evidenceUris,
-                evidenceFiles = form.evidenceFiles
+                evidenceFiles = form.evidenceFiles,
+                preferAnonymous = form.preferAnonymous
             )
 
             viewModelScope.launch {
@@ -195,5 +206,52 @@ class IncidentFormViewModel(
 
     fun updateTimeOfIncident(time: String) {
         _formState.value = _formState.value.copy(timeOfIncident = time)
+    }
+
+    fun generateTags(description: String, location: String) {
+        viewModelScope.launch {
+            _isGeneratingTags.value = true
+            _errorMessage.value = null
+            try {
+                val response = repository.generateTags(description, location)
+                if (response.isSuccessful) {
+                    response.body()?.let { tagResponse ->
+                        _generatedTags.value = tagResponse.tags
+                    }
+                } else {
+                    _errorMessage.value = "Failed to generate tags"
+                }
+            } catch (e: Exception) {
+                _errorMessage.value = e.message ?: "An error occurred"
+            } finally {
+                _isGeneratingTags.value = false
+            }
+        }
+    }
+
+    fun toggleTag(tag: String) {
+        val currentSelectedTags = _selectedTags.value.toMutableSet()
+        if (currentSelectedTags.contains(tag)) {
+            currentSelectedTags.remove(tag)
+        } else if (currentSelectedTags.size < 5) {
+            currentSelectedTags.add(tag)
+        }
+        _selectedTags.value = currentSelectedTags
+        
+        // Update form state with selected tags while preserving all other fields
+        val currentState = _formState.value
+        _formState.value = currentState.copy(
+            incidentType = currentState.incidentType,
+            dateOfIncident = currentState.dateOfIncident,
+            timeOfIncident = currentState.timeOfIncident,
+            location = currentState.location,
+            assignedOffice = currentState.assignedOffice,
+            description = currentState.description,
+            witnesses = currentState.witnesses,
+            evidenceUris = currentState.evidenceUris,
+            evidenceFiles = currentState.evidenceFiles,
+            additionalNotes = currentState.additionalNotes,
+            tags = currentSelectedTags.toList()
+        )
     }
 }

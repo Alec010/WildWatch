@@ -1,6 +1,8 @@
 package com.wildwatch.api
 
 import com.wildwatch.model.IncidentResponse
+import com.wildwatch.model.TagGenerationRequest
+import com.wildwatch.model.TagGenerationResponse
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import retrofit2.Response
@@ -16,4 +18,9 @@ interface IncidentApi {
 
     @GET("/api/incidents/my-incidents")
     suspend fun getUserIncidents(): Response<List<IncidentResponse>>
+
+    @POST("/api/tags/generate")
+    suspend fun generateTags(
+        @Body request: TagGenerationRequest
+    ): Response<TagGenerationResponse>
 }

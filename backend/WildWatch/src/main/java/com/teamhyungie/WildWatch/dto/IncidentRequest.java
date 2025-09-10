@@ -1,5 +1,6 @@
 package com.teamhyungie.WildWatch.dto;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.teamhyungie.WildWatch.model.Office;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -26,15 +27,18 @@ public class IncidentRequest {
     @NotBlank(message = "Description is required")
     private String description;
 
-    @NotNull(message = "Assigned office is required")
+    @JsonDeserialize(using = OfficeDeserializer.class)
     private Office assignedOffice;
 
     private List<WitnessDTO> witnesses;
 
     private Boolean preferAnonymous;
 
+    private List<String> tags;
+
     @Data
     public static class WitnessDTO {
+        // All fields are optional
         private String name;
         private String contactInformation;
         private String additionalNotes;

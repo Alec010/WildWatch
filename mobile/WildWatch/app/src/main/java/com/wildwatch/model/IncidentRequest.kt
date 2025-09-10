@@ -10,9 +10,10 @@ data class IncidentRequest(
     val timeOfIncident: String,
     val location: String,
     val description: String,
-    val assignedOffice: String,
+    val assignedOffice: String? = null,
     val witnesses: List<WitnessDTO>,
     val additionalNotes: String,  // Include this field
     val evidenceUris: List<String>,  // Include this field
-    val evidenceFiles: List<File>? = null
+    val evidenceFiles: List<File>? = null,
+    val preferAnonymous: Boolean = false
 )

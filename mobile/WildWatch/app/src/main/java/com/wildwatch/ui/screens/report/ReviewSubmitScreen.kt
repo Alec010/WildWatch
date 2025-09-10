@@ -6,6 +6,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -14,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -55,11 +57,11 @@ fun ReviewSubmitScreen(
     var editableTimeOfIncident by remember { mutableStateOf(formState.timeOfIncident) }
     var editableLocation by remember { mutableStateOf(formState.location) }
     var editableDescription by remember { mutableStateOf(formState.description) }
-    var editableAssignedOffice by remember { mutableStateOf(formState.assignedOffice) }
 
     // Confirmation checkboxes
     var confirmAccurate by remember { mutableStateOf(false) }
     var confirmContact by remember { mutableStateOf(false) }
+    var preferAnonymous by remember { mutableStateOf(formState.preferAnonymous) }
 
     // Date and time pickers
     var showDatePicker by remember { mutableStateOf(false) }
@@ -87,7 +89,6 @@ fun ReviewSubmitScreen(
         editableTimeOfIncident = formState.timeOfIncident
         editableLocation = formState.location
         editableDescription = formState.description
-        editableAssignedOffice = formState.assignedOffice
     }
 
     // Handle error messages from ViewModel
@@ -193,50 +194,18 @@ fun ReviewSubmitScreen(
                 }
             }
 
-            // Red header section
-            Surface(
-                color = darkRed,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.CheckCircle,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column {
-                        Text(
-                            text = "Review & Submit",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                        Text(
-                            text = "Review your report details before submission",
-                            color = Color.White.copy(alpha = 0.8f),
-                            fontSize = 14.sp
-                        )
-                    }
-                }
-            }
-
             // Main content
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
             ) {
-                // Main form card
+                // Review & Submit Header Card
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 16.dp),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = Color.White
                     ),
@@ -249,50 +218,94 @@ fun ReviewSubmitScreen(
                             .fillMaxWidth()
                             .padding(20.dp)
                     ) {
-                        // Section icon and title
-                        SectionHeader(
-                            title = "Review & Submit",
-                            icon = Icons.Default.CheckCircle,
-                            color = darkRed
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(bottom = 12.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                tint = darkRed,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Review & Submit",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = darkRed
+                            )
+                        }
 
                         Text(
                             text = "Review your report details before submission",
                             color = Color.Gray,
                             fontSize = 14.sp,
-                            modifier = Modifier.padding(bottom = 24.dp)
+                            modifier = Modifier.padding(bottom = 8.dp)
                         )
+                    }
+                }
 
-                        // Incident Summary Section
-                        SectionTitle(title = "Incident Summary")
-                        Text(
-                            text = "Summary of the reported incident",
-                            color = Color.Gray,
-                            fontSize = 14.sp,
-                            modifier = Modifier.padding(bottom = 12.dp)
-                        )
-
-                        // Incident Summary Card
-                        Surface(
-                            color = Color(0xFFF9F9F9),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = 16.dp)
+                // Incident Details Card
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color.White
+                    ),
+                    elevation = CardDefaults.cardElevation(
+                        defaultElevation = 2.dp
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
+                                Icon(
+                                    imageVector = Icons.Default.Warning,
+                                    contentDescription = null,
+                                    tint = darkRed,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = formState.description,
-                                    fontSize = 14.sp,
-                                    color = Color.DarkGray
+                                    text = "Incident Details",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp,
+                                    color = darkRed
+                                )
+                            }
+
+                            IconButton(
+                                onClick = {
+                                    editableIncidentType = formState.incidentType
+                                    editableDateOfIncident = formState.dateOfIncident
+                                    editableTimeOfIncident = formState.timeOfIncident
+                                    editableLocation = formState.location
+                                    editableDescription = formState.description
+                                    isEditingIncidentDetails = true
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = "Edit incident details",
+                                    tint = darkRed,
+                                    modifier = Modifier.size(20.dp)
                                 )
                             }
                         }
 
-                        // Incident Details Section
                         if (isEditingIncidentDetails) {
                             // Editable fields
                             Column(
@@ -319,7 +332,6 @@ fun ReviewSubmitScreen(
                                             editableTimeOfIncident = formState.timeOfIncident
                                             editableLocation = formState.location
                                             editableDescription = formState.description
-                                            editableAssignedOffice = formState.assignedOffice
                                             isEditingIncidentDetails = false
                                         },
                                         colors = ButtonDefaults.textButtonColors(
@@ -434,16 +446,6 @@ fun ReviewSubmitScreen(
                                     shape = RoundedCornerShape(8.dp)
                                 )
 
-                                OutlinedTextField(
-                                    value = editableAssignedOffice,
-                                    onValueChange = { editableAssignedOffice = it },
-                                    label = { Text("Assigned Office") },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(bottom = 16.dp),
-                                    shape = RoundedCornerShape(8.dp)
-                                )
-
                                 Button(
                                     onClick = {
                                         // Validate inputs
@@ -451,8 +453,7 @@ fun ReviewSubmitScreen(
                                             editableDateOfIncident.isBlank() ||
                                             editableTimeOfIncident.isBlank() ||
                                             editableLocation.isBlank() ||
-                                            editableDescription.isBlank() ||
-                                            editableAssignedOffice.isBlank()) {
+                                            editableDescription.isBlank()) {
 
                                             Toast.makeText(context, "All fields are required", Toast.LENGTH_SHORT).show()
                                             return@Button
@@ -466,8 +467,7 @@ fun ReviewSubmitScreen(
                                                     dateOfIncident = editableDateOfIncident,
                                                     timeOfIncident = editableTimeOfIncident,
                                                     location = editableLocation,
-                                                    description = editableDescription,
-                                                    assignedOffice = editableAssignedOffice
+                                                    description = editableDescription
                                                 )
                                             )
                                             isEditingIncidentDetails = false
@@ -479,79 +479,32 @@ fun ReviewSubmitScreen(
                                             Log.e("ReviewSubmitScreen", "Error updating incident details", e)
                                         }
                                     },
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = darkRed
-                                    ),
-                                    shape = RoundedCornerShape(8.dp),
-                                    modifier = Modifier.align(Alignment.End)
+                                    enabled = !isSubmitting,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = ButtonDefaults.buttonColors(containerColor = darkRed)
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Save,
-                                        contentDescription = null,
-                                        modifier = Modifier.padding(end = 8.dp)
-                                    )
-                                    Text("Save Changes")
+                                    if (isSubmitting) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(20.dp),
+                                            strokeWidth = 2.dp,
+                                            color = Color.White
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text("Submitting...")
+                                    } else {
+                                        Text("Save Changes")
+                                    }
                                 }
                             }
                         } else {
-                            // Read-only incident details - section header with edit button
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .background(darkRed),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 12.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Warning,
-                                        contentDescription = null,
-                                        tint = Color.White,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = "Incident Details",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 16.sp,
-                                        color = Color.White
-                                    )
-                                }
-
-                                IconButton(
-                                    onClick = {
-                                        // Initialize editable fields with current values
-                                        editableIncidentType = formState.incidentType
-                                        editableDateOfIncident = formState.dateOfIncident
-                                        editableTimeOfIncident = formState.timeOfIncident
-                                        editableLocation = formState.location
-                                        editableDescription = formState.description
-                                        editableAssignedOffice = formState.assignedOffice
-                                        isEditingIncidentDetails = true
-                                    }
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Edit,
-                                        contentDescription = "Edit incident details",
-                                        tint = Color.White,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-                            }
-
-                            // Incident details table
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(16.dp)
+                                    .padding(top = 12.dp)
                             ) {
                                 DetailRow("Incident Type", formState.incidentType)
                                 DetailRow("Date & Time", "${formState.dateOfIncident} - ${formState.timeOfIncident}")
                                 DetailRow("Location", formState.location)
-                                DetailRow("Office", formState.assignedOffice)
                                 DetailRow(
                                     "Description",
                                     formState.description,
@@ -559,23 +512,39 @@ fun ReviewSubmitScreen(
                                 )
                             }
                         }
+                    }
+                }
 
-                        // Evidence & Witnesses Section - section header with edit button
+                // Evidence & Witnesses Card
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color.White
+                    ),
+                    elevation = CardDefaults.cardElevation(
+                        defaultElevation = 2.dp
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp)
+                    ) {
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(darkRed),
+                            modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 12.dp)
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Assignment,
                                     contentDescription = null,
-                                    tint = Color.White,
+                                    tint = darkRed,
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
@@ -583,7 +552,7 @@ fun ReviewSubmitScreen(
                                     text = "Evidence & Witnesses",
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 16.sp,
-                                    color = Color.White
+                                    color = darkRed
                                 )
                             }
 
@@ -593,39 +562,46 @@ fun ReviewSubmitScreen(
                                 Icon(
                                     imageVector = Icons.Default.Edit,
                                     contentDescription = "Edit evidence and witnesses",
-                                    tint = Color.White,
+                                    tint = darkRed,
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
                         }
 
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp)
-                        ) {
-                            // Uploaded Evidence
-                            Text(
-                                text = "Uploaded Evidence",
-                                fontWeight = FontWeight.Medium,
-                                fontSize = 14.sp,
-                                modifier = Modifier.padding(bottom = 8.dp)
-                            )
+                        // Uploaded Evidence
+                        Text(
+                            text = "Uploaded Evidence",
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 14.sp,
+                            modifier = Modifier.padding(top = 12.dp, bottom = 8.dp)
+                        )
 
-                            // Image thumbnails
-                            if (formState.evidenceUris.isEmpty()) {
-                                Text(
-                                    text = "No evidence uploaded",
-                                    color = Color.Gray,
-                                    fontSize = 14.sp,
-                                    modifier = Modifier.padding(bottom = 16.dp)
-                                )
-                            } else {
+                        if (formState.evidenceUris.isEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(80.dp)
+                                    .border(width = 1.dp, color = Color.LightGray, shape = RoundedCornerShape(12.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                                    Icon(imageVector = Icons.Outlined.Info, contentDescription = null, tint = Color.Gray)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(text = "No files uploaded yet", color = Color.Gray, fontSize = 14.sp)
+                                }
+                            }
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(100.dp)
+                                    .border(width = 1.dp, color = Color.LightGray, shape = RoundedCornerShape(12.dp)),
+                                contentAlignment = Alignment.CenterStart
+                            ) {
                                 LazyRow(
                                     modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(100.dp)
-                                        .padding(bottom = 16.dp),
+                                        .fillMaxSize()
+                                        .padding(horizontal = 12.dp),
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     items(formState.evidenceUris) { uriString ->
@@ -638,189 +614,62 @@ fun ReviewSubmitScreen(
                                     }
                                 }
                             }
+                        }
 
-                            // Witness Information
+                        // Witness Information
+                        Text(
+                            text = "Witness Information",
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 14.sp,
+                            modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
+                        )
+
+                        if (formState.witnesses.isEmpty()) {
                             Text(
-                                text = "Witness Information",
-                                fontWeight = FontWeight.Medium,
+                                text = "No witnesses provided",
+                                color = Color.Gray,
                                 fontSize = 14.sp,
-                                modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
-                            )
-
-                            // Witness details
-                            if (formState.witnesses.isEmpty()) {
-                                Text(
-                                    text = "No witnesses provided",
-                                    color = Color.Gray,
-                                    fontSize = 14.sp,
-                                    modifier = Modifier.padding(bottom = 16.dp)
-                                )
-                            } else {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(bottom = 16.dp)
-                                ) {
-                                    formState.witnesses.forEach { witness ->
-                                        Card(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(bottom = 8.dp),
-                                            shape = RoundedCornerShape(8.dp),
-                                            colors = CardDefaults.cardColors(
-                                                containerColor = Color(0xFFF9F9F9)
-                                            )
-                                        ) {
-                                            Column(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(12.dp)
-                                            ) {
-                                                Text(
-                                                    text = "Name: ${witness.name}",
-                                                    fontWeight = FontWeight.Medium,
-                                                    fontSize = 14.sp
-                                                )
-
-                                                Spacer(modifier = Modifier.height(4.dp))
-
-                                                Text(
-                                                    text = "Contact: ${witness.contactInformation}",
-                                                    fontSize = 14.sp,
-                                                    color = Color.DarkGray
-                                                )
-
-                                                Spacer(modifier = Modifier.height(8.dp))
-
-                                                Text(
-                                                    text = "Statement: ${witness.statement}",
-                                                    fontSize = 14.sp,
-                                                    color = Color.DarkGray
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            // Additional Notes
-                            Text(
-                                text = "Additional Notes",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp,
-                                modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
-                            )
-
-                            Text(
-                                text = formState.additionalNotes.ifBlank { "None provided" },
-                                fontSize = 14.sp,
-                                color = Color.DarkGray,
                                 modifier = Modifier.padding(bottom = 16.dp)
                             )
-
-                            // Notification card
-                            Card(
+                        } else {
+                            Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 16.dp),
-                                shape = RoundedCornerShape(8.dp),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = Color(0xFFE6F7FF)
-                                )
+                                    .padding(bottom = 16.dp)
                             ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Info,
-                                        contentDescription = null,
-                                        tint = Color(0xFF0070F3),
-                                        modifier = Modifier.padding(end = 12.dp)
-                                    )
-                                    Text(
-                                        text = "Your report will be reviewed by campus security personnel. You will receive a confirmation email with a tracking number once your report is submitted.",
-                                        fontSize = 14.sp,
-                                        color = Color.DarkGray
-                                    )
-                                }
-                            }
-
-                            // Confirmation checkboxes
-                            ConfirmationCheck(
-                                label = "I confirm that all information provided is accurate to the best of my knowledge.",
-                                checked = confirmAccurate,
-                                onCheckedChange = { confirmAccurate = it },
-                                darkRed = darkRed
-                            )
-
-                            ConfirmationCheck(
-                                label = "I understand that campus security may contact me for additional information.",
-                                checked = confirmContact,
-                                onCheckedChange = { confirmContact = it },
-                                darkRed = darkRed
-                            )
-
-                            // Navigation buttons
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 16.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                OutlinedButton(
-                                    onClick = onBackClick,
-                                    colors = ButtonDefaults.outlinedButtonColors(
-                                        contentColor = darkRed
-                                    ),
-                                    border = BorderStroke(1.dp, darkRed),
-                                    shape = RoundedCornerShape(8.dp),
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.ArrowBack,
-                                        contentDescription = null,
-                                        modifier = Modifier.padding(end = 8.dp)
-                                    )
-                                    Text("Back")
-                                }
-
-                                Spacer(modifier = Modifier.width(16.dp))
-
-                                Button(
-                                    onClick = {
-                                        // Validate form before submission
-                                        if (!validateForm(formState, confirmAccurate, confirmContact, context)) {
-                                            return@Button
+                                formState.witnesses.forEach { witness ->
+                                    Card(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(bottom = 8.dp),
+                                        shape = RoundedCornerShape(8.dp),
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = Color(0xFFF9F9F9)
+                                        )
+                                    ) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(12.dp)
+                                        ) {
+                                            Text(
+                                                text = "Name: ${witness.name}",
+                                                fontWeight = FontWeight.Medium,
+                                                fontSize = 14.sp
+                                            )
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text(
+                                                text = "Contact: ${witness.contactInformation}",
+                                                fontSize = 14.sp,
+                                                color = Color.DarkGray
+                                            )
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            Text(
+                                                text = "Additional Notes: ${witness.additionalNotes}",
+                                                fontSize = 14.sp,
+                                                color = Color.DarkGray
+                                            )
                                         }
-
-                                        // Call the onSubmitClick callback provided by ReportFlowHost
-                                        onSubmitClick()
-                                    },
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = darkRed
-                                    ),
-                                    shape = RoundedCornerShape(8.dp),
-                                    enabled = confirmAccurate && confirmContact && !isSubmitting,
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    if (isSubmitting) {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(20.dp),
-                                            strokeWidth = 2.dp,
-                                            color = Color.White
-                                        )
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text("Submitting...")
-                                    } else {
-                                        Text("Submit Report")
-                                        Icon(
-                                            imageVector = Icons.Default.Send,
-                                            contentDescription = null,
-                                            modifier = Modifier.padding(start = 8.dp)
-                                        )
                                     }
                                 }
                             }
@@ -828,14 +677,227 @@ fun ReviewSubmitScreen(
                     }
                 }
 
-                // Help panel
-                HelpPanel(
-                    modifier = Modifier.fillMaxWidth(),
-                    darkRed = darkRed
-                )
+                // Confirmation Card
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color.White
+                    ),
+                    elevation = CardDefaults.cardElevation(
+                        defaultElevation = 2.dp
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(bottom = 12.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = null,
+                                tint = darkRed,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Confirmation",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp,
+                                color = darkRed
+                            )
+                        }
+
+                        // Notification message
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 16.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = Color(0xFFE6F7FF)
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Info,
+                                    contentDescription = null,
+                                    tint = Color(0xFF0070F3),
+                                    modifier = Modifier.padding(end = 12.dp)
+                                )
+                                Text(
+                                    text = "Your report will be reviewed by campus security personnel. You will receive a confirmation email with a tracking number once your report is submitted.",
+                                    fontSize = 14.sp,
+                                    color = Color.DarkGray
+                                )
+                            }
+                        }
+
+                        // Confirmation checkboxes
+                        ConfirmationCheck(
+                            label = "I confirm that all information provided is accurate to the best of my knowledge.",
+                            checked = confirmAccurate,
+                            onCheckedChange = { confirmAccurate = it },
+                            darkRed = darkRed
+                        )
+
+                        ConfirmationCheck(
+                            label = "I understand that campus security may contact me for additional information.",
+                            checked = confirmContact,
+                            onCheckedChange = { confirmContact = it },
+                            darkRed = darkRed
+                        )
+
+                        // Anonymous Option
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = Color.White
+                            ),
+                            elevation = CardDefaults.cardElevation(
+                                defaultElevation = 2.dp
+                            )
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Visibility,
+                                            contentDescription = null,
+                                            tint = darkRed,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = "Anonymity",
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 16.sp,
+                                            color = darkRed
+                                        )
+                                    }
+
+                                    Switch(
+                                        checked = preferAnonymous,
+                                        onCheckedChange = { 
+                                            preferAnonymous = it
+                                            formViewModel.updateFormState(
+                                                formViewModel.formState.value.copy(
+                                                    preferAnonymous = it
+                                                )
+                                            )
+                                        },
+                                        colors = SwitchDefaults.colors(
+                                            checkedThumbColor = Color.White,
+                                            checkedTrackColor = darkRed,
+                                            uncheckedThumbColor = Color.White,
+                                            uncheckedTrackColor = Color.Gray
+                                        )
+                                    )
+                                }
+
+                                Text(
+                                    text = "If enabled, your identity and incident will be hidden to the public. This is just a preference and may be reviewed by the admin.",
+                                    color = Color.Gray,
+                                    fontSize = 12.sp,
+                                    modifier = Modifier.padding(top = 8.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Navigation buttons
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    OutlinedButton(
+                        onClick = onBackClick,
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = darkRed
+                        ),
+                        border = BorderStroke(1.dp, darkRed),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = null,
+                            modifier = Modifier.padding(end = 8.dp)
+                        )
+                        Text("Back")
+                    }
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    Button(
+                        onClick = {
+                            if (!validateForm(formState, confirmAccurate, confirmContact, context)) {
+                                return@Button
+                            }
+                            onSubmitClick()
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = darkRed
+                        ),
+                        shape = RoundedCornerShape(8.dp),
+                        enabled = confirmAccurate && confirmContact && !isSubmitting,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        if (isSubmitting) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp,
+                                color = Color.White
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Submitting...")
+                        } else {
+                            Text("Submit Report")
+                            Icon(
+                                imageVector = Icons.Default.Send,
+                                contentDescription = null,
+                                modifier = Modifier.padding(start = 8.dp)
+                            )
+                        }
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(16.dp))
             }
+
+            // Help panel
+            HelpPanel(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                darkRed = darkRed
+            )
         }
     }
 }
@@ -854,16 +916,15 @@ private fun validateForm(
         formState.dateOfIncident.isBlank() ||
         formState.timeOfIncident.isBlank() ||
         formState.location.isBlank() ||
-        formState.description.isBlank() ||
-        formState.assignedOffice.isBlank()) {
+        formState.description.isBlank()) {
 
-        Toast.makeText(context, "Please fill in all required incident details", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, "Please fill in all required fields.", Toast.LENGTH_SHORT).show()
         return false
     }
 
     // Check if confirmation checkboxes are checked
     if (!confirmAccurate || !confirmContact) {
-        Toast.makeText(context, "Please confirm both statements before submitting", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, "Please confirm all checkboxes.", Toast.LENGTH_SHORT).show()
         return false
     }
 

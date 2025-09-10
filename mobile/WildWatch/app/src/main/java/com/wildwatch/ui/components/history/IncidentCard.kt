@@ -181,33 +181,6 @@ fun IncidentCard(
                     )
                 }
             }
-
-            // Action buttons
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 16.dp),
-                horizontalArrangement = Arrangement.End
-            ) {
-                OutlinedButton(
-                    onClick = { onViewDetailsClick(incident.id) },
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = WildWatchRed
-                    ),
-                    border = ButtonDefaults.outlinedButtonBorder.copy(
-                        brush = SolidColor(WildWatchRed)
-                    ),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Visibility,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("View Details")
-                }
-            }
         }
     }
 }

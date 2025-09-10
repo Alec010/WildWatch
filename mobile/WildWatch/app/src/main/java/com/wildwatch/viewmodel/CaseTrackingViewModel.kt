@@ -92,6 +92,10 @@ class CaseTrackingViewModel(context: Context) : ViewModel() {
         _searchQuery.value = query
     }
 
+    fun updateSelectedStatus(status: String) {
+        _selectedStatus.value = status
+    }
+
     fun fetchActivities(page: Int = _currentPage.value) {
         viewModelScope.launch {
             _activitiesLoading.value = true

@@ -4,6 +4,8 @@ import com.google.gson.Gson
 import com.wildwatch.api.IncidentApi
 import com.wildwatch.model.IncidentRequest
 import com.wildwatch.model.IncidentResponse
+import com.wildwatch.model.TagGenerationRequest
+import com.wildwatch.model.TagGenerationResponse
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.MultipartBody
@@ -60,5 +62,9 @@ class IncidentRepository(private val api: IncidentApi) {
 
         // Return the response
         return response
+    }
+
+    suspend fun generateTags(description: String, location: String): Response<TagGenerationResponse> {
+        return api.generateTags(TagGenerationRequest(description, location))
     }
 }

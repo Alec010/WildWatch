@@ -84,6 +84,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/uploads/**").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/chatbot").permitAll()
                         .requestMatchers(
                                 "/api/auth/**",
                                 "/login/**",

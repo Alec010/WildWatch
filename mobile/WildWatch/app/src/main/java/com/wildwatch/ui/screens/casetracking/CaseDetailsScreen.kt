@@ -28,6 +28,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.wildwatch.R
@@ -35,6 +36,18 @@ import com.wildwatch.model.EvidenceDTO
 import com.wildwatch.ui.theme.WildWatchRed
 import com.wildwatch.viewmodel.CaseDetailsViewModel
 import com.wildwatch.viewmodel.CaseDetailsUiState
+import com.wildwatch.viewmodel.UserProfileViewModel
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.TextField
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.wildwatch.ui.components.casetracking.WitnessCardCaseDetail
 import coil.compose.AsyncImage
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -44,11 +57,18 @@ fun CaseDetailsScreen(
     trackingNumber: String,
     onBackClick: () -> Unit
 ) {
+    val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
+    var showRatingDialog by remember { mutableStateOf(false) }
+    val ratingStatus by viewModel.ratingStatus.collectAsState()
+    val userProfileViewModel: UserProfileViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+    val user by userProfileViewModel.user.collectAsState()
 
     LaunchedEffect(trackingNumber) {
-        viewModel.fetchCaseDetails(trackingNumber)
+        viewModel.fetchIncidentById(trackingNumber)
+        viewModel.fetchRatingStatus(trackingNumber)
+        userProfileViewModel.fetchProfile(context)
     }
 
     Scaffold(
@@ -106,6 +126,19 @@ fun CaseDetailsScreen(
             }
             is CaseDetailsUiState.Success -> {
                 val incident = (uiState as CaseDetailsUiState.Success).incident
+                val isResolved = incident.status?.equals("RESOLVED", ignoreCase = true) == true
+                val isReporter = user?.email != null && user?.email == incident.submittedByEmail
+                val shouldShowRatingDialog = isResolved && isReporter && (ratingStatus?.reporterRating == null)
+                if (showRatingDialog || shouldShowRatingDialog) {
+                    RatingDialog(
+                        onDismiss = { showRatingDialog = false },
+                        onSubmit = { rating, feedback ->
+                            viewModel.submitRating(trackingNumber, rating, feedback)
+                            showRatingDialog = false
+                        }
+                    )
+                }
+
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -115,21 +148,21 @@ fun CaseDetailsScreen(
                 ) {
                     // Header Section with Case Info
                     CaseHeader(
-                        caseNumber = incident.trackingNumber,
+                        caseNumber = incident.trackingNumber ?: "",
                         priorityLevel = incident.priorityLevel ?: "LOW",
-                        isDismissed = incident.status.equals("Dismissed", ignoreCase = true)
+                        isDismissed = incident.status?.equals("Dismissed", ignoreCase = true) == true
                     )
 
                     // Progress Tracker
                     ProgressTracker(
-                        status = incident.status,
-                        isDismissed = incident.status.equals("Dismissed", ignoreCase = true)
+                        status = incident.status ?: "",
+                        isDismissed = incident.status?.equals("Dismissed", ignoreCase = true) == true
                     )
 
                     // Dates Section
                     DatesSection(
-                        submittedDate = incident.submittedAt,
-                        lastUpdated = incident.submittedAt, // TODO: Add last updated field to API
+                        submittedDate = incident.submittedAt ?: "",
+                        lastUpdated = incident.submittedAt ?: "",
                         estimatedResolution = incident.finishedDate ?: "Pending"
                     )
 
@@ -141,16 +174,16 @@ fun CaseDetailsScreen(
                     ) {
                         // Incident Details
                         IncidentDetailsCard(
-                            incidentType = incident.incidentType,
-                            location = incident.location,
-                            dateTime = "${incident.dateOfIncident} ${incident.timeOfIncident}",
-                            description = incident.description
+                            incidentType = incident.incidentType ?: "",
+                            location = incident.location ?: "",
+                            dateTime = "${incident.dateOfIncident ?: ""} ${incident.timeOfIncident ?: ""}",
+                            description = incident.description ?: ""
                         )
 
                         // Case Information
                         CaseInformationCard(
                             assignedTo = incident.officeAdminName ?: "Not Assigned",
-                            office = incident.assignedOffice,
+                            office = incident.assignedOffice ?: "Unknown",
                             contactEmail = "tsg@wildwatch.org", // TODO: Add to API
                             contactPhone = "+1234567890" // TODO: Add to API
                         )
@@ -158,6 +191,50 @@ fun CaseDetailsScreen(
                         // Evidence Section
                         if (incident.evidence != null) {
                             EvidenceCard(evidence = incident.evidence)
+                        }
+
+                        // Witness Section
+                        if (!incident.witnesses.isNullOrEmpty()) {
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = Color.White
+                                ),
+                                elevation = CardDefaults.cardElevation(
+                                    defaultElevation = 2.dp
+                                )
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp)
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Default.Groups,
+                                            contentDescription = null,
+                                            tint = WildWatchRed,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = "Witnesses",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = WildWatchRed
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    incident.witnesses.forEach { witness ->
+                                        WitnessCardCaseDetail(
+                                            witness = witness,
+                                            modifier = Modifier.padding(bottom = 8.dp)
+                                        )
+                                    }
+                                }
+                            }
                         }
 
                         // Reporter Information
@@ -169,8 +246,8 @@ fun CaseDetailsScreen(
 
                         // Next Steps
                         NextStepsCard(
-                            status = incident.status,
-                            isDismissed = incident.status.equals("Dismissed", ignoreCase = true)
+                            status = incident.status ?: "",
+                            isDismissed = incident.status?.equals("Dismissed", ignoreCase = true) == true
                         )
 
                         Spacer(modifier = Modifier.height(16.dp))
@@ -400,58 +477,63 @@ private fun DatesSection(
             defaultElevation = 2.dp
         )
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            Text(
+                text = "Timeline",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = WildWatchRed,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
             DateItem(label = "Submitted", date = submittedDate, icon = Icons.Default.CalendarToday)
-            HorizontalDivider(
-                modifier = Modifier
-                    .height(36.dp)
-                    .width(1.dp),
-                color = Color.LightGray
-            )
             DateItem(label = "Last Updated", date = lastUpdated, icon = Icons.Default.Update)
-            HorizontalDivider(
-                modifier = Modifier
-                    .height(36.dp)
-                    .width(1.dp),
-                color = Color.LightGray
-            )
-            DateItem(label = "Est. Resolution", date = estimatedResolution, icon = Icons.Default.Event)
+            DateItem(label = "Estimated Resolution", date = estimatedResolution, icon = Icons.Default.Event)
         }
     }
 }
 
 @Composable
-private fun DateItem(label: String, date: String, icon: androidx.compose.ui.graphics.vector.ImageVector) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
+private fun DateItem(
+    label: String,
+    date: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector
+) {
+    val formattedDate = try {
+        if (date.isBlank()) "-"
+        else {
+            val inputFormat = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.getDefault())
+            val outputFormat = java.text.SimpleDateFormat("MMM d, yyyy", java.util.Locale.getDefault())
+            val parsedDate = inputFormat.parse(date)
+            parsedDate?.let { outputFormat.format(it) } ?: date
+        }
+    } catch (e: Exception) {
+        if (date.isBlank()) "-" else date
+    }
+    Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
             imageVector = icon,
             contentDescription = null,
             tint = WildWatchRed,
-            modifier = Modifier.size(20.dp)
+            modifier = Modifier.size(20.dp).padding(end = 8.dp)
         )
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = Color.Gray,
-            textAlign = TextAlign.Center
-        )
-
-        Text(
-            text = date,
-            style = MaterialTheme.typography.bodySmall,
-            fontWeight = FontWeight.Medium,
-            textAlign = TextAlign.Center
-        )
+        Column(horizontalAlignment = Alignment.Start) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.Gray
+            )
+            Text(
+                text = formattedDate,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black
+            )
+        }
     }
 }
 
@@ -1101,6 +1183,102 @@ private fun NextStepItem(
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.Gray
             )
+        }
+    }
+}
+
+@Composable
+private fun RatingDialog(
+    onDismiss: () -> Unit,
+    onSubmit: (Int, String) -> Unit
+) {
+    var rating by remember { mutableStateOf(0) }
+    var feedback by remember { mutableStateOf(TextFieldValue("")) }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Rate Your Experience",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = WildWatchRed
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    for (i in 1..5) {
+                        IconButton(
+                            onClick = { rating = i },
+                            modifier = Modifier.size(48.dp)
+                        ) {
+                            Icon(
+                                imageVector = when {
+                                    i <= rating -> Icons.Filled.Star
+                                    else -> Icons.Outlined.StarBorder
+                                },
+                                contentDescription = "Rate $i stars",
+                                tint = if (i <= rating) WildWatchRed else Color.Gray,
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                TextField(
+                    value = feedback,
+                    onValueChange = { feedback = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    placeholder = { Text("Share your feedback (optional)") },
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White
+                    )
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    Button(
+                        onClick = onDismiss,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.Gray
+                        )
+                    ) {
+                        Text("Cancel")
+                    }
+                    
+                    Button(
+                        onClick = { onSubmit(rating, feedback.text) },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = WildWatchRed
+                        ),
+                        enabled = rating > 0
+                    ) {
+                        Text("Submit")
+                    }
+                }
+            }
         }
     }
 }

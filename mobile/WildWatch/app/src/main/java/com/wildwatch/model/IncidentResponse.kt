@@ -20,7 +20,8 @@ data class IncidentResponse(
     val finishedDate: String? = null,
     val verified: Boolean? = null,
     val evidence: List<EvidenceDTO>? = null,
-    val witnesses: List<WitnessDTO>? = null
+    val witnesses: List<WitnessDTO>? = null,
+    val upvoteCount: Int? = null
 )
 
 data class EvidenceDTO(
@@ -30,4 +31,13 @@ data class EvidenceDTO(
     val fileType: String,
     val fileSize: Long,
     val uploadedAt: String
+)
+
+data class IncidentRatingResponse(
+    val incidentId: String,
+    val reporterRating: Int?,
+    val reporterFeedback: String?,
+    val officeRating: Int?,
+    val officeFeedback: String?,
+    val pointsAwarded: Boolean?
 )

@@ -8,6 +8,8 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
+import java.util.ArrayList;
 
 @Entity
 @Table(name = "incidents")
@@ -59,6 +61,11 @@ public class Incident {
 
     @Column(name = "verified")
     private Boolean verified = false; // Changed from boolean to Boolean
+
+    @ElementCollection
+    @CollectionTable(name = "incident_tags", joinColumns = @JoinColumn(name = "incident_id"))
+    @Column(name = "tag")
+    private List<String> tags = new ArrayList<>();
 
     @OneToMany(mappedBy = "incident", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private java.util.List<Evidence> evidence;

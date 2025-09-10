@@ -2,6 +2,7 @@ package com.wildwatch.ui.screens.casetracking
 
 import android.util.Log
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -15,7 +16,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.wildwatch.model.Activity
 import com.wildwatch.model.IncidentResponse
@@ -25,6 +28,14 @@ import com.wildwatch.ui.components.casetracking.ActivityCard
 import com.wildwatch.ui.components.casetracking.CaseCard
 import com.wildwatch.navigation.Screen
 import kotlinx.coroutines.delay
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.ui.draw.scale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,20 +52,26 @@ fun CaseTrackingScreen(
     val inProgressCount by viewModel.inProgressCount.collectAsState()
     val resolvedCount by viewModel.resolvedCount.collectAsState()
 
-    // Status filter dropdown
-    val statusOptions = listOf("All", "Pending", "In Progress", "Resolved")
+    var selectedPriority by remember { mutableStateOf("All") }
+    var selectedTab by remember { mutableStateOf(0) }
     var selectedStatus by remember { mutableStateOf("All") }
-    var expanded by remember { mutableStateOf(false) }
+
+    val priorities = listOf("All", "High", "Medium", "Low")
 
     val activities by viewModel.recentActivities.collectAsState()
     val currentPage by viewModel.currentPage.collectAsState()
     val totalPages by viewModel.totalPages.collectAsState()
 
-    // Filtering logic
-    val statusFilteredCases = if (selectedStatus == "All") {
-        filteredCases
-    } else {
-        filteredCases.filter { it.status == selectedStatus }
+    val statusOptions = listOf(
+        Pair("Pending", pendingCount),
+        Pair("In Progress", inProgressCount),
+        Pair("All", pendingCount + inProgressCount + resolvedCount)
+    )
+
+    // Combine status and priority filters (robust against nulls)
+    val combinedFilteredCases = filteredCases.filter { incident ->
+        (selectedStatus == "All" || (incident.status?.equals(selectedStatus, ignoreCase = true) == true)) &&
+        (selectedPriority == "All" || (incident.priorityLevel?.equals(selectedPriority, ignoreCase = true) == true))
     }
 
     // Fetch incidents and activities when screen loads
@@ -72,6 +89,29 @@ fun CaseTrackingScreen(
     }
 
     Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Column {
+                        Text(
+                            text = "Case Tracking",
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFB71C1C)
+                        )
+                        Text(
+                            text = "Track the status of your incident reports.",
+                            fontSize = 14.sp,
+                            color = Color.Gray,
+                            modifier = Modifier.padding(top = 2.dp)
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.White
+                )
+            )
+        }
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
             when {
@@ -95,109 +135,156 @@ fun CaseTrackingScreen(
                         modifier = Modifier
                             .fillMaxSize()
                             .background(Color(0xFFF5F5F5))
+                            .padding(16.dp)
                     ) {
-                        // Stats Section
+                        // Search Bar
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { viewModel.updateSearchQuery(it) },
+                            placeholder = { Text("Search incidents...") },
+                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 16.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedContainerColor = Color.White,
+                                unfocusedContainerColor = Color.White
+                            ),
+                            singleLine = true,
+                            shape = RoundedCornerShape(24.dp)
+                        )
+
+                        // Priority Filters
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                                .padding(bottom = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            StatCard(
-                                title = "Pending",
-                                count = pendingCount,
-                                icon = Icons.Default.Schedule,
-                                iconTint = Color(0xFFFFA000)
-                            )
-                            StatCard(
-                                title = "In Progress",
-                                count = inProgressCount,
-                                icon = Icons.Default.Pending,
-                                iconTint = Color(0xFF2196F3)
-                            )
-                            StatCard(
-                                title = "Resolved",
-                                count = resolvedCount,
-                                icon = Icons.Default.CheckCircle,
-                                iconTint = Color(0xFF4CAF50)
-                            )
+                            priorities.forEach { priority ->
+                                val isSelected = selectedPriority == priority
+                                val backgroundColor = if (isSelected) Color.Black else Color.White
+                                val textColor = if (isSelected) Color.White else Color.Black
+
+                                Surface(
+                                    modifier = Modifier
+                                        .clickable { selectedPriority = priority },
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = backgroundColor
+                                ) {
+                                    Text(
+                                        text = priority,
+                                        color = textColor,
+                                        modifier = Modifier
+                                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                                    )
+                                }
+                            }
                         }
 
-                        // Search and Filter Section
+                        // Status Cards
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                                .padding(bottom = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            OutlinedTextField(
-                                value = searchQuery,
-                                onValueChange = { viewModel.updateSearchQuery(it) },
-                                placeholder = { Text("Search cases...") },
-                                modifier = Modifier.weight(1f),
-                                singleLine = true,
-                                leadingIcon = {
-                                    Icon(
-                                        Icons.Default.Search,
-                                        contentDescription = "Search"
-                                    )
-                                }
-                            )
-
-                            Spacer(modifier = Modifier.width(8.dp))
-
-                            Box {
-                                OutlinedButton(
-                                    onClick = { expanded = true },
-                                    modifier = Modifier.width(120.dp)
+                            statusOptions.forEach { (title, count) ->
+                                val isSelected = selectedStatus == title
+                                val backgroundColor by animateColorAsState(
+                                    if (isSelected) Color(0xFFF3F4F6) else Color.White,
+                                    label = "cardBgColor"
+                                )
+                                val scale by animateFloatAsState(
+                                    if (isSelected) 1.05f else 1f,
+                                    label = "cardScale"
+                                )
+                                Card(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable { selectedStatus = title }
+                                        .scale(scale),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = backgroundColor
+                                    ),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                                    shape = RoundedCornerShape(12.dp)
                                 ) {
-                                    Text(selectedStatus)
-                                    Icon(
-                                        Icons.Default.ArrowDropDown,
-                                        contentDescription = "Filter"
-                                    )
-                                }
-
-                                DropdownMenu(
-                                    expanded = expanded,
-                                    onDismissRequest = { expanded = false }
-                                ) {
-                                    statusOptions.forEach { status ->
-                                        DropdownMenuItem(
-                                            text = { Text(status) },
-                                            onClick = {
-                                                selectedStatus = status
-                                                expanded = false
-                                            }
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(12.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text(
+                                            text = count.toString(),
+                                            fontSize = 24.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFFB71C1C)
+                                        )
+                                        Text(
+                                            text = if (title == "All") "All Cases" else title,
+                                            fontSize = 12.sp,
+                                            color = Color(0xFF374151)
                                         )
                                     }
                                 }
                             }
                         }
 
-                        // Tab Section
-                        var selectedTab by remember { mutableStateOf(0) }
+                        // Tabs
                         val tabs = listOf("My Cases", "Recent Activity")
 
-                        TabRow(
-                            selectedTabIndex = selectedTab,
-                            containerColor = Color.White,
-                            contentColor = MaterialTheme.colorScheme.primary
+                        // Enhanced Tab UI
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 16.dp)
                         ) {
-                            tabs.forEachIndexed { index, title ->
-                                Tab(
-                                    selected = selectedTab == index,
-                                    onClick = { selectedTab = index },
-                                    text = { Text(title) }
-                                )
+                            // Custom tab background
+                            Surface(
+                                color = Color(0xFFF3F4F6),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(4.dp),
+                                    horizontalArrangement = Arrangement.SpaceEvenly
+                                ) {
+                                    tabs.forEachIndexed { index, title ->
+                                        val isSelected = selectedTab == index
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = if (isSelected) Color.White else Color.Transparent,
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .padding(4.dp)
+                                                .clickable { selectedTab = index }
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .padding(vertical = 12.dp, horizontal = 8.dp),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text(
+                                                    text = title,
+                                                    style = MaterialTheme.typography.labelLarge,
+                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                                    color = if (isSelected) Color(0xFFB71C1C) else Color.Gray
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
 
-                        // Content based on selected tab
+                        // Tab Content
                         when (selectedTab) {
                             0 -> {
-                                if (statusFilteredCases.isEmpty()) {
+                                if (combinedFilteredCases.isEmpty()) {
                                     Box(
                                         modifier = Modifier
                                             .fillMaxSize()
@@ -205,24 +292,24 @@ fun CaseTrackingScreen(
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Text(
-                                            text = "No cases found",
-                                            style = MaterialTheme.typography.bodyLarge,
-                                            color = Color.Gray
+                                            text = "No cases found matching your criteria",
+                                            color = Color.Gray,
+                                            textAlign = TextAlign.Center
                                         )
                                     }
                                 } else {
                                     LazyColumn(
                                         modifier = Modifier
                                             .fillMaxSize()
-                                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                                            .padding(vertical = 8.dp),
                                         verticalArrangement = Arrangement.spacedBy(12.dp)
                                     ) {
-                                        items(statusFilteredCases) { incident ->
+                                        items(combinedFilteredCases) { incident ->
                                             CaseCard(
                                                 incident = incident,
                                                 onClick = {
                                                     navController.navigate(
-                                                        Screen.CaseDetails.createRoute(incident.trackingNumber)
+                                                        Screen.CaseDetails.createRoute(incident.id)
                                                     )
                                                 }
                                             )
@@ -230,11 +317,7 @@ fun CaseTrackingScreen(
                                     }
                                 }
                             }
-
                             1 -> {
-                                // Recent Activity Tab
-                                Spacer(modifier = Modifier.height(16.dp))
-
                                 val activitiesLoading by viewModel.activitiesLoading.collectAsState()
                                 val activitiesError by viewModel.activitiesError.collectAsState()
 
@@ -275,8 +358,8 @@ fun CaseTrackingScreen(
                                         ) {
                                             Text(
                                                 text = "No recent activity",
-                                                style = MaterialTheme.typography.bodyLarge,
-                                                color = Color.Gray
+                                                color = Color.Gray,
+                                                textAlign = TextAlign.Center
                                             )
                                         }
                                     }
@@ -284,7 +367,7 @@ fun CaseTrackingScreen(
                                         LazyColumn(
                                             modifier = Modifier
                                                 .fillMaxSize()
-                                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                                                .padding(vertical = 8.dp),
                                             verticalArrangement = Arrangement.spacedBy(12.dp)
                                         ) {
                                             items(activities) { activity ->

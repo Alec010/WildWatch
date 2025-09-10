@@ -21,18 +21,25 @@ import com.wildwatch.ui.screens.casetracking.CaseDetailsScreen
 import com.wildwatch.viewmodel.CaseDetailsViewModel
 import com.wildwatch.viewmodel.CaseDetailsViewModelFactory
 import com.wildwatch.utils.TokenManager
+import com.wildwatch.utils.TokenManager.Companion.clearToken
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
     object SignUp : Screen("signup")
     object Main : Screen("main")
+    object Dashboard : Screen("main/dashboard")
     object ReportFlow : Screen("reportFlow")
     object History : Screen("history")
     object CaseDetails : Screen("caseDetails/{trackingNumber}") {
         fun createRoute(trackingNumber: String) = "caseDetails/$trackingNumber"
     }
+    object ViewAllNotifications : Screen("viewAllNotifications")
+    object ViewAllCases : Screen("viewAllCases")
+    object Settings : Screen("settings")
+    object Chatbot : Screen("chatbot")
 }
 
 private fun navigateBackToMain(
@@ -62,7 +69,7 @@ fun AppNavGraph(navController: NavHostController) {
             Screen.Login.route
         }
     }
-
+    
     if (startDestination != null) {
         var mainScreenTab by remember { mutableStateOf("dashboard") }
         NavHost(
@@ -80,7 +87,6 @@ fun AppNavGraph(navController: NavHostController) {
                     navController = navController
                 )
             }
-
             composable(Screen.SignUp.route) {
                 SignUpScreen(
                     onSignInClick = {
@@ -94,7 +100,15 @@ fun AppNavGraph(navController: NavHostController) {
             composable(Screen.Main.route) {
                 MainScreen(
                     navController = navController,
-                    currentTab = mainScreenTab,
+                    onTabChange = { tab ->
+                        // Handle tab changes here
+                    }
+                )
+            }
+
+            composable(Screen.Dashboard.route) {
+                MainScreen(
+                    navController = navController,
                     onTabChange = { mainScreenTab = it }
                 )
             }
@@ -125,6 +139,51 @@ fun AppNavGraph(navController: NavHostController) {
                 CaseDetailsScreen(
                     viewModel = viewModel,
                     trackingNumber = trackingNumber,
+                    onBackClick = { navController.popBackStack() }
+                )
+            }
+
+            // Add the new route for viewing all notifications
+            composable(Screen.ViewAllNotifications.route) {
+                com.wildwatch.ui.screens.notification.ViewAllNotificationScreen(
+                    navController = navController,
+                    onBackClick = { navController.popBackStack() }
+                )
+            }
+
+            composable(Screen.ViewAllCases.route) {
+                com.wildwatch.ui.screens.casetracking.ViewAllCasesScreen(
+                    navController = navController,
+                    onBackClick = { navController.popBackStack() }
+                )
+            }
+
+            composable(Screen.Settings.route) {
+                val coroutineScope = rememberCoroutineScope()
+                com.wildwatch.ui.screens.profile.ProfileScreen(
+                    onBackClick = {
+                        navController.navigate(Screen.Main.route) {
+                            launchSingleTop = true
+                            popUpTo(Screen.Main.route) { inclusive = false }
+                        }
+                    },
+                    onLogoutClick = {
+                        coroutineScope.launch {
+                            clearToken(context)
+                            navController.navigate(Screen.Login.route) {
+                                popUpTo(Screen.Main.route) { inclusive = true }
+                            }
+                        }
+                    },
+                    onAskKatClick = {
+                        navController.navigate(Screen.Chatbot.route)
+                    }
+                )
+            }
+
+            // Add ChatbotScreen route
+            composable(Screen.Chatbot.route) {
+                com.wildwatch.ui.screens.chatbot.ChatbotScreen(
                     onBackClick = { navController.popBackStack() }
                 )
             }

@@ -39,7 +39,8 @@ fun ProfileScreen(
     onBackClick: () -> Unit = {},
     onEditProfileClick: () -> Unit = {},
     onUpdateAccountClick: () -> Unit = {},
-    onLogoutClick: () -> Unit = {}
+    onLogoutClick: () -> Unit = {},
+    onAskKatClick: () -> Unit = {}
 ) {
     // Define colors
     val primaryColor = Color(0xFF8B0000) // Original WildWatchRed
@@ -88,6 +89,24 @@ fun ProfileScreen(
     }
 
     Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {},
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = "Back",
+                            tint = WildWatchRed
+                        )
+                    }
+                },
+                actions = {},
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent
+                )
+            )
+        },
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -387,6 +406,27 @@ fun ProfileScreen(
                         .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    // Ask Kat Button (always visible)
+                    Button(
+                        onClick = { onAskKatClick() },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = primaryColor
+                        ),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        contentPadding = PaddingValues(vertical = 12.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.SmartToy,
+                            contentDescription = "Ask Kat",
+                            modifier = Modifier.padding(end = 8.dp)
+                        )
+                        Text(
+                            text = "Ask Kat",
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+
                     if (isEditing) {
                         // Show both Save and Cancel buttons when editing
                         Row(
@@ -476,11 +516,12 @@ fun ProfileScreen(
                         }
                     } else {
                         // Edit Profile Button (only when not editing)
-                        Button(
+                        OutlinedButton(
                             onClick = { isEditing = true },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = primaryColor
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = primaryColor
                             ),
+                            border = BorderStroke(1.dp, primaryColor),
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
                             contentPadding = PaddingValues(vertical = 12.dp)

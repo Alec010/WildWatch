@@ -4,6 +4,8 @@ import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.ShowChart
+import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,18 +28,40 @@ import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.wildwatch.ui.screens.leaderboard.LeaderboardScreen
+import com.wildwatch.viewmodel.PublicIncidentsViewModel
+import com.wildwatch.viewmodel.PublicIncidentsViewModelFactory
 
 @Composable
 fun MainScreen(
     navController: NavController,
-    currentTab: String,                      // ✅ Tab now comes from parent
     onTabChange: (String) -> Unit
 ) {
+    val context = LocalContext.current
+    var currentTab by remember { mutableStateOf("dashboard") }
+    val publicIncidentsViewModel: PublicIncidentsViewModel = viewModel(
+        factory = PublicIncidentsViewModelFactory(context)
+    )
+
+    // Fetch both public and user incidents when the screen is first loaded
+    LaunchedEffect(Unit) {
+        publicIncidentsViewModel.fetchPublicIncidents()
+        publicIncidentsViewModel.fetchUserIncidents()
+    }
+
+    // Refresh data when switching back to dashboard
+    LaunchedEffect(currentTab) {
+        if (currentTab == "dashboard") {
+            publicIncidentsViewModel.fetchPublicIncidents()
+            publicIncidentsViewModel.fetchUserIncidents()
+        }
+    }
+
     val bottomNavItems = listOf(
         BottomNavItem(
             route = "dashboard",
             title = "Dashboard",
-            icon = Icons.Default.ShowChart
+            icon = Icons.AutoMirrored.Filled.ShowChart
         ),
         BottomNavItem(
             route = "history",
@@ -53,17 +77,16 @@ fun MainScreen(
         BottomNavItem(
             route = "cases",
             title = "Case Tracking",
-            icon = Icons.Default.Assignment
+            icon = Icons.AutoMirrored.Filled.Assignment
         ),
         BottomNavItem(
-            route = "settings",
-            title = "Settings",
-            icon = Icons.Default.Settings
+            route = "leaderboards",
+            title = "Leaderboards",
+            icon = Icons.Default.EmojiEvents
         )
     )
 
     val coroutineScope = rememberCoroutineScope()
-    val context = LocalContext.current
     var shouldNavigateToLogin by remember { mutableStateOf(false) }
 
     // Token check on entry
@@ -94,9 +117,15 @@ fun MainScreen(
         ) {
             when (currentTab) {
                 "dashboard" -> DashboardScreen(
-                    onIncidentClick = { trackingNumber ->
-                        navController.navigate(Screen.CaseDetails.createRoute(trackingNumber))
-                    }
+                    navController = navController,
+                    onIncidentClick = { incidentId ->
+                        android.util.Log.d("MainScreen", "Navigating to incident details with ID: $incidentId")
+                        navController.navigate(Screen.CaseDetails.createRoute(incidentId))
+                    },
+                    onViewAllClick = {
+                        navController.navigate(Screen.ViewAllCases.route)
+                    },
+                    viewModel = publicIncidentsViewModel
                 )
                 "history" -> HistoryScreen(
                     onIncidentClick = { trackingNumber ->
@@ -112,17 +141,7 @@ fun MainScreen(
                         navController = navController
                     )
                 }
-                "settings" -> ProfileScreen(
-                    onLogoutClick = {
-                        Log.d("WildWatch", "🔄 Logout button clicked")
-                        coroutineScope.launch {
-                            Log.d("WildWatch", "🗑️ Clearing authentication token...")
-                            TokenManager.clearToken(context)
-                            Log.d("WildWatch", "✅ Token cleared successfully")
-                            shouldNavigateToLogin = true
-                        }
-                    }
-                )
+                "leaderboards" -> LeaderboardScreen()
             }
         }
 
@@ -133,7 +152,8 @@ fun MainScreen(
                 if (item.route == "report") {
                     navController.navigate(Screen.ReportFlow.route)
                 } else {
-                    onTabChange(item.route)         // ✅ Update the state via the parent!
+                    currentTab = item.route
+                    onTabChange(item.route)
                 }
             },
             modifier = Modifier.align(Alignment.BottomCenter)
