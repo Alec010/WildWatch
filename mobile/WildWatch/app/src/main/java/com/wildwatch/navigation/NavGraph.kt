@@ -69,7 +69,7 @@ fun AppNavGraph(navController: NavHostController) {
             Screen.Login.route
         }
     }
-
+    
     if (startDestination != null) {
         var mainScreenTab by remember { mutableStateOf("dashboard") }
         NavHost(
@@ -87,7 +87,6 @@ fun AppNavGraph(navController: NavHostController) {
                     navController = navController
                 )
             }
-
             composable(Screen.SignUp.route) {
                 SignUpScreen(
                     onSignInClick = {

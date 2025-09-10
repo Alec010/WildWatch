@@ -8,6 +8,7 @@ import com.teamhyungie.WildWatch.service.UserService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -15,11 +16,11 @@ import org.springframework.security.oauth2.client.authentication.OAuth2Authentic
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
-import org.springframework.security.core.AuthenticationException;
 
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.Map;
 import java.util.UUID;
 
@@ -39,6 +40,38 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         this.frontendConfig = frontendConfig;
     }
 
+    private String extractMobileRedirectUri(HttpServletRequest request) {
+        // 1. Try session first
+        HttpSession session = request.getSession(false);
+        if (session != null) {
+            Object uri = session.getAttribute("mobile_redirect_uri");
+            if (uri instanceof String && !((String) uri).isEmpty()) {
+                System.out.println("[DEBUG] Found mobile_redirect_uri in session: " + uri);
+                return (String) uri;
+            }
+        }
+        // 2. Try state parameter
+        String state = request.getParameter("state");
+        System.out.println("[DEBUG] Raw state parameter: " + state);
+        if (state != null && !state.isEmpty()) {
+            try {
+                String decoded = new String(Base64.getDecoder().decode(state), StandardCharsets.UTF_8);
+                System.out.println("[DEBUG] Decoded state: " + decoded);
+                // Simple JSON parse (or use a library)
+                if (decoded.contains("mobile_redirect_uri")) {
+                    int start = decoded.indexOf("mobile_redirect_uri") + 21;
+                    int end = decoded.indexOf('"', start);
+                    String mobileRedirectUri = decoded.substring(start, end);
+                    System.out.println("[DEBUG] Extracted mobile_redirect_uri from state: " + mobileRedirectUri);
+                    return mobileRedirectUri;
+                }
+            } catch (Exception e) {
+                System.out.println("[DEBUG] Failed to decode or parse state: " + e.getMessage());
+            }
+        }
+        return null;
+    }
+
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
             Authentication authentication) throws IOException, ServletException {
@@ -56,7 +89,6 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         if (email == null) {
             email = (String) attributes.get("upn"); // Microsoft's User Principal Name
         }
-
         if (email == null) {
             throw new RuntimeException("No email found in OAuth response");
         }
@@ -98,7 +130,6 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
                 // Generate a secure random password for OAuth users
                 String randomPassword = UUID.randomUUID().toString().replace("-", "") + "Aa1!";
                 user.setPassword(randomPassword);
-
                 user.setSchoolIdNumber(schoolIdNumber);
                 user.setContactNumber("+639000000000"); // Default contact number
                 user.setMiddleInitial(""); // Empty middle initial is allowed
@@ -106,11 +137,9 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 
                 // Save the new user
                 user = userService.save(user);
-
                 if (user == null) {
                     throw new RuntimeException("Failed to create new user");
                 }
-
                 System.out.println("=== Created new user from OAuth ===");
                 System.out.println("Email: " + user.getEmail());
                 System.out.println("School ID: " + user.getSchoolIdNumber());
@@ -123,7 +152,13 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
                 // Redirect to frontend error page with error message
                 String errorMessage = URLEncoder.encode("Failed to create user account: " + e.getMessage(),
                         StandardCharsets.UTF_8);
-                String redirectUrl = frontendConfig.getActiveUrl() + "/auth/error?message=" + errorMessage;
+                String mobileRedirectUri = extractMobileRedirectUri(request);
+                String redirectUrl;
+                if (mobileRedirectUri != null && !mobileRedirectUri.isEmpty()) {
+                    redirectUrl = mobileRedirectUri + "?error=" + errorMessage;
+                } else {
+                    redirectUrl = frontendConfig.getActiveUrl() + "/auth/error?message=" + errorMessage;
+                }
                 getRedirectStrategy().sendRedirect(request, response, redirectUrl);
                 return;
             }
@@ -162,12 +197,26 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
                             "enabled", user.isEnabled()),
                     "token", token);
 
-            // Convert to JSON and URL encode
-            String jsonResponse = objectMapper.writeValueAsString(responseData);
-            String encodedResponse = URLEncoder.encode(jsonResponse, StandardCharsets.UTF_8);
+            // Retrieve mobile_redirect_uri from session
+            String mobileRedirectUri = extractMobileRedirectUri(request);
+            System.out.println("Session ID in OAuth2SuccessHandler: " + request.getSession().getId());
+            System.out.println("Retrieved mobile_redirect_uri: " + mobileRedirectUri);
 
-            // Redirect to frontend with the encoded data
-            String redirectUrl = frontendConfig.getActiveUrl() + "/auth/oauth2/redirect?data=" + encodedResponse;
+            String redirectUrl;
+            if (mobileRedirectUri != null && !mobileRedirectUri.isEmpty()) {
+                // For mobile: send token and termsAccepted as query params
+                redirectUrl = String.format("%s?token=%s&termsAccepted=%s",
+                        mobileRedirectUri,
+                        URLEncoder.encode(token, StandardCharsets.UTF_8),
+                        user.isTermsAccepted());
+                System.out.println("Redirecting mobile app to: " + redirectUrl);
+            } else {
+                // For web: send encoded data to frontend
+                String jsonResponse = objectMapper.writeValueAsString(responseData);
+                String encodedResponse = URLEncoder.encode(jsonResponse, StandardCharsets.UTF_8);
+                redirectUrl = frontendConfig.getActiveUrl() + "/auth/oauth2/redirect?data=" + encodedResponse;
+                System.out.println("Redirecting web app to: " + redirectUrl);
+            }
             getRedirectStrategy().sendRedirect(request, response, redirectUrl);
         } catch (Exception e) {
             System.err.println("Error processing OAuth login: " + e.getMessage());
@@ -175,7 +224,13 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
             // Redirect to frontend error page with error message
             String errorMessage = URLEncoder.encode("Failed to process OAuth login: " + e.getMessage(),
                     StandardCharsets.UTF_8);
-            String redirectUrl = frontendConfig.getActiveUrl() + "/auth/error?message=" + errorMessage;
+            String mobileRedirectUri = extractMobileRedirectUri(request);
+            String redirectUrl;
+            if (mobileRedirectUri != null && !mobileRedirectUri.isEmpty()) {
+                redirectUrl = mobileRedirectUri + "?error=" + errorMessage;
+            } else {
+                redirectUrl = frontendConfig.getActiveUrl() + "/auth/error?message=" + errorMessage;
+            }
             getRedirectStrategy().sendRedirect(request, response, redirectUrl);
         }
     }
