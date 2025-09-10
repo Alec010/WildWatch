@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { type OfficeInfo } from '../../../../lib/models/report';
+import { type OfficeInfo } from '../models/report';
 
 export const useOffices = (apiBaseUrl: string, token: string | null) => {
   const [offices, setOffices] = useState<OfficeInfo[]>([]);

@@ -16,7 +16,7 @@ import { storage } from '../../lib/storage';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import { type OfficeInfo, type ReportForm } from '../../lib/models/report';
+import { type OfficeInfo, type ReportForm } from '../../src/features/reports/models/report';
 import { config } from '../../lib/config';
 
 // Uses centralized API base URL from config
