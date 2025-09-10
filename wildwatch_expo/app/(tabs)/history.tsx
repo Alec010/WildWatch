@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, TextInput } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import TopSpacing from '../../components/TopSpacing';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, router } from 'expo-router';
 import { useMyHistory } from '../../src/features/incidents/hooks/useMyHistory';
@@ -60,18 +60,22 @@ export default function HistoryScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-gray-50">
+      <View className="flex-1 bg-gray-50">
         <View className="flex-1 justify-center items-center">
           <ActivityIndicator size="large" color="#8B0000" />
           <Text className="text-[#8B0000] mt-2">Loading history...</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
+    <View className="flex-1 bg-gray-50">
       <Stack.Screen options={{ title: 'History' }} />
+      
+      {/* Top spacing for notch */}
+      <TopSpacing />
+      
       <View className="bg-white px-4 py-4 border-b border-gray-200">
         <View>
           <Text className="text-2xl font-bold text-[#8B0000]">History</Text>
@@ -152,7 +156,7 @@ export default function HistoryScreen() {
           </View>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

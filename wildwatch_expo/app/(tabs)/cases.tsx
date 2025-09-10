@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, TextInput } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import TopSpacing from '../../components/TopSpacing';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, router } from 'expo-router';
 import type { IncidentResponseDto } from '../../src/features/incidents/models/IncidentModels';
@@ -85,21 +85,25 @@ export default function CasesScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-gray-50">
+      <View className="flex-1 bg-gray-50">
         <View className="flex-1 justify-center items-center">
           <ActivityIndicator size="large" color="#B71C1C" />
           <Text className="text-[#B71C1C] mt-2">Loading cases...</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
+    <View className="flex-1 bg-gray-50">
       <Stack.Screen options={{ title: 'Cases' }} />
+      
+      {/* Top spacing for notch */}
+      <TopSpacing />
+      
       <View className="bg-white px-4 py-4 border-b border-gray-200">
         <View>
-          <Text className="text-2xl font-bold text-[#B71C1C]">Case Tracking</Text>
+          <Text className="text-2xl font-bold text-[#8B0000]">Case Tracking</Text>
           <Text className="text-gray-600 mt-1">Track the status of your incident reports.</Text>
         </View>
       </View>
@@ -238,7 +242,7 @@ export default function CasesScreen() {
           </View>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
