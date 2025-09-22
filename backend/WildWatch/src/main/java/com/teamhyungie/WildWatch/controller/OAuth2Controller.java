@@ -135,4 +135,93 @@ public class OAuth2Controller {
                     .build());
         }
     }
+
+    @PostMapping("/microsoft-token")
+    public ResponseEntity<AuthResponse> handleMicrosoftToken(@RequestBody Map<String, Object> body) {
+        try {
+            String accessToken = (String) body.get("access_token");
+            Map<String, Object> userInfo = (Map<String, Object>) body.get("user_info");
+            
+            if (accessToken == null || accessToken.isEmpty()) {
+                return ResponseEntity.badRequest().body(AuthResponse.builder()
+                    .message("Microsoft access token is required")
+                    .build());
+            }
+
+            if (userInfo == null) {
+                return ResponseEntity.badRequest().body(AuthResponse.builder()
+                    .message("User info is required")
+                    .build());
+            }
+
+            System.out.println("Received Microsoft access token and user info");
+            System.out.println("User info: " + userInfo);
+            
+            // Extract user information
+            String email = (String) userInfo.get("email");
+            if (email == null) {
+                email = (String) userInfo.get("upn"); // Microsoft's User Principal Name
+            }
+            
+            String firstName = (String) userInfo.get("given_name");
+            String lastName = (String) userInfo.get("family_name");
+            
+            if (email == null || email.isEmpty()) {
+                return ResponseEntity.badRequest().body(AuthResponse.builder()
+                    .message("Email not found in Microsoft user info")
+                    .build());
+            }
+
+            // Find or create user
+            User user;
+            try {
+                user = userService.findByUsername(email);
+            } catch (Exception e) {
+                // User doesn't exist, create new one
+                user = new User();
+                user.setEmail(email);
+                user.setFirstName(firstName != null ? firstName : "");
+                user.setLastName(lastName != null ? lastName : "");
+                user.setPassword(UUID.randomUUID().toString());
+                user.setEnabled(true);
+                user.setRole(Role.REGULAR_USER);
+                user.setTermsAccepted(false);
+                user.setSchoolIdNumber("TEMP_" + System.currentTimeMillis());
+                user.setContactNumber("+639000000000");
+                user.setMiddleInitial("");
+                user.setAuthProvider("microsoft");
+                
+                try {
+                    user = userService.save(user);
+                } catch (Exception saveEx) {
+                    return ResponseEntity.badRequest().body(AuthResponse.builder()
+                        .message("Failed to create user account: " + saveEx.getMessage())
+                        .build());
+                }
+            }
+            
+            // Convert User to UserDetails for JWT generation
+            UserDetails userDetails = org.springframework.security.core.userdetails.User
+                .withUsername(user.getEmail())
+                .password(user.getPassword())
+                .authorities("USER")
+                .build();
+            
+            // Generate JWT token
+            String token = jwtUtil.generateToken(userDetails);
+            
+            return ResponseEntity.ok(AuthResponse.builder()
+                    .token(token)
+                    .termsAccepted(user.isTermsAccepted())
+                    .message("Microsoft OAuth login successful")
+                    .build());
+                    
+        } catch (Exception e) {
+            System.out.println("Error in Microsoft token validation: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.badRequest().body(AuthResponse.builder()
+                    .message("Failed to process Microsoft token: " + e.getMessage())
+                    .build());
+        }
+    }
 } 
