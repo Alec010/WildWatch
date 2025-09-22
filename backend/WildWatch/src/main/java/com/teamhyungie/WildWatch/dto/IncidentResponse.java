@@ -54,9 +54,12 @@ public class IncidentResponse {
     @Data
     public static class WitnessDTO {
         private String id;
+        private Long userId;
         private String name;
         private String contactInformation;
         private String additionalNotes;
+        // Flag to indicate if this witness is a registered user
+        private boolean registeredUser;
     }
 
     public static IncidentResponse fromIncident(Incident incident) {
@@ -105,8 +108,19 @@ public class IncidentResponse {
                 incident.getWitnesses().stream().map(w -> {
                     WitnessDTO dto = new WitnessDTO();
                     dto.setId(w.getId());
-                    dto.setName(w.getName());
-                    dto.setContactInformation(w.getContactInformation());
+                    
+                    // Check if this witness is a registered user
+                    if (w.getUser() != null) {
+                        dto.setUserId(w.getUser().getId());
+                        dto.setName(w.getUser().getFullName());
+                        dto.setContactInformation(w.getUser().getEmail());
+                        dto.setRegisteredUser(true);
+                    } else {
+                        dto.setName(w.getName());
+                        dto.setContactInformation(w.getContactInformation());
+                        dto.setRegisteredUser(false);
+                    }
+                    
                     dto.setAdditionalNotes(w.getAdditionalNotes());
                     return dto;
                 }).collect(Collectors.toList())

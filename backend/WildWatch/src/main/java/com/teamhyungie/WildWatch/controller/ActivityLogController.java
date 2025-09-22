@@ -39,9 +39,9 @@ public class ActivityLogController {
         Page<ActivityLogResponse> logs = activityLogService.getUserActivityLogs(user, PageRequest.of(page, size))
             .map(ActivityLogResponse::fromActivityLog);
         
-        logger.info("Fetching activities for user: {}", user.getEmail());
-        logger.info("Total activities found: {}", logs.getTotalElements());
-        logger.info("Activities content size: {}", logs.getContent().size());
+        logger.debug("Fetching activities for user: {}", user.getEmail());
+        logger.debug("Total activities found: {}", logs.getTotalElements());
+        logger.debug("Activities content size: {}", logs.getContent().size());
         
         return ResponseEntity.ok(logs);
     }

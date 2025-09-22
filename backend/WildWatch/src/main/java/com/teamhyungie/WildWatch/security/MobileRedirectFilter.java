@@ -24,33 +24,38 @@ public class MobileRedirectFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
         
-        logger.info("MobileRedirectFilter processing request: {}", request.getRequestURI());
+        // Only log for non-heartbeat requests
+        if (!request.getRequestURI().contains("/ws") && !request.getRequestURI().contains("/topic")) {
+            logger.debug("MobileRedirectFilter processing request: {}", request.getRequestURI());
+        }
         
         String state = request.getParameter("state");
         if (state != null && !state.isEmpty()) {
-            logger.info("Found state parameter: {}", state);
+            logger.debug("Found state parameter: {}", state);
             try {
                 String decoded = new String(Base64.getDecoder().decode(state), StandardCharsets.UTF_8);
-                logger.info("Decoded state: {}", decoded);
+                logger.debug("Decoded state: {}", decoded);
                 
                 JsonNode stateJson = objectMapper.readTree(decoded);
                 if (stateJson.has("mobile_redirect_uri")) {
                     String mobileRedirectUri = stateJson.get("mobile_redirect_uri").asText();
-                    logger.info("Extracted mobile_redirect_uri: {}", mobileRedirectUri);
+                    logger.debug("Extracted mobile_redirect_uri: {}", mobileRedirectUri);
                     
                     request.getSession().setAttribute("mobile_redirect_uri", mobileRedirectUri);
-                    logger.info("Set mobile_redirect_uri in session");
+                    logger.debug("Set mobile_redirect_uri in session");
                 } else {
-                    logger.warn("No mobile_redirect_uri found in state JSON");
+                    logger.debug("No mobile_redirect_uri found in state JSON");
                 }
             } catch (Exception e) {
                 logger.error("Error processing state parameter", e);
             }
-        } else {
-            logger.debug("No state parameter found in request");
         }
         
         filterChain.doFilter(request, response);
-        logger.info("MobileRedirectFilter completed processing");
+        
+        // Only log for non-heartbeat requests
+        if (!request.getRequestURI().contains("/ws") && !request.getRequestURI().contains("/topic")) {
+            logger.debug("MobileRedirectFilter completed processing");
+        }
     }
 }

@@ -15,10 +15,12 @@ import com.teamhyungie.WildWatch.model.IncidentUpdate;
 import com.teamhyungie.WildWatch.model.IncidentUpvote;
 import com.teamhyungie.WildWatch.repository.EvidenceRepository;
 import com.teamhyungie.WildWatch.repository.IncidentRepository;
+import com.teamhyungie.WildWatch.repository.UserRepository;
 import com.teamhyungie.WildWatch.repository.WitnessRepository;
 import com.teamhyungie.WildWatch.repository.IncidentUpdateRepository;
 import com.teamhyungie.WildWatch.repository.IncidentUpvoteRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -31,10 +33,12 @@ import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class IncidentService {
     private final IncidentRepository incidentRepository;
     private final WitnessRepository witnessRepository;
     private final EvidenceRepository evidenceRepository;
+    private final UserRepository userRepository;
     private final UserService userService;
     private final SupabaseStorageService storageService;
     private final OfficeAdminService officeAdminService;
@@ -120,11 +124,47 @@ public class IncidentService {
         return incidentRepository.save(incident);
     }
 
+    /**
+     * Creates a Witness entity from a WitnessDTO
+     * Handles both registered users (via @mention) and manually entered witnesses
+     * 
+     * @param witnessDTO The DTO containing witness information
+     * @param incident The incident this witness is associated with
+     * @return A new Witness entity
+     */
     private Witness createWitness(IncidentRequest.WitnessDTO witnessDTO, Incident incident) {
         Witness witness = new Witness();
         witness.setIncident(incident);
-        witness.setName(witnessDTO.getName());
-        witness.setContactInformation(witnessDTO.getContactInformation());
+        
+        // Check if this is a reference to a registered user
+        if (witnessDTO.getUserId() != null) {
+            try {
+                // Try to find the user by ID
+                User user = userRepository.findById(witnessDTO.getUserId())
+                    .orElse(null);
+                
+                if (user != null) {
+                    // This is a registered user, set the user reference
+                    witness.setUser(user);
+                    // Don't set name/contact info as they'll be derived from the user
+                } else {
+                    // User not found, fall back to manual entry
+                    witness.setName(witnessDTO.getName());
+                    witness.setContactInformation(witnessDTO.getContactInformation());
+                }
+            } catch (Exception e) {
+                // If there's any error, fall back to manual entry
+                witness.setName(witnessDTO.getName());
+                witness.setContactInformation(witnessDTO.getContactInformation());
+                log.error("Error resolving user reference for witness: ", e);
+            }
+        } else {
+            // This is a manually entered witness
+            witness.setName(witnessDTO.getName());
+            witness.setContactInformation(witnessDTO.getContactInformation());
+        }
+        
+        // Additional notes apply to both types of witnesses
         witness.setAdditionalNotes(witnessDTO.getAdditionalNotes());
         return witness;
     }

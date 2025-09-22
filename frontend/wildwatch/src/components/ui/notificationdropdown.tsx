@@ -122,6 +122,8 @@ export default function NotificationDropdown({
       const stompClient = new Client({
         webSocketFactory: () => socket as any,
         reconnectDelay: RECONNECT_DELAY,
+        heartbeatIncoming: 60000, // Set client heartbeat to 60 seconds
+        heartbeatOutgoing: 60000, // Set server heartbeat to 60 seconds
         onConnect: () => {
           setWsConnected(true);
           reconnectAttempts = 0;
@@ -157,13 +159,13 @@ export default function NotificationDropdown({
         onStompError: () => {
           setWsConnected(false);
           if (!pollInterval) {
-            pollInterval = setInterval(fetchNotifications, 5000);
+            pollInterval = setInterval(fetchNotifications, 30000); // Increase to 30 seconds
           }
         },
         onWebSocketClose: () => {
           setWsConnected(false);
           if (!pollInterval) {
-            pollInterval = setInterval(fetchNotifications, 5000);
+            pollInterval = setInterval(fetchNotifications, 30000); // Increase to 30 seconds
           }
           if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
             reconnectAttempts++;
@@ -175,8 +177,13 @@ export default function NotificationDropdown({
       stompClientRef.current = stompClient;
     };
 
+    // Connect to WebSocket first, only fetch notifications once
     connectStomp();
+    
+    // Initial fetch of notifications
     fetchNotifications();
+    
+    // Don't set up polling here - it will only be set up if WebSocket fails
 
     return () => {
       stompClientRef.current?.deactivate();

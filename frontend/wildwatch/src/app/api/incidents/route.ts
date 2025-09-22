@@ -44,9 +44,35 @@ export async function POST(request: Request) {
     try {
       console.log('Sending request to:', `${API_BASE_URL}/api/incidents`); // Debug log
       console.log('Using token:', token.substring(0, 10) + '...'); // Debug log (only show first 10 chars)
+      
+      // Log the incident data for debugging
+      const incidentData = JSON.parse(formData.get('incidentData') as string);
+      console.log('Incident data:', {
+        type: incidentData.incidentType,
+        witnesses: incidentData.witnesses?.length || 0,
+        files: files.length
+      });
+      
+      // Log witness details for verification
+      if (incidentData.witnesses && incidentData.witnesses.length > 0) {
+        console.log('Witness details in API route:', 
+          incidentData.witnesses.map(w => ({
+            hasUserId: !!w.userId,
+            userId: w.userId,
+            name: w.name,
+            notes: w.additionalNotes?.substring(0, 20)
+          }))
+        );
+      }
 
       // Forward the request to the backend
-      const response = await fetch(`${API_BASE_URL}/api/incidents`, {
+      // Get the correct backend URL - if API_BASE_URL is empty, use the config
+      const { getBackendUrl } = require('../../../config');
+      const backendUrl = API_BASE_URL || getBackendUrl();
+      const apiUrl = `${backendUrl}/api/incidents`;
+      console.log('Using backend URL:', apiUrl);
+      
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -59,10 +85,23 @@ export async function POST(request: Request) {
       console.log('Backend response status:', response.status); // Debug log
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Backend request failed' }));
-        console.log('Backend error:', errorData); // Debug log
+        // Try to get detailed error information
+        let errorText;
+        try {
+          const errorData = await response.json();
+          console.log('Backend error response:', errorData);
+          errorText = errorData.message || errorData.error || JSON.stringify(errorData);
+        } catch (e) {
+          try {
+            errorText = await response.text();
+            console.log('Backend error text:', errorText);
+          } catch (e2) {
+            errorText = 'Backend request failed';
+          }
+        }
+        
         return NextResponse.json(
-          { error: errorData.message || 'Backend request failed' },
+          { error: errorText || 'Backend request failed' },
           { status: response.status }
         );
       }

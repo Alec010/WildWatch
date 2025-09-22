@@ -1,6 +1,6 @@
 // Simple configuration toggle
 // Set to true to use local backend, false to use deployed backend
-const useLocalBackend = false;
+const useLocalBackend = true;
 
 // Backend URLs
 const LOCAL_BACKEND = "http://localhost:8080";

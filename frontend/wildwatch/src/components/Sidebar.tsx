@@ -53,7 +53,20 @@ export function Sidebar() {
 
   useEffect(() => {
     const fetchUserProfile = async () => {
-      const token = Cookies.get("token")
+      // First try to get token from cookies
+      let token = Cookies.get("token");
+      
+      // If not in cookies, check sessionStorage backup
+      if (!token) {
+        const backupToken = sessionStorage.getItem("auth_token_backup");
+        if (backupToken) {
+          // Restore token to cookie
+          console.log("Restoring token from backup");
+          Cookies.set("token", backupToken, { expires: 7 });
+          token = backupToken;
+        }
+      }
+      
       if (!token) {
         router.push("/login")
         return

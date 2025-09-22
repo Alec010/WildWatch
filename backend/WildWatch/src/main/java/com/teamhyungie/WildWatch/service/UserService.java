@@ -6,12 +6,15 @@ import com.teamhyungie.WildWatch.model.Role;
 import com.teamhyungie.WildWatch.model.User;
 import com.teamhyungie.WildWatch.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -173,5 +176,38 @@ public class UserService {
         user.setResetToken(null);
         user.setResetTokenExpiry(null);
         userRepository.save(user);
+    }
+    
+    /**
+     * Search for users by name or email
+     * Used for @mention functionality in the witness section
+     * 
+     * @param query The search term to match against name or email
+     * @param pageable Pagination parameters
+     * @return Paginated list of matching users
+     */
+    public Page<User> searchUsers(String query, Pageable pageable) {
+        if (query == null || query.trim().isEmpty()) {
+            // Return empty page if query is empty
+            return Page.empty(pageable);
+        }
+        
+        // Search for users matching the query
+        return userRepository.searchUsers(query.trim(), pageable);
+    }
+    
+    /**
+     * Find users by their IDs
+     * Used to resolve user references in witness information
+     * 
+     * @param userIds List of user IDs
+     * @return List of matching users
+     */
+    public List<User> findUsersByIds(List<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return List.of();
+        }
+        
+        return userRepository.findByIdIn(userIds);
     }
 } 

@@ -38,9 +38,28 @@ public class IncidentRequest {
 
     @Data
     public static class WitnessDTO {
-        // All fields are optional
+        /**
+         * ID of a registered user (for @mention functionality)
+         * When this is set, name and contactInformation will be derived from the user
+         */
+        private Long userId;
+        
+        /**
+         * Manual name entry (used when userId is null)
+         * This field will be ignored if userId is provided
+         */
         private String name;
+        
+        /**
+         * Manual contact information (used when userId is null)
+         * This field will be ignored if userId is provided
+         */
         private String contactInformation;
+        
+        /**
+         * Additional notes about the witness's account
+         * This applies regardless of whether the witness is a registered user
+         */
         private String additionalNotes;
     }
 } 

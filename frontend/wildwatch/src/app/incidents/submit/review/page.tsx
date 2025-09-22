@@ -106,11 +106,34 @@ export default function ReviewSubmissionPage() {
       if (!token) throw new Error("No authentication token found")
 
       const formData = new FormData()
+      // Process witnesses to match the backend DTO format
+      let processedWitnesses = [];
+      
+      // For each witness entry
+      evidenceData.witnesses.forEach(witness => {
+        if (witness.users && witness.users.length > 0) {
+          // If there are tagged users, create a separate witness entry for each user
+          witness.users.forEach(user => {
+            processedWitnesses.push({
+              userId: user.id,
+              additionalNotes: witness.additionalNotes
+            });
+          });
+        } else {
+          // For manually entered witnesses
+          processedWitnesses.push({
+            name: witness.name,
+            contactInformation: witness.contactInformation,
+            additionalNotes: witness.additionalNotes
+          });
+        }
+      });
+      
       formData.append(
         "incidentData",
         JSON.stringify({
           ...incidentData,
-          witnesses: evidenceData.witnesses,
+          witnesses: processedWitnesses,
           preferAnonymous: !!preferAnonymous,
           tags: incidentData.tags || [], // Ensure tags are included in the submission
         }),
@@ -133,11 +156,25 @@ export default function ReviewSubmissionPage() {
         description: "Your report is being securely transmitted.",
       })
 
+      // Add detailed logging for debugging
+      console.log('Submitting report with:', {
+        incidentType: incidentData.incidentType,
+        witnessCount: processedWitnesses.length,
+        originalWitnessCount: evidenceData.witnesses.length,
+        fileCount: evidenceData.fileInfos.length
+      });
+      
+      // Log witness details for debugging
+      console.log('Processed witnesses:', processedWitnesses);
+      
       const response = await fetch("/api/incidents", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
-      })
+      });
+      
+      // Log response status for debugging
+      console.log('Submission response status:', response.status);
 
       toast.dismiss(submissionToast)
 
@@ -148,18 +185,47 @@ export default function ReviewSubmissionPage() {
       setAssignedOffice(responseData.assignedOffice)
       setShowSuccessDialog(true)
 
-      // Clear session storage
+      // Clear session storage for form data but preserve the auth token
       sessionStorage.removeItem("incidentSubmissionData")
       sessionStorage.removeItem("evidenceSubmissionData")
+      
+      // Ensure token is preserved
+      const authToken = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("token="))
+        ?.split("=")[1];
+      
+      if (authToken) {
+        // Store token in sessionStorage as backup
+        sessionStorage.setItem("auth_token_backup", authToken);
+        
+        // Also refresh the cookie to ensure it doesn't expire
+        const expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + 7); // 7 days expiry
+        document.cookie = `token=${authToken}; expires=${expiryDate.toUTCString()}; path=/; SameSite=Lax`;
+        
+        console.log("Token preserved for future use");
+      }
 
       toast.success("Report submitted successfully!", {
         description: `Your tracking number is ${responseData.trackingNumber}`,
       })
     } catch (error) {
-      console.error("Submission failed:", error)
+      console.error("Submission failed:", error);
+      
+      // Try to get more detailed error information
+      let errorMessage = "Please try again or contact support if the problem persists.";
+      if (error instanceof Error) {
+        console.error("Error details:", error.message);
+        // If it's an HTTP error, try to get the response body
+        if (error.message.includes("HTTP error")) {
+          errorMessage = `Server error: ${error.message}. Please try again later.`;
+        }
+      }
+      
       toast.error("Submission failed", {
-        description: "Please try again or contact support if the problem persists.",
-      })
+        description: errorMessage,
+      });
     } finally {
       setIsSubmitting(false)
       setIsAssigningOffice(false)
@@ -169,7 +235,33 @@ export default function ReviewSubmissionPage() {
 
   const handleCloseDialog = () => {
     setShowSuccessDialog(false)
-    router.push("/dashboard")
+    
+    // First check if we have a backup token in sessionStorage
+    let authToken = sessionStorage.getItem("auth_token_backup");
+    
+    if (!authToken) {
+      // If no backup, try to get from cookie
+      authToken = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("token="))
+        ?.split("=")[1];
+    }
+    
+    if (authToken) {
+      // If token exists, ensure it's set in the cookie before redirecting
+      const expiryDate = new Date();
+      expiryDate.setDate(expiryDate.getDate() + 7); // 7 days expiry
+      document.cookie = `token=${authToken}; expires=${expiryDate.toUTCString()}; path=/; SameSite=Lax`;
+      
+      console.log("Token restored, redirecting to dashboard");
+      
+      // Use window.location for a full page reload to ensure cookie is applied
+      window.location.href = "/dashboard";
+    } else {
+      // If token doesn't exist, go to login page
+      console.warn("Token not found, redirecting to login");
+      router.push("/auth/login");
+    }
   }
 
   const toggleSection = (section: string) => {
@@ -533,40 +625,44 @@ export default function ReviewSubmissionPage() {
                                     className="border border-gray-200 rounded-lg mb-3 overflow-hidden"
                                   >
                                     <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-gray-50">
-                                      <div className="flex items-center gap-3 text-left">
+                                        <div className="flex items-center gap-3 text-left">
                                         <div className="bg-[#800000]/10 p-2 rounded-full">
                                           <User className="h-4 w-4 text-[#800000]" />
                                         </div>
                                         <div>
-                                          <p className="font-medium text-gray-900">
-                                            {witness.name || `Witness #${index + 1}`}
-                                          </p>
-                                          {witness.contactInformation && (
-                                            <p className="text-xs text-gray-500">{witness.contactInformation}</p>
-                                          )}
+                                          <>
+                                            <p className="font-medium text-gray-900">
+                                              {witness.name || `Witness #${index + 1}`}
+                                            </p>
+                                            {witness.contactInformation && (
+                                              <p className="text-xs text-gray-500">{witness.contactInformation}</p>
+                                            )}
+                                          </>
                                         </div>
                                       </div>
                                     </AccordionTrigger>
                                     <AccordionContent className="px-4 pb-4 pt-2">
                                       <div className="space-y-3">
-                                        <div>
-                                          <div className="flex items-center gap-2 mb-1">
-                                            <User className="h-3.5 w-3.5 text-[#800000]/70" />
-                                            <p className="text-xs text-gray-500">Full Name</p>
-                                          </div>
-                                          <p className="font-medium text-gray-900 pl-5">
-                                            {witness.name || "Not provided"}
-                                          </p>
-                                        </div>
-                                        <div>
-                                          <div className="flex items-center gap-2 mb-1">
-                                            <Phone className="h-3.5 w-3.5 text-[#800000]/70" />
-                                            <p className="text-xs text-gray-500">Contact Information</p>
-                                          </div>
-                                          <p className="text-sm text-gray-700 pl-5">
-                                            {witness.contactInformation || "Not provided"}
-                                          </p>
-                                        </div>
+                                          <>
+                                            <div>
+                                              <div className="flex items-center gap-2 mb-1">
+                                                <User className="h-3.5 w-3.5 text-[#800000]/70" />
+                                                <p className="text-xs text-gray-500">Full Name</p>
+                                              </div>
+                                              <p className="font-medium text-gray-900 pl-5">
+                                                {witness.name || "Not provided"}
+                                              </p>
+                                            </div>
+                                            <div>
+                                              <div className="flex items-center gap-2 mb-1">
+                                                <Phone className="h-3.5 w-3.5 text-[#800000]/70" />
+                                                <p className="text-xs text-gray-500">Contact Information</p>
+                                              </div>
+                                              <p className="text-sm text-gray-700 pl-5">
+                                                {witness.contactInformation || "Not provided"}
+                                              </p>
+                                            </div>
+                                          </>
                                         {witness.additionalNotes && (
                                           <div>
                                             <div className="flex items-center gap-2 mb-1">
@@ -947,7 +1043,19 @@ export default function ReviewSubmissionPage() {
                 <FileText className="h-4 w-4 text-[#800000]" />
                 <p className="text-sm text-gray-500">Tracking Number</p>
               </div>
-              <p className="text-lg font-semibold text-[#800000]">{trackingNumber}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-lg font-semibold text-[#800000]">{trackingNumber}</p>
+                <button 
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(trackingNumber);
+                    toast.success("Tracking number copied to clipboard");
+                  }}
+                  className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 py-1 px-2 rounded"
+                >
+                  Copy
+                </button>
+              </div>
             </div>
 
             {assignedOffice && (

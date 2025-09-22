@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
+import ClientMultiUserMentionInput from "@/components/ClientMultiUserMentionInput"
 import Image from "next/image"
 import { Sidebar } from "@/components/Sidebar"
 import { useSidebar } from "@/contexts/SidebarContext"
@@ -48,10 +49,20 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 
+interface UserInfo {
+  id: number
+  firstName: string
+  lastName: string
+  fullName: string
+  email: string
+  schoolIdNumber: string
+}
+
 interface WitnessInfo {
   name: string
   contactInformation: string
   additionalNotes: string
+  users: UserInfo[]  // Multiple users selected via @mention
 }
 
 interface FileInfo {
@@ -102,7 +113,12 @@ export default function EvidenceSubmissionPage() {
   const handleAddWitness = () => {
     setFormData((prev) => ({
       ...prev,
-      witnesses: [...prev.witnesses, { name: "", contactInformation: "", additionalNotes: "" }],
+      witnesses: [...prev.witnesses, { 
+        name: "", 
+        contactInformation: "", 
+        additionalNotes: "",
+        users: []
+      }],
     }))
 
     // Expand the newly added witness
@@ -612,10 +628,24 @@ export default function EvidenceSubmissionPage() {
                                           <User className="h-3.5 w-3.5 text-[#800000]/70" />
                                           Name
                                         </Label>
-                                        <Input
-                                          value={witness.name}
-                                          onChange={(e) => handleWitnessChange(index, "name", e.target.value)}
-                                          placeholder="Witness full name"
+                                        <ClientMultiUserMentionInput
+                                          selectedUsers={witness.users || []}
+                                          onUsersChange={(users) => {
+                                            // Update witness with selected users
+                                            const updatedWitnesses = [...formData.witnesses];
+                                            updatedWitnesses[index] = {
+                                              ...updatedWitnesses[index],
+                                              users: users,
+                                              // If there are users, use the first user's name and email as default
+                                              name: users.length > 0 ? users.map(u => u.fullName).join(", ") : updatedWitnesses[index].name,
+                                              contactInformation: users.length > 0 ? users.map(u => u.email).join(", ") : updatedWitnesses[index].contactInformation
+                                            };
+                                            setFormData((prev) => ({
+                                              ...prev,
+                                              witnesses: updatedWitnesses
+                                            }));
+                                          }}
+                                          placeholder="Type @ to mention users"
                                           className="border-gray-200 focus:border-[#800000] focus:ring-[#800000]/20"
                                         />
                                       </div>
@@ -624,14 +654,20 @@ export default function EvidenceSubmissionPage() {
                                           <Phone className="h-3.5 w-3.5 text-[#800000]/70" />
                                           Contact Information
                                         </Label>
-                                        <Input
-                                          value={witness.contactInformation}
-                                          onChange={(e) =>
-                                            handleWitnessChange(index, "contactInformation", e.target.value)
-                                          }
-                                          placeholder="Email or phone number"
-                                          className="border-gray-200 focus:border-[#800000] focus:ring-[#800000]/20"
-                                        />
+                                        {witness.users && witness.users.length > 0 ? (
+                                          <div className="flex items-center p-2 border border-gray-200 rounded-md bg-gray-50">
+                                            <span className="text-gray-600">{witness.users.map(u => u.email).join(", ")}</span>
+                                          </div>
+                                        ) : (
+                                          <Input
+                                            value={witness.contactInformation}
+                                            onChange={(e) =>
+                                              handleWitnessChange(index, "contactInformation", e.target.value)
+                                            }
+                                            placeholder="Email or phone number"
+                                            className="border-gray-200 focus:border-[#800000] focus:ring-[#800000]/20"
+                                          />
+                                        )}
                                       </div>
                                     </div>
                                     <div className="space-y-2">

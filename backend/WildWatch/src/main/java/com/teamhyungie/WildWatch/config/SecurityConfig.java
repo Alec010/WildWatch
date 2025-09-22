@@ -91,7 +91,7 @@ public class SecurityConfig {
                                 "/oauth2/**",
                                 "/error",
                                 "/favicon.ico",
-                                "/api/setup/by-office/**",
+                                "/api/setup/**",
                                 "/api/ping",
                                 "/api/offices",
                                 "/login/oauth2/code/microsoft")
