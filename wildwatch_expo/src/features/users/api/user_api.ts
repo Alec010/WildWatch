@@ -1,31 +1,35 @@
 import { api } from '../../../../lib/api';
+import type { UserSearchResponse, UserSearchRequest } from '../models/UserModels';
 
-export type UserProfile = {
-  id: number;
-  firstName: string;
-  lastName: string;
-  middleInitial?: string;
-  email: string;
-  schoolIdNumber: string;
-  contactNumber: string;
-  role: string;
-};
-export type UserUpdateRequest = {
-  firstName?: string;
-  lastName?: string;
-  middleInitial?: string;
-  contactNumber?: string;
-};
+export interface PaginatedResponse<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  size: number;
+  number: number;
+  first: boolean;
+  last: boolean;
+}
 
 export const userAPI = {
-  getMe: async (): Promise<UserProfile> => {
-    const response = await api.get<UserProfile>('/auth/profile');
+  searchUsers: async (params: UserSearchRequest): Promise<PaginatedResponse<UserSearchResponse>> => {
+    const queryParams = new URLSearchParams({
+      query: params.query,
+      page: (params.page || 0).toString(),
+      size: (params.size || 10).toString(),
+    });
+    
+    const response = await api.get<PaginatedResponse<UserSearchResponse>>(`/users/search?${queryParams}`);
     return response.data;
   },
-  updateMe: async (payload: UserUpdateRequest): Promise<UserProfile> => {
-    const response = await api.put<UserProfile>('/users/me', payload);
+
+  getMe: async (): Promise<any> => {
+    const response = await api.get('/users/me');
+    return response.data;
+  },
+
+  updateMe: async (payload: any): Promise<any> => {
+    const response = await api.put('/users/me', payload);
     return response.data;
   },
 };
-
-

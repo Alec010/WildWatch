@@ -5,9 +5,11 @@ export interface OfficeInfo {
 }
 
 export interface WitnessInfo {
-  name: string;
-  contact: string;
-  statement: string;
+  userId?: number; // ID of registered user for @mention functionality
+  name: string; // Manual name entry or display name
+  contact: string; // Manual contact info or user email
+  additionalNotes: string; // Additional notes about witness (renamed from statement)
+  isRegisteredUser?: boolean; // Helper flag to track if this is a registered user
 }
 
 export interface EvidenceFileInfo {

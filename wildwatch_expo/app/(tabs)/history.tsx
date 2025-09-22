@@ -83,13 +83,17 @@ export default function HistoryScreen() {
         </View>
       </View>
 
-      <ScrollView className="flex-1 px-4" refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />} showsVerticalScrollIndicator={false}>
-        <View className="bg-white rounded-3xl border border-gray-200 flex-row items-center px-4 py-3 mt-4 mb-4">
+      {/* Fixed Search Bar */}
+      <View className="bg-white px-4 py-4 border-b border-gray-200">
+        <View className="bg-white rounded-3xl border border-gray-200 flex-row items-center px-4 py-3">
           <Ionicons name="search" size={20} color="#6B7280" />
           <TextInput className="flex-1 ml-3 text-base" placeholder="Search incidents..." value={searchQuery} onChangeText={setSearchQuery} placeholderTextColor="#9CA3AF" />
         </View>
+      </View>
 
-        <View className="flex-row mb-4">
+      {/* Fixed Filter Buttons */}
+      <View className="bg-white px-4 py-4 border-b border-gray-200">
+        <View className="flex-row">
           {[
             { status: 'All', count: allCount, title: 'All Cases' },
             { status: 'Resolved', count: resolvedCount, title: 'Resolved' },
@@ -101,6 +105,9 @@ export default function HistoryScreen() {
             </TouchableOpacity>
           ))}
         </View>
+      </View>
+
+      <ScrollView className="flex-1 px-4" refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />} showsVerticalScrollIndicator={false}>
 
         {error ? (
           <View className="bg-red-50 border border-red-200 rounded-lg p-4 mt-4">
