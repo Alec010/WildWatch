@@ -3,6 +3,7 @@ import { Stack, router } from 'expo-router';
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthSignup } from '../../src/features/auth/hooks/useAuthSignup';
+import TermsModal from '../../components/TermsModal';
 
 export default function SignupScreen() {
   const [firstName, setFirstName] = useState('');
@@ -16,6 +17,7 @@ export default function SignupScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
   const { isLoading, register } = useAuthSignup();
 
   const handleSignup = async () => {
@@ -54,6 +56,12 @@ export default function SignupScreen() {
         contactNumber: rawContactNumber,
         termsAccepted: acceptTerms
       });
+      
+      Alert.alert(
+        'Account Created',
+        'Your account has been created successfully. Please sign in.',
+        [{ text: 'OK' }]
+      );
     } catch (error: any) {
       const errorMessage = error?.response?.data?.message || error?.message || 'Registration failed. Please try again.';
       Alert.alert('Registration Error', errorMessage);
@@ -99,43 +107,48 @@ export default function SignupScreen() {
   };
 
   return (
-    <ScrollView className="flex-1 bg-[#f5f5f7]">
-      <Stack.Screen options={{ title: 'Sign Up' }} />
+    <ScrollView className="flex-1 bg-white">
+      <Stack.Screen options={{ headerShown: false }} />
       
       <View className="flex-1 justify-center px-4 py-8">
+        {/* Top Gradient Bar */}
+        <View className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[#800000] via-[#D4AF37] to-[#800000]" />
+
         {/* Logo */}
         <View className="items-center mb-8">
           <Image
             source={require('../../assets/images/logos/logo.png')}
-            className="w-32 h-32"
+            className="w-32 h-16"
             resizeMode="contain"
           />
-          <Text className="text-3xl font-bold text-[#800000] mt-4">Create Account</Text>
-          <Text className="text-sm text-gray-500 mt-2">Join WILD WATCH today</Text>
+          <Text className="text-3xl font-bold text-[#800000] mt-8">Create Account</Text>
+          <Text className="text-sm text-gray-600 mt-2">Join WILD WATCH to report and track campus incidents</Text>
         </View>
 
         {/* Signup Form */}
-        <View className="space-y-4">
+        <View className="space-y-4 px-4">
           {/* Name Fields */}
           <View className="flex-row space-x-2">
             <View className="flex-1">
-              <Text className="text-[#800000] font-medium mb-2">First Name *</Text>
-              <View className="flex-row items-center border border-gray-300 rounded-lg bg-gray-50">
+              <Text className="text-[#800000] font-semibold mb-2">First Name *</Text>
+              <View className="flex-row items-center border border-gray-300 rounded-lg bg-white">
                 <Ionicons name="person-outline" size={20} color="#800000" style={{ marginLeft: 12 }} />
                 <TextInput
                   className="flex-1 p-4"
                   placeholder="Enter first name"
+                placeholderTextColor="#666"
                   value={firstName}
                   onChangeText={setFirstName}
                 />
               </View>
             </View>
             <View className="w-16">
-              <Text className="text-[#800000] font-medium mb-2">M.I.</Text>
-              <View className="flex-row items-center border border-gray-300 rounded-lg bg-gray-50">
+              <Text className="text-[#800000] font-semibold mb-2">M.I.</Text>
+              <View className="flex-row items-center border border-gray-300 rounded-lg bg-white">
                 <TextInput
                   className="flex-1 p-4 text-center"
                   placeholder="M.I."
+                  placeholderTextColor="#666"
                   value={middleInitial}
                   onChangeText={setMiddleInitial}
                   maxLength={1}
@@ -143,12 +156,13 @@ export default function SignupScreen() {
               </View>
             </View>
             <View className="flex-1">
-              <Text className="text-[#800000] font-medium mb-2">Last Name *</Text>
-              <View className="flex-row items-center border border-gray-300 rounded-lg bg-gray-50">
+              <Text className="text-[#800000] font-semibold mb-2">Last Name *</Text>
+              <View className="flex-row items-center border border-gray-300 rounded-lg bg-white">
                 <Ionicons name="person-outline" size={20} color="#800000" style={{ marginLeft: 12 }} />
                 <TextInput
                   className="flex-1 p-4"
                   placeholder="Enter last name"
+                placeholderTextColor="#666"
                   value={lastName}
                   onChangeText={setLastName}
                 />
@@ -156,30 +170,15 @@ export default function SignupScreen() {
             </View>
           </View>
 
-          {/* School ID Number */}
+          {/* CIT Email */}
           <View>
-            <Text className="text-[#800000] font-medium mb-2">School ID Number *</Text>
-            <View className="flex-row items-center border border-gray-300 rounded-lg bg-gray-50">
-              <Ionicons name="card-outline" size={20} color="#800000" style={{ marginLeft: 12 }} />
-              <TextInput
-                className="flex-1 p-4"
-                placeholder="XX-XXXX-XXX"
-                value={schoolIdNumber}
-                onChangeText={(text) => setSchoolIdNumber(formatSchoolId(text))}
-                keyboardType="numeric"
-                maxLength={11}
-              />
-            </View>
-          </View>
-
-          {/* Email */}
-          <View>
-            <Text className="text-[#800000] font-medium mb-2">Email *</Text>
-            <View className="flex-row items-center border border-gray-300 rounded-lg bg-gray-50">
+            <Text className="text-[#800000] font-semibold mb-2">CIT Email *</Text>
+            <View className="flex-row items-center border border-gray-300 rounded-lg bg-white">
               <Ionicons name="mail-outline" size={20} color="#800000" style={{ marginLeft: 12 }} />
               <TextInput
                 className="flex-1 p-4"
-                placeholder="Enter your email"
+                placeholder="your.name@cit.edu"
+                placeholderTextColor="#666"
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -188,29 +187,32 @@ export default function SignupScreen() {
             </View>
           </View>
 
-          {/* Contact Number */}
+          {/* School ID Number */}
           <View>
-            <Text className="text-[#800000] font-medium mb-2">Contact Number *</Text>
-            <View className="flex-row items-center border border-gray-300 rounded-lg bg-gray-50">
-              <Ionicons name="call-outline" size={20} color="#800000" style={{ marginLeft: 12 }} />
+            <Text className="text-[#800000] font-semibold mb-2">School ID Number *</Text>
+            <View className="flex-row items-center border border-gray-300 rounded-lg bg-white">
+              <Ionicons name="card-outline" size={20} color="#800000" style={{ marginLeft: 12 }} />
               <TextInput
                 className="flex-1 p-4"
-                placeholder="+63 ### ### ####"
-                value={contactNumber}
-                onChangeText={(text) => setContactNumber(formatContactNumber(text))}
-                keyboardType="phone-pad"
+                placeholder="22-0603-284"
+                placeholderTextColor="#666"
+                value={schoolIdNumber}
+                onChangeText={(text) => setSchoolIdNumber(formatSchoolId(text))}
+                keyboardType="numeric"
+                maxLength={11}
               />
             </View>
           </View>
 
           {/* Password */}
           <View>
-            <Text className="text-[#800000] font-medium mb-2">Password *</Text>
-            <View className="flex-row items-center border border-gray-300 rounded-lg bg-gray-50">
+            <Text className="text-[#800000] font-semibold mb-2">Password *</Text>
+            <View className="flex-row items-center border border-gray-300 rounded-lg bg-white">
               <Ionicons name="lock-closed-outline" size={20} color="#800000" style={{ marginLeft: 12 }} />
               <TextInput
                 className="flex-1 p-4"
-                placeholder="Create a password"
+                placeholder="Create a secure password"
+                placeholderTextColor="#666"
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
@@ -230,12 +232,13 @@ export default function SignupScreen() {
 
           {/* Confirm Password */}
           <View>
-            <Text className="text-[#800000] font-medium mb-2">Confirm Password *</Text>
-            <View className="flex-row items-center border border-gray-300 rounded-lg bg-gray-50">
+            <Text className="text-[#800000] font-semibold mb-2">Confirm Password *</Text>
+            <View className="flex-row items-center border border-gray-300 rounded-lg bg-white">
               <Ionicons name="lock-closed-outline" size={20} color="#800000" style={{ marginLeft: 12 }} />
               <TextInput
                 className="flex-1 p-4"
                 placeholder="Confirm your password"
+                placeholderTextColor="#666"
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
                 secureTextEntry={!showConfirmPassword}
@@ -253,25 +256,46 @@ export default function SignupScreen() {
             </View>
           </View>
 
-          {/* Terms and Conditions */}
-          <View className="flex-row items-center mt-4">
-            <Pressable
-              onPress={() => setAcceptTerms(!acceptTerms)}
-              className="w-5 h-5 border border-gray-300 rounded mr-2 items-center justify-center"
-            >
-              {acceptTerms && (
-                <Ionicons name="checkmark" size={16} color="#800000" />
-              )}
-            </Pressable>
-            <Text className="text-sm text-gray-600 flex-1">
-              I agree to the{' '}
-              <Text className="text-[#800000]">Terms of Service</Text>
-              {' '}and{' '}
-              <Text className="text-[#800000]">Privacy Policy</Text>
-            </Text>
+          {/* Contact Number */}
+          <View>
+            <Text className="text-[#800000] font-semibold mb-2">Contact Number *</Text>
+            <View className="flex-row items-center border border-gray-300 rounded-lg bg-white">
+              <Ionicons name="call-outline" size={20} color="#800000" style={{ marginLeft: 12 }} />
+              <TextInput
+                className="flex-1 p-4"
+                placeholder="+63XXXXXXXXXX"
+                placeholderTextColor="#666"
+                value={contactNumber}
+                onChangeText={(text) => setContactNumber(formatContactNumber(text))}
+                keyboardType="phone-pad"
+              />
+            </View>
           </View>
 
-          {/* Sign Up Button */}
+          {/* Terms and Conditions */}
+          <View className="bg-[#FFF8E1] rounded-lg p-4 mt-4">
+            <View className="flex-row items-start">
+              <Pressable
+                onPress={() => setAcceptTerms(!acceptTerms)}
+                className="w-5 h-5 border border-gray-300 rounded mr-2 mt-0.5 bg-white items-center justify-center"
+              >
+                {acceptTerms && (
+                  <Ionicons name="checkmark" size={16} color="#800000" />
+                )}
+              </Pressable>
+              <Text className="text-sm text-gray-600 flex-1">
+                By creating an account, you agree to our{' '}
+                <Text 
+                  className="text-[#800000] font-medium" 
+                  onPress={() => setShowTerms(true)}
+                >
+                  Terms and Conditions
+                </Text>
+              </Text>
+            </View>
+          </View>
+
+          {/* Create Account Button */}
           <Pressable
             onPress={handleSignup}
             disabled={isLoading}
@@ -288,7 +312,7 @@ export default function SignupScreen() {
               Already have an account?{' '}
               <Text 
                 className="text-[#800000] font-medium"
-                onPress={() => router.back()}
+                onPress={() => router.push('/auth/login')}
               >
                 Sign in
               </Text>
@@ -296,6 +320,17 @@ export default function SignupScreen() {
           </View>
         </View>
       </View>
+
+      {/* Terms Modal */}
+      <TermsModal
+        visible={showTerms}
+        onClose={() => setShowTerms(false)}
+        onAccept={() => {
+          setAcceptTerms(true);
+          setShowTerms(false);
+        }}
+        isLoading={isLoading}
+      />
     </ScrollView>
   );
 } 
