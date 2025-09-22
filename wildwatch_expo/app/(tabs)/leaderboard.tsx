@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, RefreshControl } from 'react-native';
+import TopSpacing from '../../components/TopSpacing';
 import { Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useLeaderboard } from '../../src/features/ratings/hooks/useLeaderboard';
@@ -53,6 +54,10 @@ export default function LeaderboardScreen() {
   return (
     <View className="flex-1" style={{ backgroundColor: '#F8F9FA' }}>
       <Stack.Screen options={{ title: 'Leaderboard' }} />
+      
+      {/* Top spacing for notch */}
+      <TopSpacing />
+      
       <View className="bg-white px-4 py-4 border-b border-gray-200">
         <Text className="text-2xl font-bold text-[#8B0000]">Leaderboard</Text>
         <Text className="text-gray-600 mt-1">See who's leading in incident reporting.</Text>

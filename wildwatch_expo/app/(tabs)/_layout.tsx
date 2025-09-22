@@ -11,9 +11,12 @@ interface CustomTabBarProps {
 
 // Custom Tab Bar Component
 function CustomTabBar({ state, descriptors, navigation }: CustomTabBarProps) {
+  // Filter out the index route from the tab bar
+  const visibleRoutes = state.routes.filter((route: any) => route.name !== 'index');
+  
   return (
     <View style={styles.tabBar}>
-      {state.routes.map((route: any, index: number) => {
+      {visibleRoutes.map((route: any, index: number) => {
         const { options } = descriptors[route.key];
         const label = options.tabBarLabel ?? options.title ?? route.name;
         const isFocused = state.index === index;
@@ -73,7 +76,7 @@ function CustomTabBar({ state, descriptors, navigation }: CustomTabBarProps) {
 
 function getIconName(routeName: string) {
   switch (routeName) {
-    case 'index':
+    case 'dashboard':
       return 'bar-chart';
     case 'history':
       return 'time';
@@ -166,7 +169,7 @@ export default function TabLayout() {
       tabBar={props => <CustomTabBar {...props} />}
     >
       <Tabs.Screen
-        name="index"
+        name="dashboard"
         options={{
           title: 'Dashboard',
         }}
