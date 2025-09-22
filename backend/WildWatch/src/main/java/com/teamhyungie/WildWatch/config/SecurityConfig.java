@@ -87,6 +87,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/chatbot").permitAll()
                         .requestMatchers(
                                 "/api/auth/**",
+                                "/api/mobile/auth/**",
                                 "/login/**",
                                 "/oauth2/**",
                                 "/error",
