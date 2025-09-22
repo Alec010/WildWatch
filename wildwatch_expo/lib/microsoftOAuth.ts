@@ -109,7 +109,7 @@ export const microsoftOAuthService = {
       console.log('User info from Microsoft:', userInfo);
 
       // Send the Microsoft access token to your backend for validation and JWT generation
-      const backendResponse = await fetch(`${config.API.BASE_URL}/auth/oauth2/microsoft-token`, {
+      const backendResponse = await fetch(`${config.API.BASE_URL}/mobile/auth/microsoft/token`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
