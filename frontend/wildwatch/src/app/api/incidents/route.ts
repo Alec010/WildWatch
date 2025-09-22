@@ -66,10 +66,7 @@ export async function POST(request: Request) {
       }
 
       // Forward the request to the backend
-      // Get the correct backend URL - if API_BASE_URL is empty, use the config
-      const { getBackendUrl } = require('../../../config');
-      const backendUrl = API_BASE_URL || getBackendUrl();
-      const apiUrl = `${backendUrl}/api/incidents`;
+      const apiUrl = `${API_BASE_URL}/api/incidents`;
       console.log('Using backend URL:', apiUrl);
       
       const response = await fetch(apiUrl, {

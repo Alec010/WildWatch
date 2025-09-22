@@ -19,6 +19,7 @@ interface ClientMultiUserMentionInputProps {
   placeholder?: string
   disabled?: boolean
   className?: string
+  maxUsers?: number
 }
 
 export default function ClientMultiUserMentionInput(props: ClientMultiUserMentionInputProps) {

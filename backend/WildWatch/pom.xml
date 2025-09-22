@@ -105,6 +105,8 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-mail</artifactId>
 		</dependency>
+		<!-- Jackson for JSON processing (already included in Spring Boot) -->
+		<!-- RestTemplate for HTTP calls (already included in Spring Boot) -->
 		<!-- Google AI (Gemini) -->
 		<!-- <dependency>
 			<groupId>com.google.cloud</groupId>

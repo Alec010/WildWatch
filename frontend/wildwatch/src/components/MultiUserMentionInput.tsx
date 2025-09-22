@@ -20,6 +20,7 @@ interface MultiUserMentionInputProps {
   placeholder?: string
   disabled?: boolean
   className?: string
+  maxUsers?: number // New prop to limit maximum number of users
 }
 
 const MultiUserMentionInput: React.FC<MultiUserMentionInputProps> = ({
@@ -27,7 +28,8 @@ const MultiUserMentionInput: React.FC<MultiUserMentionInputProps> = ({
   selectedUsers,
   placeholder = "Type @ to mention users",
   disabled = false,
-  className = ""
+  className = "",
+  maxUsers
 }) => {
   const [query, setQuery] = useState<string>('')
   const [isMentioning, setIsMentioning] = useState<boolean>(false)
@@ -79,7 +81,10 @@ const MultiUserMentionInput: React.FC<MultiUserMentionInputProps> = ({
     const value = e.target.value
     setQuery(value)
 
-    if (value.startsWith('@')) {
+    // Check if we should allow searching (not at limit, or maxUsers is 1 for replacement)
+    const canSearch = !maxUsers || selectedUsers.length < maxUsers || maxUsers === 1
+
+    if (value.startsWith('@') && canSearch) {
       setIsMentioning(true)
       const searchQuery = value.substring(1).trim() // Remove @ and trim
       if (searchQuery) {
@@ -122,8 +127,18 @@ const MultiUserMentionInput: React.FC<MultiUserMentionInputProps> = ({
 
   // Add a user to the selected users
   const addUser = (user: UserSearchResult) => {
-    const newSelectedUsers = [...selectedUsers, user]
-    onUsersChange(newSelectedUsers)
+    // Check if we've reached the maximum limit
+    if (maxUsers && selectedUsers.length >= maxUsers) {
+      // If maxUsers is 1, replace the existing user
+      if (maxUsers === 1) {
+        onUsersChange([user])
+      }
+      // Otherwise, don't add if limit is reached
+    } else {
+      const newSelectedUsers = [...selectedUsers, user]
+      onUsersChange(newSelectedUsers)
+    }
+    
     setIsMentioning(false)
     setSearchResults([])
     setQuery('')
@@ -202,9 +217,13 @@ const MultiUserMentionInput: React.FC<MultiUserMentionInputProps> = ({
           value={query}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
-          placeholder={placeholder}
-          disabled={disabled}
-          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000]"
+          placeholder={
+            maxUsers && selectedUsers.length >= maxUsers && maxUsers !== 1
+              ? `Maximum ${maxUsers} user${maxUsers > 1 ? 's' : ''} selected`
+              : placeholder
+          }
+          disabled={disabled || (maxUsers && selectedUsers.length >= maxUsers && maxUsers !== 1)}
+          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] disabled:bg-gray-50 disabled:text-gray-500"
         />
         {loading && (
           <div className="absolute right-3 top-1/2 transform -translate-y-1/2">

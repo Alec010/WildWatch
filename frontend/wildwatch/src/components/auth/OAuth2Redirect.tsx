@@ -25,12 +25,9 @@ export default function OAuth2Redirect() {
                 const data = JSON.parse(decodeURIComponent(encodedData));
                 console.log('OAuth response data:', data);
 
-                // Store the token in a cookie
-                Cookies.set('token', data.token, { 
-                    expires: 7,
-                    secure: true,
-                    sameSite: 'strict'
-                });
+                // Store the token using token service (handles automatic refresh)
+                const tokenService = (await import('@/utils/tokenService')).default;
+                tokenService.setToken(data.token);
 
                 // Check if we have a valid user object
                 if (!data.user || !data.user.email) {

@@ -622,54 +622,45 @@ export default function EvidenceSubmissionPage() {
                                   transition={{ duration: 0.2 }}
                                 >
                                   <div className="p-4 space-y-4">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                      <div className="space-y-2">
-                                        <Label className="text-sm font-medium flex items-center gap-1.5">
-                                          <User className="h-3.5 w-3.5 text-[#800000]/70" />
-                                          Name
-                                        </Label>
-                                        <ClientMultiUserMentionInput
-                                          selectedUsers={witness.users || []}
-                                          onUsersChange={(users) => {
-                                            // Update witness with selected users
-                                            const updatedWitnesses = [...formData.witnesses];
-                                            updatedWitnesses[index] = {
-                                              ...updatedWitnesses[index],
-                                              users: users,
-                                              // If there are users, use the first user's name and email as default
-                                              name: users.length > 0 ? users.map(u => u.fullName).join(", ") : updatedWitnesses[index].name,
-                                              contactInformation: users.length > 0 ? users.map(u => u.email).join(", ") : updatedWitnesses[index].contactInformation
-                                            };
-                                            setFormData((prev) => ({
-                                              ...prev,
-                                              witnesses: updatedWitnesses
-                                            }));
-                                          }}
-                                          placeholder="Type @ to mention users"
-                                          className="border-gray-200 focus:border-[#800000] focus:ring-[#800000]/20"
-                                        />
-                                      </div>
+                                    <div className="space-y-2">
+                                      <Label className="text-sm font-medium flex items-center gap-1.5">
+                                        <User className="h-3.5 w-3.5 text-[#800000]/70" />
+                                        Witness
+                                      </Label>
+                                      <ClientMultiUserMentionInput
+                                        selectedUsers={witness.users || []}
+                                        onUsersChange={(users) => {
+                                          // Update witness with selected users
+                                          const updatedWitnesses = [...formData.witnesses];
+                                          updatedWitnesses[index] = {
+                                            ...updatedWitnesses[index],
+                                            users: users,
+                                            // If there are users, use the user's name and email as default
+                                            name: users.length > 0 ? users[0].fullName : "",
+                                            contactInformation: users.length > 0 ? users[0].email : ""
+                                          };
+                                          setFormData((prev) => ({
+                                            ...prev,
+                                            witnesses: updatedWitnesses
+                                          }));
+                                        }}
+                                        placeholder="Type @ to mention a witness"
+                                        maxUsers={1}
+                                        className="border-gray-200 focus:border-[#800000] focus:ring-[#800000]/20"
+                                      />
+                                    </div>
+                                    
+                                    {witness.users && witness.users.length > 0 && (
                                       <div className="space-y-2">
                                         <Label className="text-sm font-medium flex items-center gap-1.5">
                                           <Phone className="h-3.5 w-3.5 text-[#800000]/70" />
                                           Contact Information
                                         </Label>
-                                        {witness.users && witness.users.length > 0 ? (
-                                          <div className="flex items-center p-2 border border-gray-200 rounded-md bg-gray-50">
-                                            <span className="text-gray-600">{witness.users.map(u => u.email).join(", ")}</span>
-                                          </div>
-                                        ) : (
-                                          <Input
-                                            value={witness.contactInformation}
-                                            onChange={(e) =>
-                                              handleWitnessChange(index, "contactInformation", e.target.value)
-                                            }
-                                            placeholder="Email or phone number"
-                                            className="border-gray-200 focus:border-[#800000] focus:ring-[#800000]/20"
-                                          />
-                                        )}
+                                        <div className="flex items-center p-2 border border-gray-200 rounded-md bg-gray-50">
+                                          <span className="text-gray-600">{witness.users[0].email}</span>
+                                        </div>
                                       </div>
-                                    </div>
+                                    )}
                                     <div className="space-y-2">
                                       <Label className="text-sm font-medium flex items-center gap-1.5">
                                         <PenLine className="h-3.5 w-3.5 text-[#800000]/70" />

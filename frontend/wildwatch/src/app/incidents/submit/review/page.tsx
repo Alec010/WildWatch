@@ -44,6 +44,8 @@ import { Switch } from "@/components/ui/switch"
 import { Toaster, toast } from "sonner"
 import { motion, AnimatePresence } from "framer-motion"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import { api } from "@/utils/apiClient"
+import { formatLocationDisplay } from "@/utils/locationFormatter"
 
 export default function ReviewSubmissionPage() {
   const router = useRouter()
@@ -98,12 +100,7 @@ export default function ReviewSubmissionPage() {
     setShowLoadingDialog(true)
 
     try {
-      const token = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("token="))
-        ?.split("=")[1]
-
-      if (!token) throw new Error("No authentication token found")
+      // Token will be handled by the API client automatically
 
       const formData = new FormData()
       // Process witnesses to match the backend DTO format
@@ -167,10 +164,10 @@ export default function ReviewSubmissionPage() {
       // Log witness details for debugging
       console.log('Processed witnesses:', processedWitnesses);
       
-      const response = await fetch("/api/incidents", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
+      const response = await api.post("/api/incidents", formData, {
+        headers: {
+          // Don't set Content-Type for FormData - let browser set it with boundary
+        },
       });
       
       // Log response status for debugging
@@ -185,27 +182,11 @@ export default function ReviewSubmissionPage() {
       setAssignedOffice(responseData.assignedOffice)
       setShowSuccessDialog(true)
 
-      // Clear session storage for form data but preserve the auth token
+      // Clear session storage for form data
       sessionStorage.removeItem("incidentSubmissionData")
       sessionStorage.removeItem("evidenceSubmissionData")
       
-      // Ensure token is preserved
-      const authToken = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("token="))
-        ?.split("=")[1];
-      
-      if (authToken) {
-        // Store token in sessionStorage as backup
-        sessionStorage.setItem("auth_token_backup", authToken);
-        
-        // Also refresh the cookie to ensure it doesn't expire
-        const expiryDate = new Date();
-        expiryDate.setDate(expiryDate.getDate() + 7); // 7 days expiry
-        document.cookie = `token=${authToken}; expires=${expiryDate.toUTCString()}; path=/; SameSite=Lax`;
-        
-        console.log("Token preserved for future use");
-      }
+      console.log("Form data cleared, token managed by token service");
 
       toast.success("Report submitted successfully!", {
         description: `Your tracking number is ${responseData.trackingNumber}`,
@@ -234,34 +215,9 @@ export default function ReviewSubmissionPage() {
   }
 
   const handleCloseDialog = () => {
-    setShowSuccessDialog(false)
-    
-    // First check if we have a backup token in sessionStorage
-    let authToken = sessionStorage.getItem("auth_token_backup");
-    
-    if (!authToken) {
-      // If no backup, try to get from cookie
-      authToken = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("token="))
-        ?.split("=")[1];
-    }
-    
-    if (authToken) {
-      // If token exists, ensure it's set in the cookie before redirecting
-      const expiryDate = new Date();
-      expiryDate.setDate(expiryDate.getDate() + 7); // 7 days expiry
-      document.cookie = `token=${authToken}; expires=${expiryDate.toUTCString()}; path=/; SameSite=Lax`;
-      
-      console.log("Token restored, redirecting to dashboard");
-      
-      // Use window.location for a full page reload to ensure cookie is applied
-      window.location.href = "/dashboard";
-    } else {
-      // If token doesn't exist, go to login page
-      console.warn("Token not found, redirecting to login");
-      router.push("/auth/login");
-    }
+    setShowSuccessDialog(false);
+    console.log("Redirecting to dashboard");
+    router.push("/dashboard");
   }
 
   const toggleSection = (section: string) => {
@@ -437,7 +393,7 @@ export default function ReviewSubmissionPage() {
                               <MapPin className="h-4 w-4 text-[#800000]" />
                               <h3 className="text-sm font-medium text-gray-700">Location</h3>
                             </div>
-                            <p className="text-base font-semibold text-gray-900">{incidentData.location}</p>
+                            <p className="text-base font-semibold text-gray-900">{formatLocationDisplay(incidentData)}</p>
                           </div>
 
                           <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">

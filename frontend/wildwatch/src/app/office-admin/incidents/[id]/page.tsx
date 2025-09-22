@@ -31,6 +31,8 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { API_BASE_URL } from "@/utils/api"
+import { formatLocationDisplay } from "@/utils/locationFormatter"
+import { api } from "@/utils/apiClient"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
@@ -119,21 +121,7 @@ export default function IncidentDetailsPage() {
   useEffect(() => {
     const fetchIncident = async () => {
       try {
-        const token = document.cookie
-          .split("; ")
-          .find((row) => row.startsWith("token="))
-          ?.split("=")[1]
-
-        if (!token) {
-          throw new Error("No authentication token found")
-        }
-
-        const response = await fetch(`${API_BASE_URL}/api/incidents/${id}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        })
+        const response = await api.get(`/api/incidents/${id}`)
 
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`)
@@ -191,29 +179,13 @@ export default function IncidentDetailsPage() {
     setPriorityError("")
     setIsProcessing(true)
     try {
-      const token = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("token="))
-        ?.split("=")[1]
-
-      if (!token) {
-        throw new Error("No authentication token found")
-      }
-
-      const response = await fetch(`${API_BASE_URL}/api/incidents/${id}`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          administrativeNotes,
-          verified: true,
-          verificationNotes,
-          status: "In Progress",
-          priorityLevel,
-          isAnonymous,
-        }),
+      const response = await api.put(`/api/incidents/${id}`, {
+        administrativeNotes,
+        verified: true,
+        verificationNotes,
+        status: "In Progress",
+        priorityLevel,
+        isAnonymous,
       })
 
       if (!response.ok) {
@@ -264,29 +236,13 @@ export default function IncidentDetailsPage() {
   const handleDismissIncident = async () => {
     setIsProcessing(true)
     try {
-      const token = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("token="))
-        ?.split("=")[1]
-
-      if (!token) {
-        throw new Error("No authentication token found")
-      }
-
-      const response = await fetch(`${API_BASE_URL}/api/incidents/${id}`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          administrativeNotes,
-          verified: false,
-          verificationNotes,
-          status: "Dismissed",
-          priorityLevel: null,
-          isAnonymous,
-        }),
+      const response = await api.put(`/api/incidents/${id}`, {
+        administrativeNotes,
+        verified: false,
+        verificationNotes,
+        status: "Dismissed",
+        priorityLevel: null,
+        isAnonymous,
       })
 
       if (!response.ok) {
@@ -326,29 +282,13 @@ export default function IncidentDetailsPage() {
   const handleStatusUpdate = async () => {
     setIsProcessing(true)
     try {
-      const token = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("token="))
-        ?.split("=")[1]
-
-      if (!token) {
-        throw new Error("No authentication token found")
-      }
-
-      const response = await fetch(`${API_BASE_URL}/api/incidents/${id}`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          administrativeNotes,
-          verified: isVerified,
-          verificationNotes,
-          status,
-          priorityLevel,
-          isAnonymous,
-        }),
+      const response = await api.put(`/api/incidents/${id}`, {
+        administrativeNotes,
+        verified: isVerified,
+        verificationNotes,
+        status,
+        priorityLevel,
+        isAnonymous,
       })
 
       if (!response.ok) {
@@ -399,26 +339,10 @@ export default function IncidentDetailsPage() {
 
     setIsTransferring(true)
     try {
-      const token = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("token="))
-        ?.split("=")[1]
-
-      if (!token) {
-        throw new Error("No authentication token found")
-      }
-
-      const response = await fetch(`${API_BASE_URL}/api/incidents/${id}/transfer`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          newOffice: selectedOffice,
-          transferNotes: transferNotes,
-          isAnonymous,
-        }),
+      const response = await api.post(`/api/incidents/${id}/transfer`, {
+        newOffice: selectedOffice,
+        transferNotes: transferNotes,
+        isAnonymous,
       })
 
       if (!response.ok) {
@@ -678,7 +602,7 @@ export default function IncidentDetailsPage() {
                       </div>
                       <div>
                         <p className="text-sm text-gray-500">Location</p>
-                        <p className="font-medium">{incident.location}</p>
+                        <p className="font-medium">{formatLocationDisplay(incident)}</p>
                       </div>
                     </div>
                   </div>

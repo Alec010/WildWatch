@@ -2,6 +2,7 @@ package com.teamhyungie.WildWatch.dto;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.teamhyungie.WildWatch.model.Office;
+import com.teamhyungie.WildWatch.model.Building;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -23,6 +24,15 @@ public class IncidentRequest {
 
     @NotBlank(message = "Location is required")
     private String location;
+
+    private String formattedAddress;
+
+    private Double latitude;
+
+    private Double longitude;
+
+    @JsonDeserialize(using = BuildingDeserializer.class)
+    private Building building;
 
     @NotBlank(message = "Description is required")
     private String description;

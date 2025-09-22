@@ -5,6 +5,9 @@ import com.teamhyungie.WildWatch.dto.LoginRequest;
 import com.teamhyungie.WildWatch.dto.RegisterRequest;
 import com.teamhyungie.WildWatch.service.AuthService;
 import com.teamhyungie.WildWatch.service.UserService;
+import com.teamhyungie.WildWatch.security.JwtUtil;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.Cookie;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -12,6 +15,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -27,6 +31,8 @@ public class AuthController {
     private final AuthService authService;
     private final UserService userService;
     private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
+    private final UserDetailsService userDetailsService;
 
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
@@ -149,6 +155,58 @@ public class AuthController {
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of(
                     "message", "Failed to setup account: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<?> refresh(HttpServletRequest request) {
+        try {
+            String jwt = null;
+            
+            // Try to get token from Authorization header
+            final String authHeader = request.getHeader("Authorization");
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                jwt = authHeader.substring(7);
+            }
+            
+            // If not in header, try to get from cookie
+            if (jwt == null) {
+                Cookie[] cookies = request.getCookies();
+                if (cookies != null) {
+                    for (Cookie cookie : cookies) {
+                        if ("token".equals(cookie.getName())) {
+                            jwt = cookie.getValue();
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            if (jwt == null) {
+                return ResponseEntity.status(401).body(Map.of("error", "No token provided"));
+            }
+            
+            // Extract username from token (even if expired)
+            String userEmail;
+            try {
+                userEmail = jwtUtil.extractUsernameIgnoreExpiration(jwt);
+            } catch (Exception e) {
+                return ResponseEntity.status(401).body(Map.of("error", "Invalid token"));
+            }
+            
+            // Load user details
+            UserDetails userDetails = userDetailsService.loadUserByUsername(userEmail);
+            
+            // Generate new token
+            String newToken = jwtUtil.generateToken(userDetails);
+            
+            return ResponseEntity.ok(Map.of(
+                "token", newToken,
+                "message", "Token refreshed successfully"
+            ));
+            
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to refresh token"));
         }
     }
 }

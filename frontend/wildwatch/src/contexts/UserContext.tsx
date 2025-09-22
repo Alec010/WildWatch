@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { API_BASE_URL } from "@/utils/api";
+import { api } from "@/utils/apiClient";
 
 interface UserContextType {
   userRole: string | null;
@@ -20,20 +21,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const fetchUserProfile = async () => {
       try {
-        const token = document.cookie
-          .split('; ')
-          .find((row) => row.startsWith('token='))
-          ?.split('=')[1];
-        if (!token) {
-          setIsLoading(false);
-          return;
-        }
-        const response = await fetch(`${API_BASE_URL}/api/auth/profile`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
+        const response = await api.get('/api/auth/profile');
         if (response.ok) {
           const data = await response.json();
           setUserRole(data.role);

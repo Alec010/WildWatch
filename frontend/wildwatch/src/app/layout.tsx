@@ -4,6 +4,7 @@ import "./globals.css";
 import { UserProvider } from "@/contexts/UserContext";
 import ClientChatbot from '../components/ClientChatbot';
 import { SidebarProvider } from "@/contexts/SidebarContext"
+import TokenInitializer from '@/components/TokenInitializer';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,6 +33,7 @@ export default function RootLayout({
       >
         <SidebarProvider>
           <UserProvider>
+            <TokenInitializer />
             {children}
             <ClientChatbot />
           </UserProvider>

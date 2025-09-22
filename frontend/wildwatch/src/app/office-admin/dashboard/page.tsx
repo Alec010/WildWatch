@@ -21,6 +21,8 @@ import {
 import { useRouter } from "next/navigation"
 import { Inter } from "next/font/google"
 import { API_BASE_URL } from "@/utils/api"
+import { formatLocationCompact } from "@/utils/locationFormatter"
+import { api } from "@/utils/apiClient"
 import { useSidebar } from "@/contexts/SidebarContext"
 import { motion } from "framer-motion"
 
@@ -58,22 +60,8 @@ export default function OfficeAdminDashboard() {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const token = document.cookie
-          .split("; ")
-          .find((row) => row.startsWith("token="))
-          ?.split("=")[1]
-
-        if (!token) {
-          throw new Error("No authentication token found")
-        }
-
         // Fetch incidents
-        const response = await fetch(`${API_BASE_URL}/api/incidents/office`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        })
+        const response = await api.get('/api/incidents/office')
 
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`)
@@ -446,7 +434,7 @@ export default function OfficeAdminDashboard() {
                           </div>
                           <div className="flex items-start mb-2">
                             <AlertCircle className="h-4 w-4 text-gray-400 mr-1 mt-0.5 flex-shrink-0" />
-                            <p className="text-xs text-gray-700">{incident.location}</p>
+                            <p className="text-xs text-gray-700">{formatLocationCompact(incident)}</p>
                           </div>
                           <p className="text-sm text-gray-600 line-clamp-2">{incident.description}</p>
                         </div>

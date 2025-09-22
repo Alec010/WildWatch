@@ -19,6 +19,7 @@ import {
 import Cookies from "js-cookie"
 import { useEffect, useState } from "react"
 import { API_BASE_URL } from "@/utils/api"
+import { api } from "@/utils/apiClient"
 import { motion } from "framer-motion"
 import { useSidebar } from "@/contexts/SidebarContext"
 
@@ -53,37 +54,13 @@ export function Sidebar() {
 
   useEffect(() => {
     const fetchUserProfile = async () => {
-      // First try to get token from cookies
-      let token = Cookies.get("token");
-      
-      // If not in cookies, check sessionStorage backup
-      if (!token) {
-        const backupToken = sessionStorage.getItem("auth_token_backup");
-        if (backupToken) {
-          // Restore token to cookie
-          console.log("Restoring token from backup");
-          Cookies.set("token", backupToken, { expires: 7 });
-          token = backupToken;
-        }
-      }
-      
-      if (!token) {
-        router.push("/login")
-        return
-      }
-
       try {
-        const response = await fetch(`${API_BASE_URL}/api/auth/profile`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        })
+        const response = await api.get('/api/auth/profile');
 
         if (!response.ok) {
           if (response.status === 401) {
-            // Token is invalid or expired
-            Cookies.remove("token")
+            // Token is invalid or expired - API client will handle refresh
+            console.log("Authentication failed, redirecting to login");
             router.push("/login")
             return
           }
@@ -108,9 +85,10 @@ export function Sidebar() {
     fetchUserProfile()
   }, [router])
 
-  const handleSignOut = () => {
-    Cookies.remove("token")
-    router.push("/login")
+  const handleSignOut = async () => {
+    const tokenService = (await import('@/utils/tokenService')).default;
+    tokenService.removeToken();
+    router.push("/login");
   }
 
   const navItems = [

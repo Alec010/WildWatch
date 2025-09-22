@@ -49,6 +49,28 @@ public class JwtUtil {
                 .getBody();
     }
 
+    // Extract claims from expired token (for refresh purposes)
+    private Claims extractAllClaimsIgnoreExpiration(String token) {
+        try {
+            return Jwts.parserBuilder()
+                    .setSigningKey(getSigningKey())
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+        } catch (io.jsonwebtoken.ExpiredJwtException e) {
+            // Return claims even if token is expired
+            return e.getClaims();
+        }
+    }
+
+    public String extractUsernameIgnoreExpiration(String token) {
+        try {
+            return extractAllClaimsIgnoreExpiration(token).getSubject();
+        } catch (Exception e) {
+            throw new RuntimeException("Invalid token", e);
+        }
+    }
+
     private Boolean isTokenExpired(String token) {
         return extractExpiration(token).before(new Date());
     }

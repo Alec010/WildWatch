@@ -98,6 +98,7 @@ public class SecurityConfig {
                                 "/login/oauth2/code/microsoft")
                         .permitAll()
                         .requestMatchers("/api/terms/**").authenticated()
+                        .requestMatchers("/api/geolocation/**").authenticated()
                         .anyRequest().authenticated())
                 .oauth2Login(oauth2 -> oauth2
                         .userInfoEndpoint(userInfo -> userInfo

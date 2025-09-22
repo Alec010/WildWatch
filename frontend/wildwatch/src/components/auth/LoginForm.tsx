@@ -66,13 +66,9 @@ export function LoginForm() {
         throw new Error(data.message || "Failed to login")
       }
 
-      // Store the token in a cookie
-      Cookies.set("token", data.token, {
-        expires: 7,
-        secure: true,
-        sameSite: "strict",
-        path: "/",
-      })
+      // Store the token using token service (handles automatic refresh)
+      const tokenService = (await import('@/utils/tokenService')).default;
+      tokenService.setToken(data.token);
 
       toast.success("Login successful!", {
         description: "Welcome back to WildWatch",
