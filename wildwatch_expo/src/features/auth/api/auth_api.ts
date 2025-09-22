@@ -27,6 +27,10 @@ export const authAPI = {
     const response = await api.get('/auth/profile');
     return response.data;
   },
+  acceptTerms: async (): Promise<{ message: string }> => {
+    const response = await api.post<{ message: string }>('/terms/accept');
+    return response.data;
+  },
 };
 
 

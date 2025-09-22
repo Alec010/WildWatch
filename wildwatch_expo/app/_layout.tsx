@@ -8,6 +8,7 @@ import 'react-native-reanimated';
 
 import { useColorScheme } from '@/components/useColorScheme';
 import { storage } from '../lib/storage';
+import { authAPI } from '@/src/features/auth/api/auth_api';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -54,16 +55,33 @@ function RootLayoutNav() {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const token = await storage.getToken();
-      const authed = Boolean(token);
-      setIsAuthenticated(authed);
-      setHasCheckedAuth(true);
+      try {
+        const token = await storage.getToken();
+        const authed = Boolean(token);
+        setIsAuthenticated(authed);
 
-      // Redirect logic
-      if (authed && pathname?.startsWith('/auth')) {
-        router.replace('/(tabs)');
-      } else if (!authed && pathname?.startsWith('/(tabs)')) {
-        router.replace('/auth/login');
+        if (authed) {
+          // Check if terms are accepted by fetching user profile
+          const userProfile = await authAPI.getProfile();
+          const termsAccepted = userProfile.termsAccepted;
+
+          if (!termsAccepted && !pathname?.startsWith('/auth/terms')) {
+            router.replace('/(auth)/terms' as any);
+          } else if (pathname?.startsWith('/auth') && termsAccepted) {
+            router.replace('/(tabs)');
+          }
+        } else if (pathname?.startsWith('/(tabs)')) {
+          router.replace('/auth/login');
+        }
+      } catch (error) {
+        console.error('Auth check error:', error);
+        // On error, assume not authenticated
+        setIsAuthenticated(false);
+        if (pathname?.startsWith('/(tabs)')) {
+          router.replace('/auth/login');
+        }
+      } finally {
+        setHasCheckedAuth(true);
       }
     };
 
