@@ -75,6 +75,9 @@ public class Incident {
     @Column(name = "verified")
     private Boolean verified = false; // Changed from boolean to Boolean
 
+    @Column(name = "resolution_notes", length = 2000)
+    private String resolutionNotes;
+
     @ElementCollection
     @CollectionTable(name = "incident_tags", joinColumns = @JoinColumn(name = "incident_id"))
     @Column(name = "tag")

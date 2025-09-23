@@ -48,6 +48,7 @@ import { RatingModal } from "@/components/RatingModal"
 import { useSidebar } from "@/contexts/SidebarContext"
 import { motion } from "framer-motion"
 import { Inter } from "next/font/google"
+import { Checkbox } from "@/components/ui/checkbox"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -102,10 +103,13 @@ export default function UpdateApprovedCasePage() {
   const [updateMessage, setUpdateMessage] = useState("")
   const [updatedBy, setUpdatedBy] = useState("")
   const [isVisibleToReporter, setIsVisibleToReporter] = useState(true)
-  const [status, setStatus] = useState("")
+  // Status is read-only in this view; use incident.status directly
   const [priorityLevel, setPriorityLevel] = useState<"HIGH" | "MEDIUM" | "LOW">("MEDIUM")
   const [isSending, setIsSending] = useState(false)
   const [isResolveDialogOpen, setIsResolveDialogOpen] = useState(false)
+  const [resolutionNotes, setResolutionNotes] = useState("")
+  const [confirmResolution, setConfirmResolution] = useState(false)
+  const [confirmAIGuideline, setConfirmAIGuideline] = useState(false)
   const [showTransferModal, setShowTransferModal] = useState(false)
   const [transferNotes, setTransferNotes] = useState("")
   const [selectedOffice, setSelectedOffice] = useState("")
@@ -116,7 +120,7 @@ export default function UpdateApprovedCasePage() {
   const [officeName, setOfficeName] = useState<string>("")
   const [showRatingModal, setShowRatingModal] = useState(false)
   const [showSuccessDialog, setShowSuccessDialog] = useState(false)
-  const prevStatusRef = useRef<string>("")
+  // Removed editable status tracking
 
   // Fetch user's office name when component mounts
   useEffect(() => {
@@ -248,9 +252,7 @@ export default function UpdateApprovedCasePage() {
 
   useEffect(() => {
     if (incident) {
-      setStatus(incident.status)
       setPriorityLevel(incident.priorityLevel)
-      prevStatusRef.current = incident.status
     }
   }, [incident])
 
@@ -266,7 +268,7 @@ export default function UpdateApprovedCasePage() {
   }
 
   const handleSendUpdate = async () => {
-    if (!incident || !updateMessage.trim() || !updatedBy.trim() || !status) return
+    if (!incident || !updateMessage.trim() || !updatedBy.trim()) return
 
     try {
       setIsSending(true)
@@ -280,7 +282,7 @@ export default function UpdateApprovedCasePage() {
       }
 
       const updateRequest: UpdateRequest = {
-        status,
+        status: incident.status,
         updateMessage: updateMessage.trim(),
         updatedBy: updatedBy.trim(),
         visibleToReporter: isVisibleToReporter,
@@ -323,6 +325,15 @@ export default function UpdateApprovedCasePage() {
   }
 
   const handleResolveCase = async () => {
+    if (!resolutionNotes.trim() || !confirmResolution || !confirmAIGuideline) {
+      toast.error("Please complete the resolution form", {
+        description: !resolutionNotes.trim()
+          ? "Add resolution notes before submitting."
+          : "Please check both confirmation boxes before submitting.",
+        duration: 5000,
+      })
+      return
+    }
     try {
       setIsSending(true)
       const token = document.cookie
@@ -340,6 +351,8 @@ export default function UpdateApprovedCasePage() {
         updatedBy: updatedBy || "System",
         visibleToReporter: true,
         priorityLevel,
+        // @ts-ignore backend accepts this extra field
+        resolutionNotes: resolutionNotes.trim(),
       }
 
       const response = await fetch(`${API_BASE_URL}/api/incidents/${params.id}`, {
@@ -360,7 +373,7 @@ export default function UpdateApprovedCasePage() {
         duration: 5000,
       })
 
-      setStatus("Resolved")
+      setIncident((prev) => (prev ? { ...prev, status: "Resolved" } : prev))
       await fetchUpdates()
       setShowRatingModal(true)
     } catch (error) {
@@ -372,6 +385,9 @@ export default function UpdateApprovedCasePage() {
     } finally {
       setIsSending(false)
       setIsResolveDialogOpen(false)
+      setResolutionNotes("")
+      setConfirmResolution(false)
+      setConfirmAIGuideline(false)
     }
   }
 
@@ -458,12 +474,7 @@ export default function UpdateApprovedCasePage() {
     router.push("/office-admin/dashboard")
   }
 
-  // Efficiently handle status change
-  const handleStatusChange = async (newStatus: string) => {
-    // Only update the status without triggering resolution
-    setStatus(newStatus)
-    prevStatusRef.current = newStatus
-  }
+  // Status is not editable on this page
 
   if (loading) {
     return (
@@ -605,7 +616,7 @@ export default function UpdateApprovedCasePage() {
                       <TooltipTrigger asChild>
                         <Button
                           onClick={() => setIsResolveDialogOpen(true)}
-                          disabled={status === "Resolved" || status === "Dismissed" || isSending}
+                          disabled={incident.status === "Resolved" || incident.status === "Dismissed" || isSending}
                           className="bg-green-600 hover:bg-green-700 text-white"
                           size="sm"
                         >
@@ -703,16 +714,11 @@ export default function UpdateApprovedCasePage() {
 
                       <div className="space-y-2">
                         <label className="text-sm font-medium text-[#8B0000]">Status</label>
-                        <Select value={status} onValueChange={handleStatusChange}>
-                          <SelectTrigger className="border-[#DAA520]/20 focus:ring-[#8B0000]/20 focus:border-[#8B0000]">
-                            <SelectValue placeholder="Select status" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="In Progress">In Progress</SelectItem>
-                            <SelectItem value="Resolved">Resolved</SelectItem>
-                            <SelectItem value="Dismissed">Dismissed</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <Input
+                          value={incident.status || "In Progress"}
+                          disabled
+                          className="bg-[#8B0000]/5 border-[#DAA520]/20"
+                        />
                       </div>
                     </div>
 
@@ -785,7 +791,6 @@ export default function UpdateApprovedCasePage() {
                           setUpdatedBy("")
                           setIsVisibleToReporter(true)
                           if (incident) {
-                            setStatus(incident.status)
                             setPriorityLevel(incident.priorityLevel)
                           }
                         }}
@@ -796,7 +801,7 @@ export default function UpdateApprovedCasePage() {
                       </Button>
                       <Button
                         onClick={handleSendUpdate}
-                        disabled={!updateMessage.trim() || !updatedBy.trim() || !status || isSending}
+                        disabled={!updateMessage.trim() || !updatedBy.trim() || isSending}
                         className="bg-[#8B0000] hover:bg-[#6B0000] text-white"
                       >
                         {isSending ? (
@@ -972,24 +977,52 @@ export default function UpdateApprovedCasePage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Mark as Resolved</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to mark this case as resolved? This will update the case status and notify the
-              reporter.
+              Provide resolution notes. These notes will be shared with the reporter and help future cases.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-[#8B0000]">Resolution Notes</label>
+              <Textarea
+                value={resolutionNotes}
+                onChange={(e) => setResolutionNotes(e.target.value)}
+                placeholder="Describe what was done to resolve the incident..."
+                className="min-h-[120px] resize-none border-[#DAA520]/20 focus:ring-[#8B0000]/20 focus:border-[#8B0000]"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="flex items-start gap-2 text-sm text-gray-700">
+                <Checkbox
+                  checked={confirmResolution}
+                  onCheckedChange={(v) => setConfirmResolution(Boolean(v))}
+                  className="mt-0.5"
+                />
+                <span>I confirm this incident is fully resolved and the notes are accurate.</span>
+              </label>
+              <label className="flex items-start gap-2 text-sm text-gray-700">
+                <Checkbox
+                  checked={confirmAIGuideline}
+                  onCheckedChange={(v) => setConfirmAIGuideline(Boolean(v))}
+                  className="mt-0.5"
+                />
+                <span>I understand these resolution notes may be used by AI to improve solutions for similar incidents.</span>
+              </label>
+            </div>
+          </div>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isSending}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleResolveCase}
-              disabled={isSending}
+              disabled={isSending || !resolutionNotes.trim() || !confirmResolution || !confirmAIGuideline}
               className="bg-green-600 hover:bg-green-700 text-white"
             >
               {isSending ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Processing...
+                  Submitting...
                 </>
               ) : (
-                "Confirm Resolution"
+                "Submit Resolution"
               )}
             </AlertDialogAction>
           </AlertDialogFooter>

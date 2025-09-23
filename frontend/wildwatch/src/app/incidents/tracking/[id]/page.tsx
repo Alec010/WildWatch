@@ -364,17 +364,21 @@ export default function CaseDetailsPage() {
 
   const handleRatingSuccess = async () => {
     try {
-      if (incident?.id) {
-        const ratingRes = await fetch(`${API_BASE_URL}/api/ratings/incidents/${incident.id}`, {
-          credentials: "include",
-        })
-        if (ratingRes.ok) {
-          const ratingData = await ratingRes.json()
-          setIncidentRating(ratingData)
-          setShowRatingSuccessModal(true)
-        } else {
-          throw new Error("Failed to fetch updated rating")
-        }
+      if (!incident) return
+      const token = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("token="))
+        ?.split("=")[1]
+      const idOrTracking = incident.trackingNumber || incident.id
+      const ratingRes = await fetch(`${API_BASE_URL}/api/ratings/incidents/${idOrTracking}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      })
+      if (ratingRes.ok) {
+        const ratingData = await ratingRes.json()
+        setIncidentRating(ratingData)
+        setShowRatingSuccessModal(true)
+      } else {
+        throw new Error("Failed to fetch updated rating")
       }
     } catch (error) {
       console.error("Error updating rating:", error)

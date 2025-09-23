@@ -11,4 +11,5 @@ public class IncidentUpdateRequest {
     private boolean isVisibleToReporter = true;
     private PriorityLevel priorityLevel;
     private boolean isVerified;
+    private String resolutionNotes;
 } 

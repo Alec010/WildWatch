@@ -77,6 +77,10 @@ export default function ReviewSubmissionPage() {
   const [showLoadingDialog, setShowLoadingDialog] = useState(false)
   const [showBlockedDialog, setShowBlockedDialog] = useState(false)
   const [blockedReasons, setBlockedReasons] = useState<string[]>([])
+  const [showSimilarDialog, setShowSimilarDialog] = useState(false)
+  const [similarIncidents, setSimilarIncidents] = useState<any[]>([])
+  const [analysisSuggestion, setAnalysisSuggestion] = useState<{ suggestedOffice?: string } | null>(null)
+  const [analysisWhy, setAnalysisWhy] = useState<{ tags: string[]; location?: string } | null>(null)
   const [loading, setLoading] = useState(true)
   const [expandedSection, setExpandedSection] = useState<string | null>("incident")
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
@@ -105,7 +109,7 @@ export default function ReviewSubmissionPage() {
     }
 
     setShowConfirmDialog(true)
-  }
+  };
 
   const processSubmission = async () => {
     setShowConfirmDialog(false)
@@ -139,118 +143,107 @@ export default function ReviewSubmissionPage() {
         return
       }
 
-      // Token will be handled by the API client automatically
+      // Do not pre-set assigned office; only show after final submission
 
-      const formData = new FormData()
-      // Process witnesses to match the backend DTO format
-      let processedWitnesses: ProcessedWitness[] = [];
-      
-      // For each witness entry
-      evidenceData.witnesses.forEach((witness: EvidenceWitnessInput) => {
-        if (witness.users && witness.users.length > 0) {
-          // If there are tagged users, create a separate witness entry for each user
-          witness.users.forEach((user: TaggedUser) => {
-            processedWitnesses.push({
-              userId: user.id,
-              additionalNotes: witness.additionalNotes
-            });
-          });
-        } else {
-          // For manually entered witnesses
-          processedWitnesses.push({
-            name: witness.name,
-            contactInformation: witness.contactInformation,
-            additionalNotes: witness.additionalNotes
-          });
-        }
-      });
-      
-      formData.append(
-        "incidentData",
-        JSON.stringify({
-          ...incidentData,
-          witnesses: processedWitnesses,
-          preferAnonymous: !!preferAnonymous,
-          tags: incidentData.tags || [], // Ensure tags are included in the submission
-        }),
-      )
-
-      // Show progress toast
-      const loadingToast = toast.loading("Processing files...", {
-        description: "Uploading evidence files to secure storage.",
+      // Store context for "Why this suggestion?"
+      setAnalysisWhy({
+        tags: Array.isArray(analysis.suggestedTags) ? analysis.suggestedTags.slice(0, 8) : (incidentData.tags || []).slice(0, 8),
+        location: analysis.normalizedLocation || formatLocationDisplay(incidentData),
       })
 
-      for (const fileInfo of evidenceData.fileInfos) {
-        const response = await fetch(fileInfo.data)
-        const blob = await response.blob()
-        formData.append("files", blob, fileInfo.name)
+      // If similar incidents exist (>= threshold), show modal and pause submission
+      if (Array.isArray(analysis.similarIncidents) && analysis.similarIncidents.length > 0) {
+        setSimilarIncidents(analysis.similarIncidents)
+        setAnalysisSuggestion({ suggestedOffice: analysis.suggestedOffice })
+        setIsSubmitting(false)
+        setIsAssigningOffice(false)
+        setShowLoadingDialog(false)
+        setShowSimilarDialog(true)
+        return
       }
 
-      toast.dismiss(loadingToast)
-
-      const submissionToast = toast.loading("Submitting report...", {
-        description: "Your report is being securely transmitted.",
-      })
-
-      // Add detailed logging for debugging
-      console.log('Submitting report with:', {
-        incidentType: incidentData.incidentType,
-        witnessCount: processedWitnesses.length,
-        originalWitnessCount: evidenceData.witnesses.length,
-        fileCount: evidenceData.fileInfos.length
-      });
-      
-      // Log witness details for debugging
-      console.log('Processed witnesses:', processedWitnesses);
-      
-      const response = await api.post("/api/incidents", formData, {
-        headers: {
-          // Don't set Content-Type for FormData - let browser set it with boundary
-        },
-      });
-      
-      // Log response status for debugging
-      console.log('Submission response status:', response.status);
-
-      toast.dismiss(submissionToast)
-
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
-
-      const responseData = await response.json()
-      setTrackingNumber(responseData.trackingNumber)
-      setAssignedOffice(responseData.assignedOffice)
-      setShowSuccessDialog(true)
-
-      // Clear session storage for form data
-      sessionStorage.removeItem("incidentSubmissionData")
-      sessionStorage.removeItem("evidenceSubmissionData")
-      
-      console.log("Form data cleared, token managed by token service");
-
-      toast.success("Report submitted successfully!", {
-        description: `Your tracking number is ${responseData.trackingNumber}`,
-      })
+      // If no similar suggestions, proceed to submit
+      await doSubmit()
     } catch (error) {
-      console.error("Submission failed:", error);
-      
-      // Try to get more detailed error information
-      let errorMessage = "Please try again or contact support if the problem persists.";
-      if (error instanceof Error) {
-        console.error("Error details:", error.message);
-        // If it's an HTTP error, try to get the response body
-        if (error.message.includes("HTTP error")) {
-          errorMessage = `Server error: ${error.message}. Please try again later.`;
-        }
-      }
-      
+      console.error("Analysis or submission error:", error);
       toast.error("Submission failed", {
-        description: errorMessage,
+        description: "Please try again or contact support if the problem persists.",
       });
     } finally {
       setIsSubmitting(false)
       setIsAssigningOffice(false)
       setShowLoadingDialog(false)
     }
+  }
+
+  const doSubmit = async () => {
+    // Token will be handled by the API client automatically
+    const formData = new FormData()
+    // Process witnesses to match the backend DTO format
+    let processedWitnesses: ProcessedWitness[] = []
+
+    evidenceData.witnesses.forEach((witness: EvidenceWitnessInput) => {
+      if (witness.users && witness.users.length > 0) {
+        witness.users.forEach((user: TaggedUser) => {
+          processedWitnesses.push({
+            userId: user.id,
+            additionalNotes: witness.additionalNotes,
+          })
+        })
+      } else {
+        processedWitnesses.push({
+          name: witness.name,
+          contactInformation: witness.contactInformation,
+          additionalNotes: witness.additionalNotes,
+        })
+      }
+    })
+
+    formData.append(
+      "incidentData",
+      JSON.stringify({
+        ...incidentData,
+        witnesses: processedWitnesses,
+        preferAnonymous: !!preferAnonymous,
+        tags: incidentData.tags || [],
+      }),
+    )
+
+    const loadingToast = toast.loading("Processing files...", {
+      description: "Uploading evidence files to secure storage.",
+    })
+
+    for (const fileInfo of evidenceData.fileInfos) {
+      const response = await fetch(fileInfo.data)
+      const blob = await response.blob()
+      formData.append("files", blob, fileInfo.name)
+    }
+
+    toast.dismiss(loadingToast)
+
+    const submissionToast = toast.loading("Submitting report...", {
+      description: "Your report is being securely transmitted.",
+    })
+
+    const response = await api.post("/api/incidents", formData, {
+      headers: {},
+    })
+
+    toast.dismiss(submissionToast)
+
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+
+    const responseData = await response.json()
+    setTrackingNumber(responseData.trackingNumber)
+    setAssignedOffice(responseData.assignedOffice)
+    setShowSuccessDialog(true)
+
+    sessionStorage.removeItem("incidentSubmissionData")
+    sessionStorage.removeItem("evidenceSubmissionData")
+
+    toast.success("Report submitted successfully!", {
+      description: `Your tracking number is ${responseData.trackingNumber}`,
+    })
   }
 
   const handleCloseDialog = () => {
@@ -979,6 +972,106 @@ export default function ReviewSubmissionPage() {
               <div className="bg-[#800000] h-2.5 rounded-full animate-pulse w-3/4"></div>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Similar Incidents Dialog */}
+      <Dialog open={showSimilarDialog} onOpenChange={setShowSimilarDialog}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-[#800000]">We found similar resolved cases</DialogTitle>
+            <DialogDescription>
+              Review how similar cases were resolved. You can cancel if the suggested resolution already addresses your concern, or proceed to submit your report.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+            {similarIncidents.slice(0, 1).map((s, idx) => (
+              <div key={s.id || idx} className="border rounded-lg p-4 bg-gray-50">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-gray-600">Similarity</div>
+                  <div className="text-sm font-semibold text-[#800000]">{Math.round((s.similarityScore || 0) * 100)}%</div>
+                </div>
+                <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <div className="text-xs text-gray-500">Resolved By Office</div>
+                    <div className="text-sm font-medium text-gray-800">{s.assignedOffice || "N/A"}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500">Reported At</div>
+                    <div className="text-sm font-medium text-gray-800">{s.submittedAt ? new Date(s.submittedAt).toLocaleString() : "N/A"}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500">Resolved At</div>
+                    <div className="text-sm font-medium text-gray-800">{s.finishedDate ? new Date(s.finishedDate).toLocaleString() : "N/A"}</div>
+                  </div>
+                </div>
+                {s.resolutionNotes && (
+                  <div className="mt-3">
+                    <div className="text-xs text-gray-500 mb-1">Resolution Notes</div>
+                    <div className="text-sm text-gray-800 whitespace-pre-line bg-white border rounded p-3">
+                      {s.resolutionNotes}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Why this suggestion */}
+          {analysisWhy && (
+            <div className="mt-4 border rounded-lg p-4 bg-white">
+              <div className="text-sm font-semibold text-gray-800 mb-2">Why this suggestion?</div>
+              {analysisWhy.location && (
+                <div className="mb-2 text-xs text-gray-600">
+                  Location context: <span className="font-medium text-gray-800">{analysisWhy.location}</span>
+                </div>
+              )}
+              {Array.isArray(analysisWhy.tags) && analysisWhy.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {analysisWhy.tags.map((t, i) => (
+                    <span key={`${t}-${i}`} className="px-2 py-1 text-xs rounded-full border border-gray-200 bg-gray-50 text-gray-800">
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter className="flex gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowSimilarDialog(false)
+                toast.success("Report canceled", { description: "You chose to cancel based on similar resolutions." })
+              }}
+              className="border-gray-300 text-gray-700 hover:bg-gray-50"
+            >
+              Cancel Report
+            </Button>
+            <Button
+              onClick={async () => {
+                setShowSimilarDialog(false)
+                setIsSubmitting(true)
+                setIsAssigningOffice(true)
+                setShowLoadingDialog(true)
+                try {
+                  await doSubmit()
+                } catch (e) {
+                  console.error(e)
+                  toast.error("Submission failed", { description: "Please try again." })
+                } finally {
+                  setIsSubmitting(false)
+                  setIsAssigningOffice(false)
+                  setShowLoadingDialog(false)
+                }
+              }}
+              className="bg-[#800000] hover:bg-[#600000] text-white"
+            >
+              Proceed with Report
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

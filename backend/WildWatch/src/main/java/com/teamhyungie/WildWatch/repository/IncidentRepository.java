@@ -21,4 +21,10 @@ public interface IncidentRepository extends JpaRepository<Incident, String> {
 
     @Query("SELECT i FROM Incident i WHERE i.assignedOffice = :office AND i.status = :status ORDER BY i.submittedAt DESC")
     List<Incident> findByAssignedOfficeAndStatusOrderBySubmittedAtDesc(@Param("office") Office office, @Param("status") String status);
+
+    @Query("SELECT i FROM Incident i WHERE (LOWER(i.status) = 'resolved' OR LOWER(i.status) = 'closed') AND i.resolutionNotes IS NOT NULL AND TRIM(i.resolutionNotes) <> ''")
+    List<Incident> findResolvedWithResolutionNotes();
+
+    @Query("SELECT i FROM Incident i WHERE (LOWER(i.status) = 'resolved' OR LOWER(i.status) = 'closed') AND i.resolutionNotes IS NOT NULL AND TRIM(i.resolutionNotes) <> '' ORDER BY i.submittedAt DESC")
+    List<Incident> findResolvedWithResolutionNotesOrderBySubmittedAtDesc();
 } 

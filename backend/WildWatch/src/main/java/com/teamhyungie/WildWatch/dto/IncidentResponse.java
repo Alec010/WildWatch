@@ -47,6 +47,7 @@ public class IncidentResponse {
     private String lastTransferredTo;
     private String lastTransferNotes;
     private Integer upvoteCount;
+    private String resolutionNotes;
 
     @Data
     public static class EvidenceDTO {
@@ -93,6 +94,7 @@ public class IncidentResponse {
         response.setSubmittedByEmail(incident.getSubmittedBy().getEmail());
         response.setSubmittedByPhone(incident.getSubmittedBy().getContactNumber());
         response.setSubmittedAt(incident.getSubmittedAt());
+        response.setResolutionNotes(incident.getResolutionNotes());
         response.setVerified(incident.getVerified());
         response.setTransferredFrom(incident.getTransferredFrom());
         response.setLastTransferredTo(incident.getLastTransferredTo());

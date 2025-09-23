@@ -21,6 +21,7 @@ public class IncidentAnalysisController {
     private final OfficeAssignmentService officeAssignmentService;
     private final ModerationService moderationService;
     private final com.teamhyungie.WildWatch.service.OfficeAdminService officeAdminService;
+    private final com.teamhyungie.WildWatch.service.SimilarityService similarityService;
 
     @PostMapping("/analyze")
     public ResponseEntity<?> analyze(@RequestBody AnalyzeRequest req) {
@@ -40,14 +41,24 @@ public class IncidentAnalysisController {
                 .toList();
         ModerationService.Result mod = moderationService.review(req.incidentType, req.description, enhancedLocation, tags, officeNames);
 
-        return ResponseEntity.ok(Map.of(
-                "decision", mod.decision.name(),
-                "confidence", mod.confidence,
-                "reasons", mod.reasons,
-                "suggestedTags", tags,
-                "suggestedOffice", office.name(),
-                "normalizedLocation", enhancedLocation
-        ));
+        Map<String, Object> payload = new java.util.HashMap<>();
+        payload.put("decision", mod.decision.name());
+        payload.put("confidence", mod.confidence);
+        payload.put("reasons", mod.reasons);
+        payload.put("suggestedTags", tags);
+        payload.put("suggestedOffice", office.name());
+        payload.put("normalizedLocation", enhancedLocation);
+
+        if ("ALLOW".equalsIgnoreCase(mod.decision.name())) {
+            // Use AI-powered similarity when available, fallback to lightweight
+            var similars = similarityService.findSimilarAi(req.incidentType, req.description, enhancedLocation, tags, 3);
+            if (similars == null || similars.isEmpty()) {
+                similars = similarityService.findSimilar(req.incidentType, req.description, enhancedLocation, tags, 3);
+            }
+            payload.put("similarIncidents", similars);
+        }
+
+        return ResponseEntity.ok(payload);
     }
 
     @Data

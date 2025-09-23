@@ -386,6 +386,11 @@ public class IncidentService {
             incident.setPriorityLevel(request.getPriorityLevel());
         }
         incident.setVerified(request.isVerified());
+        // If resolution notes provided and status is resolved/closed, store them on the incident
+        if (request.getResolutionNotes() != null && request.getStatus() != null &&
+            ("resolved".equalsIgnoreCase(request.getStatus()) || "closed".equalsIgnoreCase(request.getStatus()))) {
+            incident.setResolutionNotes(request.getResolutionNotes());
+        }
         
         // Save the updated incident
         Incident updatedIncident = incidentRepository.save(incident);
@@ -511,6 +516,18 @@ public class IncidentService {
                 (request.getStatus().equalsIgnoreCase("resolved") || request.getStatus().equalsIgnoreCase("closed"))) {
                 incident.setLastTransferredTo(null);
                 incidentRepository.save(incident);
+
+                // Create a resolution update entry with resolution notes, visible to reporter
+                if (request.getResolutionNotes() != null && !request.getResolutionNotes().trim().isEmpty()) {
+                    IncidentUpdate resolutionUpdate = new IncidentUpdate();
+                    resolutionUpdate.setIncident(updatedIncident);
+                    resolutionUpdate.setMessage("Resolution: " + request.getResolutionNotes().trim());
+                    resolutionUpdate.setStatus(updatedIncident.getStatus());
+                    resolutionUpdate.setUpdatedBy(user);
+                    resolutionUpdate.setVisibleToReporter(true);
+                    resolutionUpdate.setUpdatedByName(request.getUpdatedBy());
+                    incidentUpdateRepository.save(resolutionUpdate);
+                }
             }
         }
 
