@@ -274,10 +274,67 @@ export default function CaseDetailsScreen() {
             </View>
             <View style={{ height: 1, backgroundColor: '#E5E7EB', marginBottom: 16 }} />
             {incident.witnesses.map((witness, index) => (
-              <View key={index} style={{ backgroundColor: '#F9FAFB', borderRadius: 8, padding: 12, marginBottom: 8 }}>
-                <Text style={{ fontSize: fontSize, color: '#111827', fontWeight: '600', marginBottom: 4 }}>{witness.name}</Text>
-                <Text style={{ fontSize: fontSize - 2, color: '#6B7280', marginBottom: 4 }}>Contact: {witness.contact}</Text>
-                <Text style={{ fontSize: fontSize - 1, color: '#111827', lineHeight: 20 }}>{witness.statement}</Text>
+              <View key={index} style={{ 
+                backgroundColor: '#F9FAFB', 
+                borderRadius: 8, 
+                padding: 12, 
+                marginBottom: 8,
+                flexDirection: 'row',
+                alignItems: 'flex-start'
+              }}>
+                {/* Avatar with initials */}
+                <View style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  backgroundColor: '#800000',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: 12,
+                  marginTop: 2
+                }}>
+                  <Text style={{
+                    color: 'white',
+                    fontSize: fontSize - 2,
+                    fontWeight: 'bold'
+                  }}>
+                    {witness.name ? witness.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 3) : 'W'}
+                  </Text>
+                </View>
+                
+                {/* Name and statement */}
+                <View style={{ flex: 1 }}>
+                  <Text style={{ 
+                    fontSize: fontSize, 
+                    color: '#111827', 
+                    fontWeight: '600', 
+                    marginBottom: 4 
+                  }}>
+                    {witness.name}
+                  </Text>
+                  
+                  {/* Contact Information - Only show if exists */}
+                  {witness.contactInformation && witness.contactInformation.trim() && (
+                    <Text style={{ 
+                      fontSize: fontSize - 2, 
+                      color: '#6B7280', 
+                      marginBottom: 4
+                    }}>
+                      {witness.contactInformation}
+                    </Text>
+                  )}
+                  
+                  {/* Additional Notes - Only show if exists */}
+                  {witness.additionalNotes && witness.additionalNotes.trim() && (
+                    <Text style={{ 
+                      fontSize: fontSize - 1, 
+                      color: '#111827', 
+                      lineHeight: 20
+                    }}>
+                      {witness.additionalNotes}
+                    </Text>
+                  )}
+                </View>
               </View>
             ))}
           </View>

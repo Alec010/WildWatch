@@ -8,8 +8,8 @@ export interface IncidentEvidenceDto {
 export interface IncidentWitnessDto {
   id: string;
   name: string;
-  contact: string;
-  statement: string;
+  contactInformation: string;
+  additionalNotes: string;
 }
 
 export interface IncidentDetailsDto {

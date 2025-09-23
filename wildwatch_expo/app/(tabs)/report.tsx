@@ -16,7 +16,9 @@ import { storage } from '../../lib/storage';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import { type OfficeInfo, type ReportForm } from '../../src/features/reports/models/report';
+import { type OfficeInfo, type ReportForm, type WitnessInfo } from '../../src/features/reports/models/report';
+import { WitnessInput } from '../../src/features/reports/components/WitnessInput';
+import { WitnessReviewCard } from '../../src/features/reports/components/WitnessReviewCard';
 import { config } from '../../lib/config';
 
 // Uses centralized API base URL from config
@@ -257,11 +259,7 @@ export default function ReportScreen() {
     type: string;
     size: number;
   }>>([]);
-  const [witnesses, setWitnesses] = useState<Array<{
-    name: string;
-    contact: string;
-    statement: string;
-  }>>([]);
+  const [witnesses, setWitnesses] = useState<WitnessInfo[]>([]);
 
 
   // Tag generation state
@@ -471,7 +469,17 @@ export default function ReportScreen() {
         description: form.description.trim(),
         preferAnonymous: form.preferAnonymous,
         tags: form.tags,
-        witnesses: witnesses.filter(w => w.name.trim() && w.contact.trim()),
+        witnesses: witnesses.filter(w => {
+          // Include witnesses that have either:
+          // 1. A registered user (userId exists)
+          // 2. Manual entry with both name and contact
+          return w.userId || (w.name.trim() && w.contact.trim());
+        }).map(w => ({
+          userId: w.userId || undefined,
+          name: w.isRegisteredUser ? undefined : w.name.trim() || undefined,
+          contactInformation: w.isRegisteredUser ? undefined : w.contact.trim() || undefined,
+          additionalNotes: w.additionalNotes?.trim() || undefined,
+        })),
         evidenceFiles: evidenceFiles
       };
 
@@ -571,14 +579,14 @@ export default function ReportScreen() {
   };
 
   const addWitness = () => {
-    setWitnesses(prev => [...prev, { name: '', contact: '', statement: '' }]);
+    setWitnesses(prev => [...prev, { name: '', contact: '', additionalNotes: '', isRegisteredUser: false }]);
   };
 
   const removeWitness = (index: number) => {
     setWitnesses(prev => prev.filter((_, i) => i !== index));
   };
 
-  const updateWitness = (index: number, field: string, value: string) => {
+  const updateWitness = (index: number, field: keyof WitnessInfo, value: string | number | boolean) => {
     setWitnesses(prev => prev.map((witness, i) => 
       i === index ? { ...witness, [field]: value } : witness
     ));
@@ -1334,98 +1342,159 @@ export default function ReportScreen() {
                 </View>
             {/* Witnesses */}
                 <View style={{ marginBottom: margin }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-                    <Text style={{ fontWeight: 'bold', fontSize: fontSize - 1 }}>Witnesses (Optional)</Text>
-                    <Text style={{ color: '#8B0000', fontWeight: 'bold', marginLeft: 4 }}> *</Text>
-                  </View>
-                  {witnesses.map((witness, index) => (
-                    <View key={index} style={{
-                      backgroundColor: '#F9FAFB',
-                      borderRadius: 8,
-                      padding: 16,
-                      marginBottom: 12,
-                    }}>
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                        <Text style={{ fontWeight: 'bold', fontSize: fontSize - 1 }}>Witness {index + 1}</Text>
-                        <TouchableOpacity onPress={() => removeWitness(index)}>
-                          <Ionicons name="close" size={20} color="#8B0000" />
-                        </TouchableOpacity>
-                      </View>
-                      <View style={{ marginBottom: 8 }}>
-                        <Text style={{ fontWeight: 'bold', fontSize: fontSize - 2 }}>Name</Text>
-                        <TextInput
-                          style={{
-                            borderWidth: 1,
-                            borderColor: '#D1D5DB',
-                            borderRadius: 6,
-                            paddingHorizontal: 12,
-                            paddingVertical: 10,
-                            fontSize: fontSize - 2,
-                            backgroundColor: '#FFFFFF',
-                          }}
-                          placeholder="Witness name"
-                          placeholderTextColor="#9CA3AF"
-                          value={witness.name}
-                          onChangeText={(text) => updateWitness(index, 'name', text)}
-                        />
-                      </View>
-                      <View style={{ marginBottom: 8 }}>
-                        <Text style={{ fontWeight: 'bold', fontSize: fontSize - 2 }}>Contact</Text>
-                        <TextInput
-                          style={{
-                            borderWidth: 1,
-                            borderColor: '#D1D5DB',
-                            borderRadius: 6,
-                            paddingHorizontal: 12,
-                            paddingVertical: 10,
-                            fontSize: fontSize - 2,
-                            backgroundColor: '#FFFFFF',
-                          }}
-                          placeholder="Witness contact (e.g., phone, email)"
-                          placeholderTextColor="#9CA3AF"
-                          value={witness.contact}
-                          onChangeText={(text) => updateWitness(index, 'contact', text)}
-                        />
-                      </View>
-                      <View style={{ marginBottom: 8 }}>
-                        <Text style={{ fontWeight: 'bold', fontSize: fontSize - 2 }}>Statement</Text>
-                        <TextInput
-                          style={{
-                            borderWidth: 1,
-                            borderColor: '#D1D5DB',
-                            borderRadius: 6,
-                            paddingHorizontal: 12,
-                            paddingVertical: 10,
-                            fontSize: fontSize - 2,
-                            backgroundColor: '#FFFFFF',
-                            textAlignVertical: 'top',
-                            height: 100,
-                          }}
-                          placeholder="Witness statement"
-                          placeholderTextColor="#9CA3AF"
-                          value={witness.statement}
-                          onChangeText={(text) => updateWitness(index, 'statement', text)}
-                          multiline
-                          numberOfLines={4}
-                        />
-                      </View>
-                </View>
-              ))}
-                  <TouchableOpacity onPress={addWitness} style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    paddingVertical: 12,
-                    paddingHorizontal: 24,
-                    borderRadius: 8,
-                    backgroundColor: '#F3F4F6',
-                    marginTop: 12,
+                  <View style={{ 
+                    flexDirection: 'row', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between',
+                    marginBottom: 16,
+                    paddingHorizontal: 4
                   }}>
-                    <Ionicons name="add-circle" size={20} color="#8B0000" />
-                    <Text style={{ color: '#8B0000', fontSize: fontSize - 1, marginLeft: 8 }}>
-                      Add Witness
-                    </Text>
-              </TouchableOpacity>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <View style={{
+                        backgroundColor: '#FEE2E2',
+                        borderRadius: 20,
+                        padding: 8,
+                        marginRight: 12,
+                      }}>
+                        <Ionicons name="people" size={20} color="#800000" />
+                      </View>
+                      <View>
+                        <Text style={{ fontWeight: 'bold', fontSize: fontSize, color: '#374151' }}>Witness Information</Text>
+                        {witnesses.length > 0 && (
+                          <Text style={{ 
+                            fontSize: fontSize - 3, 
+                            color: '#6B7280', 
+                            marginTop: 2,
+                            fontWeight: '500'
+                          }}>
+                            {witnesses.length} witness{witnesses.length !== 1 ? 'es' : ''} added
+                          </Text>
+                        )}
+                      </View>
+                    </View>
+                     {witnesses.length > 0 && (
+                       <TouchableOpacity
+                         onPress={addWitness}
+                         style={{
+                           alignItems: 'center',
+                           justifyContent: 'center',
+                           backgroundColor: '#800000',
+                           width: 40,
+                           height: 40,
+                           borderRadius: 20,
+                           shadowColor: '#800000',
+                           shadowOffset: { width: 0, height: 2 },
+                           shadowOpacity: 0.3,
+                           shadowRadius: 4,
+                           elevation: 6,
+                           borderWidth: 1,
+                           borderColor: 'rgba(128, 0, 0, 0.1)',
+                         }}
+                         activeOpacity={0.8}
+                       >
+                         <Ionicons name="add" size={20} color="white" />
+                       </TouchableOpacity>
+                     )}
+                  </View>
+                  
+                  {witnesses.length > 0 ? (
+                    <View style={{
+                      gap: 16,
+                      backgroundColor: '#FAFBFC',
+                      borderRadius: 12,
+                      padding: 16,
+                      borderWidth: 1,
+                      borderColor: '#E5E7EB',
+                    }}>
+                      <View style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        marginBottom: 8,
+                      }}>
+                        <View style={{
+                          width: 4,
+                          height: 20,
+                          backgroundColor: '#800000',
+                          borderRadius: 2,
+                          marginRight: 12,
+                        }} />
+                        <Text style={{
+                          fontSize: fontSize - 2,
+                          fontWeight: '600',
+                          color: '#374151',
+                        }}>
+                          Witness List ({witnesses.length})
+                        </Text>
+                      </View>
+                      {witnesses.map((witness, index) => (
+                        <WitnessInput
+                          key={index}
+                          witness={witness}
+                          index={index}
+                          onUpdate={updateWitness}
+                          onRemove={removeWitness}
+                        />
+                      ))}
+                    </View>
+                  ) : (
+                    <View style={{
+                      alignItems: 'center',
+                      paddingVertical: 32,
+                      paddingHorizontal: 24,
+                      borderWidth: 1,
+                      borderColor: '#D1D5DB',
+                      borderStyle: 'dashed',
+                      borderRadius: 12,
+                      backgroundColor: '#F9FAFB'
+                    }}>
+                      <View style={{
+                        backgroundColor: '#FEE2E2',
+                        width: 64,
+                        height: 64,
+                        borderRadius: 32,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginBottom: 12
+                      }}>
+                        <Ionicons name="people" size={32} color="#800000" />
+                      </View>
+                      <Text style={{ 
+                        fontSize: fontSize, 
+                        fontWeight: '600', 
+                        color: '#374151',
+                        marginBottom: 8,
+                        textAlign: 'center'
+                      }}>
+                        No Witnesses Added
+                      </Text>
+                      <Text style={{
+                        fontSize: fontSize - 2,
+                        color: '#6B7280',
+                        textAlign: 'center',
+                        marginBottom: 16,
+                        maxWidth: 280,
+                        lineHeight: 20
+                      }}>
+                        If anyone witnessed the incident, add their information to help with the investigation.
+                      </Text>
+                      <TouchableOpacity
+                        onPress={addWitness}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          backgroundColor: '#800000',
+                          paddingHorizontal: 16,
+                          paddingVertical: 10,
+                          borderRadius: 20,
+                        }}
+                      >
+                        <Ionicons name="add" size={16} color="white" style={{ marginRight: 6 }} />
+                        <Text style={{ color: 'white', fontSize: fontSize - 1, fontWeight: '500' }}>
+                          Add a Witness
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
             </View>
 
 
@@ -1605,33 +1674,42 @@ export default function ReportScreen() {
 
                 {/* Witnesses Review */}
                 <View style={{ marginBottom: margin }}>
-                  <Text style={{ fontWeight: 'bold', fontSize: fontSize - 1, marginBottom: 8 }}>Witnesses</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+                    <View style={{
+                      backgroundColor: '#FEE2E2',
+                      borderRadius: 20,
+                      padding: 8,
+                      marginRight: 8,
+                    }}>
+                      <Ionicons name="people" size={16} color="#800000" />
+                    </View>
+                    <Text style={{ fontWeight: 'bold', fontSize: fontSize - 1, color: '#374151' }}>
+                      Witnesses ({witnesses.length})
+                    </Text>
+                  </View>
+                  
                   {witnesses.length === 0 ? (
                     <View style={{
                       backgroundColor: '#F9FAFB',
                       borderRadius: 8,
                       padding: 16,
-                      marginBottom: 12,
+                      borderWidth: 1,
+                      borderColor: '#E5E7EB',
+                      alignItems: 'center',
                     }}>
-                      <Text style={{ fontSize: fontSize - 1, color: '#6B7280' }}>No witnesses added.</Text>
+                      <Text style={{ fontSize: fontSize - 1, color: '#6B7280' }}>No witnesses provided</Text>
                     </View>
                   ) : (
-                    <View style={{
-                      backgroundColor: '#F9FAFB',
-                      borderRadius: 8,
-                      padding: 16,
-                      marginBottom: 12,
-                    }}>
+                    <View style={{ gap: 12 }}>
                       {witnesses.map((witness, index) => (
-                        <View key={index} style={{ marginBottom: 12 }}>
-                          <Text style={{ fontWeight: '600', fontSize: fontSize - 2 }}>Witness {index + 1}:</Text>
-                          <Text style={{ fontSize: fontSize - 1, marginTop: 4 }}>Name: {witness.name}</Text>
-                          <Text style={{ fontSize: fontSize - 1, marginTop: 4 }}>Contact: {witness.contact}</Text>
-                          <Text style={{ fontSize: fontSize - 1, marginTop: 4 }}>Statement: {witness.statement}</Text>
-                        </View>
+                        <WitnessReviewCard
+                          key={index}
+                          witness={witness}
+                          index={index}
+                        />
                       ))}
-          </View>
-        )}
+                    </View>
+                  )}
                 </View>
 
 

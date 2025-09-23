@@ -108,12 +108,9 @@ export default function CasesScreen() {
         </View>
       </View>
 
-      <ScrollView
-        className="flex-1 px-4"
-        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />}
-        showsVerticalScrollIndicator={false}
-      >
-        <View className="bg-white rounded-3xl border border-gray-200 flex-row items-center px-4 py-3 mt-4 mb-4">
+      {/* Fixed Search Bar */}
+      <View className="bg-white px-4 py-4 border-b border-gray-200">
+        <View className="bg-white rounded-3xl border border-gray-200 flex-row items-center px-4 py-3">
           <Ionicons name="search" size={20} color="#6B7280" />
           <TextInput
             className="flex-1 ml-3 text-base"
@@ -123,21 +120,27 @@ export default function CasesScreen() {
             placeholderTextColor="#9CA3AF"
           />
         </View>
+      </View>
 
-        <View className="flex-row mb-4">
+      {/* Fixed Priority Filters */}
+      <View className="bg-white px-4 py-3 border-b border-gray-200">
+        <View className="flex-row">
           {priorities.map((priority, index) => (
             <TouchableOpacity
               key={priority}
-              className={`px-4 py-2 rounded-lg ${selectedPriority === priority ? 'bg-[#B71C1C]' : 'bg-white'} ${index > 0 ? 'ml-2' : ''}`}
+              className={`px-3 py-1.5 rounded-md ${selectedPriority === priority ? 'bg-[#B71C1C]' : 'bg-white'} ${index > 0 ? 'ml-1.5' : ''}`}
               style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 }}
               onPress={() => setSelectedPriority(priority)}
             >
-              <Text className={`font-medium ${selectedPriority === priority ? 'text-white' : 'text-black'}`}>{priority}</Text>
+              <Text className={`text-sm font-medium ${selectedPriority === priority ? 'text-white' : 'text-black'}`}>{priority}</Text>
             </TouchableOpacity>
           ))}
         </View>
+      </View>
 
-        <View className="flex-row mb-4">
+      {/* Fixed Status Filters */}
+      <View className="bg-white px-4 py-3 border-b border-gray-200">
+        <View className="flex-row">
           {[
             { status: 'Pending', count: pendingCount },
             { status: 'In Progress', count: inProgressCount },
@@ -145,29 +148,39 @@ export default function CasesScreen() {
           ].map((item, index) => (
             <TouchableOpacity
               key={item.status}
-              className={`flex-1 bg-white rounded-xl p-3 items-center ${selectedStatus === item.status ? 'bg-gray-100' : ''} ${index > 0 ? 'ml-2' : ''}`}
-              style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 4 }}
+              className={`flex-1 bg-white rounded-lg p-2 items-center ${selectedStatus === item.status ? 'bg-gray-100' : ''} ${index > 0 ? 'ml-1.5' : ''}`}
+              style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 }}
               onPress={() => setSelectedStatus(item.status)}
             >
-              <Text className="text-2xl font-bold text-[#B71C1C]">{item.count}</Text>
-              <Text className="text-xs text-[#374151] mt-1">{item.status === 'All' ? 'All Cases' : item.status}</Text>
+              <Text className="text-lg font-bold text-[#B71C1C]">{item.count}</Text>
+              <Text className="text-xs text-[#374151] mt-0.5">{item.status === 'All' ? 'All Cases' : item.status}</Text>
             </TouchableOpacity>
           ))}
         </View>
+      </View>
 
-        <View className="bg-gray-100 rounded-xl p-1 mb-4">
+      {/* Fixed Tab Selector */}
+      <View className="bg-white px-4 py-3 border-b border-gray-200">
+        <View className="bg-gray-100 rounded-lg p-1">
           <View className="flex-row">
             {['My Cases', 'Recent Activity'].map((tab, index) => (
               <TouchableOpacity
                 key={tab}
-                className={`flex-1 py-3 px-2 rounded-lg ${selectedTab === index ? 'bg-white' : 'bg-transparent'}`}
+                className={`flex-1 py-2 px-2 rounded-md ${selectedTab === index ? 'bg-white' : 'bg-transparent'}`}
                 onPress={() => setSelectedTab(index)}
               >
-                <Text className={`text-center font-medium ${selectedTab === index ? 'text-[#B71C1C] font-bold' : 'text-gray-500'}`}>{tab}</Text>
+                <Text className={`text-center text-sm font-medium ${selectedTab === index ? 'text-[#B71C1C] font-bold' : 'text-gray-500'}`}>{tab}</Text>
               </TouchableOpacity>
             ))}
           </View>
         </View>
+      </View>
+
+      <ScrollView
+        className="flex-1 px-4"
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />}
+        showsVerticalScrollIndicator={false}
+      >
 
         {selectedTab === 0 ? (
           <>

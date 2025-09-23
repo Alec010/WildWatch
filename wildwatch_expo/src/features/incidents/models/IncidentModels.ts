@@ -13,9 +13,10 @@ export interface IncidentRequestDto {
 }
 
 export interface WitnessRequestDto {
-  name?: string;
-  contactInformation?: string;
-  additionalNotes?: string;
+  userId?: number; // ID of registered user for @mention functionality
+  name?: string; // Manual name entry (ignored if userId is provided)
+  contactInformation?: string; // Manual contact info (ignored if userId is provided)
+  additionalNotes?: string; // Notes about witness account (applies to both types)
 }
 
 export interface IncidentResponseDto {
@@ -57,9 +58,10 @@ export interface EvidenceDto {
 
 export interface WitnessResponseDto {
   id: string;
-  name?: string;
-  contactInformation?: string;
-  additionalNotes?: string;
+  userId?: number; // ID of registered user if this witness is a registered user
+  name?: string; // Display name (from user record or manual entry)
+  contactInformation?: string; // Contact info (from user record or manual entry)
+  additionalNotes?: string; // Additional notes about the witness
 }
 
 

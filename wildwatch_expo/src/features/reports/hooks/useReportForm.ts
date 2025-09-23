@@ -45,7 +45,7 @@ export const useReportForm = () => {
 
   const [witnesses, setWitnesses] = useState<WitnessInfo[]>([]);
   const addWitness = useCallback((): void => {
-    setWitnesses(prev => [...prev, { name: '', contact: '', statement: '' }]);
+    setWitnesses(prev => [...prev, { name: '', contact: '', additionalNotes: '', isRegisteredUser: false }]);
   }, []);
   const removeWitness = useCallback((index: number): void => {
     setWitnesses(prev => prev.filter((_, i) => i !== index));
