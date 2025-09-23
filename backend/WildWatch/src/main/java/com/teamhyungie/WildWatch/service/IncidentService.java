@@ -67,7 +67,7 @@ public class IncidentService {
         // Use tags from request if provided, otherwise generate tags using AI with enhanced location
         List<String> tags = (request.getTags() != null && !request.getTags().isEmpty())
             ? request.getTags()
-            : tagGenerationService.generateTags(request.getDescription(), enhancedLocationInfo);
+            : tagGenerationService.generateTags(request.getDescription(), enhancedLocationInfo, request.getIncidentType());
         
         // If no office is assigned in the request, use AI to assign one
         Office assignedOffice = request.getAssignedOffice();

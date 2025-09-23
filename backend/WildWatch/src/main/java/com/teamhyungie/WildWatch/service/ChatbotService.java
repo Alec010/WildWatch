@@ -16,7 +16,8 @@ public class ChatbotService {
     @Value("${gemini.api.key}")
     private String apiKey;
 
-    private static final String GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-002:generateContent";
+    private static final String GEMINI_PRIMARY_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent";
+    private static final String GEMINI_FALLBACK_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
     private final RestTemplate restTemplate = new RestTemplate();
 
     public String chat(String userMessage) {
@@ -73,11 +74,22 @@ User:
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
 
-            String url = GEMINI_URL + "?key=" + apiKey;
-            log.debug("Making request to Gemini API: {}", url);
+            String primaryUrl = GEMINI_PRIMARY_URL + "?key=" + apiKey;
+            String fallbackUrl = GEMINI_FALLBACK_URL + "?key=" + apiKey;
+            log.debug("Making request to Gemini API: {} (with fallback)", primaryUrl);
 
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
-            ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.POST, entity, Map.class);
+            ResponseEntity<Map> response;
+            try {
+                response = restTemplate.exchange(primaryUrl, HttpMethod.POST, entity, Map.class);
+                if (response.getStatusCode() != HttpStatus.OK) {
+                    log.warn("Gemini primary model returned status {} - attempting fallback", response.getStatusCode());
+                    response = restTemplate.exchange(fallbackUrl, HttpMethod.POST, entity, Map.class);
+                }
+            } catch (Exception ex) {
+                log.warn("Gemini primary model failed ({}). Attempting fallback...", ex.getMessage());
+                response = restTemplate.exchange(fallbackUrl, HttpMethod.POST, entity, Map.class);
+            }
 
             if (response.getStatusCode() != HttpStatus.OK) {
                 log.error("Gemini API returned non-OK status: {}", response.getStatusCode());

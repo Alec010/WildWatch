@@ -43,3 +43,4 @@ export default function ClientMentionInput(props: ClientMentionInputProps) {
 
   return <MentionInput {...props} />
 }
+

@@ -8,7 +8,6 @@ import {
   Calendar,
   MapPin,
   CheckCircle2,
-  XCircle,
   Clock,
   User,
   Mail,
@@ -107,7 +106,6 @@ export default function UpdateApprovedCasePage() {
   const [priorityLevel, setPriorityLevel] = useState<"HIGH" | "MEDIUM" | "LOW">("MEDIUM")
   const [isSending, setIsSending] = useState(false)
   const [isResolveDialogOpen, setIsResolveDialogOpen] = useState(false)
-  const [isCloseDialogOpen, setIsCloseDialogOpen] = useState(false)
   const [showTransferModal, setShowTransferModal] = useState(false)
   const [transferNotes, setTransferNotes] = useState("")
   const [selectedOffice, setSelectedOffice] = useState("")
@@ -377,57 +375,7 @@ export default function UpdateApprovedCasePage() {
     }
   }
 
-  const handleCloseCase = async () => {
-    try {
-      setIsSending(true)
-      const token = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("token="))
-        ?.split("=")[1]
-
-      if (!token) {
-        throw new Error("No authentication token found")
-      }
-
-      const updateRequest: UpdateRequest = {
-        status: "Dismissed",
-        updateMessage: "Case has been closed and dismissed.",
-        updatedBy: updatedBy || "System",
-        visibleToReporter: true,
-        priorityLevel,
-      }
-
-      const response = await fetch(`${API_BASE_URL}/api/incidents/${params.id}`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(updateRequest),
-      })
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
-      toast.success("Case closed successfully", {
-        description: "The incident has been dismissed.",
-        duration: 5000,
-      })
-
-      setStatus("Dismissed")
-      await fetchUpdates()
-    } catch (error) {
-      console.error("Error closing case:", error)
-      toast.error("Failed to close case", {
-        description: "There was an error closing the case. Please try again.",
-        duration: 5000,
-      })
-    } finally {
-      setIsSending(false)
-      setIsCloseDialogOpen(false)
-    }
-  }
+  // Removed destructive resolve-and-dismiss action per request
 
   const handleTransfer = async () => {
     if (!selectedOffice) {
@@ -667,24 +615,6 @@ export default function UpdateApprovedCasePage() {
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>Mark this case as resolved</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          onClick={() => setIsCloseDialogOpen(true)}
-                          disabled={status === "Dismissed" || isSending}
-                          variant="destructive"
-                          size="sm"
-                        >
-                          <XCircle className="h-4 w-4 mr-2" />
-                          <span className="hidden sm:inline">Close Case</span>
-                          <span className="sm:hidden">Close</span>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Close and dismiss this case</TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 </div>
@@ -1066,34 +996,7 @@ export default function UpdateApprovedCasePage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={isCloseDialogOpen} onOpenChange={setIsCloseDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Close Case</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to close and dismiss this case? This action will mark the case as dismissed and
-              notify the reporter.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isSending}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleCloseCase}
-              disabled={isSending}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
-              {isSending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                "Close Case"
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Removed destructive resolve & dismiss dialog */}
 
       {/* Transfer Modal */}
       <AlertDialog open={showTransferModal} onOpenChange={setShowTransferModal}>

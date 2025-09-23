@@ -16,6 +16,7 @@ interface NavbarProps {
   subtitle?: string
   showSearch?: boolean
   showNewIncident?: boolean
+  showQuickActions?: boolean
   searchPlaceholder?: string
   onSearch?: (query: string) => void
 }

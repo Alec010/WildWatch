@@ -248,16 +248,10 @@ export default function IncidentSubmissionPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    console.log('Form submitted, isSelectingLocation:', isSelectingLocation);
-
     if (!validateForm()) {
-      // Scroll to the first error
       const firstErrorField = Object.keys(formErrors)[0]
       const element = document.getElementById(firstErrorField)
-      if (element) {
-        element.scrollIntoView({ behavior: "smooth", block: "center" })
-        element.focus()
-      }
+      if (element) element.scrollIntoView({ behavior: "smooth", block: "center" })
       toast.error("Please fix the errors in the form", {
         description: "Please check the highlighted fields and try again.",
         icon: <AlertCircle className="h-5 w-5 text-red-500" />,
@@ -266,7 +260,6 @@ export default function IncidentSubmissionPage() {
       })
       return
     }
-
     sessionStorage.setItem("incidentSubmissionData", JSON.stringify({ ...formData, tags: selectedTags }))
     router.push("/incidents/submit/evidence")
   }
@@ -313,7 +306,13 @@ export default function IncidentSubmissionPage() {
     try {
       const response = await api.post("/api/tags/generate", {
         description: formData.description,
+        incidentType: formData.incidentType,
         location: formData.location,
+        formattedAddress: formData.formattedAddress,
+        buildingName: formData.buildingName,
+        buildingCode: formData.buildingCode,
+        latitude: formData.latitude,
+        longitude: formData.longitude,
       })
 
       if (!response.ok) {

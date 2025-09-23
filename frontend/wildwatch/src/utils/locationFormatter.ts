@@ -137,3 +137,4 @@ export function getBuildingCode(locationData: LocationData): string {
 export function hasBuilding(locationData: LocationData): boolean {
   return !!(locationData?.buildingName || locationData?.building?.fullName);
 }
+
