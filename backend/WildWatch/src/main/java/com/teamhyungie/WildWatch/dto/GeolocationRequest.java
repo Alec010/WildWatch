@@ -17,3 +17,4 @@ public class GeolocationRequest {
     @DecimalMax(value = "180.0", message = "Longitude must be between -180 and 180")
     private Double longitude;
 }
+

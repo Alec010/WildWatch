@@ -16,3 +16,4 @@ export default function ClientChatbot() {
 
   return <Chatbot />
 }
+

@@ -47,6 +47,18 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { api } from "@/utils/apiClient"
 import { formatLocationDisplay } from "@/utils/locationFormatter"
 
+// Minimal local types to satisfy TS for witnesses processing
+type TaggedUser = { id: string }
+type EvidenceWitnessInput = {
+  users?: TaggedUser[]
+  name?: string
+  contactInformation?: string
+  additionalNotes?: string
+}
+type ProcessedWitness =
+  | { userId: string; additionalNotes?: string }
+  | { name?: string; contactInformation?: string; additionalNotes?: string }
+
 export default function ReviewSubmissionPage() {
   const router = useRouter()
   const { collapsed } = useSidebar()
@@ -63,6 +75,8 @@ export default function ReviewSubmissionPage() {
   const [trackingNumber, setTrackingNumber] = useState("")
   const [preferAnonymous, setPreferAnonymous] = useState<boolean>(false)
   const [showLoadingDialog, setShowLoadingDialog] = useState(false)
+  const [showBlockedDialog, setShowBlockedDialog] = useState(false)
+  const [blockedReasons, setBlockedReasons] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [expandedSection, setExpandedSection] = useState<string | null>("incident")
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
@@ -100,17 +114,42 @@ export default function ReviewSubmissionPage() {
     setShowLoadingDialog(true)
 
     try {
+      // Analyze first (no persistence)
+      const analyzeRes = await api.post("/api/incidents/analyze", {
+        incidentType: incidentData.incidentType,
+        description: incidentData.description,
+        location: incidentData.location,
+        formattedAddress: incidentData.formattedAddress,
+        buildingName: incidentData.buildingName,
+        buildingCode: incidentData.buildingCode,
+        latitude: incidentData.latitude,
+        longitude: incidentData.longitude,
+      })
+
+      if (!analyzeRes.ok) {
+        throw new Error("Failed to analyze report. Please try again.")
+      }
+      const analysis = await analyzeRes.json()
+      if (analysis.decision === "BLOCK") {
+        setIsSubmitting(false)
+        setIsAssigningOffice(false)
+        setShowLoadingDialog(false)
+        setBlockedReasons(Array.isArray(analysis.reasons) ? analysis.reasons : [])
+        setShowBlockedDialog(true)
+        return
+      }
+
       // Token will be handled by the API client automatically
 
       const formData = new FormData()
       // Process witnesses to match the backend DTO format
-      let processedWitnesses = [];
+      let processedWitnesses: ProcessedWitness[] = [];
       
       // For each witness entry
-      evidenceData.witnesses.forEach(witness => {
+      evidenceData.witnesses.forEach((witness: EvidenceWitnessInput) => {
         if (witness.users && witness.users.length > 0) {
           // If there are tagged users, create a separate witness entry for each user
-          witness.users.forEach(user => {
+          witness.users.forEach((user: TaggedUser) => {
             processedWitnesses.push({
               userId: user.id,
               additionalNotes: witness.additionalNotes
@@ -975,6 +1014,49 @@ export default function ReviewSubmissionPage() {
             </Button>
             <Button onClick={processSubmission} className="bg-[#800000] hover:bg-[#600000] text-white">
               Confirm Submission
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Blocked Dialog */}
+      <Dialog open={showBlockedDialog} onOpenChange={setShowBlockedDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-[#800000]">Cannot Submit Report</DialogTitle>
+            <DialogDescription>
+              Your report contains content that violates our community guidelines. Please revise the report and try again.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 mt-2">
+            {blockedReasons && blockedReasons.length > 0 ? (
+              <ul className="list-disc pl-5 text-sm text-gray-700">
+                {blockedReasons.slice(0, 5).map((r, i) => (
+                  <li key={i}>{r}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-gray-700">Offensive or disparaging content detected.</p>
+            )}
+          </div>
+
+          <DialogFooter className="flex gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setShowBlockedDialog(false)}
+              className="border-gray-300 text-gray-700 hover:bg-gray-50"
+            >
+              Close
+            </Button>
+            <Button
+              onClick={() => {
+                setShowBlockedDialog(false)
+                router.push("/incidents/submit")
+              }}
+              className="bg-[#800000] hover:bg-[#600000] text-white"
+            >
+              Edit Report
             </Button>
           </DialogFooter>
         </DialogContent>

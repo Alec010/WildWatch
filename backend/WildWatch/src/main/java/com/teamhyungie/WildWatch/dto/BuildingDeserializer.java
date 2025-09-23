@@ -22,3 +22,4 @@ public class BuildingDeserializer extends JsonDeserializer<Building> {
         }
     }
 }
+

@@ -48,7 +48,6 @@ export default function CaseTrackingPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedStatus, setSelectedStatus] = useState<string>("All")
-  const [selectedPriority, setSelectedPriority] = useState<string>("All")
   const [search, setSearch] = useState("")
   const [showFilters, setShowFilters] = useState(false)
 
@@ -153,12 +152,10 @@ export default function CaseTrackingPage() {
     }
   }
 
-  // Only show incidents matching selected status and priority, and filter by search
+  // Only show incidents matching selected status and search
   const filteredCases = incidents.filter(
     (item) =>
       (selectedStatus === "All" || item.status === selectedStatus) &&
-      (selectedPriority === "All" ||
-        (item.priorityLevel && item.priorityLevel.toLowerCase() === selectedPriority.toLowerCase())) &&
       ((item.trackingNumber || "").toLowerCase().includes(search.toLowerCase()) ||
         (item.caseNumber || "").toLowerCase().includes(search.toLowerCase()) ||
         item.incidentType.toLowerCase().includes(search.toLowerCase()) ||
@@ -169,7 +166,13 @@ export default function CaseTrackingPage() {
   // Get counts for dashboard stats
   const pendingCount = incidents.filter((item) => item.status === "Pending").length
   const inProgressCount = incidents.filter((item) => item.status === "In Progress").length
-  const highPriorityCount = incidents.filter((item) => item.priorityLevel === "HIGH").length
+
+  const goToCase = (idOrTracking: string) => {
+    try {
+      sessionStorage.setItem('ww_keep_sidebar', '1')
+    } catch {}
+    router.push(`/incidents/tracking/${idOrTracking}`)
+  }
 
   if (loading) {
     return (
@@ -230,7 +233,7 @@ export default function CaseTrackingPage() {
         <Navbar title="Case Tracking" subtitle="Track and manage your security incident reports" onSearch={setSearch} />
           <div className="pt-32 px-6 pb-10">
             {/* Dashboard Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -282,32 +285,6 @@ export default function CaseTrackingPage() {
                   </button>
                 </div>
               </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: 0.2 }}
-                className="bg-gradient-to-br from-white to-[#fff9f9] p-6 rounded-xl shadow-md border border-[#f0e0e0] relative overflow-hidden"
-              >
-                <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-red-500/5 to-red-500/10 rounded-bl-full"></div>
-                <div className="flex items-center gap-4">
-                  <div className="bg-gradient-to-br from-red-500 to-red-600 p-3 rounded-lg shadow-md">
-                    <AlertTriangle className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-gray-600 text-sm font-medium">High Priority</p>
-                    <h3 className="text-3xl font-bold text-red-500">{highPriorityCount}</h3>
-                  </div>
-                </div>
-                <div className="mt-4 pt-4 border-t border-gray-100">
-                  <button
-                    onClick={() => setSelectedPriority("HIGH")}
-                    className="text-red-500 text-sm font-medium flex items-center hover:underline"
-                  >
-                    View High Priority <ArrowUpRight className="ml-1 h-3 w-3" />
-                  </button>
-                </div>
-              </motion.div>
             </div>
 
             {/* Filters Section */}
@@ -320,7 +297,11 @@ export default function CaseTrackingPage() {
                 <div>
                   <h4 className="text-sm font-medium text-gray-600 mb-2">Status</h4>
                   <div className="flex flex-wrap gap-2">
-                    {["All", "Pending", "In Progress"].map((status) => (
+                    {[
+                      "All",
+                      "Pending",
+                      "In Progress",
+                    ].map((status) => (
                       <button
                         key={status}
                         onClick={() => setSelectedStatus(status)}
@@ -335,37 +316,12 @@ export default function CaseTrackingPage() {
                     ))}
                   </div>
                 </div>
-
-                <div>
-                  <h4 className="text-sm font-medium text-gray-600 mb-2">Priority</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {["All", "HIGH", "MEDIUM", "LOW"].map((priority) => (
-                      <button
-                        key={priority}
-                        onClick={() => setSelectedPriority(priority)}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                          selectedPriority === priority
-                            ? priority === "HIGH"
-                              ? "bg-red-500 text-white shadow-md"
-                              : priority === "MEDIUM"
-                                ? "bg-orange-500 text-white shadow-md"
-                                : priority === "LOW"
-                                  ? "bg-green-500 text-white shadow-md"
-                                  : "bg-[#8B0000] text-white shadow-md"
-                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                        }`}
-                      >
-                        {priority === "All" ? priority : priority.charAt(0) + priority.slice(1).toLowerCase()}
-                      </button>
-                    ))}
-                  </div>
-                </div>
               </div>
             </div>
 
             {/* Incident Cards */}
             <div className="mb-10">
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify_between mb-4">
                 <h2 className="text-xl font-bold text-[#8B0000] flex items-center">
                   <Layers className="mr-2 h-5 w-5" />
                   Your Cases
@@ -383,7 +339,7 @@ export default function CaseTrackingPage() {
                   <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Search className="h-8 w-8 text-gray-400" />
                   </div>
-                  <h3 className="text-lg font-medium text-gray-800 mb-2">No cases found</h3>
+                  <h3 className="text-lg font-medium text_gray-800 mb-2">No cases found</h3>
                   <p className="text-gray-500 max-w-md mx-auto">
                     We couldn't find any cases matching your current filters. Try adjusting your search or filters.
                   </p>
@@ -392,7 +348,6 @@ export default function CaseTrackingPage() {
                     className="mt-4"
                     onClick={() => {
                       setSelectedStatus("All")
-                      setSelectedPriority("All")
                       setSearch("")
                     }}
                   >
@@ -441,19 +396,6 @@ export default function CaseTrackingPage() {
                                 >
                                   {item.status}
                                 </span>
-                                {item.priorityLevel && (
-                                  <span
-                                    className={`px-2 py-0.5 text-xs rounded-full ${
-                                      item.priorityLevel === "HIGH"
-                                        ? "bg-red-100 text-red-800"
-                                        : item.priorityLevel === "MEDIUM"
-                                          ? "bg-orange-100 text-orange-800"
-                                          : "bg-green-100 text-green-800"
-                                    }`}
-                                  >
-                                    {item.priorityLevel.charAt(0) + item.priorityLevel.slice(1).toLowerCase()}
-                                  </span>
-                                )}
                               </div>
                               <h4 className="text-gray-800 font-medium mt-1">{item.incidentType}</h4>
                             </div>
@@ -467,11 +409,7 @@ export default function CaseTrackingPage() {
                                 <span>{item.location}</span>
                               </div>
                               <Button
-                                onClick={() =>
-                                  router.push(
-                                    `/incidents/tracking/${item.trackingNumber ? item.trackingNumber : item.id}`,
-                                  )
-                                }
+                                onClick={() => goToCase(item.trackingNumber ? item.trackingNumber : item.id)}
                                 className="bg-[#8B0000] hover:bg-[#6B0000] text-white shadow-sm"
                                 size="sm"
                               >

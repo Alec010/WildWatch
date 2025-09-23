@@ -90,6 +90,8 @@ export default function MapPickerModal({
     loadGoogleMaps();
   }, [isOpen]);
 
+  // (moved below initializeMap to avoid TDZ)
+
   // Load buildings data
   useEffect(() => {
     if (!isOpen) return;
@@ -164,6 +166,40 @@ export default function MapPickerModal({
 
     setIsLoading(false);
   }, []);
+
+  // Ensure map re-renders correctly when modal is reopened (placed after initializeMap definition)
+  useEffect(() => {
+    if (!isOpen) {
+      // Cleanup lightweight artifacts when closing
+      if (markerRef.current) {
+        try { markerRef.current.setMap(null); } catch {}
+        markerRef.current = null;
+      }
+      buildingOverlaysRef.current.forEach(overlay => {
+        try { overlay.setMap(null); } catch {}
+      });
+      buildingOverlaysRef.current = [];
+      // Drop map instance to force clean re-init next open
+      mapInstanceRef.current = null;
+      return;
+    }
+
+    // When opening, if map already exists, trigger resize and recenter to avoid blank white view
+    const timer = setTimeout(() => {
+      if (typeof window !== 'undefined' && (window as any).google && mapInstanceRef.current) {
+        try {
+          (window as any).google.maps.event.trigger(mapInstanceRef.current, 'resize');
+          mapInstanceRef.current.setCenter(CAMPUS_CENTER);
+          mapInstanceRef.current.setZoom(CAMPUS_ZOOM);
+          setIsLoading(false);
+        } catch {}
+      } else if (typeof window !== 'undefined' && (window as any).google && mapRef.current && !mapInstanceRef.current) {
+        initializeMap();
+      }
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [isOpen, initializeMap]);
 
   const drawCampusBoundary = useCallback((map: any, campusPolygon: any[]) => {
     // Draw campus boundary polygon with red outline

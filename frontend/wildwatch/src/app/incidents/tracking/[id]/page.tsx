@@ -57,6 +57,15 @@ const getContentMargin = (userRole: string | null, collapsed: boolean) => {
   return collapsed ? 'ml-18' : 'ml-64'
 }
 
+function formatDate(dateString: string) {
+  if (!dateString) return "-"
+  return new Date(dateString).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  })
+}
+
 interface IncidentDetails {
   id: string
   trackingNumber: string
@@ -120,7 +129,9 @@ export default function CaseDetailsPage() {
   const { id } = useParams() // id is trackingNumber
   const router = useRouter()
   const { collapsed } = useSidebar()
-  const [userRole, setUserRole] = useState<string | null>(null)
+  const [userRole, setUserRole] = useState<string | null>(() =>
+    typeof window !== 'undefined' ? (sessionStorage.getItem('userRole') || null) : null
+  )
   const [incident, setIncident] = useState<IncidentDetails | null>(null)
   const [lastUpdated, setLastUpdated] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -137,6 +148,13 @@ export default function CaseDetailsPage() {
   const [incidentRating, setIncidentRating] = useState<any>(null)
   const [userEmail, setUserEmail] = useState<string | null>(null)
   const [showRatingSuccessModal, setShowRatingSuccessModal] = useState(false)
+  const [keepSidebar, setKeepSidebar] = useState<boolean>(() => {
+    try {
+      return sessionStorage.getItem('ww_keep_sidebar') === '1'
+    } catch {
+      return false
+    }
+  })
 
   const statusSteps = [
     { key: "Submitted", label: "Submitted" },
@@ -249,6 +267,17 @@ export default function CaseDetailsPage() {
     if (id) fetchIncidentDetails()
   }, [id, router])
 
+  useEffect(() => {
+    if (keepSidebar) {
+      try { sessionStorage.removeItem('ww_keep_sidebar') } catch {}
+      setKeepSidebar(false)
+    }
+  }, [keepSidebar])
+
+  const estimatedResolution = incident
+    ? getEstimatedResolution(incident.submittedAt || incident.dateOfIncident, incident.priorityLevel)
+    : null
+
   // Show rating modal for regular user if eligible (run after both user info and incident are loaded)
   useEffect(() => {
     const checkRatingEligibility = async () => {
@@ -353,27 +382,14 @@ export default function CaseDetailsPage() {
     }
   }
 
-  if (userRole === null) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9]">
-        <div className="relative w-20 h-20">
-          <div className="absolute inset-0 rounded-full border-t-2 border-b-2 border-[#8B0000] animate-spin"></div>
-          <div className="absolute inset-2 rounded-full border-r-2 border-l-2 border-[#DAA520] animate-spin animation-delay-150"></div>
-          <div className="absolute inset-4 rounded-full border-t-2 border-b-2 border-[#8B0000] animate-spin animation-delay-300"></div>
-        </div>
-      </div>
-    )
-  }
-
-  if (loading) {
+  // Always render the layout; default to Sidebar until role is known to avoid flicker
+  if (loading && !keepSidebar) {
     return (
       <div className={`min-h-screen flex flex-col bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9] ${inter.className}`}>
         <Sidebar />
         <Navbar title="Case Details" subtitle="Loading case information..." />
         <div className="flex flex-1">
-          <div
-            className={`flex-1 flex items-center justify-center transition-all duration-300 ease-in-out ${collapsed ? "ml-[5rem]" : "ml-64"}`}
-          >
+          <div className={`flex-1 flex items-center justify-center transition-all duration-300 ease-in-out ${collapsed ? "ml-[5rem]" : "ml-64"}`}>
             <div className="text-center">
               <div className="relative w-20 h-20 mx-auto">
                 <div className="absolute inset-0 rounded-full border-t-2 border-b-2 border-[#8B0000] animate-spin"></div>
@@ -388,26 +404,21 @@ export default function CaseDetailsPage() {
     )
   }
 
-  if (error || !incident) {
+  if (error) {
     return (
       <div className={`min-h-screen flex flex-col bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9] ${inter.className}`}>
-        <Sidebar />
+        {userRole === "OFFICE_ADMIN" ? <OfficeAdminSidebar /> : <Sidebar />}
         <Navbar title="Case Details" subtitle="Error loading case information" />
         <div className="flex flex-1">
-          <div className={`flex-1 p-8 transition-all duration-300 ease-in-out ${collapsed ? "ml-[5rem]" : "ml-64"}`}>
+          <div className={`flex-1 p-8 transition-all duration-300 ease-in-out ${getContentMargin(userRole, collapsed)}`}>
             <div className="pt-24 max-w-4xl mx-auto">
               <div className="bg-white rounded-xl shadow-md p-8 text-center border border-gray-100">
                 <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <AlertCircle className="h-8 w-8 text-red-500" />
                 </div>
                 <h2 className="text-xl font-bold text-gray-800 mb-2">Error Loading Case</h2>
-                <p className="text-red-600 font-medium mb-6">{error || "Case not found"}</p>
-                <Button
-                  onClick={() => router.push("/incidents/tracking")}
-                  className="bg-[#8B0000] hover:bg-[#6B0000] text-white"
-                >
-                  Return to Case List
-                </Button>
+                <p className="text-red-600 font-medium mb-6">{error}</p>
+                <Button onClick={() => router.push("/incidents/tracking")} className="bg-[#8B0000] hover:bg-[#6B0000] text-white">Return to Case List</Button>
               </div>
             </div>
           </div>
@@ -415,28 +426,13 @@ export default function CaseDetailsPage() {
       </div>
     )
   }
-
-  const estimatedResolution = getEstimatedResolution(
-    incident.submittedAt || incident.dateOfIncident,
-    incident.priorityLevel,
-  )
-
-  const formatDate = (dateString: string) => {
-    if (!dateString) return "-"
-    return new Date(dateString).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    })
-  }
-
   return (
     <div className={`min-h-screen flex flex-col bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9] ${inter.className}`}>
-      {userRole === null ? <SidebarSkeleton /> : userRole === "OFFICE_ADMIN" ? <OfficeAdminSidebar /> : <Sidebar />}
-      <Navbar title="Case Details" subtitle={`Tracking case ${incident.trackingNumber}`} />
+      {userRole === "OFFICE_ADMIN" ? <OfficeAdminSidebar /> : <Sidebar />}
+      <Navbar title="Case Details" subtitle={incident ? `Tracking case ${incident.trackingNumber}` : "Loading case information..."} />
       <div className="flex flex-1">
         <div className={`flex-1 transition-all duration-300 ease-in-out ${getContentMargin(userRole, collapsed)}`}>
-          {userRole === null || loading ? (
+          {(loading || !incident) ? (
             <div className="flex items-center justify-center h-screen">
               <div className="relative w-20 h-20">
                 <div className="absolute inset-0 rounded-full border-t-2 border-b-2 border-[#8B0000] animate-spin"></div>
@@ -505,29 +501,32 @@ export default function CaseDetailsPage() {
                         </div>
                       </div>
                       <div className="flex flex-wrap items-center gap-2 mt-3">
+                        {/* Priority chip shown only to office admins - hidden for regular users */}
+                        {isOfficeAdmin && (
+                          <span
+                            className={`px-3 py-1 text-sm font-medium rounded-full ${
+                              incident.priorityLevel === "HIGH"
+                                ? "bg-red-100 text-red-800"
+                                : incident.priorityLevel === "MEDIUM"
+                                  ? "bg-amber-100 text-amber-800"
+                                  : "bg-green-100 text-green-800"
+                            }`}
+                          >
+                            {incident.priorityLevel} Priority
+                          </span>
+                        )}
                         <span
                           className={`px-3 py-1 text-sm font-medium rounded-full ${
-                            incident.priorityLevel === "HIGH"
-                              ? "bg-red-100 text-red-800"
-                              : incident.priorityLevel === "MEDIUM"
-                                ? "bg-amber-100 text-amber-800"
-                                : "bg-green-100 text-green-800"
-                          }`}
-                        >
-                          {incident.priorityLevel} Priority
-                        </span>
-                        <span
-                          className={`px-3 py-1 text-sm font-medium rounded-full ${
-                            incident.status === "Pending"
+                            (incident.status === "Closed" ? "Resolved" : incident.status) === "Pending"
                               ? "bg-yellow-100 text-yellow-800"
-                              : incident.status === "In Progress"
+                              : (incident.status === "Closed" ? "Resolved" : incident.status) === "In Progress"
                                 ? "bg-blue-100 text-blue-800"
-                                : incident.status === "Resolved"
+                                : (incident.status === "Closed" ? "Resolved" : incident.status) === "Resolved"
                                   ? "bg-green-100 text-green-800"
                                   : "bg-gray-100 text-gray-800"
                           }`}
                         >
-                          {incident.status}
+                          {(incident.status === "Closed" ? "Resolved" : incident.status)}
                         </span>
                         {isDismissed && (
                           <span className="px-3 py-1 text-sm font-bold rounded-full bg-gray-200 text-gray-700 border border-gray-400">
@@ -868,7 +867,7 @@ export default function CaseDetailsPage() {
                             Icon = ArrowRightLeft
                           }
                           // Check for status changes
-                          else if (status.includes("resolved") || status.includes("closed")) {
+                          else if (status.includes("resolved")) {
                             iconColor = "text-green-500"
                             iconBg = "bg-gradient-to-br from-green-500 to-green-600"
                             Icon = CheckCircle

@@ -42,3 +42,4 @@ public class GeolocationResponse {
         this.withinCampus = false;
     }
 }
+
