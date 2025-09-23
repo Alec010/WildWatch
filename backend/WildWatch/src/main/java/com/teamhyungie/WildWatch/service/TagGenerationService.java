@@ -96,7 +96,16 @@ public class TagGenerationService {
             return generatedTags;
         } catch (Exception e) {
             log.error("Error generating tags from Gemini API: ", e);
-            return List.of();
+            
+            // Check if API key is configured
+            if (apiKey == null || apiKey.trim().isEmpty() || apiKey.equals("${GEMINI_API_KEY}")) {
+                log.error("Gemini API key is not configured. Please set GEMINI_API_KEY environment variable.");
+                throw new RuntimeException("AI service not configured. Please contact administrator.");
+            }
+            
+            // Log more specific error details
+            log.error("Gemini API Error Details: {}", e.getMessage());
+            throw new RuntimeException("Failed to generate tags: " + e.getMessage());
         }
     }
 } 

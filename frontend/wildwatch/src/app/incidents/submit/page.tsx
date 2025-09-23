@@ -28,7 +28,10 @@ import { Textarea } from "@/components/ui/textarea"
 import { Sidebar } from "@/components/Sidebar"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { API_BASE_URL } from "@/utils/api"
+import { api } from "@/utils/apiClient"
 import { Badge } from "@/components/ui/badge"
+import LocationPicker from "@/components/LocationPicker"
+import { LocationData } from "@/utils/locationService"
 import { motion, AnimatePresence } from "framer-motion"
 import { useSidebar } from "@/contexts/SidebarContext"
 import { Navbar } from "@/components/Navbar"
@@ -51,6 +54,12 @@ export default function IncidentSubmissionPage() {
     dateOfIncident: "",
     timeOfIncident: "",
     location: "",
+    formattedAddress: "",
+    latitude: null as number | null,
+    longitude: null as number | null,
+    building: "",
+    buildingName: "",
+    buildingCode: "",
     description: "",
     tags: [] as string[],
   })
@@ -62,6 +71,7 @@ export default function IncidentSubmissionPage() {
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [tagSelectError, setTagSelectError] = useState<string | null>(null)
   const [isGeneratingTags, setIsGeneratingTags] = useState(false)
+  const [isSelectingLocation, setIsSelectingLocation] = useState(false)
   const [activeSection, setActiveSection] = useState<string>("details")
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({})
   const [showTips, setShowTips] = useState(true)
@@ -80,7 +90,7 @@ export default function IncidentSubmissionPage() {
   }, [])
 
   useEffect(() => {
-    if (formData.incidentType || formData.location || formData.description) {
+    if (formData.incidentType || formData.location || formData.description || formData.latitude) {
       sessionStorage.setItem("incidentSubmissionData", JSON.stringify({ ...formData, tags: selectedTags }))
     }
   }, [formData, selectedTags])
@@ -115,6 +125,90 @@ export default function IncidentSubmissionPage() {
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
+  // Helper function to get local date string in YYYY-MM-DD format
+  const getLocalDateString = (date = new Date()) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  const handleUseCurrentDate = () => {
+    const currentDate = getLocalDateString();
+    setFormData((prev) => ({ ...prev, dateOfIncident: currentDate }));
+    
+    // Clear date error if it exists
+    if (formErrors.dateOfIncident) {
+      setFormErrors((prev) => {
+        const newErrors = { ...prev }
+        delete newErrors.dateOfIncident
+        return newErrors
+      })
+    }
+  }
+
+  const handleUseCurrentTime = () => {
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const currentTime = `${hours}:${minutes}`;
+    
+    setFormData((prev) => ({ ...prev, timeOfIncident: currentTime }));
+    
+    // Clear time error if it exists
+    if (formErrors.timeOfIncident) {
+      setFormErrors((prev) => {
+        const newErrors = { ...prev }
+        delete newErrors.timeOfIncident
+        return newErrors
+      })
+    }
+  }
+
+  const handleLocationSelect = (locationData: LocationData) => {
+    // Check if this is a "cleared" location (coordinates are 0,0)
+    const isClearing = locationData.latitude === 0 && locationData.longitude === 0;
+    
+    if (isClearing) {
+      // User is starting to select a new location
+      setIsSelectingLocation(true);
+      console.log('Location selection started - validation disabled');
+      
+      // Clear location error immediately when user starts selecting
+      if (formErrors.location) {
+        setFormErrors((prev) => {
+          const newErrors = { ...prev }
+          delete newErrors.location
+          return newErrors
+        })
+      }
+    } else {
+      // User has completed location selection
+      setIsSelectingLocation(false);
+      console.log('Location selection completed - validation enabled');
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      location: locationData.formattedAddress || `${locationData.latitude}, ${locationData.longitude}`,
+      formattedAddress: locationData.formattedAddress || "",
+      latitude: locationData.latitude,
+      longitude: locationData.longitude,
+      building: locationData.building || "",
+      buildingName: locationData.buildingName || "",
+      buildingCode: locationData.buildingCode || "",
+    }))
+
+    // Clear location error if it exists and location is valid
+    if (formErrors.location && !isClearing) {
+      setFormErrors((prev) => {
+        const newErrors = { ...prev }
+        delete newErrors.location
+        return newErrors
+      })
+    }
+  }
+
   const validateForm = () => {
     const errors: { [key: string]: string } = {}
 
@@ -130,8 +224,16 @@ export default function IncidentSubmissionPage() {
       errors.timeOfIncident = "Time of incident is required"
     }
 
-    if (!formData.location.trim()) {
-      errors.location = "Location is required"
+    // Location is required - check both old location field and new geolocation fields
+    // Skip location validation if user is currently selecting a location
+    if (!isSelectingLocation) {
+      const hasValidLocation = formData.location.trim() || 
+                              (formData.latitude && formData.longitude && 
+                               formData.latitude !== 0 && formData.longitude !== 0);
+      
+      if (!hasValidLocation) {
+        errors.location = "Location is required"
+      }
     }
 
     if (!formData.description.trim()) {
@@ -146,6 +248,7 @@ export default function IncidentSubmissionPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    console.log('Form submitted, isSelectingLocation:', isSelectingLocation);
 
     if (!validateForm()) {
       // Scroll to the first error
@@ -178,12 +281,19 @@ export default function IncidentSubmissionPage() {
       dateOfIncident: "",
       timeOfIncident: "",
       location: "",
+      formattedAddress: "",
+      latitude: null,
+      longitude: null,
+      building: "",
+      buildingName: "",
+      buildingCode: "",
       description: "",
       tags: [],
     })
     setSelectedTags([])
     setTags([])
     setFormErrors({})
+    setIsSelectingLocation(false)
     sessionStorage.removeItem("incidentSubmissionData")
     setShowResetDialog(false)
     toast.success("Form has been reset", {
@@ -201,29 +311,14 @@ export default function IncidentSubmissionPage() {
     setTags([])
 
     try {
-      const token = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("token="))
-        ?.split("=")[1]
-
-      if (!token) {
-        throw new Error("No authentication token found")
-      }
-
-      const response = await fetch(`${API_BASE_URL}/api/tags/generate`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          description: formData.description,
-          location: formData.location,
-        }),
+      const response = await api.post("/api/tags/generate", {
+        description: formData.description,
+        location: formData.location,
       })
 
       if (!response.ok) {
-        throw new Error("Failed to generate tags")
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to generate tags")
       }
 
       const data = await response.json()
@@ -271,7 +366,7 @@ export default function IncidentSubmissionPage() {
     if (formData.incidentType) completed++
     if (formData.dateOfIncident) completed++
     if (formData.timeOfIncident) completed++
-    if (formData.location) completed++
+    if (formData.location || (formData.latitude && formData.longitude)) completed++
     if (formData.description) completed++
 
     return Math.round((completed / totalFields) * 100)
@@ -413,7 +508,7 @@ export default function IncidentSubmissionPage() {
                   </div>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-6 space-y-6">
+                <form id="incident-form" onSubmit={handleSubmit} className="p-6 space-y-6">
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="incidentType" className="text-sm font-medium flex items-center">
@@ -449,17 +544,29 @@ export default function IncidentSubmissionPage() {
                         <Label htmlFor="dateOfIncident" className="text-sm font-medium flex items-center">
                           Date of Incident <span className="text-[#800000] ml-1">*</span>
                         </Label>
-                        <div className="relative">
-                          <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#800000]/70" />
-                          <Input
-                            id="dateOfIncident"
-                            type="date"
-                            name="dateOfIncident"
-                            value={formData.dateOfIncident}
-                            onChange={handleInputChange}
-                            max={new Date().toISOString().split("T")[0]}
-                            className={`pl-10 border-gray-200 focus:border-[#800000] focus:ring-[#800000]/20 rounded-lg ${formErrors.dateOfIncident ? "border-red-300 focus:border-red-500 focus:ring-red-200" : ""}`}
-                          />
+                        <div className="space-y-2">
+                          <div className="relative">
+                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#800000]/70" />
+                            <Input
+                              id="dateOfIncident"
+                              type="date"
+                              name="dateOfIncident"
+                              value={formData.dateOfIncident}
+                              onChange={handleInputChange}
+                              max={getLocalDateString()}
+                              className={`pl-10 border-gray-200 focus:border-[#800000] focus:ring-[#800000]/20 rounded-lg ${formErrors.dateOfIncident ? "border-red-300 focus:border-red-500 focus:ring-red-200" : ""}`}
+                            />
+                          </div>
+                          <Button
+                            type="button"
+                            onClick={handleUseCurrentDate}
+                            variant="outline"
+                            size="sm"
+                            className="w-full border-[#800000]/30 text-[#800000] hover:bg-[#800000] hover:text-white flex items-center gap-2"
+                          >
+                            <Clock className="h-3 w-3" />
+                            Use Current Date
+                          </Button>
                         </div>
                         {formErrors.dateOfIncident && (
                           <p className="text-red-500 text-xs mt-1 flex items-center">
@@ -473,16 +580,28 @@ export default function IncidentSubmissionPage() {
                         <Label htmlFor="timeOfIncident" className="text-sm font-medium flex items-center">
                           Time of Incident <span className="text-[#800000] ml-1">*</span>
                         </Label>
-                        <div className="relative">
-                          <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#800000]/70" />
-                          <Input
-                            id="timeOfIncident"
-                            type="time"
-                            name="timeOfIncident"
-                            value={formData.timeOfIncident}
-                            onChange={handleInputChange}
-                            className={`pl-10 border-gray-200 focus:border-[#800000] focus:ring-[#800000]/20 rounded-lg ${formErrors.timeOfIncident ? "border-red-300 focus:border-red-500 focus:ring-red-200" : ""}`}
-                          />
+                        <div className="space-y-2">
+                          <div className="relative">
+                            <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#800000]/70" />
+                            <Input
+                              id="timeOfIncident"
+                              type="time"
+                              name="timeOfIncident"
+                              value={formData.timeOfIncident}
+                              onChange={handleInputChange}
+                              className={`pl-10 border-gray-200 focus:border-[#800000] focus:ring-[#800000]/20 rounded-lg ${formErrors.timeOfIncident ? "border-red-300 focus:border-red-500 focus:ring-red-200" : ""}`}
+                            />
+                          </div>
+                          <Button
+                            type="button"
+                            onClick={handleUseCurrentTime}
+                            variant="outline"
+                            size="sm"
+                            className="w-full border-[#800000]/30 text-[#800000] hover:bg-[#800000] hover:text-white flex items-center gap-2"
+                          >
+                            <Clock className="h-3 w-3" />
+                            Use Current Time
+                          </Button>
                         </div>
                         {formErrors.timeOfIncident && (
                           <p className="text-red-500 text-xs mt-1 flex items-center">
@@ -493,35 +612,31 @@ export default function IncidentSubmissionPage() {
                       </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="location" className="text-sm font-medium flex items-center">
-                        Location <span className="text-[#800000] ml-1">*</span>
-                        <div className="flex items-center ml-1.5">
-                          <HelpCircle className="h-3.5 w-3.5 text-gray-400" />
-                          <span className="text-xs text-gray-500 ml-1.5">
-                            Be as specific as possible about where the incident occurred (building, room, area)
-                          </span>
-                        </div>
-                      </Label>
-                      <div className="relative">
-                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#800000]/70" />
-                        <Input
-                          id="location"
-                          name="location"
-                          placeholder="Building, room number, or specific area"
-                          value={formData.location}
-                          onChange={handleInputChange}
-                          className={`pl-10 border-gray-200 focus:border-[#800000] focus:ring-[#800000]/20 rounded-lg ${formErrors.location ? "border-red-300 focus:border-red-500 focus:ring-red-200" : ""}`}
-                        />
-                      </div>
-                      {formErrors.location && (
-                        <p className="text-red-500 text-xs mt-1 flex items-center">
-                          <AlertCircle className="h-3 w-3 mr-1" />
-                          {formErrors.location}
-                        </p>
-                      )}
-                    </div>
+                    <LocationPicker
+                      onLocationSelect={handleLocationSelect}
+                      initialLocation={
+                        formData.latitude && formData.longitude
+                          ? {
+                              latitude: formData.latitude,
+                              longitude: formData.longitude,
+                              formattedAddress: formData.formattedAddress,
+                              building: formData.building,
+                              buildingName: formData.buildingName,
+                              buildingCode: formData.buildingCode,
+                            }
+                          : undefined
+                      }
+                      required={true}
+                      className="space-y-2"
+                    />
+                    {formErrors.location && (
+                      <p className="text-red-500 text-xs mt-1 flex items-center">
+                        <AlertCircle className="h-3 w-3 mr-1" />
+                        {formErrors.location}
+                      </p>
+                    )}
                   </div>
+
                 </form>
               </Card>
 
@@ -733,28 +848,30 @@ export default function IncidentSubmissionPage() {
                         </div>
                       </motion.div>
                     )}
+
+                    {/* Form Actions */}
+                    <div className="flex justify-between pt-6 border-t border-gray-100 mt-6">
+                      <Button
+                        type="button"
+                        onClick={handleReset}
+                        variant="outline"
+                        className="border-gray-300 text-gray-700 hover:bg-gray-50 rounded-full px-4 flex items-center gap-2"
+                      >
+                        <RotateCcw className="h-4 w-4" />
+                        Reset Form
+                      </Button>
+
+                      <Button
+                        type="submit"
+                        form="incident-form"
+                        className="bg-gradient-to-r from-[#800000] to-[#9a0000] hover:from-[#700000] hover:to-[#800000] text-white rounded-full px-6 flex items-center gap-2"
+                      >
+                        Continue
+                        <ArrowRight className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
 
-                  <div className="flex justify-between pt-4 border-t border-gray-100">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleReset}
-                      className="border-gray-300 text-gray-700 hover:bg-gray-50 rounded-full px-4 flex items-center gap-2"
-                    >
-                      <RotateCcw className="h-4 w-4" />
-                      Reset Form
-                    </Button>
-
-                    <Button
-                      type="button"
-                      onClick={handleSubmit}
-                      className="bg-gradient-to-r from-[#800000] to-[#9a0000] hover:from-[#700000] hover:to-[#800000] text-white rounded-full px-6 flex items-center gap-2"
-                    >
-                      Continue
-                      <ArrowRight className="h-4 w-4" />
-                    </Button>
-                  </div>
                 </div>
               </Card>
             </div>

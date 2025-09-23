@@ -34,6 +34,19 @@ public class Incident {
     @NotBlank(message = "Location is required")
     private String location;
 
+    @Column(name = "formatted_address")
+    private String formattedAddress;
+
+    @Column(name = "latitude")
+    private Double latitude;
+
+    @Column(name = "longitude")
+    private Double longitude;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "building")
+    private Building building;
+
     @NotBlank(message = "Description is required")
     @Column(length = 1000)
     private String description;

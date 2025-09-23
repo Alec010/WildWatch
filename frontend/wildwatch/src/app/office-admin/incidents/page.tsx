@@ -19,6 +19,8 @@ import {
   RefreshCw,
 } from "lucide-react"
 import { API_BASE_URL } from "@/utils/api"
+import { formatLocationCompact } from "@/utils/locationFormatter"
+import { api } from "@/utils/apiClient"
 import { motion } from "framer-motion"
 import { useSidebar } from "@/contexts/SidebarContext"
 import { Badge } from "@/components/ui/badge"
@@ -63,43 +65,21 @@ export default function IncidentManagementPage() {
 
   // Fetch the admin's office code from the profile API
   const fetchAdminOfficeCode = async () => {
-    const token = document.cookie
-      .split("; ")
-      .find((row) => row.startsWith("token="))
-      ?.split("=")[1]
-    if (!token) return null
-    const response = await fetch(`${API_BASE_URL}/api/auth/profile`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    })
-    if (!response.ok) return null
-    const profile = await response.json()
-    return profile.officeCode || profile.office || profile.assignedOffice || null
+    try {
+      const response = await api.get('/api/auth/profile')
+      if (!response.ok) return null
+      const profile = await response.json()
+      return profile.officeCode || profile.office || profile.assignedOffice || null
+    } catch (error) {
+      console.error('Error fetching admin office code:', error)
+      return null
+    }
   }
 
   const fetchIncidents = async (officeCode: string | null) => {
     try {
       setIsRefreshing(true)
-      const token = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("token="))
-        ?.split("=")[1]
-
-      if (!token) {
-        toast.error("Authentication Error", {
-          description: "No authentication token found. Please log in again.",
-        })
-        return
-      }
-
-      const response = await fetch(`${API_BASE_URL}/api/incidents/office`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      })
+      const response = await api.get('/api/incidents/office')
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
@@ -160,22 +140,7 @@ export default function IncidentManagementPage() {
 
   const handleApprove = async (id: string) => {
     try {
-      const token = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("token="))
-        ?.split("=")[1]
-
-      if (!token) {
-        throw new Error("No authentication token found")
-      }
-
-      const response = await fetch(`${API_BASE_URL}/api/incidents/${id}/approve`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      })
+      const response = await api.post(`/api/incidents/${id}/approve`)
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
@@ -454,7 +419,7 @@ export default function IncidentManagementPage() {
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center text-sm text-gray-700">
                               <MapPin className="h-4 w-4 text-gray-400 mr-2" />
-                              {incident.location}
+                              {formatLocationCompact(incident)}
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
@@ -585,7 +550,7 @@ export default function IncidentManagementPage() {
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center text-sm text-gray-700">
                               <MapPin className="h-4 w-4 text-gray-400 mr-2" />
-                              {incident.location}
+                              {formatLocationCompact(incident)}
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">

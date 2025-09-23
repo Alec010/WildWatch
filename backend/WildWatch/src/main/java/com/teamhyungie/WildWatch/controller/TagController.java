@@ -17,9 +17,13 @@ public class TagController {
 
     @PostMapping("/generate")
     public ResponseEntity<?> generateTags(@RequestBody TagRequest request) {
-        List<String> tags = tagGenerationService.generateTags(request.getDescription(), request.getLocation());
-        if (tags.size() > 10) tags = tags.subList(0, 10);
-        return ResponseEntity.ok(Map.of("tags", tags));
+        try {
+            List<String> tags = tagGenerationService.generateTags(request.getDescription(), request.getLocation());
+            if (tags.size() > 10) tags = tags.subList(0, 10);
+            return ResponseEntity.ok(Map.of("tags", tags));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
     }
 
     @Data

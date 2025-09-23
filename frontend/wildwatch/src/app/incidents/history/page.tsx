@@ -26,6 +26,8 @@ import { useRouter } from "next/navigation"
 import jsPDF from "jspdf"
 import "jspdf-autotable"
 import { API_BASE_URL } from "@/utils/api"
+import { formatLocationCompact } from "@/utils/locationFormatter"
+import { api } from "@/utils/apiClient"
 import { motion } from "framer-motion"
 import { useSidebar } from "@/contexts/SidebarContext"
 import { Toaster, toast } from "sonner"
@@ -90,16 +92,7 @@ export default function IncidentHistoryPage() {
   const fetchIncidents = async () => {
     try {
       setError(null)
-      const token = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("token="))
-        ?.split("=")[1]
-      if (!token) {
-        throw new Error("No authentication token found")
-      }
-      const res = await fetch(`${API_BASE_URL}/api/incidents/my-incidents`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      const res = await api.get('/api/incidents/my-incidents')
 
       if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`)
@@ -935,7 +928,7 @@ export default function IncidentHistoryPage() {
                           <td className="px-3 py-3 whitespace-nowrap">
                             <div className="flex items-center text-sm text-gray-700">
                               <MapPin className="h-4 w-4 text-gray-400 mr-2" />
-                              {incident.location}
+                              {formatLocationCompact(incident)}
                             </div>
                           </td>
                           <td className="px-3 py-3 whitespace-nowrap">

@@ -2,6 +2,7 @@ package com.teamhyungie.WildWatch.dto;
 
 import com.teamhyungie.WildWatch.model.Incident;
 import com.teamhyungie.WildWatch.model.Office;
+import com.teamhyungie.WildWatch.model.Building;
 import com.teamhyungie.WildWatch.model.PriorityLevel;
 import lombok.Data;
 
@@ -19,6 +20,12 @@ public class IncidentResponse {
     private LocalDate dateOfIncident;
     private LocalTime timeOfIncident;
     private String location;
+    private String formattedAddress;
+    private Double latitude;
+    private Double longitude;
+    private Building building;
+    private String buildingName;
+    private String buildingCode;
     private String description;
     private Office assignedOffice;
     private PriorityLevel priorityLevel;
@@ -70,6 +77,12 @@ public class IncidentResponse {
         response.setDateOfIncident(incident.getDateOfIncident());
         response.setTimeOfIncident(incident.getTimeOfIncident());
         response.setLocation(incident.getLocation());
+        response.setFormattedAddress(incident.getFormattedAddress());
+        response.setLatitude(incident.getLatitude());
+        response.setLongitude(incident.getLongitude());
+        response.setBuilding(incident.getBuilding());
+        response.setBuildingName(incident.getBuilding() != null ? incident.getBuilding().getFullName() : null);
+        response.setBuildingCode(incident.getBuilding() != null ? incident.getBuilding().getCode() : null);
         response.setDescription(incident.getDescription());
         response.setAssignedOffice(incident.getAssignedOffice());
         response.setPriorityLevel(incident.getPriorityLevel());

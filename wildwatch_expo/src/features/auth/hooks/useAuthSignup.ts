@@ -11,9 +11,8 @@ export const useAuthSignup = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const res = await authAPI.register(payload);
-      await storage.setToken(res.token);
-      router.replace('/(tabs)');
+      await authAPI.register(payload);
+      router.replace('/auth/login');
     } catch (e: any) {
       const message: string = e?.response?.data?.message || e?.message || 'Registration failed. Please try again.';
       setError(message);

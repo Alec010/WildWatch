@@ -12,6 +12,10 @@ export default function AuthLayout() {
         headerBackVisible: false,
         gestureEnabled: false,
       }}
-    />
+    >
+      <Stack.Screen name="login" />
+      <Stack.Screen name="signup" />
+      <Stack.Screen name="setup" />
+    </Stack>
   );
 } 

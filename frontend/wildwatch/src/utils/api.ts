@@ -1,8 +1,8 @@
 // Import configuration
-import { getWsUrl } from '../config';
+import { getBackendUrl, getWsUrl } from '../config';
 
-// Use relative URL for API (handled by Next.js proxy)
-export const API_BASE_URL = ""; // Empty string means use relative URLs (same origin)
+// Use the configured backend URL directly instead of relying on Next.js proxy
+export const API_BASE_URL = getBackendUrl();
 
 // WebSocket still needs the full URL since it can't be proxied by Next.js
 export const WS_BASE_URL = getWsUrl(); 

@@ -5,11 +5,13 @@ import com.teamhyungie.WildWatch.dto.IncidentResponse;
 import com.teamhyungie.WildWatch.dto.IncidentUpdateRequest;
 import com.teamhyungie.WildWatch.dto.IncidentUpdateResponse;
 import com.teamhyungie.WildWatch.dto.IncidentTransferRequest;
+import com.teamhyungie.WildWatch.dto.GeolocationResponse;
 import com.teamhyungie.WildWatch.model.Evidence;
 import com.teamhyungie.WildWatch.model.Incident;
 import com.teamhyungie.WildWatch.model.User;
 import com.teamhyungie.WildWatch.model.Witness;
 import com.teamhyungie.WildWatch.model.Office;
+import com.teamhyungie.WildWatch.model.Building;
 import com.teamhyungie.WildWatch.model.OfficeAdmin;
 import com.teamhyungie.WildWatch.model.IncidentUpdate;
 import com.teamhyungie.WildWatch.model.IncidentUpvote;
@@ -48,20 +50,30 @@ public class IncidentService {
     private final SimpMessagingTemplate messagingTemplate;
     private final TagGenerationService tagGenerationService;
     private final OfficeAssignmentService officeAssignmentService;
+    private final GeolocationService geolocationService;
 
     @Transactional
     public IncidentResponse createIncident(IncidentRequest request, String userEmail, List<MultipartFile> files) {
         User user = userService.getUserByEmail(userEmail);
         
-        // Use tags from request if provided, otherwise generate tags using AI
+        // Prepare enhanced location info for AI services
+        String enhancedLocationInfo = request.getLocation();
+        if (request.getBuilding() != null) {
+            enhancedLocationInfo = request.getBuilding().getFullName() + " - " + request.getLocation();
+        } else if (request.getFormattedAddress() != null) {
+            enhancedLocationInfo = request.getFormattedAddress() + " - " + request.getLocation();
+        }
+        
+        // Use tags from request if provided, otherwise generate tags using AI with enhanced location
         List<String> tags = (request.getTags() != null && !request.getTags().isEmpty())
             ? request.getTags()
-            : tagGenerationService.generateTags(request.getDescription(), request.getLocation());
+            : tagGenerationService.generateTags(request.getDescription(), enhancedLocationInfo);
         
         // If no office is assigned in the request, use AI to assign one
         Office assignedOffice = request.getAssignedOffice();
         if (assignedOffice == null) {
-            assignedOffice = officeAssignmentService.assignOffice(request.getDescription(), request.getLocation(), tags);
+            // Use the same enhanced location info for office assignment
+            assignedOffice = officeAssignmentService.assignOffice(request.getDescription(), enhancedLocationInfo, tags);
         }
         
         // Create and save the incident first
@@ -121,7 +133,60 @@ public class IncidentService {
         incident.setSubmittedBy(user);
         incident.setPreferAnonymous(request.getPreferAnonymous());
         incident.setTags(tags);
+        
+        // Handle geolocation data
+        handleGeolocationData(incident, request);
+        
         return incidentRepository.save(incident);
+    }
+
+    private void handleGeolocationData(Incident incident, IncidentRequest request) {
+        // If latitude and longitude are provided in the request, use them
+        if (request.getLatitude() != null && request.getLongitude() != null) {
+            incident.setLatitude(request.getLatitude());
+            incident.setLongitude(request.getLongitude());
+            
+            // If building is provided in request, use it, otherwise detect from coordinates
+            if (request.getBuilding() != null) {
+                incident.setBuilding(request.getBuilding());
+            } else {
+                // Auto-detect building from coordinates using the old system for now
+                // TODO: Update building detection to use accurate building polygons
+                Building detectedBuilding = Building.findBuildingByCoordinates(
+                    request.getLatitude(), 
+                    request.getLongitude()
+                );
+                incident.setBuilding(detectedBuilding);
+            }
+            
+            // If formatted address is provided, use it, otherwise get from Google Maps
+            if (request.getFormattedAddress() != null && !request.getFormattedAddress().trim().isEmpty()) {
+                incident.setFormattedAddress(request.getFormattedAddress());
+            } else {
+                try {
+                    // Use GeolocationService to get formatted address
+                    GeolocationResponse geoResponse = geolocationService.reverseGeocode(
+                        request.getLatitude(), 
+                        request.getLongitude()
+                    );
+                    if ("SUCCESS".equals(geoResponse.getStatus())) {
+                        incident.setFormattedAddress(geoResponse.getFormattedAddress());
+                        // Update building if not set and detected by geolocation service
+                        if (incident.getBuilding() == null && geoResponse.getBuilding() != null) {
+                            incident.setBuilding(geoResponse.getBuilding());
+                        }
+                    }
+                } catch (Exception e) {
+                    log.error("Error getting formatted address for coordinates: {}, {}", 
+                        request.getLatitude(), request.getLongitude(), e);
+                    // Fallback to coordinates as formatted address
+                    incident.setFormattedAddress(String.format("%.6f, %.6f", 
+                        request.getLatitude(), request.getLongitude()));
+                }
+            }
+        } else {
+            log.debug("No coordinates provided for incident: {}", incident.getTrackingNumber());
+        }
     }
 
     /**

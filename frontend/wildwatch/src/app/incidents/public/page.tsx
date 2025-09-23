@@ -24,6 +24,7 @@ import {
   Shield,
 } from "lucide-react"
 import { API_BASE_URL } from "@/utils/api"
+import { formatLocationDisplay } from "@/utils/locationFormatter"
 import { Inter } from "next/font/google"
 import { Client } from "@stomp/stompjs"
 // @ts-ignore
@@ -616,7 +617,7 @@ export default function PublicIncidentsPage() {
                         <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600 mb-4">
                           <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg">
                             <MapPin className="h-4 w-4 text-[#800000]" />
-                            <span className="font-medium">{incident.location}</span>
+                            <span className="font-medium">{formatLocationDisplay(incident)}</span>
                           </div>
                           <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg">
                             <Calendar className="h-4 w-4 text-[#800000]" />

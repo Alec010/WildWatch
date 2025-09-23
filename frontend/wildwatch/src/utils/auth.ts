@@ -63,8 +63,9 @@ export const getCurrentUser = async () => {
   }
 };
 
-export const logout = () => {
-  Cookies.remove('token');
+export const logout = async () => {
+  const tokenService = (await import('./tokenService')).default;
+  tokenService.removeToken();
   window.location.href = '/login';
 };
 

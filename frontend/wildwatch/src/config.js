@@ -16,6 +16,20 @@ const DEPLOYED_WS = "wss://wildwatch-9djc.onrender.com";
 // Get the active WebSocket URL based on the toggle
 const getWsUrl = () => useLocalBackend ? LOCAL_WS : DEPLOYED_WS;
 
+// Google Maps Configuration
+const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
+const CAMPUS_CENTER = {
+  lat: 10.2955,
+  lng: 123.8800
+};
+const CAMPUS_ZOOM = 17;
+
+// Debug logging
+console.log('Google Maps API Key configured:', !!GOOGLE_MAPS_API_KEY);
+if (!GOOGLE_MAPS_API_KEY) {
+  console.warn('NEXT_PUBLIC_GOOGLE_MAPS_API_KEY is not set in .env.local');
+}
+
 // Export for ES modules (frontend)
 export {
   useLocalBackend,
@@ -24,7 +38,10 @@ export {
   getBackendUrl,
   LOCAL_WS,
   DEPLOYED_WS,
-  getWsUrl
+  getWsUrl,
+  GOOGLE_MAPS_API_KEY,
+  CAMPUS_CENTER,
+  CAMPUS_ZOOM
 };
 
 // We don't need CommonJS exports in an ESM file

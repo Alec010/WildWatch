@@ -25,6 +25,7 @@ import {
 import { Sidebar } from "@/components/Sidebar"
 import { Inter } from "next/font/google"
 import { API_BASE_URL } from "@/utils/api"
+import { formatLocationCompact } from "@/utils/locationFormatter"
 import { UpvoteModal } from "@/components/ui/upvote-modal"
 import { useSidebar } from "@/contexts/SidebarContext"
 import { Navbar } from "@/components/Navbar"
@@ -522,7 +523,7 @@ export default function DashboardPage() {
 
                           <div className="flex items-start mb-3">
                             <MapPin className="h-4 w-4 text-[#800000] mr-2 mt-0.5 flex-shrink-0" />
-                            <p className="text-sm text-gray-600 line-clamp-1">{incident.location}</p>
+                            <p className="text-sm text-gray-600 line-clamp-1">{formatLocationCompact(incident)}</p>
                           </div>
 
                           <div className="mb-4 flex-grow">

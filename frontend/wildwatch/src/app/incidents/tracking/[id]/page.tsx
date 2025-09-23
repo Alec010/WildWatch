@@ -31,6 +31,7 @@ import {
 import Image from "next/image"
 import Link from "next/link"
 import { API_BASE_URL } from "@/utils/api"
+import { formatLocationDisplay } from "@/utils/locationFormatter"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -699,7 +700,7 @@ export default function CaseDetailsPage() {
                             <MapPin className="mr-1 h-4 w-4" />
                             Location
                           </div>
-                          <p className="text-gray-800 font-medium">{incident.location || "-"}</p>
+                          <p className="text-gray-800 font-medium">{formatLocationDisplay(incident) || "-"}</p>
                         </div>
                       </div>
                       <div className="bg-white/50 rounded-lg p-4 border border-gray-100">
