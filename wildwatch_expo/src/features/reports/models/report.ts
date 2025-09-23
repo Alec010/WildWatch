@@ -24,6 +24,14 @@ export interface ReportForm {
   dateOfIncident: string;
   timeOfIncident: string;
   location: string;
+  formattedAddress?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  building?: string;
+  buildingName?: string;
+  buildingCode?: string;
+  withinCampus?: boolean;
+  distanceFromCampusCenter?: number;
   description: string;
   assignedOffice: string | null;
   preferAnonymous: boolean;

@@ -19,6 +19,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { type OfficeInfo, type ReportForm, type WitnessInfo } from '../../src/features/reports/models/report';
 import { WitnessInput } from '../../src/features/reports/components/WitnessInput';
 import { WitnessReviewCard } from '../../src/features/reports/components/WitnessReviewCard';
+import LocationSection from '../../src/features/reports/components/LocationSection';
+import { useReportForm } from '../../src/features/reports/hooks/useReportForm';
 import { config } from '../../lib/config';
 
 // Uses centralized API base URL from config
@@ -226,40 +228,25 @@ export default function ReportScreen() {
   const hourPickerRef = useRef<ScrollView>(null);
   const minutePickerRef = useRef<ScrollView>(null);
 
-  const [form, setForm] = useState<ReportForm>(() => {
-    const now = new Date();
-    const formatter = new Intl.DateTimeFormat('en-US', {
-      month: '2-digit',
-      day: '2-digit',
-      year: 'numeric'
-    });
-    const timeFormatter = new Intl.DateTimeFormat('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    });
-    
-    return {
-    incidentType: '',
-      dateOfIncident: formatter.format(now),
-      timeOfIncident: timeFormatter.format(now),
-    location: '',
-    description: '',
-      assignedOffice: null,
-    preferAnonymous: false,
-      tags: []
-    };
-  });
+  // Use the centralized form hook
+  const {
+    form,
+    updateForm,
+    resetForm,
+    witnesses,
+    addWitness,
+    removeWitness,
+    updateWitness,
+    evidenceFiles,
+    addEvidenceFiles,
+    removeEvidenceFile,
+    clearAllEvidence,
+    toggleTag,
+    handleLocationSelect,
+  } = useReportForm();
 
   // Multi-step form state
   const [currentStep, setCurrentStep] = useState(1);
-  const [evidenceFiles, setEvidenceFiles] = useState<Array<{
-    uri: string;
-    name: string;
-    type: string;
-    size: number;
-  }>>([]);
-  const [witnesses, setWitnesses] = useState<WitnessInfo[]>([]);
 
 
   // Tag generation state
@@ -391,7 +378,7 @@ export default function ReportScreen() {
 
   const handleTimeSelection = () => {
     const timeString = `${selectedHour.toString().padStart(2, '0')}:${selectedMinute.toString().padStart(2, '0')} ${selectedAmPm}`;
-    setForm(prev => ({ ...prev, timeOfIncident: timeString }));
+    updateForm('timeOfIncident', timeString);
     setShowTimePicker(false);
   };
 
@@ -403,7 +390,7 @@ export default function ReportScreen() {
         day: '2-digit',
         year: 'numeric'
       });
-      setForm(prev => ({ ...prev, dateOfIncident: formatter.format(selectedDate) }));
+      updateForm('dateOfIncident', formatter.format(selectedDate));
     }
   };
 
@@ -415,7 +402,7 @@ export default function ReportScreen() {
       const amPm = hours >= 12 ? 'PM' : 'AM';
       const hour12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
       const timeString = `${hour12.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} ${amPm}`;
-      setForm(prev => ({ ...prev, timeOfIncident: timeString }));
+      updateForm('timeOfIncident', timeString);
     }
   };
 
@@ -426,8 +413,8 @@ export default function ReportScreen() {
     }
 
     // Validation for all steps
-    if (!form.incidentType.trim() || !form.dateOfIncident || !form.timeOfIncident || !form.location.trim() || !form.description.trim()) {
-      Alert.alert('Error', 'Please fill in all required fields before continuing.');
+    if (!form.incidentType.trim() || !form.dateOfIncident || !form.timeOfIncident || !form.latitude || !form.longitude || !form.description.trim()) {
+      Alert.alert('Error', 'Please fill in all required fields including location before continuing.');
       return;
     }
 
@@ -465,7 +452,15 @@ export default function ReportScreen() {
         incidentType: form.incidentType.trim(),
         dateOfIncident: dateObj.toISOString().split('T')[0],
         timeOfIncident: timeObj.toTimeString().split(' ')[0],
-        location: form.location.trim(),
+        location: form.formattedAddress || form.location || `${form.latitude}, ${form.longitude}`,
+        formattedAddress: form.formattedAddress,
+        latitude: form.latitude,
+        longitude: form.longitude,
+        building: form.building,
+        buildingName: form.buildingName,
+        buildingCode: form.buildingCode,
+        withinCampus: form.withinCampus,
+        distanceFromCampusCenter: form.distanceFromCampusCenter,
         description: form.description.trim(),
         preferAnonymous: form.preferAnonymous,
         tags: form.tags,
@@ -525,18 +520,7 @@ export default function ReportScreen() {
             text: 'OK',
             onPress: () => {
               // Reset form
-              setForm({
-                incidentType: '',
-                dateOfIncident: '',
-                timeOfIncident: '',
-                location: '',
-                description: '',
-                assignedOffice: null,
-                preferAnonymous: false,
-                tags: []
-              });
-              setEvidenceFiles([]);
-              setWitnesses([]);
+              resetForm();
               setCurrentStep(1);
               setConfirmAccurate(false);
               setConfirmContact(false);
@@ -555,15 +539,12 @@ export default function ReportScreen() {
     }
   };
 
-  const updateForm = (field: keyof ReportForm, value: any) => {
-    setForm(prev => ({ ...prev, [field]: value }));
-  };
 
   const nextStep = () => {
     if (currentStep === 1) {
       // Validate Step 1
-      if (!form.incidentType.trim() || !form.dateOfIncident || !form.timeOfIncident || !form.location.trim() || !form.description.trim()) {
-        Alert.alert('Error', 'Please fill in all required fields before continuing.');
+      if (!form.incidentType.trim() || !form.dateOfIncident || !form.timeOfIncident || !form.latitude || !form.longitude || !form.description.trim()) {
+        Alert.alert('Error', 'Please fill in all required fields including location before continuing.');
       return;
     }
       setCurrentStep(2);
@@ -578,23 +559,6 @@ export default function ReportScreen() {
     }
   };
 
-  const addWitness = () => {
-    setWitnesses(prev => [...prev, { name: '', contact: '', additionalNotes: '', isRegisteredUser: false }]);
-  };
-
-  const removeWitness = (index: number) => {
-    setWitnesses(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const updateWitness = (index: number, field: keyof WitnessInfo, value: string | number | boolean) => {
-    setWitnesses(prev => prev.map((witness, i) => 
-      i === index ? { ...witness, [field]: value } : witness
-    ));
-  };
-
-  const removeEvidenceFile = (index: number) => {
-    setEvidenceFiles(prev => prev.filter((_, i) => i !== index));
-  };
 
   const requestPermissions = async () => {
     const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
@@ -626,7 +590,7 @@ export default function ReportScreen() {
         const asset = result.assets[0];
         const fileName = `photo_${Date.now()}.jpg`;
         
-        setEvidenceFiles(prev => [...prev, {
+        addEvidenceFiles([{
           uri: asset.uri,
           name: fileName,
           type: 'image/jpeg',
@@ -659,7 +623,7 @@ export default function ReportScreen() {
           size: asset.fileSize || 0,
         }));
 
-        setEvidenceFiles(prev => [...prev, ...newFiles]);
+        addEvidenceFiles(newFiles);
       }
     } catch (error) {
       console.error('Error picking images:', error);
@@ -667,7 +631,7 @@ export default function ReportScreen() {
     }
   };
 
-  const clearAllEvidence = () => {
+  const handleClearAllEvidence = () => {
     Alert.alert(
       'Clear All Evidence',
       'Are you sure you want to remove all evidence files?',
@@ -676,7 +640,7 @@ export default function ReportScreen() {
         { 
           text: 'Clear All', 
           style: 'destructive',
-          onPress: () => setEvidenceFiles([])
+          onPress: () => clearAllEvidence()
         }
       ]
     );
@@ -688,7 +652,7 @@ export default function ReportScreen() {
       return;
     }
 
-    if (!form.description.trim() || !form.location.trim()) {
+    if (!form.description.trim() || !form.latitude || !form.longitude) {
       Alert.alert('Error', 'Please provide both description and location to generate tags');
       return;
     }
@@ -706,7 +670,7 @@ export default function ReportScreen() {
         },
         body: JSON.stringify({
           description: form.description.trim(),
-          location: form.location.trim(),
+          location: form.formattedAddress || form.location || `${form.latitude}, ${form.longitude}`,
         }),
       });
 
@@ -727,14 +691,6 @@ export default function ReportScreen() {
     }
   };
 
-  const toggleTag = (tag: string) => {
-    setForm(prev => ({
-      ...prev,
-      tags: prev.tags.includes(tag) 
-        ? prev.tags.filter(t => t !== tag)
-        : [...prev.tags, tag]
-    }));
-  };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#F5F5F5' }}>
@@ -936,28 +892,22 @@ export default function ReportScreen() {
                   Tap the fields above to select date and time
                 </Text>
 
-                {/* Location */}
-                <View style={{ marginBottom: margin }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-                    <Text style={{ fontWeight: 'bold', fontSize: fontSize - 1 }}>Location</Text>
-                    <Text style={{ color: '#8B0000', fontWeight: 'bold', marginLeft: 4 }}> *</Text>
-                  </View>
-                <TextInput
-                    style={{
-                      borderWidth: 1,
-                      borderColor: form.location ? '#8B0000' : '#D1D5DB',
-                      borderRadius: 8,
-                      paddingHorizontal: 16,
-                      paddingVertical: 12,
-                      fontSize: fontSize - 1,
-                      backgroundColor: '#FFFFFF',
-                    }}
-                    placeholder="Be as specific as possible"
-                  placeholderTextColor="#9CA3AF"
-                    value={form.location}
-                    onChangeText={(text) => updateForm('location', text)}
+                {/* Location Section */}
+                <LocationSection
+                  onLocationSelect={handleLocationSelect}
+                  selectedLocation={form.latitude && form.longitude ? {
+                    latitude: form.latitude,
+                    longitude: form.longitude,
+                    formattedAddress: form.formattedAddress,
+                    building: form.building,
+                    buildingName: form.buildingName,
+                    buildingCode: form.buildingCode,
+                    withinCampus: form.withinCampus,
+                    distanceFromCampusCenter: form.distanceFromCampusCenter,
+                  } : null}
+                  disabled={false}
+                  required={true}
                 />
-              </View>
 
 
 
@@ -1014,9 +964,9 @@ export default function ReportScreen() {
                   {/* Generate Tags Button */}
                   <TouchableOpacity
                     onPress={generateTags}
-                    disabled={isGeneratingTags || !form.description.trim() || !form.location.trim()}
+                    disabled={isGeneratingTags || !form.description.trim() || !form.latitude || !form.longitude}
                     style={{
-                      backgroundColor: isGeneratingTags || !form.description.trim() || !form.location.trim() ? '#D1D5DB' : '#8B0000',
+                      backgroundColor: isGeneratingTags || !form.description.trim() || !form.latitude || !form.longitude ? '#D1D5DB' : '#8B0000',
                       borderRadius: 8,
                       paddingVertical: 12,
                       paddingHorizontal: 16,
@@ -1141,7 +1091,7 @@ export default function ReportScreen() {
                   backText="Cancel"
                   nextText="Continue"
                   darkRed="#8B0000"
-                  disabled={!form.incidentType.trim() || !form.dateOfIncident || !form.timeOfIncident || !form.location.trim() || !form.description.trim()}
+                  disabled={!form.incidentType.trim() || !form.dateOfIncident || !form.timeOfIncident || !form.latitude || !form.longitude || !form.description.trim()}
                 />
             </View>
 
@@ -1227,7 +1177,7 @@ export default function ReportScreen() {
                     {/* Clear All Button */}
                     {evidenceFiles.length > 0 && (
                       <TouchableOpacity
-                        onPress={clearAllEvidence}
+                        onPress={handleClearAllEvidence}
                         style={{
                           alignSelf: 'flex-end',
                           paddingVertical: 8,
@@ -1506,7 +1456,7 @@ export default function ReportScreen() {
                   backText="Back"
                   nextText="Continue"
                   darkRed="#8B0000"
-                  disabled={!form.incidentType.trim() || !form.dateOfIncident || !form.timeOfIncident || !form.location.trim() || !form.description.trim()}
+                  disabled={!form.incidentType.trim() || !form.dateOfIncident || !form.timeOfIncident || !form.latitude || !form.longitude || !form.description.trim()}
                 />
               </View>
 
@@ -1576,7 +1526,24 @@ export default function ReportScreen() {
                     marginBottom: 12,
                   }}>
                     <Text style={{ fontWeight: '600', fontSize: fontSize - 2 }}>Location:</Text>
-                    <Text style={{ fontSize: fontSize - 1, marginTop: 4 }}>{form.location}</Text>
+                    <Text style={{ fontSize: fontSize - 1, marginTop: 4 }}>
+                      {form.formattedAddress || form.location || `${form.latitude}, ${form.longitude}`}
+                    </Text>
+                    {form.buildingName && (
+                      <Text style={{ fontSize: fontSize - 2, marginTop: 2, color: '#6B7280' }}>
+                        Building: {form.buildingName} {form.buildingCode && `(${form.buildingCode})`}
+                      </Text>
+                    )}
+                    {form.withinCampus !== undefined && (
+                      <Text style={{ 
+                        fontSize: fontSize - 2, 
+                        marginTop: 2, 
+                        color: form.withinCampus ? '#16a34a' : '#dc2626',
+                        fontWeight: '500'
+                      }}>
+                        {form.withinCampus ? '✓ On Campus' : '⚠ Outside Campus'}
+                      </Text>
+                    )}
                   </View>
                   <View style={{
                     backgroundColor: '#F9FAFB',
@@ -2016,10 +1983,7 @@ export default function ReportScreen() {
                               day: '2-digit',
                               year: 'numeric'
                             });
-                            setForm(prev => ({ 
-                              ...prev, 
-                              dateOfIncident: formatter.format(selectedDate) 
-                            }));
+                            updateForm('dateOfIncident', formatter.format(selectedDate));
                             setShowDatePicker(false);
                           }
                         }}

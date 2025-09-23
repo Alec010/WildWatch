@@ -10,6 +10,7 @@ const API_TIMEOUT: string | undefined = process.env.EXPO_PUBLIC_API_TIMEOUT;
 const MICROSOFT_CLIENT_ID: string | undefined = process.env.EXPO_PUBLIC_MICROSOFT_CLIENT_ID;
 const MICROSOFT_TENANT_ID: string | undefined = process.env.EXPO_PUBLIC_MICROSOFT_TENANT_ID;
 const MICROSOFT_REDIRECT_URI: string | undefined = process.env.EXPO_PUBLIC_MICROSOFT_REDIRECT_URI;
+const GOOGLE_MAPS_API_KEY: string | undefined = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
 const APP_NAME: string | undefined = process.env.EXPO_PUBLIC_APP_NAME;
 const APP_VERSION: string | undefined = process.env.EXPO_PUBLIC_APP_VERSION;
 
@@ -29,6 +30,11 @@ export const config = {
       scheme: 'wildwatchexpo',
       path: 'auth/oauth2/callback'
     }),
+  },
+  
+  // Google Maps configuration
+  GOOGLE_MAPS: {
+    API_KEY: GOOGLE_MAPS_API_KEY || '',
   },
   
   // App configuration
