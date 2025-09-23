@@ -140,16 +140,13 @@ export default function CaseDetailsScreen() {
               <Text style={{ marginLeft: 6, color: '#8B0000', fontWeight: '600', fontSize: fontSize - 2 }}>{incident.upvoteCount || 0}</Text>
             </TouchableOpacity>
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <View style={{ backgroundColor: '#DC2626', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, marginRight: 8 }}>
-              <Text style={{ color: '#FFFFFF', fontSize: fontSize - 2, fontWeight: '500', textTransform: 'uppercase' }}>{incident.priorityLevel}</Text>
-            </View>
-            {isDismissed && (
+          {isDismissed && (
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <View style={{ backgroundColor: '#6B7280', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 }}>
                 <Text style={{ color: '#FFFFFF', fontSize: fontSize - 2, fontWeight: '500' }}>Dismissed</Text>
               </View>
-            )}
-          </View>
+            </View>
+          )}
         </View>
 
         <View style={{ backgroundColor: '#FFFFFF', marginHorizontal: margin, marginBottom: margin, borderRadius: 12, padding: padding, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 2 }}>

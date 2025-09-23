@@ -11,24 +11,18 @@ export default function CasesScreen() {
   const [filteredIncidents, setFilteredIncidents] = useState<IncidentResponseDto[]>([]);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [selectedPriority, setSelectedPriority] = useState<string>('All');
   const [selectedStatus, setSelectedStatus] = useState<string>('All');
   const [selectedTab, setSelectedTab] = useState<number>(0);
 
-  const priorities = useMemo(() => ['All', 'High', 'Medium', 'Low'], []);
-
   useEffect(() => {
     filterIncidents();
-  }, [incidents, searchQuery, selectedPriority, selectedStatus]);
+  }, [incidents, searchQuery, selectedStatus]);
 
   const filterIncidents = () => {
     let filtered = incidents;
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       filtered = filtered.filter((i) => (i.trackingNumber || '').toLowerCase().includes(q) || (i.description || '').toLowerCase().includes(q));
-    }
-    if (selectedPriority !== 'All') {
-      filtered = filtered.filter((i) => (i.priorityLevel || '').toLowerCase() === selectedPriority.toLowerCase());
     }
     if (selectedStatus !== 'All') {
       filtered = filtered.filter((i) => (i.status || '').toLowerCase() === selectedStatus.toLowerCase());
@@ -55,13 +49,6 @@ export default function CasesScreen() {
     return '#FFA000';
   };
 
-  const getPriorityColor = (priority?: string | null): string => {
-    const p = (priority || '').toLowerCase();
-    if (p === 'high') return '#E53935';
-    if (p === 'medium') return '#FFA000';
-    if (p === 'low') return '#4CAF50';
-    return '#757575';
-  };
 
   const getStatusIcon = (status?: string | null): keyof typeof Ionicons.glyphMap => {
     const s = (status || '').toLowerCase();
@@ -122,21 +109,6 @@ export default function CasesScreen() {
         </View>
       </View>
 
-      {/* Fixed Priority Filters */}
-      <View className="bg-white px-4 py-3 border-b border-gray-200">
-        <View className="flex-row">
-          {priorities.map((priority, index) => (
-            <TouchableOpacity
-              key={priority}
-              className={`px-3 py-1.5 rounded-md ${selectedPriority === priority ? 'bg-[#B71C1C]' : 'bg-white'} ${index > 0 ? 'ml-1.5' : ''}`}
-              style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 }}
-              onPress={() => setSelectedPriority(priority)}
-            >
-              <Text className={`text-sm font-medium ${selectedPriority === priority ? 'text-white' : 'text-black'}`}>{priority}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
 
       {/* Fixed Status Filters */}
       <View className="bg-white px-4 py-3 border-b border-gray-200">
