@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { type ReportForm, type WitnessInfo, type EvidenceFileInfo } from '../models/report';
+import { type LocationData } from '../../location/models/LocationModels';
 
 export const useReportForm = () => {
   const [form, setForm] = useState<ReportForm>(() => {
@@ -19,6 +20,14 @@ export const useReportForm = () => {
       dateOfIncident: formatter.format(now),
       timeOfIncident: timeFormatter.format(now),
       location: '',
+      formattedAddress: '',
+      latitude: null,
+      longitude: null,
+      building: '',
+      buildingName: '',
+      buildingCode: '',
+      withinCampus: undefined,
+      distanceFromCampusCenter: undefined,
       description: '',
       assignedOffice: null,
       preferAnonymous: false,
@@ -36,6 +45,14 @@ export const useReportForm = () => {
       dateOfIncident: '',
       timeOfIncident: '',
       location: '',
+      formattedAddress: '',
+      latitude: null,
+      longitude: null,
+      building: '',
+      buildingName: '',
+      buildingCode: '',
+      withinCampus: undefined,
+      distanceFromCampusCenter: undefined,
       description: '',
       assignedOffice: null,
       preferAnonymous: false,
@@ -50,7 +67,7 @@ export const useReportForm = () => {
   const removeWitness = useCallback((index: number): void => {
     setWitnesses(prev => prev.filter((_, i) => i !== index));
   }, []);
-  const updateWitness = useCallback((index: number, field: keyof WitnessInfo, value: string): void => {
+  const updateWitness = useCallback((index: number, field: keyof WitnessInfo, value: string | number | boolean): void => {
     setWitnesses(prev => prev.map((w, i) => (i === index ? { ...w, [field]: value } : w)));
   }, []);
 
@@ -72,6 +89,32 @@ export const useReportForm = () => {
     }));
   }, []);
 
+  const handleLocationSelect = useCallback((locationData: LocationData): void => {
+    // Check if this is a "cleared" location (coordinates are 0,0)
+    const isClearing = locationData.latitude === 0 && locationData.longitude === 0;
+    
+    if (isClearing) {
+      // User is starting to select a new location
+      console.log('Location selection started - validation disabled');
+    } else {
+      // User has completed location selection
+      console.log('Location selection completed - validation enabled');
+    }
+
+    setForm(prev => ({
+      ...prev,
+      location: locationData.formattedAddress || `${locationData.latitude}, ${locationData.longitude}`,
+      formattedAddress: locationData.formattedAddress || '',
+      latitude: locationData.latitude,
+      longitude: locationData.longitude,
+      building: locationData.building || '',
+      buildingName: locationData.buildingName || '',
+      buildingCode: locationData.buildingCode || '',
+      withinCampus: locationData.withinCampus,
+      distanceFromCampusCenter: locationData.distanceFromCampusCenter,
+    }));
+  }, []);
+
   return {
     form,
     updateForm,
@@ -85,6 +128,7 @@ export const useReportForm = () => {
     removeEvidenceFile,
     clearAllEvidence,
     toggleTag,
+    handleLocationSelect,
   };
 };
 
