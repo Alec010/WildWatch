@@ -17,7 +17,7 @@ const APP_VERSION: string | undefined = process.env.EXPO_PUBLIC_APP_VERSION;
 export const config = {
   // Backend API configuration
   API: {
-    BASE_URL: API_BASE_URL || 'http://192.168.1.2:8080/api',
+    BASE_URL: API_BASE_URL || 'http://192.168.1.5:8080/api',
     TIMEOUT: API_TIMEOUT ? parseInt(API_TIMEOUT) : 30000,
   },
   

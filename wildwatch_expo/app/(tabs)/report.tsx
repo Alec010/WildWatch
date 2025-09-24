@@ -461,10 +461,18 @@ export default function ReportScreen() {
     } catch (error: any) {
       console.error('AI Analysis Error:', error);
       
+      // Check if it's a timeout error
+      if (error.message?.includes('timeout') || error.code === 'ECONNABORTED') {
+        console.log('AI analysis timed out, proceeding without analysis');
+        // Hide processing modal and continue with submission
+        setShowProcessingModal(false);
+        return true; // Allow submission to continue
+      }
+      
       // Hide processing modal first
       setShowProcessingModal(false);
       
-      // Show user-friendly error message
+      // Show user-friendly error message for other errors
       Alert.alert(
         'Analysis Unavailable', 
         error.message || 'Content analysis is temporarily unavailable. Your report will be submitted for manual review.',

@@ -45,7 +45,7 @@ export const incidentAnalysisAPI = {
       });
 
       const response = await api.post<AnalyzeResponse>('/incidents/analyze', request, {
-        timeout: 30000, // 30 second timeout
+              timeout: 60000, // 60 second timeout
       });
       
       console.log('AI analysis response:', response.data);
