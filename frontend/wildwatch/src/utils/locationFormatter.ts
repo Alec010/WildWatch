@@ -138,3 +138,4 @@ export function hasBuilding(locationData: LocationData): boolean {
   return !!(locationData?.buildingName || locationData?.building?.fullName);
 }
 
+

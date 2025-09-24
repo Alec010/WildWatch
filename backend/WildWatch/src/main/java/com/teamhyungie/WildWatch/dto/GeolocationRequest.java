@@ -18,3 +18,4 @@ public class GeolocationRequest {
     private Double longitude;
 }
 
+
