@@ -1,14 +1,15 @@
-import { Stack } from 'expo-router';
+import { Stack } from "expo-router";
 
 export default function AuthLayout() {
   return (
     <Stack
       screenOptions={{
+        headerShown: false,
         headerStyle: {
-          backgroundColor: '#fff',
+          backgroundColor: "#fff",
         },
         headerShadowVisible: false,
-        headerBackTitle: 'Back',
+        headerBackTitle: "Back",
         headerBackVisible: false,
         gestureEnabled: false,
       }}
@@ -16,6 +17,7 @@ export default function AuthLayout() {
       <Stack.Screen name="login" />
       <Stack.Screen name="signup" />
       <Stack.Screen name="setup" />
+      <Stack.Screen name="onboarding" />
     </Stack>
   );
-} 
+}
