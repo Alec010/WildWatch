@@ -1,19 +1,59 @@
-import { View, Text, TextInput, Pressable, Image, ScrollView, Alert } from 'react-native';
-import { Stack, router } from 'expo-router';
-import { useState } from 'react';
-import { Ionicons } from '@expo/vector-icons';
-import { useAuthSignup } from '../../src/features/auth/hooks/useAuthSignup';
-import TermsModal from '../../components/TermsModal';
+import React, { useMemo, useState } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  Image,
+  ScrollView,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  useWindowDimensions,
+} from "react-native";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
+import { Stack, router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import TermsModal from "../../components/TermsModal";
+import { useAuthSignup } from "../../src/features/auth/hooks/useAuthSignup";
+
+const COLORS = {
+  maroon: "#8B0000",
+  gold: "#D4AF37",
+  textMuted: "#666666",
+  border: "#E5E7EB",
+  white: "#FFFFFF",
+};
 
 export default function SignupScreen() {
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [middleInitial, setMiddleInitial] = useState('');
-  const [email, setEmail] = useState('');
-  const [schoolIdNumber, setSchoolIdNumber] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [contactNumber, setContactNumber] = useState('');
+  const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+
+  const contentMaxWidth = useMemo(() => {
+    const isWide = width >= 768;
+    const phoneCap = Math.max(320, width - 32 - 8 - 8);
+    const wideCap = Math.min(width * 0.6, 720);
+    return Math.round(isWide ? wideCap : Math.min(phoneCap, 560));
+  }, [width]);
+
+  const logoSize = useMemo(() => {
+    const base = Math.min(width * 0.45, height * 0.28);
+    return Math.max(120, Math.min(base, 200));
+  }, [width, height]);
+
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [middleInitial, setMiddleInitial] = useState("");
+  const [email, setEmail] = useState("");
+  const [schoolIdNumber, setSchoolIdNumber] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [contactNumber, setContactNumber] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
@@ -21,25 +61,31 @@ export default function SignupScreen() {
   const { isLoading, register } = useAuthSignup();
 
   const handleSignup = async () => {
-    // Validation
-    if (!firstName.trim() || !lastName.trim() || !email.trim() || 
-        !schoolIdNumber.trim() || !password || !confirmPassword || !contactNumber.trim()) {
-      Alert.alert('Error', 'Please fill in all required fields');
+    if (
+      !firstName.trim() ||
+      !lastName.trim() ||
+      !email.trim() ||
+      !schoolIdNumber.trim() ||
+      !password ||
+      !confirmPassword ||
+      !contactNumber.trim()
+    ) {
+      Alert.alert("Error", "Please fill in all required fields");
       return;
     }
-
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      Alert.alert("Error", "Passwords do not match");
       return;
     }
-
     if (password.length < 8) {
-      Alert.alert('Error', 'Password must be at least 8 characters long');
+      Alert.alert("Error", "Password must be at least 8 characters long");
       return;
     }
-
     if (!acceptTerms) {
-      Alert.alert('Error', 'Please accept the Terms of Service and Privacy Policy');
+      Alert.alert(
+        "Error",
+        "Please accept the Terms of Service and Privacy Policy"
+      );
       return;
     }
 
@@ -54,272 +100,427 @@ export default function SignupScreen() {
         password,
         confirmPassword,
         contactNumber: rawContactNumber,
-        termsAccepted: acceptTerms
+        termsAccepted: acceptTerms,
       });
-      
+
       Alert.alert(
-        'Account Created',
-        'Your account has been created successfully. Please sign in.',
-        [{ text: 'OK' }]
+        "Account Created",
+        "Your account has been created successfully. Please sign in.",
+        [{ text: "OK", onPress: () => router.replace("/auth/login" as never) }]
       );
     } catch (error: any) {
-      const errorMessage = error?.response?.data?.message || error?.message || 'Registration failed. Please try again.';
-      Alert.alert('Registration Error', errorMessage);
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Registration failed. Please try again.";
+      Alert.alert("Registration Error", errorMessage);
     }
   };
 
   const formatSchoolId = (value: string) => {
-    // Remove all non-digit characters
     const numbers = value.replace(/\D/g, "");
-    // Format as XX-XXXX-XXX
     if (numbers.length <= 2) return numbers;
-    if (numbers.length <= 6) return `${numbers.slice(0, 2)}-${numbers.slice(2)}`;
-    return `${numbers.slice(0, 2)}-${numbers.slice(2, 6)}-${numbers.slice(6, 9)}`;
+    if (numbers.length <= 6)
+      return `${numbers.slice(0, 2)}-${numbers.slice(2)}`;
+    return `${numbers.slice(0, 2)}-${numbers.slice(2, 6)}-${numbers.slice(
+      6,
+      9
+    )}`;
   };
 
   const formatContactNumber = (value: string) => {
-    // Remove all non-digits
-    let inputValue = value.replace(/\D/g, '');
-    // Always ensure it starts with +63
-    if (!inputValue.startsWith('639')) {
-      inputValue = '639' + inputValue.replace(/^639/, '');
+    let inputValue = value.replace(/\D/g, "");
+    if (!inputValue.startsWith("639")) {
+      inputValue = "639" + inputValue.replace(/^639/, "");
     }
-    // Format the number as +63### ### #### for display
-    let formattedValue = '+63';
+    let formattedValue = "+63";
     if (inputValue.length > 2) {
-      const remainingDigits = inputValue.slice(2);
-      if (remainingDigits.length > 0) {
-        formattedValue += ' ' + remainingDigits.slice(0, 3);
-      }
-      if (remainingDigits.length > 3) {
-        formattedValue += ' ' + remainingDigits.slice(3, 6);
-      }
-      if (remainingDigits.length > 6) {
-        formattedValue += ' ' + remainingDigits.slice(6, 10);
-      }
+      const remaining = inputValue.slice(2);
+      if (remaining.length > 0) formattedValue += " " + remaining.slice(0, 3);
+      if (remaining.length > 3) formattedValue += " " + remaining.slice(3, 6);
+      if (remaining.length > 6) formattedValue += " " + remaining.slice(6, 10);
     }
     return formattedValue;
   };
 
-  // Function to get the raw contact number (without spaces) for API calls
-  const getRawContactNumber = (formattedNumber: string) => {
-    return formattedNumber.replace(/\s/g, '');
-  };
+  const getRawContactNumber = (formattedNumber: string) =>
+    formattedNumber.replace(/\s/g, "");
+
+  const keyboardBehavior = Platform.OS === "ios" ? "padding" : "height";
+  const keyboardVerticalOffset = Platform.OS === "ios" ? insets.top : 0;
 
   return (
-    <ScrollView className="flex-1 bg-white">
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#1a0000" }}>
       <Stack.Screen options={{ headerShown: false }} />
-      
-      <View className="flex-1 justify-center px-4 py-8">
-        {/* Top Gradient Bar */}
-        <View className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[#800000] via-[#D4AF37] to-[#800000]" />
-
-        {/* Logo */}
-        <View className="items-center mb-8">
-          <Image
-            source={require('../../assets/images/logos/logo.png')}
-            className="w-32 h-16"
-            resizeMode="contain"
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={keyboardBehavior as any}
+        keyboardVerticalOffset={keyboardVerticalOffset}
+      >
+        {/* Top gradient with centered logo */}
+        <View style={styles.top}>
+          <LinearGradient
+            colors={["#9e0202", "#7d0101", "#510000", "#1a0000"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
           />
-          <Text className="text-3xl font-bold text-[#800000] mt-8">Create Account</Text>
-          <Text className="text-sm text-gray-600 mt-2">Join WILD WATCH to report and track campus incidents</Text>
+          <View style={styles.logoWrap} accessible accessibilityRole="image">
+            <Image
+              source={require("../../assets/images/logos/logo2.png")}
+              style={{
+                width: logoSize,
+                height: logoSize,
+                resizeMode: "contain",
+              }}
+              accessibilityLabel="WildWatch logo"
+            />
+          </View>
         </View>
 
-        {/* Signup Form */}
-        <View className="space-y-4 px-4">
-          {/* Name Fields */}
-          <View className="flex-row space-x-2">
-            <View className="flex-1">
-              <Text className="text-[#800000] font-semibold mb-2">First Name *</Text>
-              <View className="flex-row items-center border border-gray-300 rounded-lg bg-white">
-                <Ionicons name="person-outline" size={20} color="#800000" style={{ marginLeft: 12 }} />
-                <TextInput
-                  className="flex-1 p-4"
-                  placeholder="Enter first name"
-                placeholderTextColor="#666"
-                  value={firstName}
-                  onChangeText={setFirstName}
-                />
+        {/* Bottom white sheet (overlap) */}
+        <View style={styles.bottom}>
+          <ScrollView
+            contentContainerStyle={[
+              styles.sheetContent,
+              { alignItems: "center" },
+            ]}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Title */}
+            <View
+              style={{
+                alignItems: "center",
+                marginBottom: 8,
+                width: "100%",
+                maxWidth: contentMaxWidth,
+              }}
+            >
+              <Text style={styles.title}>Create Account</Text>
+              <Text style={styles.subtitle}>
+                Join WildWatch to report and track campus incidents
+              </Text>
+            </View>
+
+            {/* Name row */}
+            <View
+              style={{
+                flexDirection: "row",
+                width: "100%",
+                maxWidth: contentMaxWidth,
+                marginTop: 16,
+              }}
+            >
+              <View style={{ flex: 1, marginRight: 8 }}>
+                <Text style={styles.label}>First Name *</Text>
+                <View style={styles.inputRow}>
+                  <Ionicons
+                    name="person-outline"
+                    size={20}
+                    color={COLORS.maroon}
+                    style={{ marginLeft: 12 }}
+                  />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter first name"
+                    placeholderTextColor={COLORS.textMuted}
+                    value={firstName}
+                    onChangeText={setFirstName}
+                    autoCapitalize="words"
+                  />
+                </View>
+              </View>
+              <View style={{ width: 64 }}>
+                <Text style={styles.label}>M.I.</Text>
+                <View style={styles.inputRow}>
+                  <TextInput
+                    style={[styles.input, { textAlign: "center" }]}
+                    placeholder="M"
+                    placeholderTextColor={COLORS.textMuted}
+                    value={middleInitial}
+                    onChangeText={(t) =>
+                      setMiddleInitial(t.toUpperCase().slice(0, 1))
+                    }
+                    maxLength={1}
+                    autoCapitalize="characters"
+                  />
+                </View>
+              </View>
+              <View style={{ flex: 1, marginLeft: 8 }}>
+                <Text style={styles.label}>Last Name *</Text>
+                <View style={styles.inputRow}>
+                  <Ionicons
+                    name="person-outline"
+                    size={20}
+                    color={COLORS.maroon}
+                    style={{ marginLeft: 12 }}
+                  />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter last name"
+                    placeholderTextColor={COLORS.textMuted}
+                    value={lastName}
+                    onChangeText={setLastName}
+                    autoCapitalize="words"
+                  />
+                </View>
               </View>
             </View>
-            <View className="w-16">
-              <Text className="text-[#800000] font-semibold mb-2">M.I.</Text>
-              <View className="flex-row items-center border border-gray-300 rounded-lg bg-white">
-                <TextInput
-                  className="flex-1 p-4 text-center"
-                  placeholder="M.I."
-                  placeholderTextColor="#666"
-                  value={middleInitial}
-                  onChangeText={setMiddleInitial}
-                  maxLength={1}
-                />
-              </View>
-            </View>
-            <View className="flex-1">
-              <Text className="text-[#800000] font-semibold mb-2">Last Name *</Text>
-              <View className="flex-row items-center border border-gray-300 rounded-lg bg-white">
-                <Ionicons name="person-outline" size={20} color="#800000" style={{ marginLeft: 12 }} />
-                <TextInput
-                  className="flex-1 p-4"
-                  placeholder="Enter last name"
-                placeholderTextColor="#666"
-                  value={lastName}
-                  onChangeText={setLastName}
-                />
-              </View>
-            </View>
-          </View>
 
-          {/* CIT Email */}
-          <View>
-            <Text className="text-[#800000] font-semibold mb-2">CIT Email *</Text>
-            <View className="flex-row items-center border border-gray-300 rounded-lg bg-white">
-              <Ionicons name="mail-outline" size={20} color="#800000" style={{ marginLeft: 12 }} />
-              <TextInput
-                className="flex-1 p-4"
-                placeholder="your.name@cit.edu"
-                placeholderTextColor="#666"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-            </View>
-          </View>
-
-          {/* School ID Number */}
-          <View>
-            <Text className="text-[#800000] font-semibold mb-2">School ID Number *</Text>
-            <View className="flex-row items-center border border-gray-300 rounded-lg bg-white">
-              <Ionicons name="card-outline" size={20} color="#800000" style={{ marginLeft: 12 }} />
-              <TextInput
-                className="flex-1 p-4"
-                placeholder="22-0603-284"
-                placeholderTextColor="#666"
-                value={schoolIdNumber}
-                onChangeText={(text) => setSchoolIdNumber(formatSchoolId(text))}
-                keyboardType="numeric"
-                maxLength={11}
-              />
-            </View>
-          </View>
-
-          {/* Password */}
-          <View>
-            <Text className="text-[#800000] font-semibold mb-2">Password *</Text>
-            <View className="flex-row items-center border border-gray-300 rounded-lg bg-white">
-              <Ionicons name="lock-closed-outline" size={20} color="#800000" style={{ marginLeft: 12 }} />
-              <TextInput
-                className="flex-1 p-4"
-                placeholder="Create a secure password"
-                placeholderTextColor="#666"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-              />
-              <Pressable
-                onPress={() => setShowPassword(!showPassword)}
-                className="pr-4"
-              >
+            {/* CIT Email */}
+            <View
+              style={{
+                width: "100%",
+                maxWidth: contentMaxWidth,
+                marginTop: 14,
+              }}
+            >
+              <Text style={styles.label}>CIT Email *</Text>
+              <View style={styles.inputRow}>
                 <Ionicons
-                  name={showPassword ? "eye-off-outline" : "eye-outline"}
+                  name="mail-outline"
                   size={20}
-                  color="#800000"
+                  color={COLORS.maroon}
+                  style={{ marginLeft: 12 }}
                 />
-              </Pressable>
+                <TextInput
+                  style={styles.input}
+                  placeholder="your.name@cit.edu"
+                  placeholderTextColor={COLORS.textMuted}
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+              </View>
             </View>
-          </View>
 
-          {/* Confirm Password */}
-          <View>
-            <Text className="text-[#800000] font-semibold mb-2">Confirm Password *</Text>
-            <View className="flex-row items-center border border-gray-300 rounded-lg bg-white">
-              <Ionicons name="lock-closed-outline" size={20} color="#800000" style={{ marginLeft: 12 }} />
-              <TextInput
-                className="flex-1 p-4"
-                placeholder="Confirm your password"
-                placeholderTextColor="#666"
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                secureTextEntry={!showConfirmPassword}
-              />
-              <Pressable
-                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="pr-4"
-              >
+            {/* School ID Number */}
+            <View
+              style={{
+                width: "100%",
+                maxWidth: contentMaxWidth,
+                marginTop: 14,
+              }}
+            >
+              <Text style={styles.label}>School ID Number *</Text>
+              <View style={styles.inputRow}>
                 <Ionicons
-                  name={showConfirmPassword ? "eye-off-outline" : "eye-outline"}
+                  name="card-outline"
                   size={20}
-                  color="#800000"
+                  color={COLORS.maroon}
+                  style={{ marginLeft: 12 }}
                 />
-              </Pressable>
+                <TextInput
+                  style={styles.input}
+                  placeholder="22-0603-284"
+                  placeholderTextColor={COLORS.textMuted}
+                  value={schoolIdNumber}
+                  onChangeText={(text) =>
+                    setSchoolIdNumber(formatSchoolId(text))
+                  }
+                  keyboardType="numeric"
+                  maxLength={11}
+                />
+              </View>
             </View>
-          </View>
 
-          {/* Contact Number */}
-          <View>
-            <Text className="text-[#800000] font-semibold mb-2">Contact Number *</Text>
-            <View className="flex-row items-center border border-gray-300 rounded-lg bg-white">
-              <Ionicons name="call-outline" size={20} color="#800000" style={{ marginLeft: 12 }} />
-              <TextInput
-                className="flex-1 p-4"
-                placeholder="+63XXXXXXXXXX"
-                placeholderTextColor="#666"
-                value={contactNumber}
-                onChangeText={(text) => setContactNumber(formatContactNumber(text))}
-                keyboardType="phone-pad"
-              />
-            </View>
-          </View>
-
-          {/* Terms and Conditions */}
-          <View className="bg-[#FFF8E1] rounded-lg p-4 mt-4">
-            <View className="flex-row items-start">
-              <Pressable
-                onPress={() => setAcceptTerms(!acceptTerms)}
-                className="w-5 h-5 border border-gray-300 rounded mr-2 mt-0.5 bg-white items-center justify-center"
-              >
-                {acceptTerms && (
-                  <Ionicons name="checkmark" size={16} color="#800000" />
-                )}
-              </Pressable>
-              <Text className="text-sm text-gray-600 flex-1">
-                By creating an account, you agree to our{' '}
-                <Text 
-                  className="text-[#800000] font-medium" 
-                  onPress={() => setShowTerms(true)}
+            {/* Password */}
+            <View
+              style={{
+                width: "100%",
+                maxWidth: contentMaxWidth,
+                marginTop: 14,
+              }}
+            >
+              <Text style={styles.label}>Password *</Text>
+              <View style={styles.inputRow}>
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={20}
+                  color={COLORS.maroon}
+                  style={{ marginLeft: 12 }}
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Create a secure password"
+                  placeholderTextColor={COLORS.textMuted}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                />
+                <Pressable
+                  onPress={() => setShowPassword((v) => !v)}
+                  style={{ paddingHorizontal: 12 }}
                 >
-                  Terms and Conditions
+                  <Ionicons
+                    name={showPassword ? "eye-off-outline" : "eye-outline"}
+                    size={20}
+                    color={COLORS.maroon}
+                  />
+                </Pressable>
+              </View>
+            </View>
+
+            {/* Confirm Password */}
+            <View
+              style={{
+                width: "100%",
+                maxWidth: contentMaxWidth,
+                marginTop: 14,
+              }}
+            >
+              <Text style={styles.label}>Confirm Password *</Text>
+              <View style={styles.inputRow}>
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={20}
+                  color={COLORS.maroon}
+                  style={{ marginLeft: 12 }}
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Confirm your password"
+                  placeholderTextColor={COLORS.textMuted}
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  secureTextEntry={!showConfirmPassword}
+                  autoCapitalize="none"
+                />
+                <Pressable
+                  onPress={() => setShowConfirmPassword((v) => !v)}
+                  style={{ paddingHorizontal: 12 }}
+                >
+                  <Ionicons
+                    name={
+                      showConfirmPassword ? "eye-off-outline" : "eye-outline"
+                    }
+                    size={20}
+                    color={COLORS.maroon}
+                  />
+                </Pressable>
+              </View>
+            </View>
+
+            {/* Contact Number */}
+            <View
+              style={{
+                width: "100%",
+                maxWidth: contentMaxWidth,
+                marginTop: 14,
+              }}
+            >
+              <Text style={styles.label}>Contact Number *</Text>
+              <View style={styles.inputRow}>
+                <Ionicons
+                  name="call-outline"
+                  size={20}
+                  color={COLORS.maroon}
+                  style={{ marginLeft: 12 }}
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder="+63 9## ### ####"
+                  placeholderTextColor={COLORS.textMuted}
+                  value={contactNumber}
+                  onChangeText={(text) =>
+                    setContactNumber(formatContactNumber(text))
+                  }
+                  keyboardType="phone-pad"
+                />
+              </View>
+            </View>
+
+            {/* Terms */}
+            <View
+              style={{
+                width: "100%",
+                maxWidth: contentMaxWidth,
+                backgroundColor: "#FFF8E1",
+                borderRadius: 12,
+                padding: 12,
+                marginTop: 16,
+              }}
+            >
+              <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
+                <Pressable
+                  onPress={() => setAcceptTerms((v) => !v)}
+                  style={{
+                    width: 20,
+                    height: 20,
+                    borderWidth: 1,
+                    borderColor: COLORS.border,
+                    borderRadius: 4,
+                    marginRight: 8,
+                    backgroundColor: "#FFFFFF",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    marginTop: 2,
+                  }}
+                >
+                  {acceptTerms && (
+                    <Ionicons
+                      name="checkmark"
+                      size={16}
+                      color={COLORS.maroon}
+                    />
+                  )}
+                </Pressable>
+                <Text style={{ fontSize: 13, color: "#4B5563", flex: 1 }}>
+                  By creating an account, you agree to our{" "}
+                  <Text
+                    onPress={() => setShowTerms(true)}
+                    style={{ color: COLORS.maroon, fontWeight: "600" }}
+                  >
+                    Terms and Conditions
+                  </Text>
+                  .
+                </Text>
+              </View>
+            </View>
+
+            {/* Create Account */}
+            <Pressable
+              onPress={handleSignup}
+              disabled={isLoading}
+              style={[
+                styles.primaryBtn,
+                { width: "100%", maxWidth: contentMaxWidth, marginTop: 18 },
+                isLoading && { opacity: 0.6 },
+              ]}
+            >
+              <Text style={styles.primaryText}>
+                {isLoading ? "Creating Account..." : "Create Account"}
+              </Text>
+            </Pressable>
+
+            {/* Sign In link */}
+            <View
+              style={{
+                marginTop: 18,
+                alignItems: "center",
+                width: "100%",
+                maxWidth: contentMaxWidth,
+              }}
+            >
+              <Text style={{ color: "#4B5563" }}>
+                Already have an account?{" "}
+                <Text
+                  onPress={() => router.push("/auth/login" as never)}
+                  style={{ color: COLORS.maroon, fontWeight: "600" }}
+                >
+                  Sign in
                 </Text>
               </Text>
             </View>
-          </View>
 
-          {/* Create Account Button */}
-          <Pressable
-            onPress={handleSignup}
-            disabled={isLoading}
-            className={`p-4 rounded-lg mt-6 ${isLoading ? 'bg-gray-400' : 'bg-[#800000]'}`}
-          >
-            <Text className="text-white text-center font-semibold text-lg">
-              {isLoading ? 'Creating Account...' : 'Create Account'}
-            </Text>
-          </Pressable>
-
-          {/* Sign In Link */}
-          <View className="mt-6">
-            <Text className="text-gray-600 text-center">
-              Already have an account?{' '}
-              <Text 
-                className="text-[#800000] font-medium"
-                onPress={() => router.push('/auth/login')}
-              >
-                Sign in
-              </Text>
-            </Text>
-          </View>
+            <View style={{ height: 24 }} />
+          </ScrollView>
         </View>
-      </View>
+      </KeyboardAvoidingView>
 
       {/* Terms Modal */}
       <TermsModal
@@ -331,6 +532,84 @@ export default function SignupScreen() {
         }}
         isLoading={isLoading}
       />
-    </ScrollView>
+    </SafeAreaView>
   );
-} 
+}
+
+const SHEET_RADIUS = 20;
+
+const styles = StyleSheet.create({
+  top: {
+    flex: 3, // was 30%
+    position: "relative",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  logoWrap: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  bottom: {
+    flex: 7, // was 70%
+    backgroundColor: COLORS.white,
+    borderTopLeftRadius: SHEET_RADIUS,
+    borderTopRightRadius: SHEET_RADIUS,
+    marginTop: -32, // overlap
+    overflow: "hidden",
+  },
+  sheetContent: {
+    paddingHorizontal: 20,
+    paddingTop: 32,
+    paddingBottom: 8,
+  },
+  title: {
+    fontSize: 24,
+    color: COLORS.maroon,
+    fontWeight: "800",
+    textAlign: "center",
+  },
+  subtitle: {
+    marginTop: 6,
+    fontSize: 12,
+    color: COLORS.textMuted,
+    textAlign: "center",
+  },
+  label: {
+    color: COLORS.maroon,
+    fontWeight: "600",
+    marginBottom: 6,
+  },
+  inputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 12,
+    backgroundColor: "#FFFFFF",
+  },
+  input: {
+    flex: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    fontSize: 16,
+    color: "#111827",
+  },
+  primaryBtn: {
+    backgroundColor: COLORS.maroon,
+    borderRadius: 12,
+    height: 52,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: COLORS.gold,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  primaryText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+  },
+});

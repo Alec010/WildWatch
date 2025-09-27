@@ -1,8 +1,10 @@
 // Configuration file for WildWatch Expo app
-// Note: Environment variables are loaded from .env file
-// If .env file doesn't exist, default values will be used
+// All configuration comes from environment variables
 
 import * as AuthSession from 'expo-auth-session';
+
+// Environment detection
+export const ENV = process.env.EXPO_PUBLIC_ENV || 'development';
 
 // Read from Expo inlined env variables
 const API_BASE_URL: string | undefined = process.env.EXPO_PUBLIC_API_BASE_URL;
@@ -14,10 +16,18 @@ const GOOGLE_MAPS_API_KEY: string | undefined = process.env.EXPO_PUBLIC_GOOGLE_M
 const APP_NAME: string | undefined = process.env.EXPO_PUBLIC_APP_NAME;
 const APP_VERSION: string | undefined = process.env.EXPO_PUBLIC_APP_VERSION;
 
+// Validate required environment variables
+if (!API_BASE_URL) {
+  throw new Error('EXPO_PUBLIC_API_BASE_URL is required in .env file');
+}
+
 export const config = {
+  // Environment info
+  ENV,
+  
   // Backend API configuration
   API: {
-    BASE_URL: API_BASE_URL || 'http://192.168.1.2:8080/api',
+    BASE_URL: API_BASE_URL,
     TIMEOUT: API_TIMEOUT ? parseInt(API_TIMEOUT) : 30000,
   },
   

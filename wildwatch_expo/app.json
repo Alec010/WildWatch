@@ -4,22 +4,21 @@
     "slug": "wildwatch_expo",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/logos/WildWatch_Logo.png",
     "scheme": "wildwatchexpo",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "image": "./assets/images/logos/WildWatch_Logo.png",
+      "backgroundColor": "#000000",
+      "resizeMode": "cover"
     },
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/images/logos/WildWatch_Logo.png"
       },
       "edgeToEdgeEnabled": true
     },

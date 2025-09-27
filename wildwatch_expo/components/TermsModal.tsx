@@ -1,8 +1,19 @@
-import React, { useState } from 'react';
-import { View, ScrollView, StyleSheet, Modal, ActivityIndicator, Pressable } from 'react-native';
-import { Text } from 'react-native';
-import { MaterialIcons, Ionicons } from '@expo/vector-icons';
-import Colors from '@/constants/Colors';
+// components/TermsModal.tsx
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  ScrollView,
+  StyleSheet,
+  Modal,
+  ActivityIndicator,
+  Pressable,
+  Platform,
+  UIManager,
+  LayoutAnimation,
+} from "react-native";
+import { Text } from "react-native";
+import { MaterialIcons, Ionicons } from "@expo/vector-icons";
+import Colors from "@/constants/Colors";
 
 const sections = [
   {
@@ -12,7 +23,7 @@ const sections = [
       "WildWatch is intended to facilitate the structured reporting, tracking, and resolution of campus-related incidents within CITU.",
       "• You must be a currently enrolled student or an authorized CITU personnel",
       "• You agree to provide accurate and truthful information",
-    ]
+    ],
   },
   {
     title: "User Responsibilities",
@@ -22,7 +33,7 @@ const sections = [
       "• Not to impersonate others or use false identities",
       "• Not to upload harmful, obscene, or threatening content",
       "• To respect the gamification system",
-    ]
+    ],
   },
   {
     title: "Privacy and Data Protection",
@@ -31,7 +42,7 @@ const sections = [
       "• Your personal information will be handled in accordance with our Privacy Policy",
       "• Incident reports and related information will be treated with confidentiality",
       "• Access to incident details will be restricted to authorized personnel only",
-    ]
+    ],
   },
   {
     title: "Platform Rules",
@@ -43,7 +54,7 @@ const sections = [
       "• Share confidential information about incidents publicly",
       "• Attempt to compromise the platform's security",
       "• Use the platform for any illegal activities",
-    ]
+    ],
   },
   {
     title: "Limitation of Liability",
@@ -52,22 +63,22 @@ const sections = [
       "• CITU and WildWatch team are not responsible for delays due to incomplete reports",
       "• The platform is provided on an 'as-is' basis",
       "• We do not guarantee uninterrupted or error-free operations",
-    ]
+    ],
   },
   {
     title: "Amendments",
     icon: "refresh",
     content: [
-      "These Terms may be updated at any time. Continued use of the Platform after changes constitutes acceptance of the revised Terms."
-    ]
+      "These Terms may be updated at any time. Continued use of the Platform after changes constitutes acceptance of the revised Terms.",
+    ],
   },
   {
     title: "Contact Us",
     icon: "help-outline",
     content: [
-      "For questions or concerns, contact the WildWatch Support Team via the official CITU Office of Student Affairs."
-    ]
-  }
+      "For questions or concerns, contact the WildWatch Support Team via the official CITU Office of Student Affairs.",
+    ],
+  },
 ];
 
 interface TermsModalProps {
@@ -77,10 +88,25 @@ interface TermsModalProps {
   isLoading?: boolean;
 }
 
-export default function TermsModal({ visible, onClose, onAccept, isLoading }: TermsModalProps) {
-  const [expandedSection, setExpandedSection] = useState<number | null>(null);
+export default function TermsModal({
+  visible,
+  onClose,
+  onAccept,
+  isLoading,
+}: TermsModalProps) {
+  const [expandedSection, setExpandedSection] = useState<number | null>(0);
+
+  useEffect(() => {
+    if (
+      Platform.OS === "android" &&
+      UIManager.setLayoutAnimationEnabledExperimental
+    ) {
+      UIManager.setLayoutAnimationEnabledExperimental(true);
+    }
+  }, []);
 
   const toggleSection = (index: number) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setExpandedSection(expandedSection === index ? null : index);
   };
 
@@ -88,84 +114,140 @@ export default function TermsModal({ visible, onClose, onAccept, isLoading }: Te
     <Modal
       visible={visible}
       animationType="slide"
-      transparent={true}
+      transparent
       onRequestClose={onClose}
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
-          {/* Header with gradient border */}
+          {/* Header */}
           <View style={styles.header}>
             <View style={styles.gradientBorder} />
             <View style={styles.headerContent}>
               <View style={styles.titleContainer}>
                 <View style={styles.titleBar} />
-                <Text style={styles.title}>Terms and Conditions</Text>
+                <Text style={styles.headerTitle}>Terms and Conditions</Text>
               </View>
-              <Text style={styles.subtitle}>Effective Date: April 08, 2025</Text>
+              <Text style={styles.subtitle}>
+                Effective Date: April 08, 2025
+              </Text>
             </View>
-            <Pressable onPress={onClose} style={styles.closeButton}>
+            <Pressable
+              onPress={onClose}
+              style={styles.closeButton}
+              accessibilityRole="button"
+            >
               <Ionicons name="close" size={24} color="#666" />
             </Pressable>
           </View>
 
-          {/* Introduction */}
+          {/* Intro */}
           <View style={styles.introContainer}>
             <Text style={styles.introText}>
-              Welcome to WildWatch, the official incident reporting and case management platform of Cebu Institute of Technology – University (CITU). Please read these terms carefully.
+              Welcome to WildWatch, the official incident reporting and case
+              management platform of Cebu Institute of Technology – University
+              (CITU). Please read these terms carefully.
             </Text>
           </View>
 
-          {/* Terms Sections */}
-          <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-            {sections.map((section, index) => (
-              <Pressable
-                key={index}
-                style={[
-                  styles.sectionContainer,
-                  expandedSection === index && styles.expandedSection
-                ]}
-                onPress={() => toggleSection(index)}
-              >
-                <View style={styles.sectionHeader}>
-                  <View style={styles.sectionTitleContainer}>
-                    <MaterialIcons
-                      name={section.icon as any}
-                      size={24}
-                      color={Colors.maroon}
-                      style={styles.sectionIcon}
-                    />
-                    <Text style={styles.sectionTitle}>{section.title}</Text>
-                  </View>
-                  <Ionicons
-                    name={expandedSection === index ? "chevron-up" : "chevron-down"}
-                    size={24}
-                    color={Colors.maroon}
+          {/* Sections */}
+          <ScrollView
+            style={styles.scrollView}
+            showsVerticalScrollIndicator={false}
+          >
+            {sections.map((section, index) => {
+              const expanded = expandedSection === index;
+              return (
+                <View
+                  key={index}
+                  style={[
+                    styles.sectionContainer,
+                    expanded && styles.expandedSection,
+                  ]}
+                >
+                  {/* Accent strip */}
+                  <View
+                    style={[
+                      styles.enabledAccentBase,
+                      expanded && styles.enabledAccentOn,
+                    ]}
                   />
+
+                  <Pressable
+                    onPress={() => toggleSection(index)}
+                    android_ripple={{ color: Colors.maroon + "22" }}
+                    style={styles.sectionHeader}
+                    accessibilityRole="button"
+                    accessibilityLabel={section.title}
+                    accessibilityState={{ expanded }}
+                    hitSlop={8}
+                  >
+                    <View style={styles.sectionTitleRow}>
+                      <View
+                        style={[
+                          styles.iconChip,
+                          expanded && styles.iconChipEnabled,
+                        ]}
+                      >
+                        <MaterialIcons
+                          name={section.icon as any}
+                          size={20}
+                          color={expanded ? Colors.maroon : Colors.maroon}
+                        />
+                      </View>
+                      <Text
+                        style={[
+                          styles.sectionTitleText,
+                          expanded && styles.sectionTitleTextEnabled,
+                        ]}
+                        numberOfLines={2}
+                      >
+                        {section.title}
+                      </Text>
+                    </View>
+
+                    <Ionicons
+                      name="chevron-down"
+                      size={22}
+                      color={expanded ? Colors.maroon : "#6B7280"}
+                      style={{
+                        transform: [{ rotate: expanded ? "180deg" : "0deg" }],
+                      }}
+                    />
+                  </Pressable>
+
+                  {expanded && (
+                    <View style={styles.sectionContent}>
+                      {section.content.map((line, i) => (
+                        <Text key={i} style={styles.contentText}>
+                          {line}
+                        </Text>
+                      ))}
+                    </View>
+                  )}
                 </View>
-                
-                {expandedSection === index && (
-                  <View style={styles.sectionContent}>
-                    {section.content.map((text, i) => (
-                      <Text key={i} style={styles.contentText}>{text}</Text>
-                    ))}
-                  </View>
-                )}
-              </Pressable>
-            ))}
+              );
+            })}
           </ScrollView>
 
-          {/* Accept Button */}
+          {/* Accept */}
           <View style={styles.buttonContainer}>
             <Pressable
               style={styles.acceptButton}
               onPress={onAccept}
               disabled={isLoading}
+              accessibilityRole="button"
+              accessibilityLabel="Accept Terms"
             >
               {isLoading ? (
                 <ActivityIndicator color="white" />
               ) : (
                 <>
-                  <MaterialIcons name="check-circle" size={24} color="white" style={styles.buttonIcon} />
+                  <MaterialIcons
+                    name="check-circle"
+                    size={24}
+                    color="white"
+                    style={styles.buttonIcon}
+                  />
                   <Text style={styles.buttonText}>Accept Terms</Text>
                 </>
               )}
@@ -177,30 +259,32 @@ export default function TermsModal({ visible, onClose, onAccept, isLoading }: Te
   );
 }
 
+const CARD_RADIUS = 12;
+
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
   modalContent: {
-    backgroundColor: '#f5f5f7',
-    height: '95%',
-    marginTop: 'auto',
+    backgroundColor: "#f5f5f7",
+    height: "95%",
+    marginTop: "auto",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    overflow: 'hidden',
-    position: 'relative',
+    overflow: "hidden",
+    position: "relative",
   },
   header: {
-    backgroundColor: 'white',
-    position: 'relative',
+    backgroundColor: "white",
+    position: "relative",
     paddingVertical: 16,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.gold + '30', // 30% opacity
+    borderBottomColor: Colors.gold + "30",
   },
   gradientBorder: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
@@ -208,11 +292,11 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.maroon,
   },
   headerContent: {
-    position: 'relative',
+    position: "relative",
   },
   titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 4,
   },
   titleBar: {
@@ -223,23 +307,23 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   closeButton: {
-    position: 'absolute',
+    position: "absolute",
     right: 16,
     top: 16,
     padding: 8,
     zIndex: 1,
   },
-  title: {
+  headerTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: Colors.maroon,
   },
   subtitle: {
     fontSize: 14,
-    color: '#666',
+    color: "#666",
   },
   introContainer: {
-    backgroundColor: '#FFF8E1',
+    backgroundColor: "#FFF8E1",
     margin: 16,
     padding: 16,
     borderRadius: 8,
@@ -249,75 +333,106 @@ const styles = StyleSheet.create({
   introText: {
     fontSize: 14,
     lineHeight: 22,
-    color: '#333',
+    color: "#333",
   },
   scrollView: {
     flex: 1,
     paddingHorizontal: 16,
   },
+
+  // card base
   sectionContainer: {
-    backgroundColor: 'white',
-    borderRadius: 12,
+    backgroundColor: "white",
+    borderRadius: CARD_RADIUS,
     marginBottom: 12,
-    overflow: 'hidden',
+    overflow: "hidden",
     borderWidth: 1,
-    borderColor: Colors.gold + '20', // 20% opacity
-    shadowColor: '#000',
+    borderColor: Colors.gold + "40",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
+    position: "relative",
   },
+
+  // accent strip
+  enabledAccentBase: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 0,
+    backgroundColor: Colors.maroon,
+  },
+  enabledAccentOn: {
+    width: 4,
+  },
+
   expandedSection: {
-    borderColor: Colors.gold + '40', // 40% opacity
-    backgroundColor: '#FFF8E1' + '30', // 30% opacity
+    borderColor: Colors.maroon, // maroon border
+    backgroundColor: "#FFFFFFS", // light gold background
   },
+
   sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 14,
+    paddingVertical: 14,
   },
-  sectionTitleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
+  sectionTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexShrink: 1,
   },
-  sectionIcon: {
-    marginRight: 12,
-    backgroundColor: Colors.maroon + '10', // 10% opacity
+  iconChip: {
     padding: 8,
-    borderRadius: 8,
+    borderRadius: 10,
+    backgroundColor: Colors.maroon + "10",
+    marginRight: 10,
   },
-  sectionTitle: {
+  iconChipEnabled: {
+    backgroundColor: Colors.maroon + "15", // lighter maroon background
+    borderWidth: 1,
+    borderColor: Colors.maroon,
+  },
+
+  sectionTitleText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    flex: 1,
+    fontWeight: "600",
+    color: "#333",
+    flexShrink: 1,
   },
+  sectionTitleTextEnabled: {
+    color: Colors.maroon,
+  },
+
   sectionContent: {
-    padding: 16,
-    paddingTop: 0,
+    paddingHorizontal: 16,
+    paddingBottom: 14,
+    paddingTop: 4,
     borderTopWidth: 1,
-    borderTopColor: Colors.gold + '20', // 20% opacity
+    borderTopColor: Colors.gold + "30",
   },
   contentText: {
     fontSize: 14,
     lineHeight: 22,
-    color: '#444',
-    marginBottom: 10,
+    color: "#444",
+    marginTop: 10,
   },
+
   buttonContainer: {
     padding: 16,
-    backgroundColor: 'white',
+    backgroundColor: "white",
     borderTopWidth: 1,
-    borderTopColor: Colors.gold + '30', // 30% opacity
+    borderTopColor: Colors.gold + "30",
   },
   acceptButton: {
     backgroundColor: Colors.maroon,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     padding: 16,
     borderRadius: 12,
     shadowColor: Colors.maroon,
@@ -326,13 +441,11 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-  buttonIcon: {
-    marginRight: 8,
-  },
+  buttonIcon: { marginRight: 8 },
   buttonText: {
-    color: 'white',
+    color: "white",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     letterSpacing: 0.5,
   },
 });

@@ -11,7 +11,6 @@ import {
   Platform,
   Image 
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { storage } from '../../lib/storage';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -22,6 +21,11 @@ import { WitnessReviewCard } from '../../src/features/reports/components/Witness
 import LocationSection from '../../src/features/reports/components/LocationSection';
 import { useReportForm } from '../../src/features/reports/hooks/useReportForm';
 import { config } from '../../lib/config';
+import { incidentAnalysisAPI, type AnalyzeRequest, type SimilarIncident } from '../../src/features/incidents/api/incident_analysis_api';
+import BlockedContentModal from '../../components/BlockedContentModal';
+import ProcessingReportModal from '../../components/ProcessingReportModal';
+import SimilarIncidentsModal from '../../components/SimilarIncidentsModal';
+import TopSpacing from '../../components/TopSpacing';
 
 // Uses centralized API base URL from config
 
@@ -261,6 +265,14 @@ export default function ReportScreen() {
   const [confirmAccurate, setConfirmAccurate] = useState(false);
   const [confirmContact, setConfirmContact] = useState(false);
 
+  // AI Analysis state
+  const [showBlockedModal, setShowBlockedModal] = useState(false);
+  const [blockedReasons, setBlockedReasons] = useState<string[]>([]);
+  const [showProcessingModal, setShowProcessingModal] = useState(false);
+  const [showSimilarModal, setShowSimilarModal] = useState(false);
+  const [similarIncidents, setSimilarIncidents] = useState<SimilarIncident[]>([]);
+  const [analysisWhy, setAnalysisWhy] = useState<{ tags: string[]; location?: string } | null>(null);
+
   // Responsive design constants
   const isSmallIPhone = Dimensions.get('window').height < 700;
   const isIPhone15Pro = Dimensions.get('window').height >= 800 && Dimensions.get('window').height < 900;
@@ -406,21 +418,98 @@ export default function ReportScreen() {
     }
   };
 
-  const handleSubmit = async () => {
-    if (!token) {
-      Alert.alert('Error', 'You must be logged in to report an incident');
-      return;
-    }
-
-    // Validation for all steps
-    if (!form.incidentType.trim() || !form.dateOfIncident || !form.timeOfIncident || !form.latitude || !form.longitude || !form.description.trim()) {
-      Alert.alert('Error', 'Please fill in all required fields including location before continuing.');
-      return;
-    }
-
-    setIsSubmitting(true);
-    
+  // AI Analysis function
+  const analyzeIncidentContent = async (incidentData: any): Promise<boolean> => {
     try {
+      const analysisRequest: AnalyzeRequest = {
+        incidentType: incidentData.incidentType,
+        description: incidentData.description,
+        location: incidentData.location,
+        formattedAddress: incidentData.formattedAddress,
+        buildingName: incidentData.buildingName,
+        buildingCode: incidentData.buildingCode,
+        latitude: incidentData.latitude,
+        longitude: incidentData.longitude,
+      };
+
+      console.log('Starting AI analysis...');
+      const analysis = await incidentAnalysisAPI.analyzeIncident(analysisRequest);
+      console.log('AI analysis completed:', analysis);
+      
+      if (analysis.decision === 'BLOCK') {
+        setShowProcessingModal(false);
+        setBlockedReasons(analysis.reasons || ['Inappropriate content detected']);
+        setShowBlockedModal(true);
+        return false;
+      }
+
+      // Store context for "Why this suggestion?"
+      setAnalysisWhy({
+        tags: Array.isArray(analysis.suggestedTags) ? analysis.suggestedTags.slice(0, 8) : (incidentData.tags || []).slice(0, 8),
+        location: analysis.normalizedLocation || incidentData.formattedAddress || incidentData.location,
+      });
+
+      // If similar incidents exist, show modal and pause submission
+      if (Array.isArray(analysis.similarIncidents) && analysis.similarIncidents.length > 0) {
+        setSimilarIncidents(analysis.similarIncidents);
+        setShowProcessingModal(false);
+        setShowSimilarModal(true);
+        return false; // Pause submission to show similar incidents
+      }
+      
+      return true;
+    } catch (error: any) {
+      console.error('AI Analysis Error:', error);
+      
+      // Check if it's a timeout error
+      if (error.message?.includes('timeout') || error.code === 'ECONNABORTED') {
+        console.log('AI analysis timed out, proceeding without analysis');
+        // Hide processing modal and continue with submission
+        setShowProcessingModal(false);
+        return true; // Allow submission to continue
+      }
+      
+      // Hide processing modal first
+      setShowProcessingModal(false);
+      
+      // Show user-friendly error message for other errors
+      Alert.alert(
+        'Analysis Unavailable', 
+        error.message || 'Content analysis is temporarily unavailable. Your report will be submitted for manual review.',
+        [
+          {
+            text: 'Continue Anyway',
+            onPress: async () => {
+              // Continue with submission after analysis failure
+              try {
+                setShowProcessingModal(true);
+                await doSubmit();
+              } catch (submitError) {
+                console.error('Error submitting report after analysis failure:', submitError);
+                Alert.alert('Error', 'Failed to submit report. Please try again.');
+                setIsSubmitting(false);
+                setShowProcessingModal(false);
+              }
+            }
+          },
+          {
+            text: 'Cancel',
+            style: 'cancel',
+            onPress: () => {
+              setIsSubmitting(false);
+              setShowProcessingModal(false);
+            }
+          }
+        ]
+      );
+      
+      // Return false to pause submission and wait for user choice
+      return false;
+    }
+  };
+
+  // Prepare incident data for submission
+  const prepareIncidentData = () => {
       // Parse date and time for backend
       let dateObj = new Date();
       let timeObj = new Date();
@@ -448,7 +537,7 @@ export default function ReportScreen() {
         }
       }
 
-      const incidentData = {
+    return {
         incidentType: form.incidentType.trim(),
         dateOfIncident: dateObj.toISOString().split('T')[0],
         timeOfIncident: timeObj.toTimeString().split(' ')[0],
@@ -476,7 +565,17 @@ export default function ReportScreen() {
           additionalNotes: w.additionalNotes?.trim() || undefined,
         })),
         evidenceFiles: evidenceFiles
-      };
+    };
+  };
+
+  // Actual submission function
+  const doSubmit = async () => {
+    if (!token) {
+      Alert.alert('Error', 'You must be logged in to report an incident');
+      return;
+    }
+
+    const incidentData = prepareIncidentData();
 
       // Create FormData for multipart request
       const formData = new FormData();
@@ -511,7 +610,8 @@ export default function ReportScreen() {
 
       const result = await response.json();
       
-      // Show brief success message and navigate to dashboard
+    // Hide processing modal and show success message
+    setShowProcessingModal(false);
       Alert.alert(
         'Success', 
         'Your incident report has been submitted successfully!',
@@ -525,14 +625,44 @@ export default function ReportScreen() {
               setConfirmAccurate(false);
               setConfirmContact(false);
               
-              // Navigate back to dashboard, open My Incidents tab
-              router.replace('/(tabs)?tab=my' as never);
+            // Navigate back to the dashboard
+            router.replace('/(tabs)/dashboard' as never);
             }
           }
         ]
       );
+  };
+
+  const handleSubmit = async () => {
+    if (!token) {
+      Alert.alert('Error', 'You must be logged in to report an incident');
+      return;
+    }
+
+    // Validation for all steps
+    if (!form.incidentType.trim() || !form.dateOfIncident || !form.timeOfIncident || !form.latitude || !form.longitude || !form.description.trim()) {
+      Alert.alert('Error', 'Please fill in all required fields including location before continuing.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setShowProcessingModal(true);
+    
+    try {
+      const incidentData = prepareIncidentData();
+
+      // AI Content Analysis - Check for inappropriate content
+      const isContentApproved = await analyzeIncidentContent(incidentData);
+      if (!isContentApproved) {
+        setIsSubmitting(false);
+        return; // Stop submission if content is blocked or similar incidents found
+      }
+
+      // If we reach here, proceed with submission
+      await doSubmit();
     } catch (error: any) {
       console.error('Error submitting report:', error);
+      setShowProcessingModal(false);
       Alert.alert('Error', error.message || 'Failed to submit report');
     } finally {
       setIsSubmitting(false);
@@ -693,46 +823,19 @@ export default function ReportScreen() {
 
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#F5F5F5' }}>
+    <View className="flex-1" style={{ backgroundColor: '#F5F5F5' }}>
+      {/* Top spacing for notch */}
+      <TopSpacing />
+      
       {/* Top App Bar */}
-      <View style={{ 
-        backgroundColor: '#FFFFFF', 
-        paddingHorizontal: padding, 
-        paddingVertical: padding,
-        borderBottomWidth: 1,
-        borderBottomColor: '#E5E7EB'
-      }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="#8B0000" />
-          </TouchableOpacity>
-          
-          <Text style={{ 
-            fontSize: fontSize + 2, 
-            fontWeight: '500', 
-            color: '#8B0000',
-            flex: 1,
-            textAlign: 'center',
-            marginHorizontal: 16
-          }}>
-            Report an Incident
-          </Text>
-          
-          <View style={{ width: 24 }} />
+      <View className="bg-white px-4 py-4 border-b border-gray-200">
+        <View>
+          <Text className="text-2xl font-bold text-[#8B0000]">Report an Incident</Text>
+          <Text className="text-gray-600 mt-1">Submit details about a security incident or concern</Text>
         </View>
       </View>
 
       <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
-        {/* Subtitle */}
-        <Text style={{
-          color: '#6B7280',
-          fontSize: fontSize - 2,
-          paddingHorizontal: padding,
-          paddingVertical: margin / 2,
-          textAlign: 'center'
-        }}>
-          Submit details about a security incident or concern
-        </Text>
 
         {/* Progress Steps */}
         <View style={{ 
@@ -1086,7 +1189,7 @@ export default function ReportScreen() {
 
                 {/* Continue Button */}
                 <FormNavigationButtons
-                  onBackClick={() => router.back()}
+                  onBackClick={() => router.push('/(tabs)/dashboard' as never)}
                   onNextClick={nextStep}
                   backText="Cancel"
                   nextText="Continue"
@@ -1838,7 +1941,7 @@ export default function ReportScreen() {
                           backgroundColor: form.preferAnonymous ? '#8B0000' : '#D1D5DB',
                           borderRadius: 12,
                           padding: 2,
-                          justifyContent: form.preferAnonymous ? 'flex-end' : 'flex-start',
+                          justifyContent: 'center',
                         }}
                       >
                         <View style={{
@@ -1846,6 +1949,7 @@ export default function ReportScreen() {
                           height: 20,
                           backgroundColor: '#FFFFFF',
                           borderRadius: 10,
+                          alignSelf: form.preferAnonymous ? 'flex-end' : 'flex-start',
                         }} />
                       </TouchableOpacity>
                     </View>
@@ -1870,7 +1974,7 @@ export default function ReportScreen() {
                     handleSubmit();
                   }}
                   backText="Back"
-                  nextText={isSubmitting ? "Submitting..." : "Submit Report"}
+                  nextText="Submit Report"
                   darkRed="#8B0000"
                   disabled={!confirmAccurate || !confirmContact || isSubmitting}
                 />
@@ -2496,7 +2600,67 @@ export default function ReportScreen() {
           </View>
         </View>
       )}
-    </SafeAreaView>
+
+      {/* AI Content Moderation Modal */}
+      <BlockedContentModal
+        visible={showBlockedModal}
+        onClose={() => setShowBlockedModal(false)}
+        onEditReport={() => {
+          setShowBlockedModal(false);
+          // Optionally navigate back to edit the description
+          setCurrentStep(1);
+        }}
+        reasons={blockedReasons}
+      />
+
+      {/* Processing Report Modal */}
+      <ProcessingReportModal visible={showProcessingModal} />
+
+      {/* Similar Incidents Modal */}
+      <SimilarIncidentsModal
+        visible={showSimilarModal}
+        onClose={() => {
+          setShowSimilarModal(false);
+          setIsSubmitting(false);
+        }}
+        onCancelReport={() => {
+          setShowSimilarModal(false);
+          setIsSubmitting(false);
+          Alert.alert(
+            'Report Canceled',
+            'You chose to cancel based on similar resolutions.',
+            [
+              {
+                text: 'OK',
+                onPress: () => {
+                  // Reset form and navigate back to dashboard
+                  resetForm();
+                  setCurrentStep(1);
+                  setConfirmAccurate(false);
+                  setConfirmContact(false);
+                  router.replace('/(tabs)/dashboard' as never);
+                }
+              }
+            ]
+          );
+        }}
+        onProceedAnyway={async () => {
+          setShowSimilarModal(false);
+          // Continue with submission
+          try {
+            setShowProcessingModal(true);
+            await doSubmit();
+          } catch (error) {
+            console.error('Error proceeding with submission:', error);
+            Alert.alert('Error', 'Failed to submit report. Please try again.');
+            setIsSubmitting(false);
+            setShowProcessingModal(false);
+          }
+        }}
+        similarIncidents={similarIncidents}
+        analysisWhy={analysisWhy || undefined}
+      />
+    </View>
   );
 }
 
