@@ -89,6 +89,95 @@ export const api = {
 
   delete: (endpoint: string, options?: ApiOptions) =>
     apiClient(endpoint, { ...options, method: 'DELETE' }),
+
+  // Extend resolution date
+  extendResolutionDate: async (incidentId: string, newEstimatedDate: string) => {
+    // Convert the date string to ISO format for LocalDateTime parsing
+    const date = new Date(newEstimatedDate);
+    const isoDateTime = date.toISOString();
+    
+    const response = await fetch(`${getBackendUrl()}/api/incidents/${incidentId}/extend-resolution`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${await tokenService.getValidToken()}`,
+      },
+      body: JSON.stringify({ newEstimatedDate: isoDateTime }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to extend resolution date');
+    }
+
+    return response.json();
+  },
+
+  // Office Bulletin methods
+  createBulletin: async (formData: FormData) => {
+    const response = await fetch(`${getBackendUrl()}/api/office-bulletins`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${await tokenService.getValidToken()}`,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to create bulletin');
+    }
+
+    return response.json();
+  },
+
+  getBulletins: async () => {
+    const response = await fetch(`${getBackendUrl()}/api/office-bulletins`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${await tokenService.getValidToken()}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to fetch bulletins');
+    }
+
+    return response.json();
+  },
+
+  getMyBulletins: async () => {
+    const response = await fetch(`${getBackendUrl()}/api/office-bulletins/my-bulletins`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${await tokenService.getValidToken()}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to fetch my bulletins');
+    }
+
+    return response.json();
+  },
+
+  getResolvedIncidents: async () => {
+    const response = await fetch(`${getBackendUrl()}/api/office-bulletins/resolved-incidents`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${await tokenService.getValidToken()}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to fetch resolved incidents');
+    }
+
+    return response.json();
+  },
 };
 
 export default apiClient;

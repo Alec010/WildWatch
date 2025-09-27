@@ -75,7 +75,7 @@ public class User {
     private LocalDateTime verificationTokenExpiry;
 
     @Column(name = "points")
-    private Integer points = 0;
+    private Float points = 0.0f;
 
     @Column(name = "reset_token")
     private String resetToken;
@@ -207,11 +207,11 @@ public class User {
         this.authProvider = authProvider;
     }
 
-    public Integer getPoints() {
+    public Float getPoints() {
         return points;
     }
 
-    public void setPoints(Integer points) {
+    public void setPoints(Float points) {
         this.points = points;
     }
 

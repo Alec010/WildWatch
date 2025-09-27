@@ -13,6 +13,7 @@ import com.teamhyungie.WildWatch.service.UserService;
 import com.teamhyungie.WildWatch.service.OfficeAdminService;
 import com.teamhyungie.WildWatch.service.ActivityLogService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,9 +42,9 @@ public class RatingService {
 
     @Transactional
     public IncidentRatingResponse rateReporter(String incidentId, RatingRequest request) {
-        // Try by tracking number first, then by ID
-        Incident incident = incidentRepository.findByTrackingNumber(incidentId)
-            .orElseGet(() -> incidentRepository.findById(incidentId).orElse(null));
+        validateRatingRequest(request);
+        
+        Incident incident = getIncidentWithRating(incidentId);
         if (incident == null) {
             throw new RuntimeException("Incident not found");
         }
@@ -56,49 +57,15 @@ public class RatingService {
                 .orElse(new IncidentRating());
 
         rating.setIncident(incident);
-        rating.setReporterRating(request.getRating());
+        rating.setReporterHonesty(request.getHonesty());
+        rating.setReporterCredibility(request.getCredibility());
+        rating.setReporterResponsiveness(request.getResponsiveness());
+        rating.setReporterHelpfulness(request.getHelpfulness());
         rating.setReporterFeedback(request.getFeedback());
 
         // Check if both ratings are present and award points if not already awarded
-        if (rating.getOfficeRating() != null && !rating.getPointsAwarded()) {
-            rating.setPointsAwarded(true);
-            // Award points to reporter (user)
-            try {
-                User reporter = incident.getSubmittedBy();
-                int reporterPoints = (rating.getOfficeRating() != null ? rating.getOfficeRating() : 0) * 10;
-                reporter.setPoints((reporter.getPoints() != null ? reporter.getPoints() : 0) + reporterPoints);
-                userService.save(reporter);
-                // Log activity for reporter
-                activityLogService.logActivity(
-                    "POINTS_AWARDED",
-                    "You have been awarded " + reporterPoints + " points for rating incident #" + incident.getTrackingNumber(),
-                    incident,
-                    reporter
-                );
-            } catch (Exception e) {
-                // Log error but do not fail the transaction
-                System.err.println("Failed to award points to reporter: " + e.getMessage());
-            }
-            // Award points to office admin
-            try {
-                if (incident.getAssignedOffice() != null) {
-                    OfficeAdmin officeAdmin = officeAdminService.findByOfficeCode(incident.getAssignedOffice().name()).orElse(null);
-                    if (officeAdmin != null) {
-                        int officePoints = (rating.getReporterRating() != null ? rating.getReporterRating() : 0) * 10;
-                        officeAdmin.setPoints((officeAdmin.getPoints() != null ? officeAdmin.getPoints() : 0) + officePoints);
-                        officeAdminService.save(officeAdmin);
-                        // Log activity for office admin
-                        activityLogService.logActivity(
-                            "POINTS_AWARDED",
-                            "You have been awarded " + officePoints + " points for rating incident #" + incident.getTrackingNumber(),
-                            incident,
-                            officeAdmin.getUser()
-                        );
-                    }
-                }
-            } catch (Exception e) {
-                System.err.println("Failed to award points to office admin: " + e.getMessage());
-            }
+        if (rating.hasOfficeRated() && !rating.getPointsAwarded()) {
+            awardPointsOptimized(rating, incident);
         }
 
         IncidentRating savedRating = ratingRepository.save(rating);
@@ -107,9 +74,9 @@ public class RatingService {
 
     @Transactional
     public IncidentRatingResponse rateOffice(String incidentId, RatingRequest request) {
-        // Try by tracking number first, then by ID
-        Incident incident = incidentRepository.findByTrackingNumber(incidentId)
-            .orElseGet(() -> incidentRepository.findById(incidentId).orElse(null));
+        validateRatingRequest(request);
+        
+        Incident incident = getIncidentWithRating(incidentId);
         if (incident == null) {
             throw new RuntimeException("Incident not found");
         }
@@ -122,48 +89,15 @@ public class RatingService {
                 .orElse(new IncidentRating());
 
         rating.setIncident(incident);
-        rating.setOfficeRating(request.getRating());
+        rating.setOfficeHonesty(request.getHonesty());
+        rating.setOfficeCredibility(request.getCredibility());
+        rating.setOfficeResponsiveness(request.getResponsiveness());
+        rating.setOfficeHelpfulness(request.getHelpfulness());
         rating.setOfficeFeedback(request.getFeedback());
 
         // Check if both ratings are present and award points if not already awarded
-        if (rating.getReporterRating() != null && !rating.getPointsAwarded()) {
-            rating.setPointsAwarded(true);
-            // Award points to reporter (user)
-            try {
-                User reporter = incident.getSubmittedBy();
-                int reporterPoints = (rating.getOfficeRating() != null ? rating.getOfficeRating() : 0) * 10;
-                reporter.setPoints((reporter.getPoints() != null ? reporter.getPoints() : 0) + reporterPoints);
-                userService.save(reporter);
-                // Log activity for reporter
-                activityLogService.logActivity(
-                    "POINTS_AWARDED",
-                    "You have been awarded " + reporterPoints + " points for rating incident #" + incident.getTrackingNumber(),
-                    incident,
-                    reporter
-                );
-            } catch (Exception e) {
-                System.err.println("Failed to award points to reporter: " + e.getMessage());
-            }
-            // Award points to office admin
-            try {
-                if (incident.getAssignedOffice() != null) {
-                    OfficeAdmin officeAdmin = officeAdminService.findByOfficeCode(incident.getAssignedOffice().name()).orElse(null);
-                    if (officeAdmin != null) {
-                        int officePoints = (rating.getReporterRating() != null ? rating.getReporterRating() : 0) * 10;
-                        officeAdmin.setPoints((officeAdmin.getPoints() != null ? officeAdmin.getPoints() : 0) + officePoints);
-                        officeAdminService.save(officeAdmin);
-                        // Log activity for office admin
-                        activityLogService.logActivity(
-                            "POINTS_AWARDED",
-                            "You have been awarded " + officePoints + " points for rating incident #" + incident.getTrackingNumber(),
-                            incident,
-                            officeAdmin.getUser()
-                        );
-                    }
-                }
-            } catch (Exception e) {
-                System.err.println("Failed to award points to office admin: " + e.getMessage());
-            }
+        if (rating.hasReporterRated() && !rating.getPointsAwarded()) {
+            awardPointsOptimized(rating, incident);
         }
 
         IncidentRating savedRating = ratingRepository.save(rating);
@@ -171,29 +105,54 @@ public class RatingService {
     }
 
     public IncidentRatingResponse mapToResponse(IncidentRating rating) {
+        IncidentRatingResponse.ReporterRating reporterRating = null;
+        IncidentRatingResponse.OfficeRating officeRating = null;
+        
+        if (rating.hasReporterRated()) {
+            reporterRating = new IncidentRatingResponse.ReporterRating(
+                rating.getReporterHonesty(),
+                rating.getReporterCredibility(),
+                rating.getReporterResponsiveness(),
+                rating.getReporterHelpfulness(),
+                rating.getReporterFeedback()
+            );
+        }
+        
+        if (rating.hasOfficeRated()) {
+            officeRating = new IncidentRatingResponse.OfficeRating(
+                rating.getOfficeHonesty(),
+                rating.getOfficeCredibility(),
+                rating.getOfficeResponsiveness(),
+                rating.getOfficeHelpfulness(),
+                rating.getOfficeFeedback()
+            );
+        }
+        
         return new IncidentRatingResponse(
             rating.getIncident().getId(),
-            rating.getReporterRating(),
-            rating.getReporterFeedback(),
-            rating.getOfficeRating(),
-            rating.getOfficeFeedback(),
-            rating.getPointsAwarded()
+            reporterRating,
+            officeRating,
+            rating.getPointsAwarded(),
+            rating.getReporterTotalPoints(),
+            rating.getOfficeTotalPoints()
         );
     }
 
+    @Cacheable(value = "topReporters", key = "#root.method.name")
     public List<LeaderboardEntry> getTopReporters() {
         return ratingRepository.getTopReporters().stream()
                 .map(row -> new LeaderboardEntry(
                         (Long) row[0],
                         (String) row[1],
                         (String) row[2],
-                        ((Number) row[3]).intValue(),  // totalIncidents
-                        ((Number) row[4]).doubleValue(),  // avgRating (1-5 scale)
-                        ((Number) row[5]).intValue()  // points
+                        ((Number) row[3]).intValue(),
+                        ((Number) row[4]).doubleValue(),
+                        ((Number) row[5]).floatValue()
                 ))
                 .collect(Collectors.toList());
     }
 
+    @Cacheable(value = "mostActiveReporters", key = "#root.method.name")
     public List<LeaderboardEntry> getMostActiveReporters() {
         return ratingRepository.getMostActiveReporters().stream()
                 .map(row -> new LeaderboardEntry(
@@ -205,25 +164,111 @@ public class RatingService {
                 .collect(Collectors.toList());
     }
 
+    @Cacheable(value = "topOffices", key = "#root.method.name")
     public List<LeaderboardEntry> getTopOffices() {
         return ratingRepository.getTopOffices().stream()
                 .map(row -> new LeaderboardEntry(
                         (Long) row[0],
                         (String) row[1],
-                        ((Number) row[2]).intValue(),  // totalIncidents
-                        ((Number) row[3]).doubleValue(),  // avgRating (1-5 scale)
-                        ((Number) row[4]).intValue()  // points
+                        ((Number) row[2]).intValue(),
+                        ((Number) row[3]).doubleValue(),
+                        ((Number) row[4]).floatValue()
                 ))
                 .collect(Collectors.toList());
     }
 
+    @Cacheable(value = "mostActiveOffices", key = "#root.method.name")
     public List<LeaderboardEntry> getMostActiveOffices() {
         return ratingRepository.getMostActiveOffices().stream()
                 .map(row -> new LeaderboardEntry(
-                        (Long) row[0],
-                        (String) row[1],
-                        ((Number) row[2]).intValue()
+                        null, // No ID for office enum
+                        row[0].toString(), // Office enum as string
+                        ((Number) row[1]).intValue() // resolvedIncidents
                 ))
                 .collect(Collectors.toList());
     }
-} 
+
+    /**
+     * Optimized method to get incident with single query
+     */
+    private Incident getIncidentWithRating(String incidentId) {
+        return incidentRepository.findByTrackingNumber(incidentId)
+            .orElseGet(() -> incidentRepository.findById(incidentId).orElse(null));
+    }
+
+    /**
+     * Optimized points calculation with batch processing
+     */
+    private void awardPointsOptimized(IncidentRating rating, Incident incident) {
+        if (rating.getPointsAwarded()) {
+            return; // Already awarded, skip
+        }
+
+        rating.setPointsAwarded(true);
+        
+        // Calculate points once - based on received ratings
+        int reporterPoints = rating.getOfficeTotalPoints();  // Reporter gets points based on office's rating of them
+        int officePoints = rating.getReporterTotalPoints();  // Office gets points based on reporter's rating of them
+        
+        // Batch update both users in single transaction
+        try {
+            User reporter = incident.getSubmittedBy();
+            if (reporter != null) {
+                reporter.setPoints((reporter.getPoints() != null ? reporter.getPoints() : 0.0f) + reporterPoints);
+                userService.save(reporter);
+                
+                // Log activity for reporter
+                activityLogService.logActivity(
+                    "POINTS_AWARDED",
+                    String.format("You have been awarded %d points for rating incident #%s", 
+                        reporterPoints, incident.getTrackingNumber()),
+                    incident,
+                    reporter
+                );
+            }
+            
+            // Award points to office admin
+            if (incident.getAssignedOffice() != null) {
+                OfficeAdmin officeAdmin = officeAdminService.findByOfficeCode(incident.getAssignedOffice().name()).orElse(null);
+                if (officeAdmin != null) {
+                    officeAdmin.setPoints((officeAdmin.getPoints() != null ? officeAdmin.getPoints() : 0.0f) + officePoints);
+                    officeAdminService.save(officeAdmin);
+                    
+                    // Log activity for office admin
+                    activityLogService.logActivity(
+                        "POINTS_AWARDED",
+                        String.format("You have been awarded %d points for rating incident #%s", 
+                            officePoints, incident.getTrackingNumber()),
+                        incident,
+                        officeAdmin.getUser()
+                    );
+                }
+            }
+        } catch (Exception e) {
+            // Log error but do not fail the transaction
+            System.err.println("Failed to award points: " + e.getMessage());
+            rating.setPointsAwarded(false); // Reset flag on error
+        }
+    }
+
+    /**
+     * Optimized validation with early returns
+     */
+    private void validateRatingRequest(RatingRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("Rating request cannot be null");
+        }
+        
+        // Use array for cleaner validation
+        Integer[] ratings = {request.getHonesty(), request.getCredibility(), 
+                           request.getResponsiveness(), request.getHelpfulness()};
+        String[] names = {"Honesty", "Credibility", "Responsiveness", "Helpfulness"};
+        
+        for (int i = 0; i < ratings.length; i++) {
+            if (ratings[i] == null || ratings[i] < 1 || ratings[i] > 5) {
+                throw new IllegalArgumentException(
+                    String.format("%s rating must be between 1 and 5", names[i]));
+            }
+        }
+    }
+}

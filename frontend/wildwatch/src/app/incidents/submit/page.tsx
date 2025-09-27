@@ -242,6 +242,12 @@ export default function IncidentSubmissionPage() {
       errors.description = "Description must be less than 1000 characters"
     }
 
+    // Tag validation - must have at least 3 tags
+    if (selectedTags.length < 3) {
+      setTagSelectError("You must keep at least 3 tags.")
+      return false
+    }
+
     setFormErrors(errors)
     return Object.keys(errors).length === 0
   }
@@ -321,9 +327,15 @@ export default function IncidentSubmissionPage() {
       }
 
       const data = await response.json()
-      setTags(data.tags || [])
+      const generatedTags = data.tags || []
+      setTags(generatedTags)
+      
+      // Auto-select the first 5 tags (best tags)
+      const autoSelectedTags = generatedTags.slice(0, 5)
+      setSelectedTags(autoSelectedTags)
+      
       toast.success("Tags generated successfully", {
-        description: "AI has analyzed your description and suggested relevant tags.",
+        description: "AI has analyzed your description and selected the 5 most relevant tags.",
         icon: <Sparkles className="h-5 w-5 text-green-500" />,
         className: "bg-white border-green-100 text-green-800",
         duration: 3000,
@@ -348,8 +360,14 @@ export default function IncidentSubmissionPage() {
   const handleTagClick = (tag: string) => {
     setTagSelectError(null)
     if (selectedTags.includes(tag)) {
-      setSelectedTags(selectedTags.filter((t) => t !== tag))
+      // Allow deletion only if we have more than 3 tags (minimum 3)
+      if (selectedTags.length > 3) {
+        setSelectedTags(selectedTags.filter((t) => t !== tag))
+      } else {
+        setTagSelectError("You must keep at least 3 tags. You can remove up to 2 tags maximum.")
+      }
     } else {
+      // This shouldn't happen in the new flow, but keeping for safety
       if (selectedTags.length >= 5) {
         setTagSelectError("You can select up to 5 tags only.")
         return
@@ -704,7 +722,7 @@ export default function IncidentSubmissionPage() {
 
                       <div className="flex items-center gap-1 text-sm text-gray-500">
                         <Info className="h-4 w-4 text-[#800000]/70" />
-                        <span>Select up to 5 tags that apply to this incident</span>
+                        <span>AI will select the 5 best tags. You can remove up to 2 tags (minimum 3 required)</span>
                       </div>
                     </div>
 
@@ -739,7 +757,7 @@ export default function IncidentSubmissionPage() {
                       </div>
                     )}
 
-                    {tags.length > 0 && (
+                    {selectedTags.length > 0 && (
                       <motion.div
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -749,24 +767,24 @@ export default function IncidentSubmissionPage() {
                         <div className="bg-[#800000]/5 rounded-lg p-4 border border-[#800000]/10">
                           <div className="flex items-center gap-2 mb-3">
                             <Tag className="h-4 w-4 text-[#800000]" />
-                            <p className="text-sm font-medium text-[#800000]">Suggested Tags</p>
+                            <p className="text-sm font-medium text-[#800000]">Selected Tags</p>
+                            <span className="text-xs text-gray-500">({selectedTags.length}/5)</span>
                           </div>
                           <div className="flex flex-wrap gap-2">
-                            {tags.map((tag) => (
+                            {selectedTags.map((tag) => (
                               <Badge
                                 key={tag}
-                                variant={selectedTags.includes(tag) ? "default" : "secondary"}
-                                className={`cursor-pointer select-none transition-all duration-200 px-3 py-1 text-sm ${
-                                  selectedTags.includes(tag)
-                                    ? "bg-[#800000] hover:bg-[#600000] text-white"
-                                    : "bg-white hover:bg-[#800000]/10 text-gray-700 border border-gray-200"
-                                }`}
+                                variant="default"
+                                className="cursor-pointer select-none transition-all duration-200 px-3 py-1 text-sm bg-[#800000] hover:bg-[#600000] text-white group"
                                 onClick={() => handleTagClick(tag)}
                               >
-                                {selectedTags.includes(tag) && <CheckCircle2 className="mr-1 h-3 w-3" />}
                                 {tag}
+                                <X className="ml-1 h-3 w-3 opacity-60 group-hover:opacity-100 transition-opacity" />
                               </Badge>
                             ))}
+                          </div>
+                          <div className="mt-2 text-xs text-gray-500">
+                            Click on a tag to remove it. You must keep at least 3 tags.
                           </div>
                         </div>
                       </motion.div>
@@ -779,74 +797,6 @@ export default function IncidentSubmissionPage() {
                       </div>
                     )}
 
-                    {/* Selected Tags Section */}
-                    {selectedTags.length > 0 && (
-                      <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ duration: 0.3 }}
-                        className="mb-4"
-                      >
-                        <div className="space-y-4">
-                          <div className="flex items-center gap-2">
-                            <h3 className="text-sm font-medium text-gray-700">Selected Tags</h3>
-                            <div className="flex items-center gap-1">
-                              <HelpCircle className="h-4 w-4 text-gray-400" />
-                              <span className="text-xs text-gray-500">Tags that will be associated with your report</span>
-                            </div>
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            {selectedTags.length === 0 ? (
-                              <p className="text-sm text-gray-500">No tags selected</p>
-                            ) : (
-                              selectedTags.map((tag) => (
-                                <Badge
-                                  key={tag}
-                                  variant="secondary"
-                                  className="bg-[#800000]/10 text-[#800000] hover:bg-[#800000]/20"
-                                >
-                                  {tag}
-                                  <button
-                                    onClick={() => handleTagClick(tag)}
-                                    className="ml-1 hover:text-[#800000]/80"
-                                  >
-                                    <X className="h-3 w-3" />
-                                  </button>
-                                </Badge>
-                              ))
-                            )}
-                          </div>
-
-                          {selectedTags.length > 0 && (
-                            <Card className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                              <div className="p-6">
-                                <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
-                                  <Info className="h-4 w-4 text-[#800000]" />
-                                  What happens next?
-                                </h3>
-
-                                <ol className="space-y-3 relative border-l border-gray-200 pl-6 ml-2">
-                                  {[
-                                    { title: "Evidence Collection", desc: "You'll be asked to provide photos or videos" },
-                                    { title: "Review & Submit", desc: "Verify all information before final submission" },
-                                    { title: "Confirmation", desc: "You'll receive a tracking number for your report" },
-                                    { title: "Investigation", desc: "Security team will review and respond to your report" },
-                                  ].map((step, index) => (
-                                    <li key={index} className="relative">
-                                      <div className="absolute -left-[29px] flex items-center justify-center w-6 h-6 rounded-full bg-[#800000] text-white text-xs">
-                                        {index + 1}
-                                      </div>
-                                      <h4 className="text-sm font-medium text-gray-800">{step.title}</h4>
-                                      <p className="text-xs text-gray-500">{step.desc}</p>
-                                    </li>
-                                  ))}
-                                </ol>
-                              </div>
-                            </Card>
-                          )}
-                        </div>
-                      </motion.div>
-                    )}
 
                     {/* Form Actions */}
                     <div className="flex justify-between pt-6 border-t border-gray-100 mt-6">

@@ -5,12 +5,12 @@ public class LeaderboardEntry {
     private String name;
     private Integer totalIncidents;
     private Double averageRating;
-    private Integer points;
+    private Float points;
     private Integer activeIncidents;
     private Integer resolvedIncidents;
 
     // Constructor for reporter entries
-    public LeaderboardEntry(Long id, String firstName, String lastName, Integer totalIncidents, Double averageRating, Integer points) {
+    public LeaderboardEntry(Long id, String firstName, String lastName, Integer totalIncidents, Double averageRating, Float points) {
         this.id = id;
         this.name = firstName + " " + lastName;
         this.totalIncidents = totalIncidents;
@@ -19,7 +19,7 @@ public class LeaderboardEntry {
     }
 
     // Constructor for office entries
-    public LeaderboardEntry(Long id, String name, Integer totalIncidents, Double averageRating, Integer points) {
+    public LeaderboardEntry(Long id, String name, Integer totalIncidents, Double averageRating, Float points) {
         this.id = id;
         this.name = name;
         this.totalIncidents = totalIncidents;
@@ -50,8 +50,8 @@ public class LeaderboardEntry {
     public void setTotalIncidents(Integer totalIncidents) { this.totalIncidents = totalIncidents; }
     public Double getAverageRating() { return averageRating; }
     public void setAverageRating(Double averageRating) { this.averageRating = averageRating; }
-    public Integer getPoints() { return points; }
-    public void setPoints(Integer points) { this.points = points; }
+    public Float getPoints() { return points; }
+    public void setPoints(Float points) { this.points = points; }
     public Integer getActiveIncidents() { return activeIncidents; }
     public void setActiveIncidents(Integer activeIncidents) { this.activeIncidents = activeIncidents; }
     public Integer getResolvedIncidents() { return resolvedIncidents; }

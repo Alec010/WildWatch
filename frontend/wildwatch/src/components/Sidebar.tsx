@@ -15,6 +15,7 @@ import {
   Menu,
   X,
   Globe,
+  FileText,
 } from "lucide-react"
 import Cookies from "js-cookie"
 import { useEffect, useState } from "react"
@@ -111,6 +112,11 @@ export function Sidebar() {
       href: "/incidents/history",
       icon: <History size={20} />,
       label: "Incident History",
+    },
+    {
+      href: "/office-bulletin",
+      icon: <FileText size={20} />,
+      label: "Office Bulletin",
     },
     {
       href: "/leaderboard",

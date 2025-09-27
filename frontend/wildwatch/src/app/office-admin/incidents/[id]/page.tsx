@@ -197,8 +197,8 @@ export default function IncidentDetailsPage() {
 
       // Show success modal
       setModalContent({
-        title: "Incident Approved",
-        message: "The incident has been successfully approved and is now being processed.",
+        title: "Incident Verified",
+        message: "The incident has been successfully verified and is now being processed.",
         icon: <CheckCircle className="h-12 w-12 text-green-500" />,
         color: "bg-green-50 border-green-200",
       })
@@ -223,7 +223,7 @@ export default function IncidentDetailsPage() {
       console.error("Error approving incident:", error)
       setModalContent({
         title: "Error",
-        message: "Failed to approve incident. Please try again.",
+        message: "Failed to verify incident. Please try again.",
         icon: <AlertTriangle className="h-12 w-12 text-red-500" />,
         color: "bg-red-50 border-red-200",
       })
@@ -278,6 +278,7 @@ export default function IncidentDetailsPage() {
       setIsProcessing(false)
     }
   }
+
 
   const handleStatusUpdate = async () => {
     setIsProcessing(true)
@@ -954,7 +955,7 @@ export default function IncidentDetailsPage() {
                   disabled={isProcessing || !priorityLevel || !isVerified || !status}
                 >
                   <CheckCircle2 className="h-4 w-4" />
-                  {isProcessing ? "Processing..." : "Approve"}
+                  {isProcessing ? "Processing..." : "Verify"}
                 </Button>
                 <Button
                   className="bg-gray-200 hover:bg-gray-300 text-gray-800 flex items-center gap-2"
@@ -1073,6 +1074,7 @@ export default function IncidentDetailsPage() {
           animation-delay: 300ms;
         }
       `}</style>
+
     </div>
   )
 }

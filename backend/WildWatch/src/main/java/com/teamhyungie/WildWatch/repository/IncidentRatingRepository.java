@@ -13,10 +13,12 @@ import java.util.Optional;
 public interface IncidentRatingRepository extends JpaRepository<IncidentRating, Long> {
     Optional<IncidentRating> findByIncidentId(String incidentId);
 
-    @Query("SELECT AVG(r.reporterRating) FROM IncidentRating r WHERE r.reporterRating IS NOT NULL")
+    @Query("SELECT AVG((r.reporterHonesty + r.reporterCredibility + r.reporterResponsiveness + r.reporterHelpfulness) / 4.0) " +
+           "FROM IncidentRating r WHERE r.reporterHonesty IS NOT NULL")
     Double getAverageReporterRating();
 
-    @Query("SELECT AVG(r.officeRating) FROM IncidentRating r WHERE r.officeRating IS NOT NULL")
+    @Query("SELECT AVG((r.officeHonesty + r.officeCredibility + r.officeResponsiveness + r.officeHelpfulness) / 4.0) " +
+           "FROM IncidentRating r WHERE r.officeHonesty IS NOT NULL")
     Double getAverageOfficeRating();
 
     @Query("SELECT u.id, u.firstName, u.lastName, COUNT(i.id) as activeIncidents " +
@@ -35,7 +37,7 @@ public interface IncidentRatingRepository extends JpaRepository<IncidentRating, 
     List<Object[]> getMostActiveOffices();
 
     @Query("SELECT u.id, u.firstName, u.lastName, COUNT(i.id) as totalIncidents, " +
-           "COALESCE(AVG(r.officeRating), 0) as avgRating, " +
+           "COALESCE(AVG(r.officeHonesty + r.officeCredibility + r.officeResponsiveness + r.officeHelpfulness) / 4.0, 0) as avgRating, " +
            "COALESCE(u.points, 0) as points " +
            "FROM User u " +
            "LEFT JOIN Incident i ON i.submittedBy.id = u.id " +
@@ -47,7 +49,7 @@ public interface IncidentRatingRepository extends JpaRepository<IncidentRating, 
     List<Object[]> getTopReporters();
 
     @Query("SELECT o.id, o.officeCode, COUNT(i.id) as totalIncidents, " +
-           "COALESCE(AVG(r.reporterRating), 0) as avgRating, " +
+           "COALESCE(AVG(r.reporterHonesty + r.reporterCredibility + r.reporterResponsiveness + r.reporterHelpfulness) / 4.0, 0) as avgRating, " +
            "COALESCE(o.points, 0) as points " +
            "FROM OfficeAdmin o " +
            "LEFT JOIN Incident i ON i.assignedOffice = o.officeCode " +

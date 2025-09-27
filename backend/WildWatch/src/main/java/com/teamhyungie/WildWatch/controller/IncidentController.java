@@ -16,6 +16,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -128,5 +129,26 @@ public class IncidentController {
     public ResponseEntity<Boolean> getUpvoteStatus(@PathVariable String id, @AuthenticationPrincipal UserDetails userDetails) {
         boolean hasUpvoted = incidentService.hasUserUpvoted(id, userDetails.getUsername());
         return ResponseEntity.ok(hasUpvoted);
+    }
+
+    @PostMapping("/{id}/extend-resolution")
+    public ResponseEntity<IncidentResponse> extendResolutionDate(
+            @PathVariable String id,
+            @RequestBody ExtendResolutionRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        IncidentResponse response = incidentService.extendResolutionDate(id, request.getNewEstimatedDate(), userDetails.getUsername());
+        return ResponseEntity.ok(response);
+    }
+
+    public static class ExtendResolutionRequest {
+        private LocalDateTime newEstimatedDate;
+
+        public LocalDateTime getNewEstimatedDate() {
+            return newEstimatedDate;
+        }
+
+        public void setNewEstimatedDate(LocalDateTime newEstimatedDate) {
+            this.newEstimatedDate = newEstimatedDate;
+        }
     }
 } 

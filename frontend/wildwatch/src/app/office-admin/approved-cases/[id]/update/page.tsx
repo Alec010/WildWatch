@@ -22,6 +22,7 @@ import {
   ArrowRightLeft,
   Info,
   Tag,
+  CalendarPlus,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { OfficeAdminSidebar } from "@/components/OfficeAdminSidebar"
@@ -45,6 +46,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { API_BASE_URL } from "@/utils/api"
 import { RatingModal } from "@/components/RatingModal"
+import ExtendResolutionModal from "@/components/ExtendResolutionModal"
+import { api } from "@/utils/apiClient"
 import { useSidebar } from "@/contexts/SidebarContext"
 import { motion } from "framer-motion"
 import { Inter } from "next/font/google"
@@ -62,6 +65,34 @@ interface IncidentUpdate {
   visibleToReporter: boolean
 }
 
+function getEstimatedResolution(submittedAt: string, priority: string, extendedDate?: string) {
+  // If there's an extended date from the backend, use that
+  if (extendedDate) {
+    return new Date(extendedDate)
+  }
+  
+  // Otherwise, calculate based on priority
+  const base = new Date(submittedAt)
+  let days = 2
+  if (priority === "MEDIUM") days = 3
+  if (priority === "HIGH") days = 5
+  base.setDate(base.getDate() + days)
+  return base
+}
+
+function formatDate(dateString: string) {
+  try {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    })
+  } catch (error) {
+    return 'Invalid date'
+  }
+}
+
 interface Incident {
   id: string
   trackingNumber: string
@@ -77,6 +108,10 @@ interface Incident {
   submittedByIdNumber: string
   status: string
   priorityLevel: "HIGH" | "MEDIUM" | "LOW"
+  submittedAt?: string
+  estimatedResolutionDate?: string
+  resolutionExtendedBy?: string
+  resolutionExtendedAt?: string
 }
 
 interface UpdateRequest {
@@ -92,7 +127,7 @@ interface TransferRequest {
   transferNotes: string
 }
 
-export default function UpdateApprovedCasePage() {
+export default function UpdateVerifiedCasePage() {
   const params = useParams()
   const router = useRouter()
   const { collapsed } = useSidebar()
@@ -113,6 +148,7 @@ export default function UpdateApprovedCasePage() {
   const [showTransferModal, setShowTransferModal] = useState(false)
   const [transferNotes, setTransferNotes] = useState("")
   const [selectedOffice, setSelectedOffice] = useState("")
+  const [showExtendModal, setShowExtendModal] = useState(false)
   const [isTransferring, setIsTransferring] = useState(false)
   const [offices, setOffices] = useState<{ code: string; fullName: string; description: string }[]>([])
   const [officesLoading, setOfficesLoading] = useState(false)
@@ -447,6 +483,21 @@ export default function UpdateApprovedCasePage() {
     }
   }
 
+  const handleExtendResolution = async (newDate: string) => {
+    try {
+      const response = await api.extendResolutionDate(params.id as string, newDate)
+      // Update the incident data with the response
+      setIncident(response)
+      toast.success("Resolution date extended successfully", {
+        description: `New estimated resolution date: ${new Date(newDate).toLocaleDateString()}`,
+        duration: 4000,
+      })
+    } catch (error: any) {
+      console.error("Failed to extend resolution date:", error)
+      throw new Error(error.message || "Failed to extend resolution date")
+    }
+  }
+
   // Fetch offices when transfer modal is opened
   useEffect(() => {
     if (showTransferModal) {
@@ -580,7 +631,7 @@ export default function UpdateApprovedCasePage() {
                   href="/office-admin/approved-cases"
                   className="hover:text-[#8B0000] transition-colors font-medium"
                 >
-                  Approved Case Tracker
+                  Verified Case Tracker
                 </Link>
                 <ChevronRight className="h-4 w-4 mx-2" />
                 <span>Update Case</span>
@@ -662,6 +713,31 @@ export default function UpdateApprovedCasePage() {
                           <p className="text-sm font-medium text-[#8B0000]">
                             {formatDate(incident.dateOfIncident)} at {incident.timeOfIncident}
                           </p>
+                        </div>
+
+                        <div>
+                          <h3 className="text-sm font-medium text-gray-500 mb-1 flex items-center">
+                            <div className="bg-[#8B0000]/10 p-1 rounded mr-2">
+                              <Clock className="h-4 w-4 text-[#8B0000]" />
+                            </div>
+                            Est. Resolution
+                            {incident.estimatedResolutionDate && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 ml-2">
+                                Extended
+                              </span>
+                            )}
+                          </h3>
+                          <p className="text-sm font-medium text-[#8B0000]">
+                            {incident.submittedAt ? 
+                              formatDate(getEstimatedResolution(incident.submittedAt, incident.priorityLevel, incident.estimatedResolutionDate).toISOString()) : 
+                              'Not available'
+                            }
+                          </p>
+                          {incident.resolutionExtendedBy && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              Extended by {incident.resolutionExtendedBy}
+                            </p>
+                          )}
                         </div>
 
                         <div>
@@ -783,36 +859,48 @@ export default function UpdateApprovedCasePage() {
                       />
                     </div>
 
-                    <div className="flex justify-end gap-3 pt-2">
+                    <div className="flex justify-between items-center pt-2">
                       <Button
                         variant="outline"
-                        onClick={() => {
-                          setUpdateMessage("")
-                          setUpdatedBy("")
-                          setIsVisibleToReporter(true)
-                          if (incident) {
-                            setPriorityLevel(incident.priorityLevel)
-                          }
-                        }}
+                        onClick={() => setShowExtendModal(true)}
                         disabled={isSending}
-                        className="border-[#DAA520]/30 text-[#8B0000] hover:bg-[#8B0000]/5"
+                        className="border-blue-600 text-blue-600 hover:bg-blue-50 flex items-center gap-2"
                       >
-                        Reset
+                        <CalendarPlus className="h-4 w-4" />
+                        Extend Resolution
                       </Button>
-                      <Button
-                        onClick={handleSendUpdate}
-                        disabled={!updateMessage.trim() || !updatedBy.trim() || isSending}
-                        className="bg-[#8B0000] hover:bg-[#6B0000] text-white"
-                      >
-                        {isSending ? (
-                          <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Sending...
-                          </>
-                        ) : (
-                          "Save Changes"
-                        )}
-                      </Button>
+                      
+                      <div className="flex gap-3">
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setUpdateMessage("")
+                            setUpdatedBy("")
+                            setIsVisibleToReporter(true)
+                            if (incident) {
+                              setPriorityLevel(incident.priorityLevel)
+                            }
+                          }}
+                          disabled={isSending}
+                          className="border-[#DAA520]/30 text-[#8B0000] hover:bg-[#8B0000]/5"
+                        >
+                          Reset
+                        </Button>
+                        <Button
+                          onClick={handleSendUpdate}
+                          disabled={!updateMessage.trim() || !updatedBy.trim() || isSending}
+                          className="bg-[#8B0000] hover:bg-[#6B0000] text-white"
+                        >
+                          {isSending ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Sending...
+                            </>
+                          ) : (
+                            "Save Changes"
+                          )}
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </motion.div>
@@ -1145,6 +1233,15 @@ export default function UpdateApprovedCasePage() {
         incidentId={params.id as string}
         type="office"
         onSuccess={handleRatingSuccess}
+      />
+
+      {/* Extend Resolution Modal */}
+      <ExtendResolutionModal
+        isOpen={showExtendModal}
+        onClose={() => setShowExtendModal(false)}
+        onExtend={handleExtendResolution}
+        currentEstimatedDate={incident?.estimatedResolutionDate}
+        incidentId={incident?.trackingNumber || ""}
       />
 
       {/* Add custom styles for animation delays */}

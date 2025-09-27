@@ -48,6 +48,9 @@ public class IncidentResponse {
     private String lastTransferNotes;
     private Integer upvoteCount;
     private String resolutionNotes;
+    private LocalDateTime estimatedResolutionDate;
+    private String resolutionExtendedBy;
+    private LocalDateTime resolutionExtendedAt;
 
     @Data
     public static class EvidenceDTO {
@@ -100,6 +103,10 @@ public class IncidentResponse {
         response.setLastTransferredTo(incident.getLastTransferredTo());
         response.setLastTransferNotes(incident.getLastTransferNotes());
         response.setUpvoteCount(incident.getUpvoteCount());
+        response.setEstimatedResolutionDate(incident.getEstimatedResolutionDate());
+        response.setResolutionExtendedBy(incident.getResolutionExtendedBy() != null ? 
+            incident.getResolutionExtendedBy().getFirstName() + " " + incident.getResolutionExtendedBy().getLastName() : null);
+        response.setResolutionExtendedAt(incident.getResolutionExtendedAt());
 
         // Map evidence
         if (incident.getEvidence() != null) {

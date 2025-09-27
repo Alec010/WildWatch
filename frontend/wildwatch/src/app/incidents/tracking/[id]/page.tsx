@@ -111,7 +111,13 @@ interface Evidence {
   uploadedAt: string
 }
 
-function getEstimatedResolution(submittedAt: string, priority: string) {
+function getEstimatedResolution(submittedAt: string, priority: string, extendedDate?: string) {
+  // If there's an extended date from the backend, use that
+  if (extendedDate) {
+    return new Date(extendedDate)
+  }
+  
+  // Otherwise, calculate based on priority
   const base = new Date(submittedAt)
   let days = 2
   if (priority === "MEDIUM") days = 3
@@ -275,7 +281,7 @@ export default function CaseDetailsPage() {
   }, [keepSidebar])
 
   const estimatedResolution = incident
-    ? getEstimatedResolution(incident.submittedAt || incident.dateOfIncident, incident.priorityLevel)
+    ? getEstimatedResolution(incident.submittedAt || incident.dateOfIncident, incident.priorityLevel, incident.estimatedResolutionDate)
     : null
 
   // Show rating modal for regular user if eligible (run after both user info and incident are loaded)
@@ -346,7 +352,7 @@ export default function CaseDetailsPage() {
         body: JSON.stringify({ status: "Pending" }),
       })
 
-      if (!response.ok) throw new Error("Failed to approve case")
+      if (!response.ok) throw new Error("Failed to verify case")
 
       setShowApproveModal(false)
       setShowSuccessModal(true)
@@ -356,7 +362,7 @@ export default function CaseDetailsPage() {
         router.push("/office-admin/incidents")
       }, 2000)
     } catch (err) {
-      alert("Failed to approve case.")
+      alert("Failed to verify case.")
     } finally {
       setIsApproving(false)
     }
@@ -552,10 +558,22 @@ export default function CaseDetailsPage() {
                         <div className="font-semibold text-gray-800">{lastUpdated ? formatDate(lastUpdated) : "-"}</div>
                       </div>
                       <div className="bg-white/50 rounded-lg p-3 border border-gray-100">
-                        <div className="text-xs text-gray-500 mb-1">Est. Resolution</div>
+                        <div className="text-xs text-gray-500 mb-1 flex items-center gap-1">
+                          Est. Resolution
+                          {incident?.estimatedResolutionDate && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              Extended
+                            </span>
+                          )}
+                        </div>
                         <div className="font-semibold text-gray-800">
                           {estimatedResolution ? formatDate(estimatedResolution.toISOString()) : "-"}
                         </div>
+                        {incident?.resolutionExtendedBy && (
+                          <div className="text-xs text-gray-500 mt-1">
+                            Extended by {incident.resolutionExtendedBy}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -661,7 +679,7 @@ export default function CaseDetailsPage() {
                         onClick={() => setShowApproveModal(true)}
                       >
                         <CheckCircle className="h-4 w-4 mr-2" />
-                        Approve Case
+                        Verify Case
                       </Button>
                       <Button
                         variant="outline"
@@ -1179,10 +1197,10 @@ export default function CaseDetailsPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CheckCircle className="h-5 w-5 text-green-600" />
-              Confirm Case Approval
+              Confirm Case Verification
             </DialogTitle>
             <DialogDescription>
-              Are you sure you want to approve this case? This will move it back to the pending list for further review.
+              Are you sure you want to verify this case? This will move it back to the pending list for further review.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex gap-2 justify-end mt-4">
@@ -1203,7 +1221,7 @@ export default function CaseDetailsPage() {
               ) : (
                 <>
                   <CheckCircle className="h-4 w-4 mr-2" />
-                  Confirm Approval
+                  Confirm Verification
                 </>
               )}
             </Button>
@@ -1217,10 +1235,10 @@ export default function CaseDetailsPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-green-600">
               <CheckCircle className="h-5 w-5" />
-              Case Approved Successfully
+              Case Verified Successfully
             </DialogTitle>
             <DialogDescription>
-              The case has been approved and moved to the pending list. You will be redirected to the incidents page.
+              The case has been verified and moved to the pending list. You will be redirected to the incidents page.
             </DialogDescription>
           </DialogHeader>
         </DialogContent>

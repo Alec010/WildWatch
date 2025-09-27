@@ -45,6 +45,7 @@ interface Incident {
   submittedAt: string
   isAnonymous: boolean
   submittedBy: string
+  submittedByFullName?: string
   upvoteCount: number
 }
 
@@ -634,7 +635,12 @@ export default function PublicIncidentsPage() {
                         <div className="flex items-center justify-between pt-4 border-t border-slate-100 mb-6">
                           <div className="flex items-center gap-2 text-xs text-slate-500">
                             <User className="h-3 w-3" />
-                            <span className="font-medium">{incident.isAnonymous ? "Anonymous" : "Verified User"}</span>
+                            <span className="font-medium">
+                              {incident.isAnonymous 
+                                ? "Anonymous" 
+                                : (incident.submittedByFullName || "Verified User")
+                              }
+                            </span>
                           </div>
                           <div className="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 px-2 py-1 rounded-md">
                             <FileText className="h-3 w-3" />

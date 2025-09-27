@@ -26,7 +26,7 @@ public class OfficeAdmin {
     private boolean isActive = true;
 
     @Column(name = "points")
-    private Integer points = 0;
+    private Float points = 0.0f;
 
     // Getters and Setters
     public Long getId() {
@@ -77,11 +77,11 @@ public class OfficeAdmin {
         isActive = active;
     }
 
-    public Integer getPoints() {
+    public Float getPoints() {
         return points;
     }
 
-    public void setPoints(Integer points) {
+    public void setPoints(Float points) {
         this.points = points;
     }
 } 

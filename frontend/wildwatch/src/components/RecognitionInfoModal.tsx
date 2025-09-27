@@ -41,7 +41,11 @@ export function RecognitionInfoModal({ isOpen, onClose }: RecognitionInfoModalPr
                   2
                 </div>
                 <div>
-                  <span className="font-medium">Quality Rating:</span> Up to 10 points based on report quality
+                  <span className="font-medium">Two-Way Rating System:</span> Up to 20 points based on 4-dimensional ratings
+                  <div className="text-xs text-gray-600 mt-1 ml-6">
+                    • Honesty, Credibility, Responsiveness, Helpfulness (1-5 stars each)
+                    • Points awarded when both parties complete ratings
+                  </div>
                 </div>
               </div>
               <div className="flex items-start gap-2">
@@ -58,6 +62,14 @@ export function RecognitionInfoModal({ isOpen, onClose }: RecognitionInfoModalPr
                 </div>
                 <div>
                   <span className="font-medium">Witness Information:</span> 2 points per witness
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <div className="w-5 h-5 rounded-full bg-[#8B0000] text-white flex items-center justify-center text-xs mt-0.5">
+                  5
+                </div>
+                <div>
+                  <span className="font-medium">Community Upvotes:</span> 1 point per upvote received
                 </div>
               </div>
             </div>

@@ -28,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.Arrays;
@@ -705,6 +706,28 @@ public class IncidentService {
             incidentUpvoteRepository.delete(existingUpvote.get());
             incident.setUpvoteCount(incident.getUpvoteCount() - 1);
             incidentRepository.save(incident);
+            
+            // Remove 1 point from the incident reporter (if not self-upvote)
+            if (!user.getId().equals(incident.getSubmittedBy().getId())) {
+                try {
+                    User reporter = incident.getSubmittedBy();
+                    float currentPoints = reporter.getPoints() != null ? reporter.getPoints() : 0.0f;
+                    reporter.setPoints(Math.max(0.0f, currentPoints - 1.0f)); // Ensure points don't go below 0
+                    userService.save(reporter);
+                    
+                    // Log activity for reporter
+                    activityLogService.logActivity(
+                        "UPVOTE_POINTS_REMOVED",
+                        "1 point was removed due to upvote removal on incident #" + incident.getTrackingNumber(),
+                        incident,
+                        reporter
+                    );
+                } catch (Exception e) {
+                    // Log error but do not fail the transaction
+                    System.err.println("Failed to remove upvote points from reporter: " + e.getMessage());
+                }
+            }
+            
             // Broadcast new count
             messagingTemplate.convertAndSend(
                 "/topic/upvotes/" + incident.getId(),
@@ -725,8 +748,27 @@ public class IncidentService {
                 incident.getUpvoteCount()
             );
 
-            // Create notification for the incident creator
+            // Create notification for the incident creator and award points
             if (!user.getId().equals(incident.getSubmittedBy().getId())) {
+                // Award +1 point to the incident reporter
+                try {
+                    User reporter = incident.getSubmittedBy();
+                    reporter.setPoints((reporter.getPoints() != null ? reporter.getPoints() : 0.0f) + 1.0f);
+                    userService.save(reporter);
+                    
+                    // Log activity for reporter
+                    activityLogService.logActivity(
+                        "UPVOTE_POINTS",
+                        "You received 1 point for an upvote on incident #" + incident.getTrackingNumber(),
+                        incident,
+                        reporter
+                    );
+                } catch (Exception e) {
+                    // Log error but do not fail the transaction
+                    System.err.println("Failed to award upvote points to reporter: " + e.getMessage());
+                }
+                
+                // Create upvote notification
                 activityLogService.logActivity(
                     "UPVOTE",
                     "Your incident #" + incident.getTrackingNumber() + " received an upvote",
@@ -743,5 +785,55 @@ public class IncidentService {
         Incident incident = incidentRepository.findById(incidentId)
             .orElseThrow(() -> new RuntimeException("Incident not found"));
         return incidentUpvoteRepository.existsByIncidentAndUser(incident, user);
+    }
+
+    public IncidentResponse extendResolutionDate(String incidentId, LocalDateTime newEstimatedDate, String userEmail) {
+        User user = userService.getUserByEmail(userEmail);
+        Incident incident = incidentRepository.findById(incidentId)
+            .orElseThrow(() -> new RuntimeException("Incident not found"));
+
+        // Validate that the new date is in the future
+        if (newEstimatedDate.isBefore(LocalDateTime.now())) {
+            throw new RuntimeException("Estimated resolution date must be in the future");
+        }
+
+        // Store the previous estimated date for audit trail
+        LocalDateTime previousDate = incident.getEstimatedResolutionDate();
+        
+        // Update the incident
+        incident.setEstimatedResolutionDate(newEstimatedDate);
+        incident.setResolutionExtendedBy(user);
+        incident.setResolutionExtendedAt(LocalDateTime.now());
+        incidentRepository.save(incident);
+
+        // Create an audit entry
+        IncidentUpdate update = new IncidentUpdate();
+        update.setIncident(incident);
+        update.setUpdatedBy(user);
+        update.setUpdatedByName(user.getFirstName() + " " + user.getLastName());
+        update.setUpdatedAt(LocalDateTime.now());
+        update.setVisibleToReporter(true);
+        
+        String message = "Resolution date extended";
+        if (previousDate != null) {
+            message += " from " + previousDate.toLocalDate() + " to " + newEstimatedDate.toLocalDate();
+        } else {
+            message += " to " + newEstimatedDate.toLocalDate();
+        }
+        message += " by " + user.getFirstName() + " " + user.getLastName();
+        
+        update.setMessage(message);
+        update.setStatus(incident.getStatus());
+        incidentUpdateRepository.save(update);
+
+        // Create notification for the incident reporter
+        activityLogService.logActivity(
+            "RESOLUTION_EXTENDED",
+            "The estimated resolution date for your incident #" + incident.getTrackingNumber() + " has been extended to " + newEstimatedDate.toLocalDate(),
+            incident,
+            incident.getSubmittedBy()
+        );
+
+        return mapToIncidentResponseWithExtras(incident);
     }
 } 

@@ -135,7 +135,7 @@ export default function IncidentManagementPage() {
   }
 
   const handleEdit = (id: string) => {
-    router.push(`/office-admin/approved-cases/${id}/update`)
+    router.push(`/office-admin/verified-cases/${id}/update`)
   }
 
   const handleApprove = async (id: string) => {
@@ -150,19 +150,19 @@ export default function IncidentManagementPage() {
       fetchIncidents(currentOffice)
     } catch (error) {
       console.error("Error approving incident:", error)
-      setError(error instanceof Error ? error.message : "Failed to approve incident")
+      setError(error instanceof Error ? error.message : "Failed to verify incident")
     }
   }
 
   const handleTransfer = (id: string) => {
-    router.push(`/office-admin/approved-cases/${id}/update`)
+    router.push(`/office-admin/verified-cases/${id}/update`)
   }
 
   const handleEditPending = (id: string) => {
     router.push(`/office-admin/incidents/${id}`)
   }
 
-  const handleEditApproved = (id: string) => {
+  const handleEditVerified = (id: string) => {
     router.push(`/office-admin/approved-cases/${id}/update`)
   }
 

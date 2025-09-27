@@ -15,6 +15,7 @@ import {
   Menu,
   X,
   ClipboardCheck,
+  FileText,
 } from "lucide-react"
 import Cookies from "js-cookie"
 import { useEffect, useState } from "react"
@@ -105,12 +106,17 @@ export function OfficeAdminSidebar() {
     {
       href: "/office-admin/approved-cases",
       icon: <ClipboardCheck size={20} />,
-      label: "Approved Case Tracker"
+      label: "Verified Case Tracker"
     },
     {
       href: "/office-admin/history",
       icon: <History size={20} />,
       label: "Incident History"
+    },
+    {
+      href: "/office-admin/office-bulletin",
+      icon: <FileText size={20} />,
+      label: "Office Bulletin"
     },
     {
       href: "/leaderboard",

@@ -107,6 +107,16 @@ public class Incident {
     @Column(name = "upvote_count")
     private Integer upvoteCount = 0;
 
+    @Column(name = "estimated_resolution_date")
+    private LocalDateTime estimatedResolutionDate;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "resolution_extended_by")
+    private User resolutionExtendedBy;
+
+    @Column(name = "resolution_extended_at")
+    private LocalDateTime resolutionExtendedAt;
+
     @PrePersist
     protected void onCreate() {
         submittedAt = LocalDateTime.now(ZoneOffset.UTC);

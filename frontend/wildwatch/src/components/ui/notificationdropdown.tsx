@@ -15,6 +15,7 @@ import {
   TrendingUp,
   User,
   Info,
+  CalendarPlus,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
@@ -377,6 +378,14 @@ export default function NotificationDropdown({
         accent: "border-l-blue-400",
       };
     }
+    if (activityType.includes("resolution_extended") || activityType.includes("extended")) {
+      return {
+        bg: isRead ? "bg-indigo-50/30" : "bg-indigo-50/50",
+        border: `border-indigo-${isRead ? "100" : "200"}`,
+        icon: `text-indigo-${isRead ? "300" : "400"}`,
+        accent: "border-l-indigo-400",
+      };
+    }
     if (activityType.includes("comment") || activityType.includes("message")) {
       return {
         bg: isRead ? "bg-green-50/30" : "bg-green-50/50",
@@ -408,6 +417,9 @@ export default function NotificationDropdown({
     }
     if (activityType.includes("status") || activityType.includes("update")) {
       return <TrendingUp className="h-5 w-5 text-blue-400" />;
+    }
+    if (activityType.includes("resolution_extended") || activityType.includes("extended")) {
+      return <CalendarPlus className="h-5 w-5 text-indigo-400" />;
     }
     if (activityType.includes("verification") || activityType.includes("verify")) {
       return <CheckCircle className="h-5 w-5 text-amber-400" />;
@@ -443,9 +455,11 @@ export default function NotificationDropdown({
       case "TRANSFER_RECEIVED":
         return "Case Received";
       case "TRANSFER_APPROVED":
-        return "Transfer Approved";
+        return "Transfer Verified";
       case "UPVOTE":
         return "New Upvote";
+      case "RESOLUTION_EXTENDED":
+        return "Resolution Extended";
       default:
         return type.replace(/_/g, ' ');
     }

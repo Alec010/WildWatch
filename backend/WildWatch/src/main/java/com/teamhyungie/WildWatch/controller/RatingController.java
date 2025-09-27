@@ -74,7 +74,7 @@ public class RatingController {
         Optional<IncidentRating> ratingOpt = ratingRepository.findByIncidentId(incident.getId());
         if (ratingOpt.isEmpty()) {
             return ResponseEntity.ok(new IncidentRatingResponse(
-                incident.getId(), null, null, null, null, false
+                incident.getId(), null, null, false, 0, 0
             ));
         }
         IncidentRating rating = ratingOpt.get();

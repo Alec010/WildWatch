@@ -92,7 +92,7 @@ export function UpdateIncidentClient({ incidentId }: UpdateIncidentClientProps) 
           <div className="mb-8">
             <div className="flex items-center text-sm text-gray-500 mb-4">
               <Link href="/office-admin/approved-cases" className="hover:text-[#8B0000]">
-                Approved Case Tracker
+                Verified Case Tracker
               </Link>
               <ChevronRight className="h-4 w-4 mx-2" />
               <span>Update Incident</span>

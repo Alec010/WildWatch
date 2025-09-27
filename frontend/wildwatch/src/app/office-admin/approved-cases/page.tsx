@@ -41,7 +41,7 @@ interface Incident {
   priorityLevel: "HIGH" | "MEDIUM" | "LOW"
 }
 
-export default function ApprovedCaseTracker() {
+export default function VerifiedCaseTracker() {
   const router = useRouter()
   const { collapsed } = useSidebar()
   const [incidents, setIncidents] = useState<Incident[]>([])
@@ -59,7 +59,7 @@ export default function ApprovedCaseTracker() {
 
   const itemsPerPage = 10
 
-  const fetchApprovedCases = async () => {
+  const fetchVerifiedCases = async () => {
     try {
       setIsRefreshing(true)
       const token = document.cookie
@@ -97,9 +97,9 @@ export default function ApprovedCaseTracker() {
       }
       setStats(stats)
     } catch (e: any) {
-      setError(e.message || "Failed to load approved cases")
+      setError(e.message || "Failed to load verified cases")
       toast.error("Failed to Load Cases", {
-        description: e.message || "There was an error loading the approved cases. Please try again.",
+        description: e.message || "There was an error loading the verified cases. Please try again.",
       })
     } finally {
       setLoading(false)
@@ -108,7 +108,7 @@ export default function ApprovedCaseTracker() {
   }
 
   useEffect(() => {
-    fetchApprovedCases()
+    fetchVerifiedCases()
   }, [])
 
   // Filter incidents based on search query
@@ -151,7 +151,7 @@ export default function ApprovedCaseTracker() {
               <div className="absolute inset-2 rounded-full border-r-2 border-l-2 border-[#DAA520] animate-spin animation-delay-150"></div>
               <div className="absolute inset-4 rounded-full border-t-2 border-b-2 border-[#8B0000] animate-spin animation-delay-300"></div>
             </div>
-            <p className="mt-6 text-gray-600 font-medium">Loading approved cases...</p>
+            <p className="mt-6 text-gray-600 font-medium">Loading verified cases...</p>
           </div>
         </div>
       </div>
@@ -192,8 +192,8 @@ export default function ApprovedCaseTracker() {
     <div className={`min-h-screen flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9] ${inter.className}`}>
       <OfficeAdminSidebar />
       <OfficeAdminNavbar
-        title="Approved Case Tracker"
-        subtitle="View and manage approved incident reports"
+        title="Verified Case Tracker"
+        subtitle="View and manage verified incident reports"
         showSearch={true}
         searchPlaceholder="Search cases..."
         onSearch={setSearchQuery}
@@ -208,7 +208,7 @@ export default function ApprovedCaseTracker() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={fetchApprovedCases}
+                onClick={fetchVerifiedCases}
                 disabled={isRefreshing}
                 className="border-[#DAA520]/30 text-[#8B0000] hover:bg-[#8B0000] hover:text-white"
               >
@@ -216,7 +216,7 @@ export default function ApprovedCaseTracker() {
                 {isRefreshing ? "Refreshing..." : "Refresh"}
               </Button>
             </div>
-            <div className="text-sm text-gray-500">Showing {filteredIncidents.length} approved cases</div>
+            <div className="text-sm text-gray-500">Showing {filteredIncidents.length} verified cases</div>
           </div>
 
           {/* Summary Section */}
@@ -261,7 +261,7 @@ export default function ApprovedCaseTracker() {
               <div className="flex items-center gap-2">
                 <Shield className="h-5 w-5 text-[#8B0000]" />
                 <h2 className="text-lg font-semibold text-gray-800">
-                  Approved Cases
+                  Verified Cases
                   <span className="ml-2 text-sm bg-[#8B0000]/10 text-[#8B0000] px-2 py-0.5 rounded-full">
                     {filteredIncidents.length}
                   </span>
@@ -383,11 +383,11 @@ export default function ApprovedCaseTracker() {
                   <div className="w-16 h-16 bg-[#8B0000]/10 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Activity className="h-8 w-8 text-[#8B0000]" />
                   </div>
-                  <h3 className="text-lg font-medium text-gray-800 mb-2">No approved cases found</h3>
+                  <h3 className="text-lg font-medium text-gray-800 mb-2">No verified cases found</h3>
                   <p className="text-gray-500 max-w-md mx-auto">
                     {searchQuery
                       ? "No cases match your search criteria. Try adjusting your search terms."
-                      : "There are no approved cases to display at this time."}
+                      : "There are no verified cases to display at this time."}
                   </p>
                   {searchQuery && (
                     <Button variant="outline" className="mt-4" onClick={() => setSearchQuery("")}>
