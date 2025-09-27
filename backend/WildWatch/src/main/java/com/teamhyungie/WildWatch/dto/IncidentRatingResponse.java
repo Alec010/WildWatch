@@ -52,7 +52,7 @@ public class IncidentRatingResponse {
             if (credibility != null) { sum += credibility; count++; }
             if (responsiveness != null) { sum += responsiveness; count++; }
             if (helpfulness != null) { sum += helpfulness; count++; }
-            return count > 0 ? (double) sum / count : 0.0;
+            return count > 0 ? (double) sum / count : null;
         }
     }
 
@@ -93,7 +93,7 @@ public class IncidentRatingResponse {
             if (credibility != null) { sum += credibility; count++; }
             if (responsiveness != null) { sum += responsiveness; count++; }
             if (helpfulness != null) { sum += helpfulness; count++; }
-            return count > 0 ? (double) sum / count : 0.0;
+            return count > 0 ? (double) sum / count : null;
         }
     }
 

@@ -251,8 +251,10 @@ export default function CaseDetailsPage() {
           })
           if (ratingRes.ok) {
             const ratingData = await ratingRes.json()
+            console.log('Rating data received:', ratingData)
             setIncidentRating(ratingData)
           } else {
+            console.log('No rating data found for incident')
             setIncidentRating(null)
           }
         }
@@ -468,10 +470,21 @@ export default function CaseDetailsPage() {
                 </div>
 
                 {/* Points Awarded Notification */}
-                {incidentRating?.pointsAwarded &&
-                  ((userRole === "OFFICE_ADMIN" && incident?.assignedOffice) ||
-                    (userRole === "USER" && incident?.submittedByEmail === userEmail) ||
-                    (userRole === "REGULAR_USER" && incident?.submittedByEmail === userEmail)) && (
+                {(() => {
+                  const shouldShow = incidentRating &&
+                    ((userRole === "OFFICE_ADMIN" && incident?.assignedOffice) ||
+                      (userRole === "USER" && incident?.submittedByEmail === userEmail) ||
+                      (userRole === "REGULAR_USER" && incident?.submittedByEmail === userEmail))
+                  console.log('Points section conditions:', {
+                    incidentRating: !!incidentRating,
+                    userRole,
+                    assignedOffice: incident?.assignedOffice,
+                    submittedByEmail: incident?.submittedByEmail,
+                    userEmail,
+                    shouldShow
+                  })
+                  return shouldShow
+                })() && (
                     <motion.div
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
@@ -482,16 +495,22 @@ export default function CaseDetailsPage() {
                           <Star className="h-5 w-5 text-white" />
                         </div>
                         <div>
-                          <span className="font-semibold text-yellow-800">Points Awarded:</span>
+                          <span className="font-semibold text-yellow-800">
+                            {incidentRating?.pointsAwarded ? "Points Awarded:" : "Points Status:"}
+                          </span>
                           <span className="font-bold text-yellow-900 ml-2">
                             {incidentRating?.pointsAwarded
                               ? userRole === "OFFICE_ADMIN"
-                                ? (incidentRating?.reporterRating || 0) * 10
-                                : (incidentRating?.officeRating || 0) * 10
-                              : 0}{" "}
-                            pts
+                                ? incidentRating?.totalReporterPoints || 0
+                                : incidentRating?.totalOfficePoints || 0
+                              : "Pending"}{" "}
+                            {incidentRating?.pointsAwarded ? "pts" : ""}
                           </span>
-                          <span className="ml-2 text-xs text-yellow-700">(for this report)</span>
+                          <span className="ml-2 text-xs text-yellow-700">
+                            {incidentRating?.pointsAwarded 
+                              ? "(for this report)" 
+                              : "(waiting for both parties to rate)"}
+                          </span>
                         </div>
                       </div>
                     </motion.div>
