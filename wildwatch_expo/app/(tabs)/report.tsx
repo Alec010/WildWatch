@@ -1314,15 +1314,19 @@ export default function ReportScreen() {
                               shadowOpacity: 0.2,
                               shadowRadius: 2,
                               elevation: 2,
+                              flexDirection: 'row',
+                              alignItems: 'center',
                             }}
                           >
                             <Text style={{
                               color: '#FFFFFF',
                               fontSize: fontSize - 2,
                               fontWeight: '500',
+                              marginRight: 8,
                             }}>
                               {tag}
                             </Text>
+                            <Ionicons name="close" size={16} color="#FFFFFF" />
                           </TouchableOpacity>
                         ))}
                       </View>
