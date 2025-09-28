@@ -5,7 +5,16 @@ export const useTagsGeneration = (apiBaseUrl: string, token: string | null) => {
   const [isGeneratingTags, setIsGeneratingTags] = useState<boolean>(false);
   const [tagsError, setTagsError] = useState<string | null>(null);
 
-  const generateTags = useCallback(async (description: string, location: string): Promise<void> => {
+  const generateTags = useCallback(async (
+    description: string, 
+    incidentType: string, 
+    location: string,
+    formattedAddress?: string,
+    buildingName?: string,
+    buildingCode?: string,
+    latitude?: number,
+    longitude?: number
+  ): Promise<void> => {
     if (!token) throw new Error('Not authenticated');
     if (!description.trim() || !location.trim()) throw new Error('Missing fields');
     setIsGeneratingTags(true);
@@ -18,7 +27,16 @@ export const useTagsGeneration = (apiBaseUrl: string, token: string | null) => {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ description: description.trim(), location: location.trim() }),
+        body: JSON.stringify({ 
+          description: description.trim(), 
+          incidentType: incidentType,
+          location: location.trim(),
+          formattedAddress: formattedAddress,
+          buildingName: buildingName,
+          buildingCode: buildingCode,
+          latitude: latitude,
+          longitude: longitude,
+        }),
       });
       if (!res.ok) {
         const errorText = await res.text();
