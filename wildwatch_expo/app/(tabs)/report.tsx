@@ -26,6 +26,7 @@ import BlockedContentModal from '../../components/BlockedContentModal';
 import ProcessingReportModal from '../../components/ProcessingReportModal';
 import SimilarIncidentsModal from '../../components/SimilarIncidentsModal';
 import ReportSuccessModal from '../../components/ReportSuccessModal';
+import EmergencyNoteBanner from '../../components/EmergencyNoteBanner';
 import TopSpacing from '../../components/TopSpacing';
 
 // Uses centralized API base URL from config
@@ -909,6 +910,9 @@ export default function ReportScreen() {
             <ProgressStep number={3} title="Review & Submit" isActive={currentStep === 3} isCompleted={currentStep === 3} />
           </View>
         </View>
+
+        {/* Important Emergency Note */}
+        <EmergencyNoteBanner />
 
         {/* Main Content */}
         <View style={{ paddingHorizontal: padding }}>
