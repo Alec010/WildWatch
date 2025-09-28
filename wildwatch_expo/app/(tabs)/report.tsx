@@ -27,6 +27,7 @@ import ProcessingReportModal from '../../components/ProcessingReportModal';
 import SimilarIncidentsModal from '../../components/SimilarIncidentsModal';
 import ReportSuccessModal from '../../components/ReportSuccessModal';
 import EmergencyNoteBanner from '../../components/EmergencyNoteBanner';
+import NeedHelpPanel from '../../components/NeedHelpPanel';
 import TopSpacing from '../../components/TopSpacing';
 
 // Uses centralized API base URL from config
@@ -168,43 +169,6 @@ const FormNavigationButtons: React.FC<FormNavigationButtonsProps> = ({
   </View>
 );
 
-interface HelpPanelProps {
-  modifier?: any;
-  darkRed: string;
-}
-
-const HelpPanel: React.FC<HelpPanelProps> = ({ modifier, darkRed }) => (
-  <View
-    style={[
-      {
-        backgroundColor: '#8B0000',
-        borderColor: '#8B0000',
-        borderRadius: 12,
-        padding: 16,
-        marginTop: 16,
-      },
-      modifier,
-    ]}
-  >
-    <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-      <Ionicons name="warning" size={24} color="#FFFFFF" style={{ marginTop: 2, marginRight: 12 }} />
-      <View style={{ flex: 1 }}>
-        <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: 'bold', marginBottom: 8 }}>
-          Evidence Guidelines
-        </Text>
-        <Text style={{ color: '#FFFFFF', fontSize: 14, lineHeight: 20, marginBottom: 8 }}>
-          Tips for submitting evidence:
-        </Text>
-        <Text style={{ color: '#FFFFFF', fontSize: 14, lineHeight: 20 }}>
-          • Upload clear, high-quality images{'\n'}
-          • Include relevant timestamps in photos if possible{'\n'}
-          • Ensure witness additional notes are detailed and accurate{'\n'}
-          • Provide contact information for follow-up
-        </Text>
-      </View>
-    </View>
-  </View>
-);
 
 export default function ReportScreen() {
   const [token, setToken] = useState<string | null>(null);
@@ -1356,8 +1320,8 @@ export default function ReportScreen() {
                 />
             </View>
 
-              {/* Help Panel */}
-              <HelpPanel darkRed="#8B0000" />
+              {/* Need Help Panel */}
+              <NeedHelpPanel />
             </>
           )}
 
@@ -1721,8 +1685,8 @@ export default function ReportScreen() {
                 />
               </View>
 
-              {/* Help Panel */}
-              <HelpPanel darkRed="#8B0000" />
+              {/* Need Help Panel */}
+              <NeedHelpPanel />
             </>
           )}
 
@@ -2138,8 +2102,8 @@ export default function ReportScreen() {
                 />
               </View>
 
-              {/* Help Panel */}
-              <HelpPanel darkRed="#8B0000" />
+              {/* Need Help Panel */}
+              <NeedHelpPanel />
             </>
           )}
         </View>
