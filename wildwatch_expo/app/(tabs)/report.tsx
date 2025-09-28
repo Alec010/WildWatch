@@ -27,6 +27,7 @@ import ProcessingReportModal from '../../components/ProcessingReportModal';
 import SimilarIncidentsModal from '../../components/SimilarIncidentsModal';
 import ReportSuccessModal from '../../components/ReportSuccessModal';
 import EmergencyNoteBanner from '../../components/EmergencyNoteBanner';
+import EvidenceGuidelinesBanner from '../../components/EvidenceGuidelinesBanner';
 import NeedHelpPanel from '../../components/NeedHelpPanel';
 import TopSpacing from '../../components/TopSpacing';
 
@@ -875,8 +876,11 @@ export default function ReportScreen() {
           </View>
         </View>
 
-        {/* Important Emergency Note */}
-        <EmergencyNoteBanner />
+        {/* Important Emergency Note - Only show on step 1 */}
+        {currentStep === 1 && <EmergencyNoteBanner />}
+        
+        {/* Evidence Guidelines - Only show on step 2 */}
+        {currentStep === 2 && <EvidenceGuidelinesBanner />}
 
         {/* Main Content */}
         <View style={{ paddingHorizontal: padding }}>
