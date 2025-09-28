@@ -25,6 +25,7 @@ import { incidentAnalysisAPI, type AnalyzeRequest, type SimilarIncident } from '
 import BlockedContentModal from '../../components/BlockedContentModal';
 import ProcessingReportModal from '../../components/ProcessingReportModal';
 import SimilarIncidentsModal from '../../components/SimilarIncidentsModal';
+import ReportSuccessModal from '../../components/ReportSuccessModal';
 import TopSpacing from '../../components/TopSpacing';
 
 // Uses centralized API base URL from config
@@ -270,6 +271,11 @@ export default function ReportScreen() {
   const [showBlockedModal, setShowBlockedModal] = useState(false);
   const [blockedReasons, setBlockedReasons] = useState<string[]>([]);
   const [showProcessingModal, setShowProcessingModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [submissionResult, setSubmissionResult] = useState<{
+    trackingNumber: string;
+    assignedOffice?: string;
+  } | null>(null);
   const [showSimilarModal, setShowSimilarModal] = useState(false);
   const [similarIncidents, setSimilarIncidents] = useState<SimilarIncident[]>([]);
   const [analysisWhy, setAnalysisWhy] = useState<{ tags: string[]; location?: string } | null>(null);
@@ -611,27 +617,27 @@ export default function ReportScreen() {
 
       const result = await response.json();
       
-    // Hide processing modal and show success message
-    setShowProcessingModal(false);
-      Alert.alert(
-        'Success', 
-        'Your incident report has been submitted successfully!',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              // Reset form
-              resetForm();
-              setCurrentStep(1);
-              setConfirmAccurate(false);
-              setConfirmContact(false);
-              
-            // Navigate back to the dashboard
-            router.replace('/(tabs)/dashboard' as never);
-            }
-          }
-        ]
-      );
+      // Hide processing modal and show success modal
+      setShowProcessingModal(false);
+      setSubmissionResult({
+        trackingNumber: result.trackingNumber,
+        assignedOffice: result.assignedOffice,
+      });
+      setShowSuccessModal(true);
+  };
+
+  const handleSuccessModalClose = () => {
+    setShowSuccessModal(false);
+    setSubmissionResult(null);
+    
+    // Reset form
+    resetForm();
+    setCurrentStep(1);
+    setConfirmAccurate(false);
+    setConfirmContact(false);
+    
+    // Navigate back to the dashboard
+    router.replace('/(tabs)/dashboard' as never);
   };
 
   const handleSubmit = async () => {
@@ -2804,6 +2810,16 @@ export default function ReportScreen() {
         similarIncidents={similarIncidents}
         analysisWhy={analysisWhy || undefined}
       />
+
+      {/* Report Success Modal */}
+      {submissionResult && (
+        <ReportSuccessModal
+          visible={showSuccessModal}
+          onClose={handleSuccessModalClose}
+          trackingNumber={submissionResult.trackingNumber}
+          assignedOffice={submissionResult.assignedOffice}
+        />
+      )}
     </View>
   );
 }
