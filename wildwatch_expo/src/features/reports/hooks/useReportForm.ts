@@ -83,10 +83,29 @@ export const useReportForm = () => {
   }, []);
 
   const toggleTag = useCallback((tag: string): void => {
-    setForm(prev => ({
-      ...prev,
-      tags: prev.tags.includes(tag) ? prev.tags.filter(t => t !== tag) : [...prev.tags, tag]
-    }));
+    setForm(prev => {
+      if (prev.tags.includes(tag)) {
+        // Allow deletion only if we have more than 3 tags (minimum 3)
+        if (prev.tags.length > 3) {
+          return {
+            ...prev,
+            tags: prev.tags.filter(t => t !== tag)
+          };
+        } else {
+          // Don't allow deletion if we're at minimum
+          return prev;
+        }
+      } else {
+        // This shouldn't happen in the new flow, but keeping for safety
+        if (prev.tags.length >= 5) {
+          return prev; // Don't add if we're at maximum
+        }
+        return {
+          ...prev,
+          tags: [...prev.tags, tag]
+        };
+      }
+    });
   }, []);
 
   const handleLocationSelect = useCallback((locationData: LocationData): void => {
