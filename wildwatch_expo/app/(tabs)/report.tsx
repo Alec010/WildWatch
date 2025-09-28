@@ -2633,12 +2633,8 @@ export default function ReportScreen() {
               {
                 text: 'OK',
                 onPress: () => {
-                  // Reset form and navigate back to dashboard
-                  resetForm();
-                  setCurrentStep(1);
-                  setConfirmAccurate(false);
-                  setConfirmContact(false);
-                  router.replace('/(tabs)/dashboard' as never);
+                  // Go back to Review & Submit step
+                  setCurrentStep(3);
                 }
               }
             ]

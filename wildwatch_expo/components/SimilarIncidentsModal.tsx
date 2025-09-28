@@ -62,24 +62,21 @@ export default function SimilarIncidentsModal({
         <View style={styles.modalContent}>
           {/* Header */}
           <View style={styles.header}>
-            <View style={styles.titleContainer}>
-              <View style={styles.iconContainer}>
-                <Ionicons name="search" size={24} color="#8B0000" />
-              </View>
-              <View style={styles.titleTextContainer}>
-                <Text style={styles.title}>Similar Resolved Cases Found</Text>
-                <Text style={styles.subtitle}>
-                  Review how similar cases were resolved. You can cancel if the suggested resolution already addresses your concern, or proceed to submit your report.
-                </Text>
-              </View>
+            <View style={styles.titleTextContainer}>
+              <Text style={styles.title}>Similar Resolved Cases Found</Text>
+              <Text style={styles.subtitle}>
+                Review how similar cases were resolved. You can cancel if the suggested resolution already addresses your concern, or proceed to submit your report.
+              </Text>
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Ionicons name="close" size={24} color="#6B7280" />
-            </TouchableOpacity>
           </View>
 
           {/* Similar Incidents List */}
-          <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          <ScrollView 
+            style={styles.content} 
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+          >
             {similarIncidents.slice(0, 3).map((incident, index) => (
               <View key={incident.id || index} style={styles.incidentCard}>
                 {/* Similarity Score */}
@@ -197,71 +194,75 @@ export default function SimilarIncidentsModal({
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 40,
   },
   modalContent: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 20,
     width: '100%',
-    maxHeight: '90%',
+    maxHeight: '95%',
+    minHeight: '85%',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 12,
+    flexDirection: 'column',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.05)',
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    padding: 20,
+    padding: 24,
+    paddingBottom: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
-  },
-  titleContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#FEE2E2',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
+    backgroundColor: '#FAFAFA',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
   },
   titleTextContainer: {
-    flex: 1,
+    width: '100%',
   },
   title: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 20,
+    fontWeight: '800',
     color: '#8B0000',
-    marginBottom: 4,
+    marginBottom: 6,
+    letterSpacing: 0.5,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#6B7280',
-    lineHeight: 20,
-  },
-  closeButton: {
-    padding: 4,
+    lineHeight: 18,
+    fontWeight: '500',
+    textAlign: 'left',
+    alignSelf: 'flex-start',
   },
   content: {
     flex: 1,
     padding: 20,
+    minHeight: 0, // Allow flex to work properly
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 10,
   },
   incidentCard: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 18,
     marginBottom: 16,
     borderWidth: 1,
     borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   similarityHeader: {
     flexDirection: 'row',
@@ -275,9 +276,14 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   similarityScore: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
   },
   similarityScoreText: {
     fontSize: 14,
@@ -316,11 +322,16 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   resolutionNotes: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    padding: 12,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: 14,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
   },
   resolutionText: {
     fontSize: 14,
@@ -328,12 +339,17 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   analysisSection: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginTop: 8,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    padding: 18,
+    marginTop: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 1,
   },
   analysisTitle: {
     fontSize: 16,
@@ -361,57 +377,77 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   tag: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: '#EFF6FF',
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#DBEAFE',
   },
   tagText: {
     fontSize: 12,
-    color: '#374151',
-    fontWeight: '500',
+    color: '#1E40AF',
+    fontWeight: '600',
   },
   footer: {
     flexDirection: 'row',
-    padding: 20,
+    padding: 24,
+    paddingTop: 20,
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
-    gap: 12,
+    gap: 16,
+    backgroundColor: '#F8FAFC',
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
   },
   cancelButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
     backgroundColor: '#FFFFFF',
-    gap: 8,
+    gap: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
+    minWidth: 0,
   },
   cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 10,
+    fontWeight: '700',
     color: '#6B7280',
+    letterSpacing: 0.5,
+    flexShrink: 1,
   },
   proceedButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     borderRadius: 8,
     backgroundColor: '#8B0000',
-    gap: 8,
+    gap: 4,
+    shadowColor: '#8B0000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
+    minWidth: 0,
   },
   proceedButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 10,
+    fontWeight: '700',
     color: '#FFFFFF',
+    letterSpacing: 0.5,
+    flexShrink: 1,
   },
 });
