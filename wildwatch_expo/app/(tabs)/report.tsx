@@ -1096,7 +1096,7 @@ export default function ReportScreen() {
                       color: '#1F2937',
                       marginBottom: 4,
                     }}>
-                      AI Tag Generation
+                      Generate Tags
                     </Text>
                     <Text style={{ 
                       color: '#6B7280', 
