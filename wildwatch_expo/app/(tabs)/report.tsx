@@ -257,6 +257,7 @@ export default function ReportScreen() {
   const [generatedTags, setGeneratedTags] = useState<string[]>([]);
   const [isGeneratingTags, setIsGeneratingTags] = useState(false);
   const [tagsError, setTagsError] = useState<string | null>(null);
+  const [tagSelectError, setTagSelectError] = useState<string | null>(null);
 
   // Image picker state
   const [isUploading, setIsUploading] = useState(false);
@@ -776,6 +777,25 @@ export default function ReportScreen() {
     );
   };
 
+  const handleTagClick = (tag: string) => {
+    setTagSelectError(null);
+    if (form.tags.includes(tag)) {
+      // Allow deletion only if we have more than 3 tags (minimum 3)
+      if (form.tags.length > 3) {
+        toggleTag(tag);
+      } else {
+        setTagSelectError("You must keep at least 3 tags. You can remove up to 2 tags maximum.");
+      }
+    } else {
+      // This shouldn't happen in the new flow, but keeping for safety
+      if (form.tags.length >= 5) {
+        setTagSelectError("You can select up to 5 tags only.");
+        return;
+      }
+      toggleTag(tag);
+    }
+  };
+
   const generateTags = async () => {
     if (!token) {
       Alert.alert('Error', 'You must be logged in to generate tags');
@@ -800,7 +820,13 @@ export default function ReportScreen() {
         },
         body: JSON.stringify({
           description: form.description.trim(),
+          incidentType: form.incidentType,
           location: form.formattedAddress || form.location || `${form.latitude}, ${form.longitude}`,
+          formattedAddress: form.formattedAddress,
+          buildingName: form.buildingName,
+          buildingCode: form.buildingCode,
+          latitude: form.latitude,
+          longitude: form.longitude,
         }),
       });
 
@@ -810,8 +836,14 @@ export default function ReportScreen() {
       }
 
       const data = await response.json();
-      setGeneratedTags(data.tags || []);
-      Alert.alert('Success', 'Tags generated successfully! AI has analyzed your description and suggested relevant tags.');
+      const generatedTags = data.tags || [];
+      setGeneratedTags(generatedTags);
+      
+      // Auto-select the first 5 tags (best tags) - same as frontend
+      const autoSelectedTags = generatedTags.slice(0, 5);
+      updateForm('tags', autoSelectedTags);
+      
+      Alert.alert('Success', 'Tags generated successfully! AI has analyzed your description and selected the 5 most relevant tags.');
     } catch (error: any) {
       console.error('Error generating tags:', error);
       setTagsError(error.message || 'Failed to generate tags');
@@ -1057,10 +1089,21 @@ export default function ReportScreen() {
 
                 {/* Tag Generation */}
                 <View style={{ marginBottom: margin }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                    <Text style={{ fontWeight: 'bold', fontSize: fontSize - 1 }}>Tags</Text>
-                    <Text style={{ color: '#6B7280', fontSize: fontSize - 2, marginLeft: 8 }}>
-                      (Optional - AI-generated based on your description)
+                  <View style={{ marginBottom: 16 }}>
+                    <Text style={{ 
+                      fontWeight: '700', 
+                      fontSize: fontSize, 
+                      color: '#1F2937',
+                      marginBottom: 4,
+                    }}>
+                      AI Tag Generation
+                    </Text>
+                    <Text style={{ 
+                      color: '#6B7280', 
+                      fontSize: fontSize - 2,
+                      lineHeight: (fontSize - 2) * 1.4,
+                    }}>
+                      Let AI analyze your incident and suggest relevant tags automatically
                     </Text>
                   </View>
                   
@@ -1069,71 +1112,212 @@ export default function ReportScreen() {
                     onPress={generateTags}
                     disabled={isGeneratingTags || !form.description.trim() || !form.latitude || !form.longitude}
                     style={{
-                      backgroundColor: isGeneratingTags || !form.description.trim() || !form.latitude || !form.longitude ? '#D1D5DB' : '#8B0000',
-                      borderRadius: 8,
-                      paddingVertical: 12,
-                      paddingHorizontal: 16,
+                      backgroundColor: isGeneratingTags || !form.description.trim() || !form.latitude || !form.longitude ? '#E5E7EB' : '#8B0000',
+                      borderRadius: 12,
+                      paddingVertical: 16,
+                      paddingHorizontal: 20,
                       alignItems: 'center',
                       justifyContent: 'center',
-                      marginBottom: 12,
+                      flexDirection: 'row',
+                      marginBottom: 16,
+                      shadowColor: isGeneratingTags || !form.description.trim() || !form.latitude || !form.longitude ? '#000' : '#8B0000',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: isGeneratingTags || !form.description.trim() || !form.latitude || !form.longitude ? 0.1 : 0.2,
+                      shadowRadius: 4,
+                      elevation: 3,
                     }}
                   >
                     {isGeneratingTags ? (
-                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <>
                         <ActivityIndicator size="small" color="#FFFFFF" />
-                        <Text style={{ color: '#FFFFFF', fontSize: fontSize - 1, marginLeft: 8 }}>
+                        <Text style={{ 
+                          color: '#FFFFFF', 
+                          fontSize: fontSize, 
+                          fontWeight: '600',
+                          marginLeft: 12,
+                        }}>
                           Generating Tags...
                         </Text>
-                      </View>
+                      </>
                     ) : (
-                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <Ionicons name="sparkles" size={20} color="#FFFFFF" />
-                        <Text style={{ color: '#FFFFFF', fontSize: fontSize - 1, marginLeft: 8 }}>
-                          Generate Tags
+                      <>
+                        <Ionicons name="sparkles" size={22} color="#FFFFFF" />
+                        <Text style={{ 
+                          color: '#FFFFFF', 
+                          fontSize: fontSize, 
+                          fontWeight: '600',
+                          marginLeft: 12,
+                        }}>
+                          Generate Tags with AI
+                        </Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                  
+                  {/* Info Card */}
+                  <View style={{
+                    backgroundColor: '#FFFBEB',
+                    borderRadius: 12,
+                    padding: 16,
+                    borderWidth: 1,
+                    borderColor: '#FEF3C7',
+                    marginBottom: 16,
+                    shadowColor: '#F59E0B',
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowOpacity: 0.1,
+                    shadowRadius: 3,
+                    elevation: 2,
+                  }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <View style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: 16,
+                        backgroundColor: '#FEF3C7',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginRight: 16,
+                        shadowColor: '#F59E0B',
+                        shadowOffset: { width: 0, height: 1 },
+                        shadowOpacity: 0.2,
+                        shadowRadius: 2,
+                        elevation: 1,
+                      }}>
+                        <Ionicons name="bulb" size={18} color="#D97706" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ 
+                          color: '#92400E', 
+                          fontSize: fontSize - 1,
+                          fontWeight: '600',
+                          lineHeight: (fontSize - 1) * 1.3,
+                        }}>
+                          AI will select the 5 best tags. You can remove up to 2 tags (minimum 3 required)
                         </Text>
                       </View>
-                    )}
-                </TouchableOpacity>
+                    </View>
+                  </View>
 
-                  {/* Error Message */}
+                  {/* Error Messages */}
                   {tagsError && (
-                    <Text style={{
-                      color: '#DC2626',
-                      fontSize: fontSize - 2,
-                      marginBottom: 12,
-                      textAlign: 'center',
+                    <View style={{
+                      backgroundColor: '#FEF2F2',
+                      borderWidth: 1,
+                      borderColor: '#FECACA',
+                      borderRadius: 8,
+                      padding: 12,
+                      marginBottom: 16,
                     }}>
-                      {tagsError}
-                    </Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Ionicons name="alert-circle" size={16} color="#DC2626" />
+                        <Text style={{
+                          color: '#DC2626',
+                          fontSize: fontSize - 2,
+                          fontWeight: '500',
+                          marginLeft: 8,
+                          flex: 1,
+                        }}>
+                          {tagsError}
+                        </Text>
+                      </View>
+                    </View>
                   )}
 
-                  {/* Generated Tags */}
-                  {generatedTags.length > 0 && (
-                    <View style={{ marginBottom: 12 }}>
-                      <Text style={{
-                        fontWeight: '600',
-                        fontSize: fontSize - 2,
-                        color: '#374151',
-                        marginBottom: 8,
-                      }}>
-                        Generated Tags:
-                      </Text>
-                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                        {generatedTags.map((tag, index) => (
+                  {tagSelectError && (
+                    <View style={{
+                      backgroundColor: '#FEF3F2',
+                      borderWidth: 1,
+                      borderColor: '#FECACA',
+                      borderRadius: 8,
+                      padding: 12,
+                      marginBottom: 16,
+                    }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Ionicons name="information-circle" size={16} color="#DC2626" />
+                        <Text style={{
+                          color: '#DC2626',
+                          fontSize: fontSize - 2,
+                          fontWeight: '500',
+                          marginLeft: 8,
+                          flex: 1,
+                        }}>
+                          {tagSelectError}
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+
+                  {/* Selected Tags */}
+                  {form.tags.length > 0 && (
+                    <View style={{ 
+                      marginBottom: 20,
+                      backgroundColor: '#F8FAFC',
+                      borderRadius: 12,
+                      padding: 16,
+                      borderWidth: 1,
+                      borderColor: '#E2E8F0',
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.05,
+                      shadowRadius: 2,
+                      elevation: 1,
+                    }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+                        <View style={{
+                          width: 24,
+                          height: 24,
+                          borderRadius: 12,
+                          backgroundColor: '#8B0000',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          marginRight: 12,
+                        }}>
+                          <Ionicons name="pricetag" size={14} color="#FFFFFF" />
+                        </View>
+                        <Text style={{
+                          fontWeight: '600',
+                          fontSize: fontSize - 1,
+                          color: '#1F2937',
+                          flex: 1,
+                        }}>
+                          Selected Tags
+                        </Text>
+                        <View style={{
+                          backgroundColor: '#E5E7EB',
+                          paddingHorizontal: 8,
+                          paddingVertical: 4,
+                          borderRadius: 12,
+                        }}>
+                          <Text style={{
+                            fontSize: fontSize - 3,
+                            color: '#6B7280',
+                            fontWeight: '500',
+                          }}>
+                            {form.tags.length}/5
+                          </Text>
+                        </View>
+                      </View>
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+                        {form.tags.map((tag, index) => (
                           <TouchableOpacity
                             key={index}
-                            onPress={() => toggleTag(tag)}
+                            onPress={() => handleTagClick(tag)}
                             style={{
-                              paddingHorizontal: 12,
-                              paddingVertical: 6,
-                              borderRadius: 16,
-                              backgroundColor: form.tags.includes(tag) ? '#8B0000' : '#F3F4F6',
+                              paddingHorizontal: 14,
+                              paddingVertical: 8,
+                              borderRadius: 20,
+                              backgroundColor: '#8B0000',
                               borderWidth: 1,
-                              borderColor: form.tags.includes(tag) ? '#8B0000' : '#D1D5DB',
+                              borderColor: '#8B0000',
+                              shadowColor: '#8B0000',
+                              shadowOffset: { width: 0, height: 1 },
+                              shadowOpacity: 0.2,
+                              shadowRadius: 2,
+                              elevation: 2,
                             }}
                           >
                             <Text style={{
-                              color: form.tags.includes(tag) ? '#FFFFFF' : '#374151',
+                              color: '#FFFFFF',
                               fontSize: fontSize - 2,
                               fontWeight: '500',
                             }}>
@@ -1145,47 +1329,7 @@ export default function ReportScreen() {
                     </View>
                   )}
 
-                  {/* Selected Tags */}
-                  {form.tags.length > 0 && (
-                    <View>
-                      <Text style={{
-                        fontWeight: '600',
-                        fontSize: fontSize - 2,
-                        color: '#374151',
-                        marginBottom: 8,
-                      }}>
-                        Selected Tags:
-                      </Text>
-                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                        {form.tags.map((tag, index) => (
-                          <View
-                            key={index}
-                            style={{
-                              paddingHorizontal: 12,
-                              paddingVertical: 6,
-                              borderRadius: 16,
-                              backgroundColor: '#8B0000',
-                              flexDirection: 'row',
-                              alignItems: 'center',
-                            }}
-                          >
-                            <Text style={{
-                              color: '#FFFFFF',
-                              fontSize: fontSize - 2,
-                              fontWeight: '500',
-                              marginRight: 6,
-                            }}>
-                              {tag}
-                            </Text>
-                            <TouchableOpacity onPress={() => toggleTag(tag)}>
-                              <Ionicons name="close" size={14} color="#FFFFFF" />
-                        </TouchableOpacity>
-                          </View>
-                      ))}
-                  </View>
-                    </View>
-                )}
-              </View>
+                </View>
 
                 {/* Continue Button */}
                 <FormNavigationButtons
