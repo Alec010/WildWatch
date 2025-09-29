@@ -10,9 +10,6 @@ import {
   Dimensions,
   Platform,
   Image,
-  Modal,
-  KeyboardAvoidingView,
-  Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -25,15 +22,10 @@ import { storage } from '../lib/storage';
 import { config } from '../lib/config';
 import Colors from '../constants/Colors';
 import { useThemeColor } from '../components/Themed';
-import FloatingAskKatButton from '../components/FloatingAskKatButton';
 import TopSpacing from '../components/TopSpacing';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
-type Sender = 'user' | 'bot';
-interface ChatMessage { sender: Sender; text: string }
-interface ChatRequest { message: string }
-interface ChatResponse { reply: string }
 const isIPhone = Platform.OS === 'ios';
 const isSmallIPhone = screenHeight <= 667;
 const isMediumIPhone = screenHeight > 667 && screenHeight <= 812;
@@ -206,41 +198,11 @@ const ProfileTextField: React.FC<ProfileTextFieldProps> = ({ value, onValueChang
   </View>
 );
 
-// Chatbot components
-const MessageBubble: React.FC<{ message: ChatMessage; isFirst: boolean }> = ({ message, isFirst }) => (
-  <View style={{ flexDirection: 'row', justifyContent: message.sender === 'user' ? 'flex-end' : 'flex-start', marginBottom: 8, marginTop: isFirst ? 0 : 8 }}>
-    {message.sender === 'bot' && (
-      <View style={{ width: 32, height: 32, backgroundColor: '#8B0000B3', borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
-        <Ionicons name="paw-outline" size={20} color="white" />
-      </View>
-    )}
-    <View style={{ maxWidth: 280, backgroundColor: message.sender === 'user' ? '#8B0000' : '#FFFFFF', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 2, borderTopLeftRadius: 16, borderTopRightRadius: 16, borderBottomLeftRadius: message.sender === 'user' ? 16 : 4, borderBottomRightRadius: message.sender === 'user' ? 4 : 16 }}>
-      <Text style={{ paddingHorizontal: 12, paddingVertical: 12, fontSize: 14, color: message.sender === 'user' ? 'white' : 'black', lineHeight: 20 }}>{message.text}</Text>
-    </View>
-    {message.sender === 'user' && (
-      <>
-        <View style={{ width: 8 }} />
-        <View style={{ width: 32, height: 32, backgroundColor: '#8B0000', borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginLeft: 8 }}>
-          <Ionicons name="person" size={20} color="white" />
-        </View>
-      </>
-    )}
-  </View>
-);
-
-const LoadingDots: React.FC = () => (
-  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, marginLeft: 40 }}>
-    <View style={{ width: 8, height: 8, backgroundColor: '#8B000066', borderRadius: 4, marginRight: 4 }} />
-    <View style={{ width: 8, height: 8, backgroundColor: '#8B000066', borderRadius: 4, marginRight: 4 }} />
-    <View style={{ width: 8, height: 8, backgroundColor: '#8B000066', borderRadius: 4 }} />
-  </View>
-);
 
 export default function ProfileScreen() {
   const { userProfile, isLoading, error, fetchUserProfile, updateUserProfile, setUserProfile } = useUserProfile();
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [isAskKatVisible, setIsAskKatVisible] = useState(false);
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -249,52 +211,12 @@ export default function ProfileScreen() {
 
   const [originalValues, setOriginalValues] = useState({ firstName: '', lastName: '', middleInitial: '', contactNumber: '' });
 
-  // Chatbot state
-  const [token, setToken] = useState<string | null>(null);
-  const [messages, setMessages] = useState<ChatMessage[]>([{ sender: 'bot', text: 'Hi! I can help you with incident reporting, offices, or WildWatch. How can I assist you today?' }]);
-  const [input, setInput] = useState<string>('');
-  const [isLoadingChat, setIsLoadingChat] = useState<boolean>(false);
-  const scrollViewRef = useRef<ScrollView>(null);
   
-  // Keyboard state
-  const [keyboardHeight, setKeyboardHeight] = useState<number>(0);
-  const [isKeyboardVisible, setIsKeyboardVisible] = useState<boolean>(false);
 
   useEffect(() => {
     // Hydrated by hook
   }, []);
 
-  // Chatbot effects
-  useEffect(() => { storage.getToken().then(setToken).catch(() => setToken(null)); }, []);
-
-  useEffect(() => {
-    if (messages.length > 0) {
-      const t = setTimeout(() => { scrollViewRef.current?.scrollToEnd({ animated: true }); }, 100);
-      return () => clearTimeout(t);
-    }
-  }, [messages]);
-
-  // Keyboard event listeners
-  useEffect(() => {
-    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', (e) => {
-      setKeyboardHeight(e.endCoordinates.height);
-      setIsKeyboardVisible(true);
-      // Scroll to bottom when keyboard appears
-      setTimeout(() => {
-        scrollViewRef.current?.scrollToEnd({ animated: true });
-      }, 100);
-    });
-
-    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
-      setKeyboardHeight(0);
-      setIsKeyboardVisible(false);
-    });
-
-    return () => {
-      keyboardDidShowListener.remove();
-      keyboardDidHideListener.remove();
-    };
-  }, []);
 
   useEffect(() => {
     if (userProfile) {
@@ -345,45 +267,8 @@ export default function ProfileScreen() {
     ]);
   };
 
-  const handleAskKat = () => {
-    setIsAskKatVisible(true);
-  };
 
-  const dismissKeyboard = () => {
-    Keyboard.dismiss();
-  };
 
-  // Chatbot functions
-  const sendMessage = async (messageText: string) => {
-    if (!messageText.trim() || !token) return;
-    const userMessage: ChatMessage = { sender: 'user', text: messageText.trim() };
-    setMessages(prev => [...prev, userMessage]);
-    setInput('');
-    setIsLoadingChat(true);
-    try {
-      const res = await fetch(`${config.API.BASE_URL}/chatbot`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: messageText.trim() } as ChatRequest),
-      });
-      if (!res.ok) throw new Error(`Chat failed: ${res.status}`);
-      const data: ChatResponse = await res.json();
-      setMessages(prev => [...prev, { sender: 'bot', text: data.reply }]);
-    } catch (e) {
-      setMessages(prev => [...prev, { sender: 'bot', text: 'Sorry, I encountered an error. Please try again in a moment.' }]);
-    } finally { setIsLoadingChat(false); }
-  };
-
-  const quickResponses: string[] = [
-    'How do I report an incident?',
-    'What offices are available?',
-    'Tell me about WildWatch',
-    'How to contact security?',
-    'Where is the admin office?',
-    'What are the reporting hours?',
-    'How to track my report?',
-    'Emergency procedures'
-  ];
 
   if (isLoading) {
     return (
@@ -710,259 +595,7 @@ export default function ProfileScreen() {
 
       </View>
 
-      {/* Floating Ask Kat Button Component */}
-      <FloatingAskKatButton 
-        onPress={handleAskKat}
-        primaryColor={primaryColor}
-        buttonSize={60}
-        margin={20}
-      />
 
-       {/* Ask Kat Bottom Sheet Modal */}
-       <Modal
-         visible={isAskKatVisible}
-         transparent={true}
-         animationType="slide"
-         onRequestClose={() => setIsAskKatVisible(false)}
-         statusBarTranslucent={true}
-       >
-         <KeyboardAvoidingView 
-           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-           keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-           style={{ flex: 1, backgroundColor: 'white' }}
-         >
-           <View 
-             style={{
-               flex: 1,
-               backgroundColor: 'white',
-               paddingTop: Platform.OS === 'ios' ? 50 : 20,
-               paddingBottom: isKeyboardVisible ? 20 : 40,
-               paddingHorizontal: 20,
-               shadowColor: '#000',
-               shadowOffset: { width: 0, height: -4 },
-               shadowOpacity: 0.3,
-               shadowRadius: 16,
-               elevation: 16
-             }}
-           >
-              {/* Header with Close Button */}
-              <View style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: 24,
-                paddingBottom: 20,
-                borderBottomWidth: 1,
-                borderBottomColor: '#F1F5F9'
-              }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <View style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 24,
-                    backgroundColor: primaryColor,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginRight: 16,
-                    shadowColor: primaryColor,
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.2,
-                    shadowRadius: 4,
-                    elevation: 3
-                  }}>
-                    <Ionicons name="paw-outline" size={24} color="white" />
-                  </View>
-                  <View>
-                    <Text style={{
-                      fontSize: 20,
-                      fontWeight: '800',
-                      color: textPrimaryColor,
-                      letterSpacing: 0.3
-                    }}>Ask Kat</Text>
-                    <Text style={{
-                      fontSize: 13,
-                      color: textSecondaryColor,
-                      fontWeight: '500'
-                    }}>Your AI Assistant</Text>
-                  </View>
-                </View>
-                <TouchableOpacity
-                  onPress={() => setIsAskKatVisible(false)}
-                  style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 18,
-                    backgroundColor: '#F8FAFC',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderWidth: 1,
-                    borderColor: '#E2E8F0',
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 1 },
-                    shadowOpacity: 0.05,
-                    shadowRadius: 2,
-                    elevation: 1
-                  }}
-                >
-                  <Ionicons name="close" size={20} color={textSecondaryColor} />
-                </TouchableOpacity>
-              </View>
-
-            {/* Chat Area */}
-            <View style={{ flex: 1, marginBottom: isKeyboardVisible ? 10 : 0 }}>
-              <ScrollView 
-                ref={scrollViewRef} 
-                style={{ 
-                  flex: 1, 
-                  backgroundColor: '#FAFBFC',
-                  borderRadius: 16,
-                  marginHorizontal: 4
-                }} 
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-                contentContainerStyle={{ 
-                  paddingTop: 20, 
-                  paddingBottom: isKeyboardVisible ? 10 : 20,
-                  paddingHorizontal: 16,
-                  flexGrow: 1
-                }}
-              >
-                {messages.map((m, idx) => (
-                  <MessageBubble key={idx} message={m} isFirst={idx === 0} />
-                ))}
-                {isLoadingChat && <LoadingDots />}
-              </ScrollView>
-
-              {messages.length === 1 && (
-                <View style={{ 
-                  paddingHorizontal: 20, 
-                  paddingVertical: 20,
-                  backgroundColor: '#F8FAFC',
-                  borderRadius: 12,
-                  marginHorizontal: 4,
-                  marginBottom: 16
-                }}>
-                  <Text style={{ 
-                    fontSize: 13, 
-                    fontWeight: '600', 
-                    color: '#374151', 
-                    marginBottom: 12,
-                    letterSpacing: 0.2
-                  }}>Suggested questions:</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 16 }}>
-                    {quickResponses.map((q) => (
-                      <TouchableOpacity 
-                        key={q} 
-                        style={{ 
-                          borderColor: '#8B000030', 
-                          borderWidth: 1, 
-                          borderRadius: 24, 
-                          paddingHorizontal: 16, 
-                          paddingVertical: 10, 
-                          marginRight: 10,
-                          backgroundColor: 'white',
-                          shadowColor: '#000',
-                          shadowOffset: { width: 0, height: 1 },
-                          shadowOpacity: 0.05,
-                          shadowRadius: 2,
-                          elevation: 1
-                        }} 
-                        onPress={() => sendMessage(q)}
-                      >
-                        <Text style={{ 
-                          fontSize: 13, 
-                          color: '#8B0000',
-                          fontWeight: '500'
-                        }}>{q}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-              )}
-            </View>
-
-            {/* Input Area - Fixed at bottom */}
-            <View style={{ 
-              backgroundColor: 'white', 
-              paddingHorizontal: 20, 
-              paddingVertical: isKeyboardVisible ? 12 : 20, 
-              shadowColor: '#000', 
-              shadowOffset: { width: 0, height: -2 }, 
-              shadowOpacity: 0.1, 
-              shadowRadius: 12, 
-              elevation: 8,
-              borderRadius: 16,
-              marginHorizontal: 4,
-              borderTopWidth: 1,
-              borderTopColor: '#F1F5F9',
-              marginBottom: isKeyboardVisible ? 0 : 0
-            }}>
-              <View style={{ 
-                flexDirection: 'row', 
-                alignItems: 'center',
-                backgroundColor: '#F8FAFC',
-                borderRadius: 28,
-                paddingHorizontal: 4,
-                paddingVertical: 4,
-                borderWidth: 1,
-                borderColor: '#E2E8F0'
-              }}>
-                <TextInput 
-                  style={{ 
-                    flex: 1, 
-                    borderColor: 'transparent', 
-                    borderWidth: 0, 
-                    fontSize: 16, 
-                    borderRadius: 24, 
-                    paddingHorizontal: 20, 
-                    paddingVertical: 14, 
-                    marginRight: 8,
-                    backgroundColor: 'transparent',
-                    color: textPrimaryColor,
-                    minHeight: 48,
-                    maxHeight: 120,
-                    textAlignVertical: 'top'
-                  }} 
-                  value={input} 
-                  onChangeText={setInput} 
-                  placeholder="Type your message here..." 
-                  placeholderTextColor="#9CA3AF" 
-                  editable={!isLoadingChat} 
-                  multiline
-                  returnKeyType="send"
-                  onSubmitEditing={() => {
-                    if (input.trim() && !isLoadingChat) {
-                      sendMessage(input);
-                    }
-                  }}
-                  blurOnSubmit={false}
-                />
-                <TouchableOpacity 
-                  style={{ 
-                    width: 48, 
-                    height: 48, 
-                    backgroundColor: input.trim() && !isLoadingChat ? primaryColor : '#E5E7EB', 
-                    borderRadius: 24, 
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    shadowColor: input.trim() && !isLoadingChat ? primaryColor : 'transparent',
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.2,
-                    shadowRadius: 4,
-                    elevation: input.trim() && !isLoadingChat ? 2 : 0,
-                    alignSelf: 'flex-end',
-                    marginBottom: 0
-                  }} 
-                  onPress={() => sendMessage(input)} 
-                  disabled={!input.trim() || isLoadingChat}
-                >
-                  {isLoadingChat ? <ActivityIndicator color="white" size="small" /> : <Ionicons name="send" size={24} color={input.trim() ? 'white' : '#9CA3AF'} />}
-                </TouchableOpacity>
-              </View>
-             </View>
-           </View>
-         </KeyboardAvoidingView>
-       </Modal>
     </View>
   );
 }

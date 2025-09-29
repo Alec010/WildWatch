@@ -8,6 +8,9 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/Colors';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const BUTTON_POSITION_KEY = 'floatingButtonPosition';
 
 interface FloatingAskKatButtonProps {
   onPress: () => void;
@@ -26,6 +29,28 @@ const FloatingAskKatButton: React.FC<FloatingAskKatButtonProps> = ({
   const screenWidth = Dimensions.get('window').width;
   const screenHeight = Dimensions.get('window').height;
   const currentPosition = useRef({ x: 0, y: 0 });
+
+  // Save button position to storage
+  const savePosition = async (x: number, y: number) => {
+    try {
+      await AsyncStorage.setItem(BUTTON_POSITION_KEY, JSON.stringify({ x, y }));
+    } catch (error) {
+      console.error('Error saving button position:', error);
+    }
+  };
+
+  // Load button position from storage
+  const loadPosition = async (): Promise<{ x: number; y: number } | null> => {
+    try {
+      const savedPosition = await AsyncStorage.getItem(BUTTON_POSITION_KEY);
+      if (savedPosition) {
+        return JSON.parse(savedPosition);
+      }
+    } catch (error) {
+      console.error('Error loading button position:', error);
+    }
+    return null;
+  };
 
   // Pan responder for draggable button
   const panResponder = useRef(
@@ -64,6 +89,9 @@ const FloatingAskKatButton: React.FC<FloatingAskKatButtonProps> = ({
         // Update current position reference
         currentPosition.current = { x: magnetX, y: magnetY };
         
+        // Save position to storage
+        savePosition(magnetX, magnetY);
+        
         Animated.spring(pan, {
           toValue: { x: magnetX, y: magnetY },
           useNativeDriver: false,
@@ -76,10 +104,26 @@ const FloatingAskKatButton: React.FC<FloatingAskKatButtonProps> = ({
 
   // Set initial position of the draggable button
   useEffect(() => {
-    const initialX = screenWidth - buttonSize - margin;
-    const initialY = screenHeight - buttonSize - 100;
-    pan.setValue({ x: initialX, y: initialY });
-    currentPosition.current = { x: initialX, y: initialY };
+    const initializePosition = async () => {
+      const savedPosition = await loadPosition();
+      
+      if (savedPosition) {
+        // Use saved position if available
+        const { x, y } = savedPosition;
+        pan.setValue({ x, y });
+        currentPosition.current = { x, y };
+      } else {
+        // Use default position if no saved position
+        const initialX = screenWidth - buttonSize - margin;
+        const initialY = screenHeight - buttonSize - 100;
+        pan.setValue({ x: initialX, y: initialY });
+        currentPosition.current = { x: initialX, y: initialY };
+        // Save the initial position
+        savePosition(initialX, initialY);
+      }
+    };
+    
+    initializePosition();
   }, [screenWidth, screenHeight, buttonSize, margin, pan]);
 
   return (
