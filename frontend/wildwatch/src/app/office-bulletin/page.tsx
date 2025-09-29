@@ -19,6 +19,7 @@ interface Bulletin {
   isActive: boolean
   mediaAttachments: any[]
   relatedIncidents: any[]
+  upvoteCount?: number
 }
 
 export default function OfficeBulletinPage() {
