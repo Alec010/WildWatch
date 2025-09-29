@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,16 +9,31 @@ import {
   ActivityIndicator,
   Dimensions,
   Platform,
+  Image,
+  Modal,
+  KeyboardAvoidingView,
+  Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { userAPI } from '../src/features/users/api/user_api';
 import { useUserProfile } from '../src/features/users/hooks/useUserProfile';
 import type { UserProfile, UserUpdateRequest } from '../src/features/users/models/UserProfileModels';
 import { storage } from '../lib/storage';
+import { config } from '../lib/config';
+import Colors from '../constants/Colors';
+import { useThemeColor } from '../components/Themed';
+import FloatingAskKatButton from '../components/FloatingAskKatButton';
+import TopSpacing from '../components/TopSpacing';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+
+type Sender = 'user' | 'bot';
+interface ChatMessage { sender: Sender; text: string }
+interface ChatRequest { message: string }
+interface ChatResponse { reply: string }
 const isIPhone = Platform.OS === 'ios';
 const isSmallIPhone = screenHeight <= 667;
 const isMediumIPhone = screenHeight > 667 && screenHeight <= 812;
@@ -57,12 +72,15 @@ const getResponsiveIconSize = () => {
 };
 const iconSize = getResponsiveIconSize();
 
-const primaryColor = '#8B0000';
-const accentColor = '#E09F3E';
-const backgroundColor = '#F9F7F7';
+// Theme colors using the established WildWatch brand
+const primaryColor = Colors.maroon; // #800000
+const accentColor = Colors.gold; // #D4AF37
+const backgroundColor = '#F8FAFC';
 const cardColor = '#FFFFFF';
-const textPrimaryColor = '#333333';
-const textSecondaryColor = '#666666';
+const textPrimaryColor = '#1A1A1A';
+const textSecondaryColor = '#6B7280';
+const borderColor = '#E5E7EB';
+const shadowColor = '#000000';
 
 // Types moved to feature models and imported at top
 
@@ -74,17 +92,55 @@ interface ProfileSectionProps {
   children: React.ReactNode;
 }
 
-const ProfileSection: React.FC<ProfileSectionProps> = ({ title, icon, iconTint, backgroundColor = cardColor, children }) => (
-  <View className="bg-white rounded-2xl mb-4 shadow-sm" style={{ backgroundColor, marginHorizontal: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 2, borderRadius: 16 }}>
+const ProfileSection: React.FC<ProfileSectionProps> = ({ title, icon, iconTint, backgroundColor = 'white', children }) => (
+  <View style={{ 
+    backgroundColor, 
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 }, 
+    shadowOpacity: 0.06, 
+    shadowRadius: 4, 
+    elevation: 2, 
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(139, 0, 0, 0.08)',
+    overflow: 'hidden'
+  }}>
     <View>
-      <View className="flex-row items-center p-4">
-        <Ionicons name={icon} size={24} color={iconTint} />
-        <View style={{ width: 12 }} />
-        <Text className="font-bold text-gray-900" style={{ fontSize: 16, color: textPrimaryColor }}>
+      <View style={{ 
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        backgroundColor: `${iconTint}08`,
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(139, 0, 0, 0.1)'
+      }}>
+        <View style={{ 
+          width: 32, 
+          height: 32, 
+          borderRadius: 16,
+          backgroundColor: `${iconTint}15`,
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginRight: 12,
+          shadowColor: iconTint,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.15,
+          shadowRadius: 2,
+          elevation: 1
+        }}>
+          <Ionicons name={icon} size={16} color={iconTint} />
+        </View>
+        <Text style={{ 
+          fontSize: 14, 
+          color: textPrimaryColor, 
+          fontWeight: '700',
+          letterSpacing: 0.1
+        }}>
           {title}
         </Text>
       </View>
-      <View className="h-px bg-gray-200" style={{ backgroundColor: '#EEEEEE' }} />
       {children}
     </View>
   </View>
@@ -103,14 +159,19 @@ interface ProfileTextFieldProps {
 }
 
 const ProfileTextField: React.FC<ProfileTextFieldProps> = ({ value, onValueChange, label, readOnly = true, leadingIcon, placeholder, keyboardType = 'default', autoCapitalize = 'sentences', style }) => (
-  <View className="mb-4" style={style}>
-    <Text className="text-sm font-medium mb-2 text-gray-700" style={{ fontSize: 12, color: textSecondaryColor }}>
+  <View style={{ marginBottom: 16, ...style }}>
+    <Text style={{ 
+      fontSize: 12, 
+      color: textSecondaryColor, 
+      fontWeight: '600',
+      marginBottom: 4,
+      letterSpacing: 0.1
+    }}>
       {label}
     </Text>
-    <View className="relative">
-      {leadingIcon && <View className="absolute left-4 top-4 z-10">{leadingIcon}</View>}
+    <View style={{ position: 'relative' }}>
+      {leadingIcon && <View style={{ position: 'absolute', left: 14, top: 14, zIndex: 10 }}>{leadingIcon}</View>}
       <TextInput
-        className={`w-full h-14 pr-4 border rounded-xl text-base ${readOnly ? 'border-gray-200 bg-gray-50 text-gray-600' : 'border-gray-300 text-gray-900'}`}
         value={value}
         onChangeText={onValueChange}
         editable={!readOnly}
@@ -120,9 +181,58 @@ const ProfileTextField: React.FC<ProfileTextFieldProps> = ({ value, onValueChang
         autoCapitalize={autoCapitalize}
         autoCorrect={false}
         textAlignVertical="center"
-        style={{ backgroundColor: readOnly ? '#FAFAFA' : 'white', borderColor: readOnly ? '#E5E7EB' : '#D1D5DB', color: readOnly ? textSecondaryColor : textPrimaryColor, fontSize: 16, textAlign: 'left', paddingHorizontal: leadingIcon ? 56 : 16, paddingVertical: 8, borderRadius: 12 }}
+        style={{ 
+          width: '100%',
+          height: 44,
+          paddingRight: 14,
+          paddingLeft: leadingIcon ? 44 : 14,
+          paddingVertical: 10,
+          backgroundColor: readOnly ? '#F8FAFC' : 'white', 
+          borderColor: readOnly ? '#E2E8F0' : primaryColor, 
+          borderWidth: readOnly ? 1 : 1.5,
+          color: readOnly ? textSecondaryColor : textPrimaryColor, 
+          fontSize: 13, 
+          textAlign: 'left', 
+          borderRadius: 8,
+          fontWeight: readOnly ? '500' : '400',
+          shadowColor: readOnly ? 'transparent' : '#000',
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: readOnly ? 0 : 0.03,
+          shadowRadius: 2,
+          elevation: readOnly ? 0 : 1
+        }}
       />
     </View>
+  </View>
+);
+
+// Chatbot components
+const MessageBubble: React.FC<{ message: ChatMessage; isFirst: boolean }> = ({ message, isFirst }) => (
+  <View style={{ flexDirection: 'row', justifyContent: message.sender === 'user' ? 'flex-end' : 'flex-start', marginBottom: 8, marginTop: isFirst ? 0 : 8 }}>
+    {message.sender === 'bot' && (
+      <View style={{ width: 32, height: 32, backgroundColor: '#8B0000B3', borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
+        <Ionicons name="paw-outline" size={20} color="white" />
+      </View>
+    )}
+    <View style={{ maxWidth: 280, backgroundColor: message.sender === 'user' ? '#8B0000' : '#FFFFFF', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 2, borderTopLeftRadius: 16, borderTopRightRadius: 16, borderBottomLeftRadius: message.sender === 'user' ? 16 : 4, borderBottomRightRadius: message.sender === 'user' ? 4 : 16 }}>
+      <Text style={{ paddingHorizontal: 12, paddingVertical: 12, fontSize: 14, color: message.sender === 'user' ? 'white' : 'black', lineHeight: 20 }}>{message.text}</Text>
+    </View>
+    {message.sender === 'user' && (
+      <>
+        <View style={{ width: 8 }} />
+        <View style={{ width: 32, height: 32, backgroundColor: '#8B0000', borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginLeft: 8 }}>
+          <Ionicons name="person" size={20} color="white" />
+        </View>
+      </>
+    )}
+  </View>
+);
+
+const LoadingDots: React.FC = () => (
+  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, marginLeft: 40 }}>
+    <View style={{ width: 8, height: 8, backgroundColor: '#8B000066', borderRadius: 4, marginRight: 4 }} />
+    <View style={{ width: 8, height: 8, backgroundColor: '#8B000066', borderRadius: 4, marginRight: 4 }} />
+    <View style={{ width: 8, height: 8, backgroundColor: '#8B000066', borderRadius: 4 }} />
   </View>
 );
 
@@ -130,6 +240,7 @@ export default function ProfileScreen() {
   const { userProfile, isLoading, error, fetchUserProfile, updateUserProfile, setUserProfile } = useUserProfile();
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isAskKatVisible, setIsAskKatVisible] = useState(false);
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -138,8 +249,51 @@ export default function ProfileScreen() {
 
   const [originalValues, setOriginalValues] = useState({ firstName: '', lastName: '', middleInitial: '', contactNumber: '' });
 
+  // Chatbot state
+  const [token, setToken] = useState<string | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([{ sender: 'bot', text: 'Hi! I can help you with incident reporting, offices, or WildWatch. How can I assist you today?' }]);
+  const [input, setInput] = useState<string>('');
+  const [isLoadingChat, setIsLoadingChat] = useState<boolean>(false);
+  const scrollViewRef = useRef<ScrollView>(null);
+  
+  // Keyboard state
+  const [keyboardHeight, setKeyboardHeight] = useState<number>(0);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState<boolean>(false);
+
   useEffect(() => {
     // Hydrated by hook
+  }, []);
+
+  // Chatbot effects
+  useEffect(() => { storage.getToken().then(setToken).catch(() => setToken(null)); }, []);
+
+  useEffect(() => {
+    if (messages.length > 0) {
+      const t = setTimeout(() => { scrollViewRef.current?.scrollToEnd({ animated: true }); }, 100);
+      return () => clearTimeout(t);
+    }
+  }, [messages]);
+
+  // Keyboard event listeners
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+      setIsKeyboardVisible(true);
+      // Scroll to bottom when keyboard appears
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    });
+
+    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardHeight(0);
+      setIsKeyboardVisible(false);
+    });
+
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
   }, []);
 
   useEffect(() => {
@@ -192,8 +346,44 @@ export default function ProfileScreen() {
   };
 
   const handleAskKat = () => {
-    try { router.push('/chatbot' as never); } catch { router.back(); }
+    setIsAskKatVisible(true);
   };
+
+  const dismissKeyboard = () => {
+    Keyboard.dismiss();
+  };
+
+  // Chatbot functions
+  const sendMessage = async (messageText: string) => {
+    if (!messageText.trim() || !token) return;
+    const userMessage: ChatMessage = { sender: 'user', text: messageText.trim() };
+    setMessages(prev => [...prev, userMessage]);
+    setInput('');
+    setIsLoadingChat(true);
+    try {
+      const res = await fetch(`${config.API.BASE_URL}/chatbot`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: messageText.trim() } as ChatRequest),
+      });
+      if (!res.ok) throw new Error(`Chat failed: ${res.status}`);
+      const data: ChatResponse = await res.json();
+      setMessages(prev => [...prev, { sender: 'bot', text: data.reply }]);
+    } catch (e) {
+      setMessages(prev => [...prev, { sender: 'bot', text: 'Sorry, I encountered an error. Please try again in a moment.' }]);
+    } finally { setIsLoadingChat(false); }
+  };
+
+  const quickResponses: string[] = [
+    'How do I report an incident?',
+    'What offices are available?',
+    'Tell me about WildWatch',
+    'How to contact security?',
+    'Where is the admin office?',
+    'What are the reporting hours?',
+    'How to track my report?',
+    'Emergency procedures'
+  ];
 
   if (isLoading) {
     return (
@@ -222,115 +412,560 @@ export default function ProfileScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor }} edges={['left','right','bottom']}>
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
-        <View style={{ height: 200, marginBottom: 16 }}>
-          <View style={{ height: 140 }}>
-            <View style={{ flex: 1, backgroundColor: primaryColor }} />
-          </View>
-          <View className="bg-white rounded-2xl shadow-sm" style={{ marginHorizontal: 16, marginTop: 70, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4, borderRadius: 16 }}>
-            <View className="p-4">
-              <View style={{ height: 40 }} />
-              <View className="items-center mb-2">
-                <Text className="font-bold text-center" style={{ fontSize: 22, color: textPrimaryColor }}>{firstName}</Text>
+    <View className="flex-1" style={{ backgroundColor: Colors.maroon }}>
+      {/* Top spacing for notch */}
+      <TopSpacing />
+
+      {/* Enhanced Top App Bar */}
+      <View style={{
+        backgroundColor: 'white',
+        paddingHorizontal: 20,
+        paddingVertical: 16,
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2
+      }}>
+        <TouchableOpacity 
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            backgroundColor: 'rgba(139, 0, 0, 0.1)',
+            alignItems: 'center',
+            justifyContent: 'center',
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 4,
+            elevation: 2
+          }}
+          onPress={() => router.back()}
+        >
+          <Ionicons name="chevron-back" size={24} color={Colors.maroon} />
+        </TouchableOpacity>
+        
+        <View style={{ flex: 1, alignItems: 'center' }}>
+          <Text style={{
+            fontSize: 20,
+            fontWeight: '700',
+            color: Colors.maroon,
+            letterSpacing: 0.3
+          }}>Profile</Text>
+        </View>
+        
+        <View style={{ width: 40 }} />
+      </View>
+
+      <View className="flex-1" style={{ padding: 16 }}>
+        {/* Profile Card */}
+        <View style={{
+          backgroundColor: 'white',
+          borderRadius: 16,
+          padding: 20,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.08,
+          shadowRadius: 4,
+          elevation: 2,
+          marginBottom: 16,
+          borderWidth: 1,
+          borderColor: 'rgba(139, 0, 0, 0.08)'
+        }}>
+          {/* Left Section - Avatar and User Info */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+            {/* Profile Avatar with Initials */}
+            <View style={{
+              width: 70,
+              height: 70,
+              borderRadius: 35,
+              backgroundColor: 'white',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginRight: 16,
+              shadowColor: primaryColor,
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.15,
+              shadowRadius: 4,
+              elevation: 2,
+              borderWidth: 3,
+              borderColor: 'white'
+            }}>
+              <View style={{
+                width: 60,
+                height: 60,
+                borderRadius: 30,
+                backgroundColor: primaryColor,
+                alignItems: 'center',
+                justifyContent: 'center',
+                shadowColor: primaryColor,
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.2,
+                shadowRadius: 4,
+                elevation: 2
+              }}>
+                <Text style={{
+                  fontSize: 24,
+                  fontWeight: '700',
+                  color: 'white',
+                  letterSpacing: 1
+                }}>
+                  {firstName.charAt(0).toUpperCase()}
+                </Text>
               </View>
-              <View style={{ height: 4 }} />
-              <View className="items-center">
-                <View className="rounded-full px-3 py-1" style={{ backgroundColor: `${accentColor}26`, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 }}>
-                  <Text className="font-medium text-center" style={{ fontSize: 12, color: `${accentColor}CC` }}>ID: {userProfile.schoolIdNumber} • {userProfile.role}</Text>
-                </View>
+            </View>
+            
+            {/* User Info Section */}
+            <View style={{ flex: 1 }}>
+              {/* User Name with Enhanced Typography */}
+              <Text style={{
+                fontSize: 16,
+                fontWeight: '700',
+                color: textPrimaryColor,
+                letterSpacing: 0.2,
+                marginBottom: 3
+              }}>{firstName.toUpperCase()}</Text>
+              
+              {/* Email with Better Styling */}
+              <Text style={{
+                fontSize: 12,
+                color: textSecondaryColor,
+                fontWeight: '500',
+                opacity: 0.8,
+                marginBottom: 4
+              }}>{userProfile.email}</Text>
+              
+              {/* Role Badge */}
+              <View style={{
+                backgroundColor: `${primaryColor}15`,
+                paddingHorizontal: 10,
+                paddingVertical: 3,
+                borderRadius: 10,
+                alignSelf: 'flex-start',
+                borderWidth: 1,
+                borderColor: `${primaryColor}30`
+              }}>
+                <Text style={{
+                  fontSize: 10,
+                  color: primaryColor,
+                  fontWeight: '600',
+                  letterSpacing: 0.1
+                }}>{userProfile.role.replace(/_/g, ' ').toUpperCase()}</Text>
               </View>
-              <View style={{ height: 8 }} />
             </View>
           </View>
-          <View className="absolute" style={{ top: 30, left: '50%', width: 90, height: 90, marginLeft: -45 }}>
-            <View className="rounded-full items-center justify-center border-3" style={{ width: 90, height: 90, backgroundColor: cardColor, borderColor: cardColor, borderWidth: 3, padding: 3 }}>
-              <View className="rounded-full items-center justify-center" style={{ width: 84, height: 84, backgroundColor }}>
-                <Ionicons name="person" size={50} color={primaryColor} />
-              </View>
-            </View>
+
+          {/* Right Section - Action Buttons */}
+          <View style={{ flexDirection: 'row', gap: 0, alignItems: 'center' }}>
+            {isEditing ? (
+              <>
+                {/* Cancel Button */}
+                  <TouchableOpacity
+                    style={{
+                      width: 44,
+                      height: 44,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                    onPress={handleCancelEdit}
+                  >
+                    <Ionicons name="close" size={22} color={textSecondaryColor} />
+                  </TouchableOpacity>
+
+                  {/* Save Button */}
+                  <TouchableOpacity
+                    style={{
+                      width: 44,
+                      height: 44,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                    onPress={handleSaveProfile}
+                    disabled={isSaving}
+                  >
+                    {isSaving ? (
+                      <ActivityIndicator color={primaryColor} size="small" />
+                    ) : (
+                      <Ionicons name="save" size={22} color={primaryColor} />
+                    )}
+                  </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                {/* Edit Profile Button */}
+                <TouchableOpacity
+                  style={{
+                    width: 44,
+                    height: 44,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                  onPress={() => setIsEditing(true)}
+                >
+                  <Ionicons name="create" size={22} color={primaryColor} />
+                </TouchableOpacity>
+
+                {/* Logout Button */}
+                <TouchableOpacity 
+                  style={{
+                    width: 44,
+                    height: 44,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                  onPress={handleLogout}
+                >
+                  <Ionicons name="log-out" size={22} color={primaryColor} />
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         </View>
 
         <ProfileSection title="Personal Information" icon="person-outline" iconTint={primaryColor}>
-          <View className="flex-row px-4 py-2" style={{ gap: 8 }}>
-            <View className="flex-1">
-              <ProfileTextField value={firstName} onValueChange={(text) => setFirstName(text.replace(/^./, text[0]?.toUpperCase() || ''))} label="First Name" readOnly={!isEditing} placeholder="Enter first name" style={{ marginBottom: 0 }} />
+          <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+            <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
+              <View style={{ flex: 1 }}>
+                <ProfileTextField value={firstName} onValueChange={(text) => setFirstName(text.replace(/^./, text[0]?.toUpperCase() || ''))} label="First Name" readOnly={!isEditing} placeholder="Enter first name" style={{ marginBottom: 0 }} />
+              </View>
+              <View style={{ width: 80 }}>
+                <ProfileTextField value={middleInitial} onValueChange={(text) => setMiddleInitial(text.toUpperCase().slice(0, 1))} label="M.I." readOnly={!isEditing} placeholder="I" autoCapitalize="characters" style={{ marginBottom: 0 }} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <ProfileTextField value={lastName} onValueChange={(text) => setLastName(text.replace(/^./, text[0]?.toUpperCase() || ''))} label="Last Name" readOnly={!isEditing} placeholder="Enter last name" style={{ marginBottom: 0 }} />
+              </View>
             </View>
-            <View style={{ width: 60 }}>
-              <ProfileTextField value={middleInitial} onValueChange={(text) => setMiddleInitial(text.toUpperCase().slice(0, 1))} label="M.I." readOnly={!isEditing} placeholder="I" autoCapitalize="characters" style={{ marginBottom: 0 }} />
-            </View>
-            <View className="flex-1">
-              <ProfileTextField value={lastName} onValueChange={(text) => setLastName(text.replace(/^./, text[0]?.toUpperCase() || ''))} label="Last Name" readOnly={!isEditing} placeholder="Enter last name" style={{ marginBottom: 0 }} />
-            </View>
-          </View>
-          <View className="px-4 py-2">
-            <ProfileTextField value={contactNumber} onValueChange={setContactNumber} label="Contact Number" readOnly={!isEditing} placeholder="Enter contact number" keyboardType="phone-pad" leadingIcon={<Ionicons name="call-outline" size={iconSize.medium} color={textSecondaryColor} />} />
+            <ProfileTextField value={contactNumber} onValueChange={setContactNumber} label="Contact Number" readOnly={!isEditing} placeholder="Enter contact number" keyboardType="phone-pad" leadingIcon={<Ionicons name="call-outline" size={16} color={textSecondaryColor} />} />
           </View>
         </ProfileSection>
 
         <ProfileSection title="Account Information" icon="at-circle-outline" iconTint={primaryColor}>
-          <View className="px-4 py-2 mb-4">
-            <Text className="font-medium mb-2" style={{ fontSize: 12, color: textSecondaryColor }}>Institutional Email</Text>
-            <View style={{ height: 4 }} />
-            <View className="relative">
-              <View className="absolute left-4 top-4 z-10">
-                <Ionicons name="mail-outline" size={iconSize.medium} color={textSecondaryColor} />
+          <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+            <View style={{ marginBottom: 12 }}>
+              <Text style={{ fontSize: 12, color: textSecondaryColor, fontWeight: '600', marginBottom: 4, letterSpacing: 0.1 }}>Institutional Email</Text>
+              <View style={{ position: 'relative' }}>
+                <View style={{ position: 'absolute', left: 14, top: 14, zIndex: 10 }}>
+                  <Ionicons name="mail-outline" size={16} color={textSecondaryColor} />
+                </View>
+                <TextInput
+                  value={userProfile.email}
+                  editable={false}
+                  style={{
+                    width: '100%',
+                    height: 44,
+                    paddingRight: 14,
+                    paddingLeft: 44,
+                    paddingVertical: 10,
+                    backgroundColor: '#F8FAFC',
+                    borderColor: '#E2E8F0',
+                    borderWidth: 1,
+                    color: textSecondaryColor,
+                    fontSize: 13,
+                    borderRadius: 8,
+                    fontWeight: '500'
+                  }}
+                />
               </View>
-              <TextInput className="w-full h-14 pr-4 border rounded-xl text-base" value={userProfile.email} editable={false} style={{ backgroundColor: `${backgroundColor}80`, borderColor: '#E5E7EB', color: textSecondaryColor, fontSize: 16, borderRadius: 12, paddingLeft: 56 }} />
+              <Text style={{ fontSize: 10, color: textSecondaryColor, fontStyle: 'italic', marginTop: 4, marginLeft: 4 }}>Email cannot be changed</Text>
             </View>
-            <Text className="text-xs mt-2 ml-1" style={{ fontSize: 10, color: textSecondaryColor }}>Email cannot be changed</Text>
-          </View>
 
-          <View className="px-4 py-2">
-            <Text className="font-medium mb-2" style={{ fontSize: 12, color: textSecondaryColor }}>Role</Text>
-            <View style={{ height: 4 }} />
-            <View className="relative">
-              <View className="absolute left-4 top-4 z-10">
-                <Ionicons name="school-outline" size={iconSize.medium} color={textSecondaryColor} />
+            <View>
+              <Text style={{ fontSize: 12, color: textSecondaryColor, fontWeight: '600', marginBottom: 4, letterSpacing: 0.1 }}>Role</Text>
+              <View style={{ position: 'relative' }}>
+                <View style={{ position: 'absolute', left: 14, top: 14, zIndex: 10 }}>
+                  <Ionicons name="school-outline" size={16} color={textSecondaryColor} />
+                </View>
+                <TextInput
+                  value={userProfile.role}
+                  editable={false}
+                  style={{
+                    width: '100%',
+                    height: 44,
+                    paddingRight: 14,
+                    paddingLeft: 44,
+                    paddingVertical: 10,
+                    backgroundColor: '#F8FAFC',
+                    borderColor: '#E2E8F0',
+                    borderWidth: 1,
+                    color: textSecondaryColor,
+                    fontSize: 13,
+                    borderRadius: 8,
+                    fontWeight: '500'
+                  }}
+                />
               </View>
-              <TextInput className="w-full h-14 pr-4 border rounded-xl text-base" value={userProfile.role} editable={false} style={{ backgroundColor: `${backgroundColor}80`, borderColor: '#E5E7EB', color: textSecondaryColor, fontSize: 16, borderRadius: 12, paddingLeft: 56 }} />
+              <Text style={{ fontSize: 10, color: textSecondaryColor, fontStyle: 'italic', marginTop: 4, marginLeft: 4 }}>Role is assigned by the system</Text>
             </View>
-            <Text className="text-xs mt-2 ml-1" style={{ fontSize: 10, color: textSecondaryColor }}>Role is assigned by the system</Text>
           </View>
         </ProfileSection>
 
-        <ProfileSection title="Account Actions" icon="settings-outline" iconTint={primaryColor}>
-          <View className="p-4" style={{ gap: 12 }}>
-            <TouchableOpacity className="bg-[#8B0000] rounded-xl flex-row items-center justify-center" style={{ paddingVertical: 16, backgroundColor: primaryColor, borderRadius: 12 }} onPress={handleAskKat}>
-              <Ionicons name="chatbubble-ellipses" size={iconSize.large} color="white" />
-              <Text className="text-white font-medium ml-2" style={{ fontSize: fontSize.medium }}>Ask Kat</Text>
-            </TouchableOpacity>
 
-            {isEditing ? (
-              <View className="flex-row" style={{ gap: 8 }}>
-                <TouchableOpacity className="flex-1 border rounded-xl flex-row items-center justify-center" style={{ paddingVertical: 16, borderColor: '#E5E7EB', borderWidth: 1, borderRadius: 12 }} onPress={handleCancelEdit}>
-                  <Ionicons name="close" size={iconSize.large} color={textSecondaryColor} />
-                  <Text className="font-medium ml-2" style={{ fontSize: fontSize.medium, color: textSecondaryColor }}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity className="flex-1 bg-[#8B0000] rounded-xl flex-row items-center justify-center" style={{ paddingVertical: 16, backgroundColor: primaryColor, borderRadius: 12 }} onPress={handleSaveProfile} disabled={isSaving}>
-                  {isSaving ? <ActivityIndicator color="white" size="small" /> : (<><Ionicons name="save" size={iconSize.large} color="white" /><Text className="text-white font-medium ml-2" style={{ fontSize: fontSize.medium }}>Save Changes</Text></>)}
+      </View>
+
+      {/* Floating Ask Kat Button Component */}
+      <FloatingAskKatButton 
+        onPress={handleAskKat}
+        primaryColor={primaryColor}
+        buttonSize={60}
+        margin={20}
+      />
+
+       {/* Ask Kat Bottom Sheet Modal */}
+       <Modal
+         visible={isAskKatVisible}
+         transparent={true}
+         animationType="slide"
+         onRequestClose={() => setIsAskKatVisible(false)}
+         statusBarTranslucent={true}
+       >
+         <KeyboardAvoidingView 
+           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+           keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+           style={{ flex: 1, backgroundColor: 'white' }}
+         >
+           <View 
+             style={{
+               flex: 1,
+               backgroundColor: 'white',
+               paddingTop: Platform.OS === 'ios' ? 50 : 20,
+               paddingBottom: isKeyboardVisible ? 20 : 40,
+               paddingHorizontal: 20,
+               shadowColor: '#000',
+               shadowOffset: { width: 0, height: -4 },
+               shadowOpacity: 0.3,
+               shadowRadius: 16,
+               elevation: 16
+             }}
+           >
+              {/* Header with Close Button */}
+              <View style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: 24,
+                paddingBottom: 20,
+                borderBottomWidth: 1,
+                borderBottomColor: '#F1F5F9'
+              }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: 24,
+                    backgroundColor: primaryColor,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginRight: 16,
+                    shadowColor: primaryColor,
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.2,
+                    shadowRadius: 4,
+                    elevation: 3
+                  }}>
+                    <Ionicons name="paw-outline" size={24} color="white" />
+                  </View>
+                  <View>
+                    <Text style={{
+                      fontSize: 20,
+                      fontWeight: '800',
+                      color: textPrimaryColor,
+                      letterSpacing: 0.3
+                    }}>Ask Kat</Text>
+                    <Text style={{
+                      fontSize: 13,
+                      color: textSecondaryColor,
+                      fontWeight: '500'
+                    }}>Your AI Assistant</Text>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  onPress={() => setIsAskKatVisible(false)}
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 18,
+                    backgroundColor: '#F8FAFC',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderWidth: 1,
+                    borderColor: '#E2E8F0',
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowOpacity: 0.05,
+                    shadowRadius: 2,
+                    elevation: 1
+                  }}
+                >
+                  <Ionicons name="close" size={20} color={textSecondaryColor} />
                 </TouchableOpacity>
               </View>
-            ) : (
-              <TouchableOpacity className="border rounded-xl flex-row items-center justify-center" style={{ paddingVertical: 16, borderColor: primaryColor, borderWidth: 1, borderRadius: 12 }} onPress={() => setIsEditing(true)}>
-                <Ionicons name="create-outline" size={iconSize.large} color={primaryColor} />
-                <Text className="font-medium ml-2" style={{ fontSize: fontSize.medium, color: primaryColor }}>Edit Profile</Text>
-              </TouchableOpacity>
-            )}
 
-            {!isEditing && (
-              <TouchableOpacity className="border rounded-xl flex-row items-center justify-center" style={{ paddingVertical: 16, borderColor: primaryColor, borderWidth: 1, borderRadius: 12 }} onPress={handleLogout}>
-                <Ionicons name="log-out-outline" size={iconSize.large} color={primaryColor} />
-                <Text className="text-white font-medium ml-2" style={{ fontSize: fontSize.medium, color: primaryColor }}>Logout</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </ProfileSection>
+            {/* Chat Area */}
+            <View style={{ flex: 1, marginBottom: isKeyboardVisible ? 10 : 0 }}>
+              <ScrollView 
+                ref={scrollViewRef} 
+                style={{ 
+                  flex: 1, 
+                  backgroundColor: '#FAFBFC',
+                  borderRadius: 16,
+                  marginHorizontal: 4
+                }} 
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                contentContainerStyle={{ 
+                  paddingTop: 20, 
+                  paddingBottom: isKeyboardVisible ? 10 : 20,
+                  paddingHorizontal: 16,
+                  flexGrow: 1
+                }}
+              >
+                {messages.map((m, idx) => (
+                  <MessageBubble key={idx} message={m} isFirst={idx === 0} />
+                ))}
+                {isLoadingChat && <LoadingDots />}
+              </ScrollView>
 
-        <View style={{ height: 24 }} />
-      </ScrollView>
-    </SafeAreaView>
+              {messages.length === 1 && (
+                <View style={{ 
+                  paddingHorizontal: 20, 
+                  paddingVertical: 20,
+                  backgroundColor: '#F8FAFC',
+                  borderRadius: 12,
+                  marginHorizontal: 4,
+                  marginBottom: 16
+                }}>
+                  <Text style={{ 
+                    fontSize: 13, 
+                    fontWeight: '600', 
+                    color: '#374151', 
+                    marginBottom: 12,
+                    letterSpacing: 0.2
+                  }}>Suggested questions:</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 16 }}>
+                    {quickResponses.map((q) => (
+                      <TouchableOpacity 
+                        key={q} 
+                        style={{ 
+                          borderColor: '#8B000030', 
+                          borderWidth: 1, 
+                          borderRadius: 24, 
+                          paddingHorizontal: 16, 
+                          paddingVertical: 10, 
+                          marginRight: 10,
+                          backgroundColor: 'white',
+                          shadowColor: '#000',
+                          shadowOffset: { width: 0, height: 1 },
+                          shadowOpacity: 0.05,
+                          shadowRadius: 2,
+                          elevation: 1
+                        }} 
+                        onPress={() => sendMessage(q)}
+                      >
+                        <Text style={{ 
+                          fontSize: 13, 
+                          color: '#8B0000',
+                          fontWeight: '500'
+                        }}>{q}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+            </View>
+
+            {/* Input Area - Fixed at bottom */}
+            <View style={{ 
+              backgroundColor: 'white', 
+              paddingHorizontal: 20, 
+              paddingVertical: isKeyboardVisible ? 12 : 20, 
+              shadowColor: '#000', 
+              shadowOffset: { width: 0, height: -2 }, 
+              shadowOpacity: 0.1, 
+              shadowRadius: 12, 
+              elevation: 8,
+              borderRadius: 16,
+              marginHorizontal: 4,
+              borderTopWidth: 1,
+              borderTopColor: '#F1F5F9',
+              marginBottom: isKeyboardVisible ? 0 : 0
+            }}>
+              <View style={{ 
+                flexDirection: 'row', 
+                alignItems: 'center',
+                backgroundColor: '#F8FAFC',
+                borderRadius: 28,
+                paddingHorizontal: 4,
+                paddingVertical: 4,
+                borderWidth: 1,
+                borderColor: '#E2E8F0'
+              }}>
+                <TextInput 
+                  style={{ 
+                    flex: 1, 
+                    borderColor: 'transparent', 
+                    borderWidth: 0, 
+                    fontSize: 16, 
+                    borderRadius: 24, 
+                    paddingHorizontal: 20, 
+                    paddingVertical: 14, 
+                    marginRight: 8,
+                    backgroundColor: 'transparent',
+                    color: textPrimaryColor,
+                    minHeight: 48,
+                    maxHeight: 120,
+                    textAlignVertical: 'top'
+                  }} 
+                  value={input} 
+                  onChangeText={setInput} 
+                  placeholder="Type your message here..." 
+                  placeholderTextColor="#9CA3AF" 
+                  editable={!isLoadingChat} 
+                  multiline
+                  returnKeyType="send"
+                  onSubmitEditing={() => {
+                    if (input.trim() && !isLoadingChat) {
+                      sendMessage(input);
+                    }
+                  }}
+                  blurOnSubmit={false}
+                />
+                <TouchableOpacity 
+                  style={{ 
+                    width: 48, 
+                    height: 48, 
+                    backgroundColor: input.trim() && !isLoadingChat ? primaryColor : '#E5E7EB', 
+                    borderRadius: 24, 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    shadowColor: input.trim() && !isLoadingChat ? primaryColor : 'transparent',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.2,
+                    shadowRadius: 4,
+                    elevation: input.trim() && !isLoadingChat ? 2 : 0,
+                    alignSelf: 'flex-end',
+                    marginBottom: 0
+                  }} 
+                  onPress={() => sendMessage(input)} 
+                  disabled={!input.trim() || isLoadingChat}
+                >
+                  {isLoadingChat ? <ActivityIndicator color="white" size="small" /> : <Ionicons name="send" size={24} color={input.trim() ? 'white' : '#9CA3AF'} />}
+                </TouchableOpacity>
+              </View>
+             </View>
+           </View>
+         </KeyboardAvoidingView>
+       </Modal>
+    </View>
   );
 }
+
+
 
