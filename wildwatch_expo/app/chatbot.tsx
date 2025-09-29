@@ -343,45 +343,50 @@ export default function ChatbotScreen() {
             )}
 
             <View style={{ 
-              backgroundColor: 'transparent', 
+              backgroundColor: 'white', 
               paddingHorizontal: 24, 
-              paddingVertical: 50, 
-              paddingBottom: 80,
-              borderTopWidth: 0,
-              borderTopColor: 'transparent',
-              shadowColor: 'transparent',
-              shadowOffset: { width: 0, height: 0 },
-              shadowOpacity: 0,
-              shadowRadius: 0,
-              elevation: 0
+              paddingVertical: 20, 
+              paddingBottom: Platform.OS === 'ios' ? 65 : 40,
+              borderTopWidth: 1,
+              borderTopColor: '#F1F5F9',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: -2 },
+              shadowOpacity: 0.1,
+              shadowRadius: 8,
+              elevation: 8
             }}>
               <View style={{ 
                 flexDirection: 'row', 
-                alignItems: 'center',
-                backgroundColor: '#F8FAFC',
-                borderRadius: 28,
-                paddingHorizontal: 6,
-                borderWidth: 1.5,
-                borderColor: '#E2E8F0',
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.05,
-                shadowRadius: 3,
-                elevation: 2
+                alignItems: 'flex-end',
+                backgroundColor: '#FFFFFF',
+                borderRadius: 24,
+                paddingHorizontal: 4,
+                paddingVertical: 4,
+                borderWidth: 2,
+                borderColor: input.trim() ? '#8B0000' : '#E2E8F0',
+                shadowColor: input.trim() ? '#8B0000' : '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: input.trim() ? 0.15 : 0.05,
+                shadowRadius: 8,
+                elevation: input.trim() ? 6 : 2,
+                minHeight: 56
               }}>
                 <TextInput 
                   style={{ 
                     flex: 1, 
                     fontSize: 16, 
                     color: '#1F2937',
-                    paddingHorizontal: 18, 
-                    paddingVertical: 14, 
-                    maxHeight: 100,
-                    fontWeight: '500'
+                    paddingHorizontal: 20, 
+                    paddingVertical: 16, 
+                    maxHeight: 120,
+                    minHeight: 48,
+                    fontWeight: '500',
+                    lineHeight: 22,
+                    textAlignVertical: 'top'
                   }} 
                   value={input} 
                   onChangeText={setInput} 
-                  placeholder="Type your message here..." 
+                  placeholder="Ask me" 
                   placeholderTextColor="#9CA3AF" 
                   editable={!isLoading} 
                   multiline
@@ -406,21 +411,33 @@ export default function ChatbotScreen() {
                   style={{ 
                     width: 48, 
                     height: 48, 
-                    backgroundColor: input.trim() && !isLoading ? '#8B0000' : '#E5E7EB', 
+                    backgroundColor: input.trim() && !isLoading ? '#8B0000' : '#F3F4F6', 
                     borderRadius: 24, 
                     alignItems: 'center', 
                     justifyContent: 'center',
-                    marginLeft: 6,
+                    marginLeft: 8,
+                    marginRight: 4,
+                    marginBottom: 4,
                     shadowColor: input.trim() && !isLoading ? '#8B0000' : 'transparent',
-                    shadowOffset: { width: 0, height: 3 },
-                    shadowOpacity: 0.3,
-                    shadowRadius: 6,
-                    elevation: input.trim() && !isLoading ? 4 : 0
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: input.trim() && !isLoading ? 0.3 : 0,
+                    shadowRadius: 8,
+                    elevation: input.trim() && !isLoading ? 6 : 0,
+                    transform: [{ scale: input.trim() && !isLoading ? 1.05 : 1 }]
                   }} 
                   onPress={() => sendMessage(input)} 
                   disabled={!input.trim() || isLoading}
+                  activeOpacity={0.8}
                 >
-                  {isLoading ? <ActivityIndicator color="white" size="small" /> : <Ionicons name="send" size={22} color={input.trim() ? 'white' : '#9CA3AF'} />}
+                  {isLoading ? (
+                    <ActivityIndicator color="white" size="small" />
+                  ) : (
+                    <Ionicons 
+                      name="send" 
+                      size={20} 
+                      color={input.trim() && !isLoading ? 'white' : '#9CA3AF'} 
+                    />
+                  )}
                 </TouchableOpacity>
               </View>
             </View>
