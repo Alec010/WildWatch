@@ -77,71 +77,76 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
-                        .sessionFixation().migrateSession()
-                        .maximumSessions(1)
-                        .expiredUrl("/login?expired"))
+                .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+                .sessionFixation().migrateSession()
+                .maximumSessions(1)
+                .expiredUrl("/login?expired"))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/uploads/**").permitAll()
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/chatbot").permitAll()
-                        .requestMatchers(
-                                "/api/auth/**",
-                                "/api/mobile/auth/**",
-                                "/login/**",
-                                "/oauth2/**",
-                                "/error",
-                                "/favicon.ico",
-                                "/api/setup/**",
-                                "/api/ping",
-                                "/api/offices",
-                                "/login/oauth2/code/microsoft")
-                        .permitAll()
-                        .requestMatchers("/api/terms/**").authenticated()
-                        .requestMatchers("/api/geolocation/**").authenticated()
-                        .anyRequest().authenticated())
+                .requestMatchers("/uploads/**").permitAll()
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/chatbot").permitAll()
+                .requestMatchers(
+                        "/api/auth/**",
+                        "/api/mobile/auth/**",
+                        "/login/**",
+                        "/oauth2/**",
+                        "/error",
+                        "/favicon.ico",
+                        "/api/setup/**",
+                        "/api/ping",
+                        "/api/offices",
+                        "/login/oauth2/code/microsoft",
+                        // Swagger/OpenAPI endpoints
+                        "/swagger-ui/**",
+                        "/v3/api-docs/**",
+                        "/swagger-ui.html",
+                        "/webjars/**")
+                .permitAll()
+                .requestMatchers("/api/terms/**").authenticated()
+                .requestMatchers("/api/geolocation/**").authenticated()
+                .anyRequest().authenticated())
                 .oauth2Login(oauth2 -> oauth2
-                        .userInfoEndpoint(userInfo -> userInfo
-                                .userService(customOAuth2UserService))
-                        .successHandler(oAuth2SuccessHandler)
-                        .failureHandler(oAuth2FailureHandler)
-                        .authorizationEndpoint(authorization -> authorization
-                                .authorizationRequestResolver(customAuthorizationRequestResolver())))
+                .userInfoEndpoint(userInfo -> userInfo
+                .userService(customOAuth2UserService))
+                .successHandler(oAuth2SuccessHandler)
+                .failureHandler(oAuth2FailureHandler)
+                .authorizationEndpoint(authorization -> authorization
+                .authorizationRequestResolver(customAuthorizationRequestResolver())))
                 .addFilterBefore(new MobileRedirectFilter(), SecurityContextPersistenceFilter.class)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .exceptionHandling(exception -> exception
-                        .authenticationEntryPoint((request, response, authException) -> {
-                            if (request.getHeader("Accept") != null &&
-                                    request.getHeader("Accept").contains("application/json")) {
-                                response.setStatus(401);
-                                response.setContentType("application/json");
-                                response.getWriter().write("{\"error\":\"Unauthorized\"}");
-                            } else {
-                                String errorMessage = URLEncoder.encode(authException.getMessage(),
+                .authenticationEntryPoint((request, response, authException) -> {
+                    if (request.getHeader("Accept") != null
+                            && request.getHeader("Accept").contains("application/json")) {
+                        response.setStatus(401);
+                        response.setContentType("application/json");
+                        response.getWriter().write("{\"error\":\"Unauthorized\"}");
+                    } else {
+                        String errorMessage = URLEncoder.encode(authException.getMessage(),
+                                StandardCharsets.UTF_8);
+                        String mobileRedirectUri = null;
+                        String state = request.getParameter("state");
+                        if (state != null && !state.isEmpty()) {
+                            try {
+                                String decoded = new String(Base64.getDecoder().decode(state),
                                         StandardCharsets.UTF_8);
-                                String mobileRedirectUri = null;
-                                String state = request.getParameter("state");
-                                if (state != null && !state.isEmpty()) {
-                                    try {
-                                        String decoded = new String(Base64.getDecoder().decode(state),
-                                                StandardCharsets.UTF_8);
-                                        if (decoded.contains("mobile_redirect_uri")) {
-                                            int start = decoded.indexOf("mobile_redirect_uri") + 21;
-                                            int end = decoded.indexOf('"', start);
-                                            mobileRedirectUri = decoded.substring(start, end);
-                                        }
-                                    } catch (Exception e) {
-                                        // Log error but continue with web redirect
-                                    }
+                                if (decoded.contains("mobile_redirect_uri")) {
+                                    int start = decoded.indexOf("mobile_redirect_uri") + 21;
+                                    int end = decoded.indexOf('"', start);
+                                    mobileRedirectUri = decoded.substring(start, end);
                                 }
-                                if (mobileRedirectUri != null && !mobileRedirectUri.isEmpty()) {
-                                    response.sendRedirect(mobileRedirectUri + "?error=" + errorMessage);
-                                } else {
-                                    response.sendRedirect(
-                                            frontendConfig.getActiveUrl() + "/auth/error?message=" + errorMessage);
-                                }
+                            } catch (Exception e) {
+                                // Log error but continue with web redirect
                             }
-                        }));
+                        }
+                        if (mobileRedirectUri != null && !mobileRedirectUri.isEmpty()) {
+                            response.sendRedirect(mobileRedirectUri + "?error=" + errorMessage);
+                        } else {
+                            response.sendRedirect(
+                                    frontendConfig.getActiveUrl() + "/auth/error?message=" + errorMessage);
+                        }
+                    }
+                }));
 
         return http.build();
     }
