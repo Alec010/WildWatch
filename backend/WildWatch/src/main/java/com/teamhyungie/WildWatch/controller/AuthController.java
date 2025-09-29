@@ -6,6 +6,10 @@ import com.teamhyungie.WildWatch.dto.RegisterRequest;
 import com.teamhyungie.WildWatch.service.AuthService;
 import com.teamhyungie.WildWatch.service.UserService;
 import com.teamhyungie.WildWatch.security.JwtUtil;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.Cookie;
 import jakarta.validation.Valid;
@@ -26,6 +30,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
+@Tag(name = "Authentication", description = "Authentication and user management endpoints")
 public class AuthController {
 
     private final AuthService authService;
@@ -34,6 +39,11 @@ public class AuthController {
     private final JwtUtil jwtUtil;
     private final UserDetailsService userDetailsService;
 
+    @Operation(summary = "Register a new user", description = "Create a new user account with email and password")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "User registered successfully"),
+            @ApiResponse(responseCode = "400", description = "Registration failed - invalid data or user already exists")
+    })
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
         try {
@@ -46,6 +56,11 @@ public class AuthController {
         }
     }
 
+    @Operation(summary = "User login", description = "Authenticate user with email and password")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Login successful"),
+            @ApiResponse(responseCode = "400", description = "Login failed - invalid credentials")
+    })
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         try {

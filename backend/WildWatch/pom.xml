@@ -105,6 +105,12 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-mail</artifactId>
 		</dependency>
+		<!-- SpringDoc OpenAPI for Swagger documentation -->
+		<dependency>
+			<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+			<version>2.2.0</version>
+		</dependency>
 		<!-- Jackson for JSON processing (already included in Spring Boot) -->
 		<!-- RestTemplate for HTTP calls (already included in Spring Boot) -->
 		<!-- Google AI (Gemini) -->

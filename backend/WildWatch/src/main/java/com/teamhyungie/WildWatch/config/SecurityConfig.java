@@ -95,7 +95,10 @@ public class SecurityConfig {
                                 "/api/setup/**",
                                 "/api/ping",
                                 "/api/offices",
-                                "/login/oauth2/code/microsoft")
+                                "/login/oauth2/code/microsoft",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**",
+                                "/swagger-ui.html")
                         .permitAll()
                         .requestMatchers("/api/terms/**").authenticated()
                         .requestMatchers("/api/geolocation/**").authenticated()
