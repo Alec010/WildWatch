@@ -87,11 +87,20 @@ function IncidentCard({ incident, onPress }: { incident: IncidentResponseDto; on
   );
 }
 
-function StatCard({ title, count, icon, iconTint, onPress }: { title: string; count: number; icon: keyof typeof Ionicons.glyphMap; iconTint: string; onPress?: () => void }) {
+function StatCard({ title, count, icon, iconTint, onPress, isActive = false }: { title: string; count: number; icon: keyof typeof Ionicons.glyphMap; iconTint: string; onPress?: () => void; isActive?: boolean }) {
   return (
     <TouchableOpacity
-      className="flex-1 bg-white rounded-lg"
-      style={{ padding: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 2, elevation: 1 }}
+      className={`flex-1 rounded-lg ${isActive ? 'bg-gray-100' : 'bg-white'}`}
+      style={{ 
+        padding: 8, 
+        shadowColor: '#000', 
+        shadowOffset: { width: 0, height: 1 }, 
+        shadowOpacity: isActive ? 0.15 : 0.06, 
+        shadowRadius: 2, 
+        elevation: isActive ? 3 : 1,
+        borderWidth: isActive ? 1 : 0,
+        borderColor: isActive ? iconTint : 'transparent'
+      }}
       onPress={onPress}
       accessibilityRole="button"
     >
@@ -99,8 +108,8 @@ function StatCard({ title, count, icon, iconTint, onPress }: { title: string; co
         <View className="rounded-lg items-center justify-center mb-2" style={{ width: 24, height: 24, backgroundColor: `${iconTint}20` }}>
           <Ionicons name={icon} size={14} color={iconTint} />
         </View>
-        <Text className="font-bold text-gray-900 mb-1" style={{ fontSize: 16 }}>{count}</Text>
-        <Text className="text-gray-600" style={{ fontSize: 10 }}>{title}</Text>
+        <Text className={`font-bold mb-1 ${isActive ? 'text-gray-800' : 'text-gray-900'}`} style={{ fontSize: 16 }}>{count}</Text>
+        <Text className={`${isActive ? 'text-gray-700' : 'text-gray-600'}`} style={{ fontSize: 10 }}>{title}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -119,6 +128,7 @@ export default function DashboardScreen() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [notificationsLoading, setNotificationsLoading] = useState<boolean>(false);
   const [notificationsError, setNotificationsError] = useState<string | null>(null);
+  const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const screenHeight = Dimensions.get('window').height;
 
   const fetchData = async () => {
@@ -170,6 +180,18 @@ export default function DashboardScreen() {
     } catch {}
   };
 
+  const handleFilterPress = (filterType: string) => {
+    if (activeFilter === filterType) {
+      setActiveFilter(null); // Clear filter if same filter is pressed
+    } else {
+      setActiveFilter(filterType);
+    }
+  };
+
+  const clearFilter = () => {
+    setActiveFilter(null);
+  };
+
   useEffect(() => {
     setLoading(true);
     fetchData();
@@ -189,7 +211,30 @@ export default function DashboardScreen() {
     }, [])
   );
 
-  const visibleIncidents = useMemo(() => (selectedTab === 0 ? publicIncidents : myIncidents), [selectedTab, publicIncidents, myIncidents]);
+  const visibleIncidents = useMemo(() => {
+    const incidents = selectedTab === 0 ? publicIncidents : myIncidents;
+    
+    if (!activeFilter || activeFilter === 'all') {
+      return incidents;
+    }
+    
+    return incidents.filter(incident => {
+      const status = (incident.status || '').toLowerCase();
+      
+      switch (activeFilter) {
+        case 'pending':
+          return status === 'pending';
+        case 'in_progress':
+          return status.includes('in progress');
+        case 'resolved':
+          return status.includes('resolved');
+        case 'urgent':
+          return status.includes('urgent');
+        default:
+          return true;
+      }
+    });
+  }, [selectedTab, publicIncidents, myIncidents, activeFilter]);
 
   if (loading) {
   return (
@@ -231,12 +276,48 @@ export default function DashboardScreen() {
       <ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchData(); fetchNotifications(); }} />} className="flex-1" contentContainerStyle={{ padding: 16 }}>
         {/* Overview Stats */}
         <View className="bg-white rounded-2xl mb-4" style={{ padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 2, elevation: 1 }}>
-          <Text className="font-bold text-[#8B0000] mb-3" style={{ fontSize: 18 }}>Overview</Text>
+          <View className="flex-row justify-between items-center mb-3">
+            <Text className="font-bold text-[#8B0000]" style={{ fontSize: 18 }}>Overview</Text>
+            {activeFilter && (
+              <TouchableOpacity onPress={clearFilter} className="flex-row items-center">
+                <Ionicons name="close-circle" size={16} color="#6B7280" />
+                <Text className="text-gray-500 ml-1" style={{ fontSize: 12 }}>Clear filter</Text>
+              </TouchableOpacity>
+            )}
+          </View>
           <View className="flex-row" style={{ columnGap: 8 }}>
-            <StatCard title="Total Reports" count={myIncidents.length} icon="document-text" iconTint="#8B0000" />
-            <StatCard title="Pending" count={myIncidents.filter(i => (i.status || '').toLowerCase() === 'pending').length} icon="time" iconTint="#FFA000" />
-            <StatCard title="In Progress" count={myIncidents.filter(i => (i.status || '').toLowerCase().includes('in progress')).length} icon="time" iconTint="#1976D2" />
-            <StatCard title="Resolved" count={myIncidents.filter(i => (i.status || '').toLowerCase().includes('resolved')).length} icon="checkmark-circle" iconTint="#4CAF50" />
+            <StatCard 
+              title="Total Reports" 
+              count={myIncidents.length} 
+              icon="document-text" 
+              iconTint="#8B0000" 
+              onPress={() => handleFilterPress('all')}
+              isActive={activeFilter === 'all'}
+            />
+            <StatCard 
+              title="Pending" 
+              count={myIncidents.filter(i => (i.status || '').toLowerCase() === 'pending').length} 
+              icon="time" 
+              iconTint="#FFA000" 
+              onPress={() => handleFilterPress('pending')}
+              isActive={activeFilter === 'pending'}
+            />
+            <StatCard 
+              title="In Progress" 
+              count={myIncidents.filter(i => (i.status || '').toLowerCase().includes('in progress')).length} 
+              icon="time" 
+              iconTint="#1976D2" 
+              onPress={() => handleFilterPress('in_progress')}
+              isActive={activeFilter === 'in_progress'}
+            />
+            <StatCard 
+              title="Resolved" 
+              count={myIncidents.filter(i => (i.status || '').toLowerCase().includes('resolved')).length} 
+              icon="checkmark-circle" 
+              iconTint="#4CAF50" 
+              onPress={() => handleFilterPress('resolved')}
+              isActive={activeFilter === 'resolved'}
+            />
           </View>
         </View>
 
@@ -255,6 +336,21 @@ export default function DashboardScreen() {
             </View>
           </TouchableOpacity>
         </View>
+
+        {/* Filter Indicator */}
+        {activeFilter && activeFilter !== 'all' && (
+          <View className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 flex-row items-center justify-between">
+            <View className="flex-row items-center">
+              <Ionicons name="filter" size={16} color="#1976D2" />
+              <Text className="text-blue-800 ml-2 font-medium">
+                Showing {activeFilter === 'in_progress' ? 'In Progress' : activeFilter.charAt(0).toUpperCase() + activeFilter.slice(1)} incidents
+              </Text>
+            </View>
+            <TouchableOpacity onPress={clearFilter}>
+              <Ionicons name="close" size={16} color="#1976D2" />
+            </TouchableOpacity>
+          </View>
+        )}
 
         {error ? (
           <View className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
