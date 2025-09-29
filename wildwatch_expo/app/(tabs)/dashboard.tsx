@@ -117,9 +117,7 @@ function StatCard({ title, count, icon, iconTint, onPress, isActive = false }: {
 
 export default function DashboardScreen() {
   const { tab } = useLocalSearchParams<{ tab?: string }>();
-  const [publicIncidents, setPublicIncidents] = useState<IncidentResponseDto[]>([]);
   const [myIncidents, setMyIncidents] = useState<IncidentResponseDto[]>([]);
-  const [selectedTab, setSelectedTab] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -134,11 +132,7 @@ export default function DashboardScreen() {
   const fetchData = async () => {
     setError(null);
     try {
-      const [pub, mine] = await Promise.all([
-        incidentAPI.getPublicIncidents(),
-        incidentAPI.getMyIncidents(),
-      ]);
-      setPublicIncidents(pub);
+      const mine = await incidentAPI.getMyIncidents();
       setMyIncidents(mine);
     } catch (e: any) {
       setError(e?.message || 'Failed to load incidents');
@@ -198,11 +192,6 @@ export default function DashboardScreen() {
     fetchNotifications();
   }, []);
 
-  useEffect(() => {
-    if ((tab || '').toLowerCase() === 'my') {
-      setSelectedTab(1);
-    }
-  }, [tab]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -212,7 +201,7 @@ export default function DashboardScreen() {
   );
 
   const visibleIncidents = useMemo(() => {
-    const incidents = selectedTab === 0 ? publicIncidents : myIncidents;
+    const incidents = myIncidents;
     
     if (!activeFilter || activeFilter === 'all') {
       return incidents;
@@ -234,7 +223,7 @@ export default function DashboardScreen() {
           return true;
       }
     });
-  }, [selectedTab, publicIncidents, myIncidents, activeFilter]);
+  }, [myIncidents, activeFilter]);
 
   if (loading) {
   return (
@@ -321,20 +310,14 @@ export default function DashboardScreen() {
           </View>
         </View>
 
-        {/* Tabs */}
+        {/* My Incidents Header */}
         <View className="bg-white flex-row mb-4 rounded-lg" style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 2, elevation: 1 }}>
-          <TouchableOpacity className={`flex-1 items-center ${selectedTab === 0 ? 'border-b-2 border-[#8B0000]' : ''}`} style={{ paddingVertical: 16 }} onPress={() => setSelectedTab(0)}>
+          <View className="flex-1 items-center" style={{ paddingVertical: 16 }}>
             <View className="flex-row items-center justify-center">
-              <Ionicons name="globe" size={20} color={selectedTab === 0 ? '#8B0000' : '#6B7280'} />
-              <Text className={`ml-2 font-medium ${selectedTab === 0 ? 'text-[#8B0000]' : 'text-gray-500'}`}>All Incidents</Text>
+              <Ionicons name="person" size={20} color="#8B0000" />
+              <Text className="ml-2 font-medium text-[#8B0000]">My Incident Reports</Text>
             </View>
-          </TouchableOpacity>
-          <TouchableOpacity className={`flex-1 items-center ${selectedTab === 1 ? 'border-b-2 border-[#8B0000]' : ''}`} style={{ paddingVertical: 16 }} onPress={() => setSelectedTab(1)}>
-            <View className="flex-row items-center justify-center">
-              <Ionicons name="person" size={20} color={selectedTab === 1 ? '#8B0000' : '#6B7280'} />
-              <Text className={`ml-2 font-medium ${selectedTab === 1 ? 'text-[#8B0000]' : 'text-gray-500'}`}>My Incidents</Text>
-            </View>
-          </TouchableOpacity>
+          </View>
         </View>
 
         {/* Filter Indicator */}
@@ -361,7 +344,7 @@ export default function DashboardScreen() {
           <View className="bg-white rounded-lg p-8 items-center">
             <Ionicons name="document-outline" size={28} color="#9CA3AF" />
             <Text className="text-gray-500 mt-4 text-center">
-              {selectedTab === 0 ? 'No public incidents available at the moment.' : "You haven't submitted any incidents yet."}
+              You haven't submitted any incidents yet.
             </Text>
           </View>
         ) : (
