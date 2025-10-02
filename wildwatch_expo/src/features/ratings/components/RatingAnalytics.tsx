@@ -81,6 +81,19 @@ export const RatingAnalytics: React.FC<RatingAnalyticsProps> = ({
             ))}
           </View>
         )}
+
+        {/* Feedback Section */}
+        {rating.feedback && rating.feedback.trim() && (
+          <View style={styles.feedbackSection}>
+            <View style={styles.feedbackHeader}>
+              <Ionicons name="chatbubble-outline" size={16} color="#6B7280" />
+              <Text style={styles.feedbackTitle}>Feedback</Text>
+            </View>
+            <View style={styles.feedbackContainer}>
+              <Text style={styles.feedbackText}>{rating.feedback}</Text>
+            </View>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -192,6 +205,35 @@ const styles = StyleSheet.create({
   progressFill: {
     height: '100%',
     borderRadius: 4,
+  },
+  feedbackSection: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  feedbackHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  feedbackTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    marginLeft: 6,
+  },
+  feedbackContainer: {
+    backgroundColor: '#F9FAFB',
+    padding: 12,
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#3B82F6',
+  },
+  feedbackText: {
+    fontSize: 14,
+    color: '#374151',
+    lineHeight: 20,
   },
 });
 
