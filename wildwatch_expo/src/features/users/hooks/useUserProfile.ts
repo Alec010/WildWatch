@@ -12,6 +12,7 @@ export const useUserProfile = () => {
     setError(null);
     try {
       const me = await userAPI.getMe();
+      console.log('User profile API response:', me);
       setUserProfile(me as UserProfile);
     } catch (e: any) {
       setError(e?.message || 'Failed to fetch profile');
