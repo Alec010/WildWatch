@@ -43,8 +43,8 @@ public class OfficeBulletinController {
     }
 
     @GetMapping
-    public ResponseEntity<List<OfficeBulletinResponse>> getAllBulletins() {
-        List<OfficeBulletinResponse> bulletins = officeBulletinService.getAllActiveBulletins();
+    public ResponseEntity<List<OfficeBulletinResponse>> getAllBulletins(@AuthenticationPrincipal UserDetails userDetails) {
+        List<OfficeBulletinResponse> bulletins = officeBulletinService.getAllActiveBulletins(userDetails.getUsername());
         return ResponseEntity.ok(bulletins);
     }
 
@@ -60,5 +60,21 @@ public class OfficeBulletinController {
             @AuthenticationPrincipal UserDetails userDetails) {
         List<ResolvedIncidentResponse> incidents = officeBulletinService.getResolvedIncidents(userDetails.getUsername());
         return ResponseEntity.ok(incidents);
+    }
+
+    @PostMapping("/{id}/upvote")
+    public ResponseEntity<Boolean> toggleUpvote(
+            @PathVariable("id") String id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        boolean isUpvoted = officeBulletinService.toggleUpvote(id, userDetails.getUsername());
+        return ResponseEntity.ok(isUpvoted);
+    }
+
+    @GetMapping("/{id}/upvote-status")
+    public ResponseEntity<Boolean> getUpvoteStatus(
+            @PathVariable("id") String id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        boolean hasUpvoted = officeBulletinService.hasUserUpvoted(id, userDetails.getUsername());
+        return ResponseEntity.ok(hasUpvoted);
     }
 }

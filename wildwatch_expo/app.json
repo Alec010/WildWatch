@@ -14,9 +14,13 @@
       "resizeMode": "cover"
     },
     "ios": {
+      "bundleIdentifier": "com.wildwatch.app",
+      "buildNumber": "1",
       "supportsTablet": true
     },
     "android": {
+      "package": "com.wildwatch.app",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/logos/WildWatch_Logo.png"
       },
@@ -33,6 +37,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "86220201-cf3e-4e5f-9bdc-73be52b8075c"
+      }
     }
   }
 }
