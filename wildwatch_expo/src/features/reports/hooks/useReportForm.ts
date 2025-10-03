@@ -111,7 +111,7 @@ export const useReportForm = () => {
   const handleLocationSelect = useCallback((locationData: LocationData): void => {
     // Check if this is a "cleared" location (coordinates are 0,0)
     const isClearing = locationData.latitude === 0 && locationData.longitude === 0;
-    
+
     if (isClearing) {
       // User is starting to select a new location
       console.log('Location selection started - validation disabled');
