@@ -119,12 +119,18 @@ export default function NotificationDropdown({
     const RECONNECT_DELAY = 5000;
 
     const connectStomp = () => {
-      const socket = new SockJS(`${API_BASE_URL.replace(/\/api$/, '')}/ws`);
-      const stompClient = new Client({
-        webSocketFactory: () => socket as any,
-        reconnectDelay: RECONNECT_DELAY,
-        heartbeatIncoming: 60000, // Set client heartbeat to 60 seconds
-        heartbeatOutgoing: 60000, // Set server heartbeat to 60 seconds
+      try {
+        console.log("Connecting to WebSocket at:", `${WS_BASE_URL}/ws`);
+        // Create SockJS connection with error handling
+        const socket = new SockJS(`${WS_BASE_URL}/ws`, null, {
+          transports: ['websocket', 'xhr-streaming', 'xhr-polling'],
+          timeout: 10000
+        });
+        const stompClient = new Client({
+          webSocketFactory: () => socket as any,
+          reconnectDelay: RECONNECT_DELAY,
+          heartbeatIncoming: 60000, // Set client heartbeat to 60 seconds
+          heartbeatOutgoing: 60000, // Set server heartbeat to 60 seconds
         onConnect: () => {
           setWsConnected(true);
           reconnectAttempts = 0;
@@ -174,8 +180,21 @@ export default function NotificationDropdown({
           }
         },
       });
+      // Add debug event listeners
+      socket.onopen = () => console.log("SockJS connection opened");
+      socket.onclose = (e) => console.log("SockJS connection closed", e);
+      socket.onerror = (e) => console.error("SockJS connection error", e);
+      
       stompClient.activate();
       stompClientRef.current = stompClient;
+      } catch (error) {
+        console.error("WebSocket connection error:", error);
+        // Fall back to polling if WebSocket fails
+        if (!pollInterval) {
+          console.log("Falling back to polling for notifications");
+          pollInterval = setInterval(fetchNotifications, 30000);
+        }
+      }
     };
 
     // Connect to WebSocket first, only fetch notifications once

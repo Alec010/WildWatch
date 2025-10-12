@@ -6,7 +6,9 @@ import com.teamhyungie.WildWatch.dto.IncidentResponse;
 import com.teamhyungie.WildWatch.dto.IncidentUpdateRequest;
 import com.teamhyungie.WildWatch.dto.IncidentUpdateResponse;
 import com.teamhyungie.WildWatch.dto.IncidentTransferRequest;
+import com.teamhyungie.WildWatch.dto.BulkIncidentUpdateRequest;
 import com.teamhyungie.WildWatch.service.IncidentService;
+import com.teamhyungie.WildWatch.service.IncidentService.BulkResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -66,6 +68,13 @@ public class IncidentController {
         List<IncidentResponse> incidents = incidentService.getUserIncidents(userDetails.getUsername());
         return ResponseEntity.ok(incidents);
     }
+    
+    @GetMapping("/my-active-cases")
+    public ResponseEntity<List<IncidentResponse>> getActiveCases(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        List<IncidentResponse> incidents = incidentService.getActiveCases(userDetails.getUsername());
+        return ResponseEntity.ok(incidents);
+    }
 
     @GetMapping("/public")
     public ResponseEntity<List<IncidentResponse>> getPublicIncidents() {
@@ -84,6 +93,13 @@ public class IncidentController {
     public ResponseEntity<List<IncidentResponse>> getOfficeIncidents(
             @AuthenticationPrincipal UserDetails userDetails) {
         List<IncidentResponse> incidents = incidentService.getOfficeIncidents(userDetails.getUsername());
+        return ResponseEntity.ok(incidents);
+    }
+    
+    @GetMapping("/office/verified")
+    public ResponseEntity<List<IncidentResponse>> getVerifiedCases(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        List<IncidentResponse> incidents = incidentService.getVerifiedCases(userDetails.getUsername());
         return ResponseEntity.ok(incidents);
     }
 
@@ -157,6 +173,22 @@ public class IncidentController {
             @AuthenticationPrincipal UserDetails userDetails) {
         IncidentResponse response = incidentService.extendResolutionDate(id, request.getNewEstimatedDate(), userDetails.getUsername());
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/bulk/resolve")
+    public ResponseEntity<BulkResult> bulkResolve(
+            @jakarta.validation.Valid @RequestBody BulkIncidentUpdateRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        BulkResult result = incidentService.bulkResolve(userDetails.getUsername(), request);
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/bulk/dismiss")
+    public ResponseEntity<BulkResult> bulkDismiss(
+            @jakarta.validation.Valid @RequestBody BulkIncidentUpdateRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        BulkResult result = incidentService.bulkDismiss(userDetails.getUsername(), request);
+        return ResponseEntity.ok(result);
     }
 
     public static class ExtendResolutionRequest {

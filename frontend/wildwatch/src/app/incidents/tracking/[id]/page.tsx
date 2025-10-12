@@ -27,6 +27,7 @@ import {
   FileImage,
   Users,
   MessageSquare,
+  XCircle,
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
@@ -294,6 +295,13 @@ export default function CaseDetailsPage() {
       console.log("DEBUG: userEmail", userEmail)
       if (!incident || !userRole || !userEmail) return
       console.log("DEBUG: incident.status", incident.status)
+      
+      // Don't show rating modal for dismissed cases
+      if (incident.status?.toLowerCase() === "dismissed") {
+        console.log("DEBUG: incident is dismissed, no rating available")
+        return
+      }
+      
       if (incident.status?.toLowerCase() === "resolved") {
         try {
           console.log("DEBUG: status is resolved, about to fetch rating")
@@ -471,20 +479,43 @@ export default function CaseDetailsPage() {
 
                 {/* Points Awarded Notification */}
                 {(() => {
+                  // Don't show points status for dismissed cases
+                  if (isDismissed) {
+                    return (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="mb-6 bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200 rounded-xl p-4"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="bg-gradient-to-br from-gray-400 to-gray-500 p-2 rounded-lg">
+                            <AlertCircle className="h-5 w-5 text-white" />
+                          </div>
+                          <div>
+                            <span className="font-semibold text-gray-800">
+                              Points Status:
+                            </span>
+                            <span className="font-bold text-gray-900 ml-2">
+                              Not Available
+                            </span>
+                            <span className="ml-2 text-xs text-gray-700">
+                              (dismissed cases do not receive points)
+                            </span>
+                          </div>
+                        </div>
+                      </motion.div>
+                    );
+                  }
+                  
+                  // For non-dismissed cases, show the regular points status
                   const shouldShow = incidentRating &&
                     ((userRole === "OFFICE_ADMIN" && incident?.assignedOffice) ||
                       (userRole === "USER" && incident?.submittedByEmail === userEmail) ||
                       (userRole === "REGULAR_USER" && incident?.submittedByEmail === userEmail))
-                  console.log('Points section conditions:', {
-                    incidentRating: !!incidentRating,
-                    userRole,
-                    assignedOffice: incident?.assignedOffice,
-                    submittedByEmail: incident?.submittedByEmail,
-                    userEmail,
-                    shouldShow
-                  })
-                  return shouldShow
-                })() && (
+                  
+                  if (!shouldShow) return null;
+                  
+                  return (
                     <motion.div
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
@@ -514,7 +545,8 @@ export default function CaseDetailsPage() {
                         </div>
                       </div>
                     </motion.div>
-                  )}
+                  );
+                })()}
 
                 {/* Case Header Card */}
                 <div className="bg-gradient-to-br from-white to-[#fff9f9] rounded-xl shadow-md border border-[#f0e0e0] p-6 relative overflow-hidden">
@@ -546,22 +578,19 @@ export default function CaseDetailsPage() {
                         )}
                         <span
                           className={`px-3 py-1 text-sm font-medium rounded-full ${
-                            (incident.status === "Closed" ? "Resolved" : incident.status) === "Pending"
+                            incident.status === "Pending"
                               ? "bg-yellow-100 text-yellow-800"
-                              : (incident.status === "Closed" ? "Resolved" : incident.status) === "In Progress"
+                              : incident.status === "In Progress"
                                 ? "bg-blue-100 text-blue-800"
-                                : (incident.status === "Closed" ? "Resolved" : incident.status) === "Resolved"
+                                : (incident.status === "Resolved")
                                   ? "bg-green-100 text-green-800"
-                                  : "bg-gray-100 text-gray-800"
+                                  : isDismissed
+                                    ? "bg-gray-200 text-gray-700 border border-gray-400 font-bold"
+                                    : "bg-gray-100 text-gray-800"
                           }`}
                         >
-                          {(incident.status === "Closed" ? "Resolved" : incident.status)}
+                          {isDismissed || incident.status === "Closed" ? "Dismissed" : incident.status}
                         </span>
-                        {isDismissed && (
-                          <span className="px-3 py-1 text-sm font-bold rounded-full bg-gray-200 text-gray-700 border border-gray-400">
-                            Dismissed
-                          </span>
-                        )}
                       </div>
                     </div>
 
@@ -577,22 +606,10 @@ export default function CaseDetailsPage() {
                         <div className="font-semibold text-gray-800">{lastUpdated ? formatDate(lastUpdated) : "-"}</div>
                       </div>
                       <div className="bg-white/50 rounded-lg p-3 border border-gray-100">
-                        <div className="text-xs text-gray-500 mb-1 flex items-center gap-1">
-                          Est. Resolution
-                          {incident?.estimatedResolutionDate && (
-                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                              Extended
-                            </span>
-                          )}
-                        </div>
+                        <div className="text-xs text-gray-500 mb-1">Est. Resolution</div>
                         <div className="font-semibold text-gray-800">
                           {estimatedResolution ? formatDate(estimatedResolution.toISOString()) : "-"}
                         </div>
-                        {incident?.resolutionExtendedBy && (
-                          <div className="text-xs text-gray-500 mt-1">
-                            Extended by {incident.resolutionExtendedBy}
-                          </div>
-                        )}
                       </div>
                     </div>
                   </div>
@@ -907,8 +924,14 @@ export default function CaseDetailsPage() {
                             iconBg = "bg-gradient-to-br from-purple-500 to-purple-600"
                             Icon = ArrowRightLeft
                           }
-                          // Check for status changes
-                          else if (status.includes("resolved")) {
+                          // Check for dismissed status
+                          else if (status.includes("dismissed") || message.includes("dismissed") || message.includes("dismiss")) {
+                            iconColor = "text-gray-500"
+                            iconBg = "bg-gradient-to-br from-gray-500 to-gray-600"
+                            Icon = XCircle
+                          }
+                          // Check for resolved status
+                          else if (status.includes("resolved") || status.includes("closed")) {
                             iconColor = "text-green-500"
                             iconBg = "bg-gradient-to-br from-green-500 to-green-600"
                             Icon = CheckCircle
@@ -1006,7 +1029,15 @@ export default function CaseDetailsPage() {
                       </div>
 
                       {/* Office Rating */}
-                      {incidentRating?.officeRating && (
+                      {isDismissed ? (
+                        <div className="bg-white/50 rounded-lg p-3 border border-gray-100">
+                          <div className="text-sm font-medium text-gray-500 mb-2">Office Rating</div>
+                          <div className="flex items-center gap-2 text-gray-500">
+                            <AlertCircle className="w-4 h-4" />
+                            <p className="text-sm">Dismissed cases do not receive ratings</p>
+                          </div>
+                        </div>
+                      ) : incidentRating?.officeRating ? (
                         <div className="bg-white/50 rounded-lg p-3 border border-gray-100">
                           <div className="text-sm font-medium text-gray-500 mb-2">Office Rating</div>
                           <div className="flex items-center gap-1">
@@ -1025,7 +1056,7 @@ export default function CaseDetailsPage() {
                             <p className="text-xs text-gray-600 mt-2 italic">"{incidentRating.officeFeedback}"</p>
                           )}
                         </div>
-                      )}
+                      ) : null}
                     </div>
                   </motion.div>
 
@@ -1073,7 +1104,15 @@ export default function CaseDetailsPage() {
                       </div>
 
                       {/* Student Rating */}
-                      {incidentRating?.reporterRating && (
+                      {isDismissed ? (
+                        <div className="bg-white/50 rounded-lg p-3 border border-gray-100">
+                          <div className="text-sm font-medium text-gray-500 mb-2">Student Rating</div>
+                          <div className="flex items-center gap-2 text-gray-500">
+                            <AlertCircle className="w-4 h-4" />
+                            <p className="text-sm">No points are awarded for dismissed cases</p>
+                          </div>
+                        </div>
+                      ) : incidentRating?.reporterRating ? (
                         <div className="bg-white/50 rounded-lg p-3 border border-gray-100">
                           <div className="text-sm font-medium text-gray-500 mb-2">Student Rating</div>
                           <div className="flex items-center gap-1">
@@ -1092,7 +1131,7 @@ export default function CaseDetailsPage() {
                             <p className="text-xs text-gray-600 mt-2 italic">"{incidentRating.reporterFeedback}"</p>
                           )}
                         </div>
-                      )}
+                      ) : null}
                     </div>
                   </motion.div>
 

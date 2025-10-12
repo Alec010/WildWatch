@@ -131,38 +131,6 @@ export const api = {
     return response.json();
   },
 
-  upvoteBulletin: async (bulletinId: string) => {
-    const response = await fetch(`${getBackendUrl()}/api/office-bulletins/${bulletinId}/upvote`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${await tokenService.getValidToken()}`,
-      },
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || 'Failed to upvote bulletin');
-    }
-
-    return response.json() as Promise<boolean>;
-  },
-
-  getBulletinUpvoteStatus: async (bulletinId: string) => {
-    const response = await fetch(`${getBackendUrl()}/api/office-bulletins/${bulletinId}/upvote-status`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${await tokenService.getValidToken()}`,
-      },
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || 'Failed to fetch upvote status');
-    }
-
-    return response.json() as Promise<boolean>;
-  },
-
   getBulletins: async () => {
     const response = await fetch(`${getBackendUrl()}/api/office-bulletins`, {
       method: 'GET',

@@ -12,8 +12,6 @@ public class OfficeBulletinResponse {
     private String createdBy;
     private LocalDateTime createdAt;
     private Boolean isActive;
-    private Integer upvoteCount;
-    private Boolean userHasUpvoted;
     private List<BulletinMediaResponse> mediaAttachments;
     private List<IncidentSummaryResponse> relatedIncidents;
 

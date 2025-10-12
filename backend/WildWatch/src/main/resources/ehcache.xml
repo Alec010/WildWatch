@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xmlns="http://www.ehcache.org/v3"
+        xsi:schemaLocation="http://www.ehcache.org/v3 http://www.ehcache.org/schema/ehcache-core-3.0.xsd">
+
+    <persistence directory="${java.io.tmpdir}/ehcache-data"/>
+
+    <cache-template name="default">
+        <expiry>
+            <ttl unit="minutes">30</ttl>
+        </expiry>
+        <resources>
+            <heap>1000</heap>
+            <offheap unit="MB">10</offheap>
+        </resources>
+    </cache-template>
+
+    <!-- Entity caches -->
+    <cache alias="com.teamhyungie.WildWatch.model.Incident" uses-template="default">
+        <expiry>
+            <ttl unit="minutes">60</ttl>
+        </expiry>
+        <resources>
+            <heap>2000</heap>
+            <offheap unit="MB">20</offheap>
+        </resources>
+    </cache>
+    
+    <cache alias="com.teamhyungie.WildWatch.model.User" uses-template="default">
+        <expiry>
+            <ttl unit="minutes">120</ttl>
+        </expiry>
+        <resources>
+            <heap>500</heap>
+            <offheap unit="MB">10</offheap>
+        </resources>
+    </cache>
+    
+    <cache alias="com.teamhyungie.WildWatch.model.OfficeAdmin" uses-template="default">
+        <expiry>
+            <ttl unit="minutes">120</ttl>
+        </expiry>
+    </cache>
+    
+    <cache alias="com.teamhyungie.WildWatch.model.Evidence" uses-template="default">
+        <resources>
+            <heap>1000</heap>
+        </resources>
+    </cache>
+    
+    <cache alias="com.teamhyungie.WildWatch.model.Witness" uses-template="default"/>
+    
+    <!-- Collection caches -->
+    <cache alias="com.teamhyungie.WildWatch.model.Incident.tags" uses-template="default">
+        <expiry>
+            <ttl unit="minutes">30</ttl>
+        </expiry>
+        <resources>
+            <heap>500</heap>
+        </resources>
+    </cache>
+    <cache alias="com.teamhyungie.WildWatch.model.Incident.evidence" uses-template="default">
+        <expiry>
+            <ttl unit="minutes">30</ttl>
+        </expiry>
+        <resources>
+            <heap>500</heap>
+        </resources>
+    </cache>
+    <cache alias="com.teamhyungie.WildWatch.model.Incident.witnesses" uses-template="default">
+        <expiry>
+            <ttl unit="minutes">30</ttl>
+        </expiry>
+        <resources>
+            <heap>500</heap>
+        </resources>
+    </cache>
+    
+    <!-- Query result caches -->
+    <cache alias="userIncidentHistory" uses-template="default">
+        <expiry>
+            <ttl unit="minutes">10</ttl>
+        </expiry>
+    </cache>
+    
+    <cache alias="activeCases" uses-template="default">
+        <expiry>
+            <ttl unit="minutes">5</ttl>
+        </expiry>
+    </cache>
+    
+    <!-- Query caches -->
+    <cache alias="org.hibernate.cache.internal.StandardQueryCache" uses-template="default"/>
+    <cache alias="org.hibernate.cache.spi.TimestampsCache" uses-template="default">
+        <expiry>
+            <ttl unit="minutes">120</ttl>
+        </expiry>
+    </cache>
+</config>

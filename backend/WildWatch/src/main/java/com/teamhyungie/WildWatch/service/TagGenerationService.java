@@ -196,43 +196,18 @@ public class TagGenerationService {
                 }
             }
 
-            // Balance: separate location-like tags from content tags
-            // Heuristics for location: present in mandatory tokens OR matches geo indicators/building patterns
-            Pattern buildingRoomPattern2 = Pattern.compile("\\b([A-Z]{2,})[- ]?(\\d{1,4})\\b");
-            Set<String> mergedOrderedSet = new LinkedHashSet<>();
-            // preserve input order: mandatory first, then generated
-            mandatoryLocationTokens.forEach(mergedOrderedSet::add);
-            cleanedGenerated.forEach(mergedOrderedSet::add);
-
-            List<String> locationCandidates = new ArrayList<>();
-            List<String> contentCandidates = new ArrayList<>();
-            for (String t : mergedOrderedSet) {
-                String lower = t.toLowerCase();
-                boolean isLoc = mandatoryLocationTokens.contains(t)
-                        || geoIndicators.stream().anyMatch(lower::contains)
-                        || buildingRoomPattern2.matcher(t).find()
-                        || lower.contains("building");
-                if (isLoc) locationCandidates.add(t); else contentCandidates.add(t);
+            // Merge mandatory tokens first, then AI-generated tags, keeping order and uniqueness
+            LinkedHashSet<String> merged = new LinkedHashSet<>();
+            for (String t : mandatoryLocationTokens) {
+                merged.add(t);
+            }
+            for (String t : cleanedGenerated) {
+                merged.add(t);
             }
 
-            // Build top 5 to be balanced: 2-3 location and 2-3 content
-            List<String> topFive = new ArrayList<>();
-            int locQuota = Math.min(3, locationCandidates.size());
-            int contentQuota = Math.min(3, contentCandidates.size());
-            // Ensure total 5; prefer 2 loc + 3 content if content is rich, else 3 loc + 2 content
-            int desiredLoc = contentCandidates.size() >= 3 ? Math.min(2, locQuota) : Math.min(3, locQuota);
-            int desiredContent = 5 - desiredLoc;
-            for (int i = 0; i < desiredLoc && i < locationCandidates.size(); i++) topFive.add(locationCandidates.get(i));
-            for (int i = 0; i < desiredContent && i < contentCandidates.size(); i++) topFive.add(contentCandidates.get(i));
-
-            // Compose final list up to 15: prioritized balanced topFive, then remaining content, then remaining location
-            LinkedHashSet<String> finalOrdered = new LinkedHashSet<>();
-            topFive.forEach(finalOrdered::add);
-            for (int i = desiredContent; i < contentCandidates.size(); i++) finalOrdered.add(contentCandidates.get(i));
-            for (int i = desiredLoc; i < locationCandidates.size(); i++) finalOrdered.add(locationCandidates.get(i));
-
+            // Enforce exactly 15 tags, prioritizing mandatory tokens
             List<String> finalTags = new ArrayList<>(15);
-            for (String t : finalOrdered) {
+            for (String t : merged) {
                 if (finalTags.size() >= 15) break;
                 finalTags.add(t);
             }

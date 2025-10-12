@@ -26,6 +26,9 @@ import { useSidebar } from "@/contexts/SidebarContext"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 import { Toaster } from "sonner"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Textarea } from "@/components/ui/textarea"
 
 interface Incident {
   id: string
@@ -62,6 +65,16 @@ export default function IncidentManagementPage() {
   const [activeTab, setActiveTab] = useState<"pending" | "transferred">("pending")
   const [pendingCount, setPendingCount] = useState(0)
   const [transferredCount, setTransferredCount] = useState(0)
+
+  // Bulk actions state
+  const [bulkMode, setBulkMode] = useState<"none" | "resolve" | "dismiss">("none")
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [isBulkLoading, setIsBulkLoading] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [confirmAction, setConfirmAction] = useState<"resolve" | "dismiss" | null>(null)
+  const [confirmNotes, setConfirmNotes] = useState("")
+  const [resultOpen, setResultOpen] = useState(false)
+  const [resultItems, setResultItems] = useState<Array<{ id: string; trackingNumber?: string; status: string }>>([])
 
   // Fetch the admin's office code from the profile API
   const fetchAdminOfficeCode = async () => {
@@ -132,6 +145,67 @@ export default function IncidentManagementPage() {
 
   const handleRefresh = () => {
     fetchIncidents(currentOffice)
+  }
+
+  const exitBulkMode = () => {
+    setBulkMode("none")
+    setSelectedIds(new Set())
+  }
+
+  const toggleRowSelection = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const performBulk = async (action: "resolve" | "dismiss") => {
+    if (selectedIds.size === 0) {
+      toast.info("Select incidents first", { description: "Please choose at least one incident." })
+      return
+    }
+    // open modal for notes
+    setConfirmAction(action)
+    setConfirmNotes("")
+    setConfirmOpen(true)
+  }
+
+  const submitBulk = async () => {
+    if (!confirmAction) return
+    try {
+      setIsBulkLoading(true)
+      const body = {
+        incidentIds: Array.from(selectedIds),
+        visibleToReporter: true,
+        updateMessage: confirmNotes.trim(),
+      }
+      const endpoint = confirmAction === "resolve" ? "/api/incidents/bulk/resolve" : "/api/incidents/bulk/dismiss"
+      const res = await api.post(endpoint, body)
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`)
+      const result = await res.json()
+      const updated = (result?.updatedIds?.length ?? 0)
+      const failed = (result?.failed?.length ?? 0)
+      const updatedItems: Array<{ id: string; trackingNumber?: string; status: string }> = result?.updated || []
+      setResultItems(updatedItems)
+
+      toast.success(`Bulk ${confirmAction} completed`, {
+        description: `${updated} updated${failed ? `, ${failed} failed` : ""}.`,
+        action: {
+          label: "View details",
+          onClick: () => setResultOpen(true)
+        }
+      })
+      exitBulkMode()
+      fetchIncidents(currentOffice)
+    } catch (e: any) {
+      toast.error(`Bulk ${confirmAction} failed`, { description: e?.message || "Please try again." })
+    } finally {
+      setIsBulkLoading(false)
+      setConfirmOpen(false)
+      setConfirmAction(null)
+    }
   }
 
   const handleEdit = (id: string) => {
@@ -342,6 +416,46 @@ export default function IncidentManagementPage() {
                 <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
                 {isRefreshing ? "Refreshing..." : "Refresh"}
               </Button>
+              {/* Bulk controls */}
+              <div className="ml-2 flex items-center gap-2">
+                {bulkMode === "dismiss" ? (
+                  <Button variant="outline" size="sm" onClick={exitBulkMode} disabled={isBulkLoading}>
+                    Cancel
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    disabled={isBulkLoading}
+                    className={`${bulkMode === "resolve" ? "bg-green-600 hover:bg-green-700" : "bg-[#8B0000] hover:bg-[#6B0000]"} text-white`}
+                    onClick={() => {
+                      if (bulkMode === "resolve") performBulk("resolve")
+                      else setBulkMode("resolve")
+                    }}
+                  >
+                    {bulkMode === "resolve" ? `Confirm Resolve (${selectedIds.size})` : "Bulk Resolve"}
+                  </Button>
+                )}
+                {bulkMode === "resolve" ? (
+                  <Button variant="outline" size="sm" onClick={exitBulkMode} disabled={isBulkLoading}>
+                    Cancel
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    disabled={isBulkLoading}
+                    className={`${bulkMode === "dismiss" ? "bg-gray-700 hover:bg-gray-800" : "bg-gray-600 hover:bg-gray-700"} text-white`}
+                    onClick={() => {
+                      if (bulkMode === "dismiss") performBulk("dismiss")
+                      else setBulkMode("dismiss")
+                    }}
+                  >
+                    {bulkMode === "dismiss" ? `Confirm Dismiss (${selectedIds.size})` : "Bulk Dismiss"}
+                  </Button>
+                )}
+              </div>
+              {bulkMode !== "none" && (
+                <div className="text-xs text-gray-600 ml-2">Bulk mode: {bulkMode} • Selected: {selectedIds.size}</div>
+              )}
             </div>
             <div className="text-sm text-gray-500">
               {activeTab === "pending" ? (
@@ -372,6 +486,7 @@ export default function IncidentManagementPage() {
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
+                        {bulkMode !== "none" && (<th className="px-4 py-3"></th>)}
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Case ID
                         </th>
@@ -404,6 +519,14 @@ export default function IncidentManagementPage() {
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ duration: 0.2, delay: index * 0.05 }}
                         >
+                          {bulkMode !== "none" && (
+                            <td className="px-4 py-4 whitespace-nowrap">
+                              <Checkbox
+                                checked={selectedIds.has(incident.id)}
+                                onCheckedChange={() => toggleRowSelection(incident.id)}
+                              />
+                            </td>
+                          )}
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
                               <div className="flex-shrink-0 h-8 w-1 bg-yellow-400 rounded-full mr-3"></div>
@@ -494,6 +617,7 @@ export default function IncidentManagementPage() {
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
+                        {bulkMode !== "none" && (<th className="px-4 py-3"></th>)}
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Case ID
                         </th>
@@ -535,6 +659,14 @@ export default function IncidentManagementPage() {
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ duration: 0.2, delay: index * 0.05 }}
                         >
+                          {bulkMode !== "none" && (
+                            <td className="px-4 py-4 whitespace-nowrap">
+                              <Checkbox
+                                checked={selectedIds.has(incident.id)}
+                                onCheckedChange={() => toggleRowSelection(incident.id)}
+                              />
+                            </td>
+                          )}
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
                               <div className="flex-shrink-0 h-8 w-1 bg-blue-400 rounded-full mr-3"></div>
@@ -635,6 +767,67 @@ export default function IncidentManagementPage() {
           )}
         </div>
       </div>
+
+      {/* Confirm bulk modal */}
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-[#8B0000]">
+              {confirmAction === "resolve" ? "Confirm Bulk Resolve" : "Confirm Bulk Dismiss"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="text-sm text-gray-700">{selectedIds.size} selected item(s).</div>
+            <Textarea
+              placeholder={confirmAction === "resolve" ? "Resolution notes (required)" : "Dismissal notes (required)"}
+              value={confirmNotes}
+              onChange={(e) => setConfirmNotes(e.target.value)}
+              className="min-h-[120px] border-[#DAA520]/30 focus:ring-[#8B0000]/20 focus:border-[#8B0000]"
+              required
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmOpen(false)} disabled={isBulkLoading}>Cancel</Button>
+            <Button onClick={submitBulk} disabled={isBulkLoading || !confirmNotes.trim()} className="bg-[#8B0000] hover:bg-[#6B0000] text-white">
+              {isBulkLoading ? "Processing..." : confirmAction === "resolve" ? "Resolve Selected" : "Dismiss Selected"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Result modal */}
+      <Dialog open={resultOpen} onOpenChange={setResultOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-[#8B0000]">Updated Incidents ({resultItems.length})</DialogTitle>
+          </DialogHeader>
+          <div className="max-h-[50vh] overflow-auto divide-y">
+            {resultItems.length === 0 ? (
+              <div className="text-sm text-gray-600">No items.</div>
+            ) : (
+              resultItems.map((it) => (
+                <div key={it.id} className="flex items-center justify-between py-2">
+                  <div className="text-sm">
+                    <span className="text-gray-700">{it.trackingNumber || it.id}</span>
+                    <span className="ml-2 text-xs text-gray-500">{it.status}</span>
+                  </div>
+                  <a
+                    href={`/incidents/tracking/${it.trackingNumber || it.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[#8B0000] hover:underline text-sm"
+                  >
+                    Open
+                  </a>
+                </div>
+              ))
+            )}
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setResultOpen(false)} variant="outline">Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Add custom styles for animation delays */}
       <style jsx global>{`

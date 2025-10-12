@@ -9,12 +9,15 @@ const DEPLOYED_BACKEND = "https://wildwatch-9djc.onrender.com";
 // Get the active backend URL based on the toggle
 const getBackendUrl = () => useLocalBackend ? LOCAL_BACKEND : DEPLOYED_BACKEND;
 
-// WebSocket URLs
-const LOCAL_WS = "ws://localhost:8080";
-const DEPLOYED_WS = "wss://wildwatch-9djc.onrender.com";
+// WebSocket URLs - SockJS works with HTTP/HTTPS URLs
+const LOCAL_WS = "http://localhost:8080"; 
+const DEPLOYED_WS = "https://wildwatch-9djc.onrender.com";
 
 // Get the active WebSocket URL based on the toggle
-const getWsUrl = () => useLocalBackend ? LOCAL_WS : DEPLOYED_WS;
+const getWsUrl = () => {
+  // For development in Next.js, use the backend URL directly
+  return useLocalBackend ? LOCAL_WS : DEPLOYED_WS;
+};
 
 // Google Maps Configuration
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";

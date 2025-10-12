@@ -6,6 +6,7 @@ import com.teamhyungie.WildWatch.dto.IncidentUpdateRequest;
 import com.teamhyungie.WildWatch.dto.IncidentUpdateResponse;
 import com.teamhyungie.WildWatch.dto.IncidentTransferRequest;
 import com.teamhyungie.WildWatch.dto.GeolocationResponse;
+import com.teamhyungie.WildWatch.dto.BulkIncidentUpdateRequest;
 import com.teamhyungie.WildWatch.model.Evidence;
 import com.teamhyungie.WildWatch.model.Incident;
 import com.teamhyungie.WildWatch.model.User;
@@ -33,6 +34,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.Arrays;
 import java.util.Optional;
+import java.util.ArrayList;
 
 @Service
 @RequiredArgsConstructor
@@ -282,12 +284,21 @@ public class IncidentService {
         return response;
     }
 
+    /**
+     * Get user incidents for dashboard view - optimized version
+     * Uses a specialized query that fetches only necessary data in a single query
+     */
     public List<IncidentResponse> getUserIncidents(String userEmail) {
         User user = userService.getUserByEmail(userEmail);
-        return incidentRepository.findBySubmittedByOrderBySubmittedAtDesc(user)
-            .stream()
-            .map(this::mapToIncidentResponseWithExtras)
-            .collect(Collectors.toList());
+        return incidentRepository.findUserIncidentHistory(user);
+    }
+    
+    /**
+     * Get active cases (pending/in progress) for case tracking page - optimized version
+     */
+    public List<IncidentResponse> getActiveCases(String userEmail) {
+        User user = userService.getUserByEmail(userEmail);
+        return incidentRepository.findActiveCasesByUser(user);
     }
 
     public List<IncidentResponse> getPublicIncidents() {
@@ -304,15 +315,26 @@ public class IncidentService {
         return mapToIncidentResponseWithExtras(incident);
     }
 
+    /**
+     * Get office incidents for dashboard view - optimized version
+     * Uses a specialized query that fetches only necessary data in a single query
+     */
     public List<IncidentResponse> getOfficeIncidents(String userEmail) {
         User user = userService.getUserByEmail(userEmail);
         OfficeAdmin officeAdmin = officeAdminService.findByUserEmail(userEmail)
             .orElseThrow(() -> new RuntimeException("User is not an office admin"));
         Office office = Office.valueOf(officeAdmin.getOfficeCode());
-        return incidentRepository.findByAssignedOfficeOrderBySubmittedAtDesc(office)
-            .stream()
-            .map(this::mapToIncidentResponseWithExtras)
-            .collect(Collectors.toList());
+        return incidentRepository.findOfficeAdminIncidents(office);
+    }
+    
+    /**
+     * Get verified cases for office admin - optimized version
+     */
+    public List<IncidentResponse> getVerifiedCases(String userEmail) {
+        OfficeAdmin officeAdmin = officeAdminService.findByUserEmail(userEmail)
+            .orElseThrow(() -> new RuntimeException("User is not an office admin"));
+        Office office = Office.valueOf(officeAdmin.getOfficeCode());
+        return incidentRepository.findVerifiedCases(office);
     }
 
     public IncidentResponse getIncidentById(String id, String userEmail) {
@@ -714,7 +736,14 @@ public class IncidentService {
                     float currentPoints = reporter.getPoints() != null ? reporter.getPoints() : 0.0f;
                     reporter.setPoints(Math.max(0.0f, currentPoints - 1.0f)); // Ensure points don't go below 0
                     userService.save(reporter);
-                    // Removed upvote notifications
+                    
+                    // Log activity for reporter
+                    activityLogService.logActivity(
+                        "UPVOTE_POINTS_REMOVED",
+                        "1 point was removed due to upvote removal on incident #" + incident.getTrackingNumber(),
+                        incident,
+                        reporter
+                    );
                 } catch (Exception e) {
                     // Log error but do not fail the transaction
                     System.err.println("Failed to remove upvote points from reporter: " + e.getMessage());
@@ -741,19 +770,33 @@ public class IncidentService {
                 incident.getUpvoteCount()
             );
 
-            // Award points, but do not send upvote notifications
+            // Create notification for the incident creator and award points
             if (!user.getId().equals(incident.getSubmittedBy().getId())) {
                 // Award +1 point to the incident reporter
                 try {
                     User reporter = incident.getSubmittedBy();
                     reporter.setPoints((reporter.getPoints() != null ? reporter.getPoints() : 0.0f) + 1.0f);
                     userService.save(reporter);
-                    // Removed upvote notifications
+                    
+                    // Log activity for reporter
+                    activityLogService.logActivity(
+                        "UPVOTE_POINTS",
+                        "You received 1 point for an upvote on incident #" + incident.getTrackingNumber(),
+                        incident,
+                        reporter
+                    );
                 } catch (Exception e) {
                     // Log error but do not fail the transaction
                     System.err.println("Failed to award upvote points to reporter: " + e.getMessage());
                 }
-                // Removed upvote notifications
+                
+                // Create upvote notification
+                activityLogService.logActivity(
+                    "UPVOTE",
+                    "Your incident #" + incident.getTrackingNumber() + " received an upvote",
+                    incident,
+                    incident.getSubmittedBy()
+                );
             }
             return true;
         }
@@ -814,5 +857,120 @@ public class IncidentService {
         );
 
         return mapToIncidentResponseWithExtras(incident);
+    }
+
+    @Transactional
+    public BulkResult bulkResolve(String userEmail, BulkIncidentUpdateRequest request) {
+        return bulkUpdateStatus(userEmail, request, "Resolved");
+    }
+
+    @Transactional
+    public BulkResult bulkDismiss(String userEmail, BulkIncidentUpdateRequest request) {
+        return bulkUpdateStatus(userEmail, request, "Dismissed");
+    }
+
+    public static class BulkResult {
+        public List<String> updatedIds = new ArrayList<>();
+        public List<BulkItem> updated = new ArrayList<>();
+        public List<Failure> failed = new ArrayList<>();
+    }
+    public static class Failure {
+        public String id;
+        public String reason;
+        public Failure(String id, String reason) { this.id = id; this.reason = reason; }
+    }
+    public static class BulkItem {
+        public String id;
+        public String trackingNumber;
+        public String status;
+        public BulkItem(String id, String trackingNumber, String status) {
+            this.id = id;
+            this.trackingNumber = trackingNumber;
+            this.status = status;
+        }
+    }
+
+    private BulkResult bulkUpdateStatus(String userEmail, BulkIncidentUpdateRequest req, String targetStatus) {
+        BulkResult result = new BulkResult();
+        if (req == null || req.getIncidentIds() == null || req.getIncidentIds().isEmpty()) return result;
+
+        // Auth: must be office admin
+        OfficeAdmin officeAdmin = officeAdminService.findByUserEmail(userEmail)
+            .orElseThrow(() -> new RuntimeException("User is not an office admin"));
+        Office office = Office.valueOf(officeAdmin.getOfficeCode());
+
+        // Fetch all incidents in one go
+        List<Incident> incidents = incidentRepository.findAllById(req.getIncidentIds());
+
+        for (Incident incident : incidents) {
+            try {
+                // Scope: only incidents assigned to admin's office
+                if (incident.getAssignedOffice() == null || !incident.getAssignedOffice().equals(office)) {
+                    result.failed.add(new Failure(incident.getId(), "Not in your office"));
+                    continue;
+                }
+                // Eligibility: allow from Pending/In Progress
+                String current = incident.getStatus() == null ? "" : incident.getStatus();
+                String curLower = current.toLowerCase();
+                if (!(curLower.equals("pending") || curLower.equals("in progress"))) {
+                    // idempotency: if already in target state, count as updated
+                    if (current.equalsIgnoreCase(targetStatus)) {
+                        result.updatedIds.add(incident.getId());
+                    } else {
+                        result.failed.add(new Failure(incident.getId(), "Invalid state: " + current));
+                    }
+                    continue;
+                }
+
+                // Apply update
+                incident.setStatus(targetStatus);
+                if ("Resolved".equals(targetStatus) || "Dismissed".equals(targetStatus)) {
+                    incident.setLastTransferredTo(null);
+                }
+                // Persist notes to the appropriate field when provided
+                if (req.getUpdateMessage() != null && !req.getUpdateMessage().trim().isEmpty()) {
+                    if ("Resolved".equals(targetStatus)) {
+                        incident.setResolutionNotes(req.getUpdateMessage().trim());
+                    } else if ("Dismissed".equals(targetStatus)) {
+                        incident.setDismissalNotes(req.getUpdateMessage().trim());
+                    }
+                }
+                incidentRepository.save(incident);
+
+                // Create update entry
+                IncidentUpdate update = new IncidentUpdate();
+                update.setIncident(incident);
+                update.setStatus(targetStatus);
+                update.setVisibleToReporter(req.getVisibleToReporter() != null ? req.getVisibleToReporter() : true);
+                update.setUpdatedBy(userService.getUserByEmail(userEmail));
+                update.setUpdatedByName(userService.getUserByEmail(userEmail).getFullName());
+                String baseMsg = "Resolved".equals(targetStatus) ? "Case marked as resolved." : "Case has been dismissed.";
+                String msg = (req.getUpdateMessage() != null && !req.getUpdateMessage().trim().isEmpty())
+                    ? baseMsg + " " + req.getUpdateMessage().trim()
+                    : baseMsg;
+                update.setMessage(msg);
+                incidentUpdateRepository.save(update);
+
+                // Activity logs (admin + reporter)
+                activityLogService.logActivity(
+                    "STATUS_CHANGE",
+                    "Case #" + incident.getTrackingNumber() + " status updated to '" + targetStatus + "'",
+                    incident,
+                    userService.getUserByEmail(userEmail)
+                );
+                activityLogService.logActivity(
+                    "STATUS_CHANGE",
+                    "Your case #" + incident.getTrackingNumber() + " status updated to '" + targetStatus + "'",
+                    incident,
+                    incident.getSubmittedBy()
+                );
+
+                result.updatedIds.add(incident.getId());
+                result.updated.add(new BulkItem(incident.getId(), incident.getTrackingNumber(), targetStatus));
+            } catch (Exception e) {
+                result.failed.add(new Failure(incident.getId(), e.getMessage()));
+            }
+        }
+        return result;
     }
 } 

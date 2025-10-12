@@ -48,6 +48,7 @@ export default function CaseTrackingPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedStatus, setSelectedStatus] = useState<string>("All")
+  const [selectedPriority, setSelectedPriority] = useState<string>("All")
   const [search, setSearch] = useState("")
   const [showFilters, setShowFilters] = useState(false)
 
@@ -156,6 +157,7 @@ export default function CaseTrackingPage() {
   const filteredCases = incidents.filter(
     (item) =>
       (selectedStatus === "All" || item.status === selectedStatus) &&
+      (selectedPriority === "All" || (item.priorityLevel && item.priorityLevel.toLowerCase() === selectedPriority.toLowerCase())) &&
       ((item.trackingNumber || "").toLowerCase().includes(search.toLowerCase()) ||
         (item.caseNumber || "").toLowerCase().includes(search.toLowerCase()) ||
         item.incidentType.toLowerCase().includes(search.toLowerCase()) ||
@@ -297,11 +299,7 @@ export default function CaseTrackingPage() {
                 <div>
                   <h4 className="text-sm font-medium text-gray-600 mb-2">Status</h4>
                   <div className="flex flex-wrap gap-2">
-                    {[
-                      "All",
-                      "Pending",
-                      "In Progress",
-                    ].map((status) => (
+                    {["All", "Pending", "In Progress"].map((status) => (
                       <button
                         key={status}
                         onClick={() => setSelectedStatus(status)}
@@ -312,6 +310,31 @@ export default function CaseTrackingPage() {
                         }`}
                       >
                         {status}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-medium text-gray-600 mb-2">Priority</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {["All", "HIGH", "MEDIUM", "LOW"].map((priority) => (
+                      <button
+                        key={priority}
+                        onClick={() => setSelectedPriority(priority)}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                          selectedPriority === priority
+                            ? priority === "HIGH"
+                              ? "bg-red-500 text-white shadow-md"
+                              : priority === "MEDIUM"
+                                ? "bg-orange-500 text-white shadow-md"
+                                : priority === "LOW"
+                                  ? "bg-green-500 text-white shadow-md"
+                                  : "bg-[#8B0000] text-white shadow-md"
+                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                        }`}
+                      >
+                        {priority === "All" ? priority : priority.charAt(0) + priority.slice(1).toLowerCase()}
                       </button>
                     ))}
                   </div>
@@ -348,6 +371,7 @@ export default function CaseTrackingPage() {
                     className="mt-4"
                     onClick={() => {
                       setSelectedStatus("All")
+                      setSelectedPriority("All")
                       setSearch("")
                     }}
                   >

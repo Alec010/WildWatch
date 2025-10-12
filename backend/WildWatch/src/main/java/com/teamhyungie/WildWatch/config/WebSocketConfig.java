@@ -34,6 +34,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         registry.addEndpoint("/ws")
             .setAllowedOriginPatterns("*")
             .withSockJS()
-            .setHeartbeatTime(60000); // Set SockJS heartbeat to 60 seconds
+            .setHeartbeatTime(60000) // Set SockJS heartbeat to 60 seconds
+            .setClientLibraryUrl("https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js")
+            .setSessionCookieNeeded(false);
     }
 } 

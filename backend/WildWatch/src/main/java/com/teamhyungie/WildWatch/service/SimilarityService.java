@@ -83,8 +83,6 @@ public class SimilarityService {
         public LocalDateTime finishedDate;
         public String resolutionNotes;
         public String description;
-        public String latestUpdateMessage; // for in-progress
-        public LocalDateTime latestUpdateAt; // for in-progress
     }
 
     public List<SimilarIncident> findSimilar(String incidentType, String description, String normalizedLocation, List<String> tags, int maxResults) {
@@ -92,29 +90,7 @@ public class SimilarityService {
         Map<String, Double> queryVector = toTfVector(queryText);
         Map<String, Double> queryDescVector = toTfVector(normalize(safe(description)));
 
-        // Fetch resolved/closed with notes
-        List<Incident> resolved = incidentRepository.findResolvedWithResolutionNotes();
-        // Fetch in-progress incidents (limit by cacheMaxCandidates for safety)
-        List<Incident> inProgress = incidentRepository.findInProgressOrderBySubmittedAtDesc();
-        if (inProgress.size() > cacheMaxCandidates) inProgress = inProgress.subList(0, cacheMaxCandidates);
-
-        // Build latest update map for in-progress to avoid N+1
-        Map<String, String> latestUpdateMsgById = new HashMap<>();
-        Map<String, LocalDateTime> latestUpdateAtById = new HashMap<>();
-        if (!inProgress.isEmpty()) {
-            List<String> ids = inProgress.stream().map(Incident::getId).collect(Collectors.toList());
-            var latestUpdates = incidentUpdateRepository.findLatestUpdatesForIncidents(ids);
-            for (var u : latestUpdates) {
-                if (u.getIncident() != null && u.getIncident().getId() != null) {
-                    latestUpdateMsgById.put(u.getIncident().getId(), u.getMessage());
-                    latestUpdateAtById.put(u.getIncident().getId(), u.getUpdatedAt());
-                }
-            }
-        }
-
-        List<Incident> candidates = new ArrayList<>();
-        candidates.addAll(resolved);
-        candidates.addAll(inProgress);
+        List<Incident> candidates = incidentRepository.findResolvedWithResolutionNotes();
 
         List<SimilarIncident> scored = new ArrayList<>();
         for (Incident inc : candidates) {
@@ -144,22 +120,16 @@ public class SimilarityService {
                 si.location = inc.getLocation();
                 si.assignedOffice = inc.getAssignedOffice() != null ? inc.getAssignedOffice().name() : null;
                 si.submittedAt = inc.getSubmittedAt() == null ? null : java.sql.Timestamp.valueOf(inc.getSubmittedAt());
-                // Populate resolution or latest update fields
-                String status = inc.getStatus() == null ? "" : inc.getStatus().toLowerCase(Locale.ROOT);
-                if ("resolved".equals(status) || "closed".equals(status)) {
-                    try {
-                        var finishedUpdate = incidentUpdateRepository.findFirstByIncidentAndStatusInOrderByUpdatedAtDesc(
-                            inc, java.util.Arrays.asList("Resolved", "resolved", "Closed", "closed")
-                        );
-                        if (finishedUpdate != null) {
-                            si.finishedDate = finishedUpdate.getUpdatedAt();
-                        }
-                    } catch (Exception ignored) {}
-                    si.resolutionNotes = inc.getResolutionNotes();
-                } else {
-                    si.latestUpdateMessage = latestUpdateMsgById.get(inc.getId());
-                    si.latestUpdateAt = latestUpdateAtById.get(inc.getId());
-                }
+                // Determine finished date (latest Resolved/Closed update), similar to IncidentService
+                try {
+                    var finishedUpdate = incidentUpdateRepository.findFirstByIncidentAndStatusInOrderByUpdatedAtDesc(
+                        inc, java.util.Arrays.asList("Resolved", "resolved", "Closed", "closed")
+                    );
+                    if (finishedUpdate != null) {
+                        si.finishedDate = finishedUpdate.getUpdatedAt();
+                    }
+                } catch (Exception ignored) {}
+                si.resolutionNotes = inc.getResolutionNotes();
                 si.description = inc.getDescription();
                 scored.add(si);
             }
@@ -175,7 +145,6 @@ public class SimilarityService {
      * Pure AI matching: pass new incident and a compact list of resolved incidents to Gemini, take its top results.
      */
     public List<SimilarIncident> findSimilarAi(String incidentType, String description, String normalizedLocation, List<String> tags, int maxResults) {
-        // Use resolved candidates; optionally could append in-progress similarly if desired for AI path.
         List<Incident> all = getRecentResolvedCandidates();
 
         // Build AI prompt

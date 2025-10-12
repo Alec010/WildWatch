@@ -29,7 +29,87 @@ public interface IncidentRepository extends JpaRepository<Incident, String> {
     List<Incident> findResolvedWithResolutionNotesOrderBySubmittedAtDesc();
     
     List<Incident> findByStatus(String status);
-
-    @Query("SELECT i FROM Incident i WHERE LOWER(i.status) IN ('in progress','in-progress') ORDER BY i.submittedAt DESC")
-    List<Incident> findInProgressOrderBySubmittedAtDesc();
+    
+    /**
+     * Optimized query for dashboard that fetches only the necessary fields for display
+     * and joins the submitter information to avoid N+1 queries
+     */
+    @Query("SELECT new com.teamhyungie.WildWatch.dto.IncidentResponse(" +
+           "i.id, i.trackingNumber, i.incidentType, i.location, i.status, " +
+           "i.description, i.submittedAt, i.upvoteCount, " +
+           "u.firstName, u.lastName, u.email) " +
+           "FROM Incident i JOIN i.submittedBy u " +
+           "WHERE u = :user " +
+           "ORDER BY i.submittedAt DESC")
+    List<com.teamhyungie.WildWatch.dto.IncidentResponse> findDashboardIncidentsByUser(@Param("user") User user);
+    
+    /**
+     * Optimized query for office admin dashboard that fetches only the necessary fields
+     */
+    @Query("SELECT new com.teamhyungie.WildWatch.dto.IncidentResponse(" +
+           "i.id, i.trackingNumber, i.incidentType, i.location, i.status, " +
+           "i.description, i.submittedAt, i.upvoteCount, " +
+           "u.firstName, u.lastName, u.email) " +
+           "FROM Incident i JOIN i.submittedBy u " +
+           "WHERE i.assignedOffice = :office " +
+           "ORDER BY i.submittedAt DESC")
+    List<com.teamhyungie.WildWatch.dto.IncidentResponse> findDashboardIncidentsByOffice(@Param("office") Office office);
+    
+    /**
+     * Optimized query for office admin incident management page that includes transfer information
+     */
+    @Query("SELECT new com.teamhyungie.WildWatch.dto.IncidentResponse(" +
+           "i.id, i.trackingNumber, i.incidentType, i.location, i.status, " +
+           "i.description, i.submittedAt, i.dateOfIncident, i.timeOfIncident, " +
+           "u.firstName, u.lastName, u.email, i.transferredFrom, i.lastTransferredTo, i.lastTransferNotes, i.priorityLevel) " +
+           "FROM Incident i JOIN i.submittedBy u " +
+           "WHERE i.assignedOffice = :office " +
+           "ORDER BY i.submittedAt DESC")
+    List<com.teamhyungie.WildWatch.dto.IncidentResponse> findOfficeAdminIncidents(@Param("office") Office office);
+    
+    /**
+     * Optimized query for verified cases tracker
+     */
+    @Query("SELECT new com.teamhyungie.WildWatch.dto.IncidentResponse(" +
+           "i.id, i.trackingNumber, i.incidentType, i.location, i.status, " +
+           "i.description, i.submittedAt, i.dateOfIncident, i.timeOfIncident, " +
+           "u.firstName, u.lastName, u.email, i.verified, i.priorityLevel) " +
+           "FROM Incident i JOIN i.submittedBy u " +
+           "WHERE i.assignedOffice = :office AND i.verified = true " +
+           "ORDER BY i.submittedAt DESC")
+    List<com.teamhyungie.WildWatch.dto.IncidentResponse> findVerifiedCases(@Param("office") Office office);
+    
+    /**
+     * Optimized query for case tracking page - returns only active cases (pending/in progress)
+     * Uses query cache with name "activeCases"
+     */
+    @org.springframework.data.jpa.repository.QueryHints({
+        @org.springframework.data.jpa.repository.QueryHint(name = "org.hibernate.cacheable", value = "true"),
+        @org.springframework.data.jpa.repository.QueryHint(name = "org.hibernate.cacheRegion", value = "activeCases")
+    })
+    @Query("SELECT new com.teamhyungie.WildWatch.dto.IncidentResponse(" +
+           "i.id, i.trackingNumber, i.incidentType, i.location, i.status, " +
+           "i.description, i.submittedAt, i.dateOfIncident, i.timeOfIncident, " +
+           "i.priorityLevel) " +
+           "FROM Incident i " +
+           "WHERE i.submittedBy = :user AND LOWER(i.status) IN ('pending', 'in progress') " +
+           "ORDER BY i.submittedAt DESC")
+    List<com.teamhyungie.WildWatch.dto.IncidentResponse> findActiveCasesByUser(@Param("user") User user);
+    
+    /**
+     * Optimized query for incident history page
+     * Uses query cache with name "userIncidentHistory"
+     */
+    @org.springframework.data.jpa.repository.QueryHints({
+        @org.springframework.data.jpa.repository.QueryHint(name = "org.hibernate.cacheable", value = "true"),
+        @org.springframework.data.jpa.repository.QueryHint(name = "org.hibernate.cacheRegion", value = "userIncidentHistory")
+    })
+    @Query("SELECT new com.teamhyungie.WildWatch.dto.IncidentResponse(" +
+           "i.id, i.trackingNumber, i.incidentType, i.location, i.status, " +
+           "i.description, i.submittedAt, i.dateOfIncident, i.timeOfIncident, " +
+           "i.priorityLevel, i.resolutionNotes) " +
+           "FROM Incident i " +
+           "WHERE i.submittedBy = :user " +
+           "ORDER BY i.submittedAt DESC")
+    List<com.teamhyungie.WildWatch.dto.IncidentResponse> findUserIncidentHistory(@Param("user") User user);
 } 

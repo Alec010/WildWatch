@@ -4,7 +4,6 @@ import com.teamhyungie.WildWatch.dto.CreateBulletinRequest;
 import com.teamhyungie.WildWatch.dto.OfficeBulletinResponse;
 import com.teamhyungie.WildWatch.dto.ResolvedIncidentResponse;
 import com.teamhyungie.WildWatch.model.BulletinMedia;
-import com.teamhyungie.WildWatch.model.BulletinUpvote;
 import com.teamhyungie.WildWatch.model.Incident;
 import com.teamhyungie.WildWatch.model.Office;
 import com.teamhyungie.WildWatch.model.OfficeBulletin;
@@ -12,7 +11,6 @@ import com.teamhyungie.WildWatch.model.Role;
 import com.teamhyungie.WildWatch.model.User;
 import com.teamhyungie.WildWatch.repository.BulletinMediaRepository;
 import com.teamhyungie.WildWatch.repository.IncidentRepository;
-import com.teamhyungie.WildWatch.repository.BulletinUpvoteRepository;
 import com.teamhyungie.WildWatch.repository.OfficeBulletinRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -31,9 +29,6 @@ public class OfficeBulletinService {
     private final OfficeBulletinRepository officeBulletinRepository;
     private final BulletinMediaRepository bulletinMediaRepository;
     private final IncidentRepository incidentRepository;
-    private final BulletinUpvoteRepository bulletinUpvoteRepository;
-    private final ActivityLogService activityLogService;
-    private final OfficeAdminService officeAdminService;
     private final UserService userService;
     private final SupabaseStorageService supabaseStorageService;
 
@@ -101,34 +96,18 @@ public class OfficeBulletinService {
         return mapToBulletinResponse(bulletin);
     }
 
-    public List<OfficeBulletinResponse> getAllActiveBulletins(String userEmail) {
+    public List<OfficeBulletinResponse> getAllActiveBulletins() {
         List<OfficeBulletin> bulletins = officeBulletinRepository.findByIsActiveTrueOrderByCreatedAtDesc();
-        List<String> upvotedIds = null;
-        try {
-            User user = userService.getUserByEmail(userEmail);
-            upvotedIds = bulletinUpvoteRepository.findUpvotedBulletinIdsByUserId(user.getId());
-        } catch (Exception ignored) {}
-        final java.util.Set<String> upvotedSet = upvotedIds != null ? new java.util.HashSet<>(upvotedIds) : java.util.Collections.emptySet();
         return bulletins.stream()
-            .map(b -> {
-                OfficeBulletinResponse resp = mapToBulletinResponse(b);
-                resp.setUserHasUpvoted(upvotedSet.contains(b.getId()));
-                return resp;
-            })
+            .map(this::mapToBulletinResponse)
             .collect(Collectors.toList());
     }
 
     public List<OfficeBulletinResponse> getBulletinsByCreator(String userEmail) {
         User user = userService.getUserByEmail(userEmail);
         List<OfficeBulletin> bulletins = officeBulletinRepository.findByCreatedByAndIsActiveTrueOrderByCreatedAtDesc(user);
-        List<String> upvotedIds = bulletinUpvoteRepository.findUpvotedBulletinIdsByUserId(user.getId());
-        final java.util.Set<String> upvotedSet = new java.util.HashSet<>(upvotedIds);
         return bulletins.stream()
-            .map(b -> {
-                OfficeBulletinResponse resp = mapToBulletinResponse(b);
-                resp.setUserHasUpvoted(upvotedSet.contains(b.getId()));
-                return resp;
-            })
+            .map(this::mapToBulletinResponse)
             .collect(Collectors.toList());
     }
 
@@ -157,69 +136,6 @@ public class OfficeBulletinService {
             .collect(Collectors.toList());
     }
 
-    @Transactional
-    public boolean toggleUpvote(String bulletinId, String userEmail) {
-        User user = userService.getUserByEmail(userEmail);
-        OfficeBulletin bulletin = officeBulletinRepository.findById(bulletinId)
-            .orElseThrow(() -> new RuntimeException("Bulletin not found"));
-
-        if (bulletin.getUpvoteCount() == null) {
-            bulletin.setUpvoteCount(0);
-        }
-
-        java.util.Optional<BulletinUpvote> existing = bulletinUpvoteRepository.findByBulletinAndUser(bulletin, user);
-        if (existing.isPresent()) {
-            bulletinUpvoteRepository.delete(existing.get());
-            bulletin.setUpvoteCount(Math.max(0, bulletin.getUpvoteCount() - 1));
-            officeBulletinRepository.save(bulletin);
-            // Remove point from bulletin creator's office if not self-upvote
-            try {
-                User creator = bulletin.getCreatedBy();
-                if (creator != null && !creator.getId().equals(user.getId())) {
-                    com.teamhyungie.WildWatch.model.OfficeAdmin officeAdmin = officeAdminService.findByUserEmail(creator.getEmail()).orElse(null);
-                    if (officeAdmin != null) {
-                        float current = officeAdmin.getPoints() != null ? officeAdmin.getPoints() : 0.0f;
-                        officeAdmin.setPoints(Math.max(0.0f, current - 1.0f));
-                        officeAdminService.save(officeAdmin);
-                        // Removed upvote notifications
-                    }
-                }
-            } catch (Exception e) {
-                System.err.println("Failed to remove upvote points from bulletin creator: " + e.getMessage());
-            }
-            return false;
-        } else {
-            BulletinUpvote upvote = new BulletinUpvote();
-            upvote.setBulletin(bulletin);
-            upvote.setUser(user);
-            bulletinUpvoteRepository.save(upvote);
-            bulletin.setUpvoteCount(bulletin.getUpvoteCount() + 1);
-            officeBulletinRepository.save(bulletin);
-            // Award +1 point to bulletin creator's office if not self-upvote
-            try {
-                User creator = bulletin.getCreatedBy();
-                if (creator != null && !creator.getId().equals(user.getId())) {
-                    com.teamhyungie.WildWatch.model.OfficeAdmin officeAdmin = officeAdminService.findByUserEmail(creator.getEmail()).orElse(null);
-                    if (officeAdmin != null) {
-                        officeAdmin.setPoints((officeAdmin.getPoints() != null ? officeAdmin.getPoints() : 0.0f) + 1.0f);
-                        officeAdminService.save(officeAdmin);
-                        // Removed upvote notifications
-                    }
-                }
-            } catch (Exception e) {
-                System.err.println("Failed to award upvote points to bulletin creator: " + e.getMessage());
-            }
-            return true;
-        }
-    }
-
-    public boolean hasUserUpvoted(String bulletinId, String userEmail) {
-        User user = userService.getUserByEmail(userEmail);
-        OfficeBulletin bulletin = officeBulletinRepository.findById(bulletinId)
-            .orElseThrow(() -> new RuntimeException("Bulletin not found"));
-        return bulletinUpvoteRepository.existsByBulletinAndUser(bulletin, user);
-    }
-
     private OfficeBulletinResponse mapToBulletinResponse(OfficeBulletin bulletin) {
         OfficeBulletinResponse response = new OfficeBulletinResponse();
         response.setId(bulletin.getId());
@@ -228,7 +144,6 @@ public class OfficeBulletinService {
         response.setCreatedBy(bulletin.getCreatedBy().getFirstName() + " " + bulletin.getCreatedBy().getLastName());
         response.setCreatedAt(bulletin.getCreatedAt());
         response.setIsActive(bulletin.getIsActive());
-        response.setUpvoteCount(bulletin.getUpvoteCount() != null ? bulletin.getUpvoteCount() : 0);
 
         // Map media attachments
         if (bulletin.getMediaAttachments() != null) {

@@ -1,12 +1,9 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
+import React from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { FileText, Download, ExternalLink, Calendar, User, ArrowUpCircle } from "lucide-react"
-import { api } from "@/utils/apiClient"
-import { UpvoteModal } from "@/components/ui/upvote-modal"
-import { toast } from "sonner"
+import { FileText, Download, ExternalLink, Calendar, User } from "lucide-react"
 import { format } from "date-fns"
 
 interface BulletinMedia {
@@ -34,8 +31,6 @@ interface Bulletin {
   isActive: boolean
   mediaAttachments: BulletinMedia[]
   relatedIncidents: IncidentSummary[]
-  upvoteCount?: number
-  userHasUpvoted?: boolean
 }
 
 interface BulletinCardProps {
@@ -44,41 +39,6 @@ interface BulletinCardProps {
 }
 
 export function BulletinCard({ bulletin, isAdmin = false }: BulletinCardProps) {
-  const [isUpvoted, setIsUpvoted] = useState<boolean>(bulletin.userHasUpvoted ?? false)
-  const [upvoteCount, setUpvoteCount] = useState<number>(bulletin.upvoteCount ?? 0)
-  const [isLoading, setIsLoading] = useState<boolean>(false)
-  const [modalOpen, setModalOpen] = useState<boolean>(false)
-
-  useEffect(() => {
-    setIsUpvoted(bulletin.userHasUpvoted ?? false)
-    setUpvoteCount(bulletin.upvoteCount ?? 0)
-  }, [bulletin.userHasUpvoted, bulletin.upvoteCount])
-
-  const handleToggleUpvote = async () => {
-    if (isLoading) return
-    setIsLoading(true)
-    const prevIsUpvoted = isUpvoted
-    const prevCount = upvoteCount
-    // optimistic update
-    setIsUpvoted(!prevIsUpvoted)
-    setUpvoteCount(prevIsUpvoted ? Math.max(0, prevCount - 1) : prevCount + 1)
-    try {
-      const isNowUpvoted = await api.upvoteBulletin(bulletin.id)
-      setIsUpvoted(isNowUpvoted)
-      // reconcile count based on server outcome
-      setUpvoteCount((c) => {
-        const base = prevCount
-        return isNowUpvoted ? base + 1 : Math.max(0, base - 1)
-      })
-    } catch (error: any) {
-      // rollback
-      setIsUpvoted(prevIsUpvoted)
-      setUpvoteCount(prevCount)
-      toast.error(error?.message || "Failed to upvote bulletin")
-    } finally {
-      setIsLoading(false)
-    }
-  }
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes'
     const k = 1024
@@ -132,28 +92,6 @@ export function BulletinCard({ bulletin, isAdmin = false }: BulletinCardProps) {
       <div className="mb-6">
         <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{bulletin.description}</p>
       </div>
-
-      {/* Upvote */}
-      <div className="mb-6">
-        <Button
-          variant={isUpvoted ? "outline" : "default"}
-          onClick={() => setModalOpen(true)}
-          disabled={isLoading}
-          className={isUpvoted ? "border-[#8B0000]/40 text-[#8B0000]" : "bg-[#8B0000] hover:bg-[#6f0000]"}
-        >
-          <ArrowUpCircle className="h-4 w-4 mr-2" />
-          {isUpvoted ? "Upvoted" : "Upvote"}
-          <span className="ml-2 text-sm opacity-90">{upvoteCount}</span>
-        </Button>
-      </div>
-
-      <UpvoteModal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onConfirm={handleToggleUpvote}
-        incidentType={"Office Bulletin"}
-        isUpvoted={isUpvoted}
-      />
       
       {/* Media Attachments */}
       {bulletin.mediaAttachments && bulletin.mediaAttachments.length > 0 && (

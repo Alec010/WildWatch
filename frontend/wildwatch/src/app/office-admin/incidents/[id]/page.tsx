@@ -416,8 +416,8 @@ export default function IncidentDetailsPage() {
       // 'Closed' is deprecated; treat as Resolved in UI
       case "Closed":
         return (
-          <Badge variant="outline" className="bg-green-100 text-green-700 border-green-200">
-            Resolved
+          <Badge variant="outline" className="bg-gray-100 text-gray-700 border-gray-200">
+            Dismissed
           </Badge>
         )
       default:
@@ -771,6 +771,7 @@ export default function IncidentDetailsPage() {
                       <option value="">Select Status</option>
                       <option value="In Progress">In Progress</option>
                       <option value="Resolved">Resolved</option>
+                      <option value="Dismissed">Dismissed</option>
                     </select>
                     {statusError && <div className="text-red-600 text-xs mt-1">{statusError}</div>}
                   </div>

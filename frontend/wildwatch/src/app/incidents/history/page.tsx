@@ -20,6 +20,7 @@ import {
   ChevronLeft,
   ChevronRight,
   XCircle,
+  Filter,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import jsPDF from "jspdf"
@@ -70,6 +71,7 @@ export default function IncidentHistoryPage() {
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState<string>("All")
+  const [priorityFilter, setPriorityFilter] = useState<string>("All")
   const [isDownloading, setIsDownloading] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -122,6 +124,7 @@ export default function IncidentHistoryPage() {
   const filteredIncidents = incidents.filter(
     (i) =>
       (statusFilter === "All" || i.status === statusFilter) &&
+      (priorityFilter === "All" || (i.priorityLevel && i.priorityLevel.toLowerCase() === priorityFilter.toLowerCase())) &&
       (i.trackingNumber.toLowerCase().includes(search.toLowerCase()) ||
         i.incidentType.toLowerCase().includes(search.toLowerCase()) ||
         i.location.toLowerCase().includes(search.toLowerCase()) ||
@@ -712,6 +715,64 @@ export default function IncidentHistoryPage() {
             className="flex flex-col gap-4 mb-6"
           >
             <div className="flex flex-wrap items-center gap-4">
+              <div className="flex items-center gap-2">
+                <div className="bg-[#8B0000]/10 p-2 rounded-lg">
+                  <Filter className="h-5 w-5 text-[#8B0000]" />
+                </div>
+                <h3 className="text-lg font-semibold text-[#8B0000]">Priority Filters</h3>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant={priorityFilter === "All" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setPriorityFilter("All")}
+                  className={
+                    priorityFilter === "All"
+                      ? "bg-[#8B0000] hover:bg-[#6B0000]"
+                      : "border-[#DAA520]/30 text-[#8B0000] hover:bg-[#8B0000] hover:text-white"
+                  }
+                >
+                  All Priorities
+                </Button>
+                <Button
+                  variant={priorityFilter === "HIGH" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setPriorityFilter("HIGH")}
+                  className={
+                    priorityFilter === "HIGH"
+                      ? "bg-red-600 hover:bg-red-700"
+                      : "border-red-200 text-red-600 hover:bg-red-600 hover:text-white"
+                  }
+                >
+                  High
+                </Button>
+                <Button
+                  variant={priorityFilter === "MEDIUM" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setPriorityFilter("MEDIUM")}
+                  className={
+                    priorityFilter === "MEDIUM"
+                      ? "bg-orange-500 hover:bg-orange-600"
+                      : "border-orange-200 text-orange-500 hover:bg-orange-500 hover:text-white"
+                  }
+                >
+                  Medium
+                </Button>
+                <Button
+                  variant={priorityFilter === "LOW" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setPriorityFilter("LOW")}
+                  className={
+                    priorityFilter === "LOW"
+                      ? "bg-green-600 hover:bg-green-700"
+                      : "border-green-200 text-green-600 hover:bg-green-600 hover:text-white"
+                  }
+                >
+                  Low
+                </Button>
+              </div>
+
               <div className="ml-auto">
                 <Button
                   variant="outline"
@@ -807,17 +868,18 @@ export default function IncidentHistoryPage() {
                           </div>
                           <p className="text-lg font-medium text-gray-800 mb-2">No incidents found</p>
                           <p className="text-gray-500 max-w-md mx-auto">
-                            {search || statusFilter !== "All"
+                            {search || statusFilter !== "All" || priorityFilter !== "All"
                               ? "No incidents match your search criteria. Try adjusting your filters."
                               : "There are no historical incidents to display at this time."}
                           </p>
-                          {(search || statusFilter !== "All") && (
+                          {(search || statusFilter !== "All" || priorityFilter !== "All") && (
                             <Button
                               variant="outline"
                               className="mt-4 border-[#DAA520]/30 text-[#8B0000] hover:bg-[#8B0000] hover:text-white"
                               onClick={() => {
                                 setSearch("")
                                 setStatusFilter("All")
+                                setPriorityFilter("All")
                               }}
                             >
                               Clear Filters

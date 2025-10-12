@@ -14,6 +14,7 @@ import java.util.ArrayList;
 @Entity
 @Table(name = "incidents")
 @Data
+@org.hibernate.annotations.Cache(usage = org.hibernate.annotations.CacheConcurrencyStrategy.READ_WRITE)
 public class Incident {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -78,15 +79,26 @@ public class Incident {
     @Column(name = "resolution_notes", length = 2000)
     private String resolutionNotes;
 
+    @Column(name = "dismissal_notes", length = 2000)
+    private String dismissalNotes;
+
     @ElementCollection
     @CollectionTable(name = "incident_tags", joinColumns = @JoinColumn(name = "incident_id"))
     @Column(name = "tag")
+    @org.hibernate.annotations.Cache(usage = org.hibernate.annotations.CacheConcurrencyStrategy.READ_WRITE)
+    @org.hibernate.annotations.BatchSize(size = 20)
     private List<String> tags = new ArrayList<>();
 
     @OneToMany(mappedBy = "incident", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @org.hibernate.annotations.Cache(usage = org.hibernate.annotations.CacheConcurrencyStrategy.READ_WRITE)
+    @org.hibernate.annotations.BatchSize(size = 10)
+    @org.hibernate.annotations.Fetch(org.hibernate.annotations.FetchMode.SUBSELECT)
     private java.util.List<Evidence> evidence;
 
     @OneToMany(mappedBy = "incident", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @org.hibernate.annotations.Cache(usage = org.hibernate.annotations.CacheConcurrencyStrategy.READ_WRITE)
+    @org.hibernate.annotations.BatchSize(size = 10)
+    @org.hibernate.annotations.Fetch(org.hibernate.annotations.FetchMode.SUBSELECT)
     private java.util.List<Witness> witnesses;
 
     @Column(name = "transferred_from")

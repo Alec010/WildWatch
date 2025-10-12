@@ -5,6 +5,8 @@ import com.teamhyungie.WildWatch.model.Office;
 import com.teamhyungie.WildWatch.model.Building;
 import com.teamhyungie.WildWatch.model.PriorityLevel;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -13,6 +15,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Data
+@NoArgsConstructor
 public class IncidentResponse {
     private String id;
     private String trackingNumber;
@@ -51,6 +54,122 @@ public class IncidentResponse {
     private LocalDateTime estimatedResolutionDate;
     private String resolutionExtendedBy;
     private LocalDateTime resolutionExtendedAt;
+    
+    /**
+     * Constructor for optimized dashboard queries
+     * This constructor is used by the repository to create lightweight DTO objects
+     * directly from the query without loading the entire entity graph
+     */
+    public IncidentResponse(String id, String trackingNumber, String incidentType, String location, 
+                           String status, String description, LocalDateTime submittedAt, 
+                           Integer upvoteCount, String firstName, String lastName, String email) {
+        this.id = id;
+        this.trackingNumber = trackingNumber;
+        this.incidentType = incidentType;
+        this.location = location;
+        this.status = status;
+        this.description = description;
+        this.submittedAt = submittedAt;
+        this.upvoteCount = upvoteCount;
+        this.submittedByFullName = firstName + " " + lastName;
+        this.submittedByEmail = email;
+        this.submittedBy = email;
+    }
+    
+    /**
+     * Constructor for office admin incident management queries
+     * Includes transfer information and date/time details
+     */
+    public IncidentResponse(String id, String trackingNumber, String incidentType, String location, 
+                           String status, String description, LocalDateTime submittedAt,
+                           LocalDate dateOfIncident, LocalTime timeOfIncident,
+                           String firstName, String lastName, String email, 
+                           String transferredFrom, String lastTransferredTo, String lastTransferNotes,
+                           PriorityLevel priorityLevel) {
+        this.id = id;
+        this.trackingNumber = trackingNumber;
+        this.incidentType = incidentType;
+        this.location = location;
+        this.status = status;
+        this.description = description;
+        this.submittedAt = submittedAt;
+        this.dateOfIncident = dateOfIncident;
+        this.timeOfIncident = timeOfIncident;
+        this.submittedByFullName = firstName + " " + lastName;
+        this.submittedByEmail = email;
+        this.submittedBy = email;
+        this.transferredFrom = transferredFrom;
+        this.lastTransferredTo = lastTransferredTo;
+        this.lastTransferNotes = lastTransferNotes;
+        this.priorityLevel = priorityLevel;
+    }
+    
+    /**
+     * Constructor for verified cases tracker
+     */
+    public IncidentResponse(String id, String trackingNumber, String incidentType, String location, 
+                           String status, String description, LocalDateTime submittedAt,
+                           LocalDate dateOfIncident, LocalTime timeOfIncident,
+                           String firstName, String lastName, String email, 
+                           Boolean verified, PriorityLevel priorityLevel) {
+        this.id = id;
+        this.trackingNumber = trackingNumber;
+        this.incidentType = incidentType;
+        this.location = location;
+        this.status = status;
+        this.description = description;
+        this.submittedAt = submittedAt;
+        this.dateOfIncident = dateOfIncident;
+        this.timeOfIncident = timeOfIncident;
+        this.submittedByFullName = firstName + " " + lastName;
+        this.submittedByEmail = email;
+        this.submittedBy = email;
+        this.verified = verified;
+        this.priorityLevel = priorityLevel;
+    }
+    
+    /**
+     * Constructor for case tracking page - active cases
+     */
+    public IncidentResponse(String id, String trackingNumber, String incidentType, String location, 
+                           String status, String description, LocalDateTime submittedAt,
+                           LocalDate dateOfIncident, LocalTime timeOfIncident,
+                           PriorityLevel priorityLevel) {
+        this.id = id;
+        this.trackingNumber = trackingNumber;
+        this.incidentType = incidentType;
+        this.location = location;
+        this.status = status;
+        this.description = description;
+        this.submittedAt = submittedAt;
+        this.dateOfIncident = dateOfIncident;
+        this.timeOfIncident = timeOfIncident;
+        this.priorityLevel = priorityLevel;
+    }
+    
+    /**
+     * Constructor for incident history page
+     */
+    public IncidentResponse(String id, String trackingNumber, String incidentType, String location, 
+                           String status, String description, LocalDateTime submittedAt,
+                           LocalDate dateOfIncident, LocalTime timeOfIncident,
+                           PriorityLevel priorityLevel, String resolutionNotes) {
+        this.id = id;
+        this.trackingNumber = trackingNumber;
+        this.incidentType = incidentType;
+        this.location = location;
+        this.status = status;
+        this.description = description;
+        this.submittedAt = submittedAt;
+        this.dateOfIncident = dateOfIncident;
+        this.timeOfIncident = timeOfIncident;
+        this.priorityLevel = priorityLevel;
+        this.resolutionNotes = resolutionNotes;
+        // Calculate finishedDate based on submittedAt for resolved/dismissed cases
+        if (status != null && (status.equalsIgnoreCase("resolved") || status.equalsIgnoreCase("dismissed"))) {
+            this.finishedDate = submittedAt;
+        }
+    }
 
     @Data
     public static class EvidenceDTO {
