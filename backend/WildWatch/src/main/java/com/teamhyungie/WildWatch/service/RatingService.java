@@ -17,6 +17,8 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -37,6 +39,12 @@ public class RatingService {
 
     @Autowired
     private ActivityLogService activityLogService;
+
+    @Autowired
+    private RankService rankService;
+
+    @Autowired
+    private BadgeService badgeService;
 
     private static final int MIN_RATINGS_THRESHOLD = 1;
 
@@ -138,18 +146,39 @@ public class RatingService {
         );
     }
 
-    @Cacheable(value = "topReporters", key = "#root.method.name")
+    // Removed caching to fix 500 error
     public List<LeaderboardEntry> getTopReporters() {
-        return ratingRepository.getTopReporters().stream()
-                .map(row -> new LeaderboardEntry(
-                        (Long) row[0],
-                        (String) row[1],
-                        (String) row[2],
-                        ((Number) row[3]).intValue(),
-                        ((Number) row[4]).doubleValue(),
-                        ((Number) row[5]).floatValue()
-                ))
-                .collect(Collectors.toList());
+        try {
+            List<Object[]> results = ratingRepository.getTopReporters();
+            
+            // Debug log
+            System.out.println("TopReporters query returned " + results.size() + " results");
+            
+            return results.stream()
+                    .map(row -> {
+                        try {
+                            Long id = (Long) row[0];
+                            String firstName = (String) row[1];
+                            String lastName = (String) row[2];
+                            int totalIncidents = row[3] != null ? ((Number) row[3]).intValue() : 0;
+                            double avgRating = row[4] != null ? ((Number) row[4]).doubleValue() : 0.0;
+                            float points = row[5] != null ? ((Number) row[5]).floatValue() : 0.0f;
+                            String rankStr = (String) row[6]; // userRank
+                            
+                            return new LeaderboardEntry(id, firstName, lastName, totalIncidents, avgRating, points, rankStr);
+                        } catch (Exception e) {
+                            System.err.println("Error mapping reporter row: " + Arrays.toString(row));
+                            e.printStackTrace();
+                            // Return a default entry to avoid breaking the stream
+                            return new LeaderboardEntry(0L, "Unknown", "User", 0, 0.0, 0.0f, "NONE");
+                        }
+                    })
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            System.err.println("Error getting top reporters: " + e.getMessage());
+            e.printStackTrace();
+            return new ArrayList<>(); // Return empty list on error
+        }
     }
 
     @Cacheable(value = "mostActiveReporters", key = "#root.method.name")
@@ -164,17 +193,38 @@ public class RatingService {
                 .collect(Collectors.toList());
     }
 
-    @Cacheable(value = "topOffices", key = "#root.method.name")
+    // Removed caching to fix 500 error
     public List<LeaderboardEntry> getTopOffices() {
-        return ratingRepository.getTopOffices().stream()
-                .map(row -> new LeaderboardEntry(
-                        (Long) row[0],
-                        (String) row[1],
-                        ((Number) row[2]).intValue(),
-                        ((Number) row[3]).doubleValue(),
-                        ((Number) row[4]).floatValue()
-                ))
-                .collect(Collectors.toList());
+        try {
+            List<Object[]> results = ratingRepository.getTopOffices();
+            
+            // Debug log
+            System.out.println("TopOffices query returned " + results.size() + " results");
+            
+            return results.stream()
+                    .map(row -> {
+                        try {
+                            Long id = (Long) row[0];
+                            String officeCode = (String) row[1];
+                            int totalIncidents = row[2] != null ? ((Number) row[2]).intValue() : 0;
+                            double avgRating = row[3] != null ? ((Number) row[3]).doubleValue() : 0.0;
+                            float points = row[4] != null ? ((Number) row[4]).floatValue() : 0.0f;
+                            String rankStr = (String) row[5]; // userRank
+                            
+                            return new LeaderboardEntry(id, officeCode, totalIncidents, avgRating, points, rankStr);
+                        } catch (Exception e) {
+                            System.err.println("Error mapping office row: " + Arrays.toString(row));
+                            e.printStackTrace();
+                            // Return a default entry to avoid breaking the stream
+                            return new LeaderboardEntry(0L, "Unknown Office", 0, 0.0, 0.0f, "NONE");
+                        }
+                    })
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            System.err.println("Error getting top offices: " + e.getMessage());
+            e.printStackTrace();
+            return new ArrayList<>(); // Return empty list on error
+        }
     }
 
     @Cacheable(value = "mostActiveOffices", key = "#root.method.name")
@@ -217,6 +267,9 @@ public class RatingService {
                 reporter.setPoints((reporter.getPoints() != null ? reporter.getPoints() : 0.0f) + reporterPoints);
                 userService.save(reporter);
                 
+                // Update rank based on new points
+                rankService.updateUserRank(reporter);
+                
                 // Log activity for reporter
                 activityLogService.logActivity(
                     "POINTS_AWARDED",
@@ -233,6 +286,16 @@ public class RatingService {
                 if (officeAdmin != null) {
                     officeAdmin.setPoints((officeAdmin.getPoints() != null ? officeAdmin.getPoints() : 0.0f) + officePoints);
                     officeAdminService.save(officeAdmin);
+                    
+                    // Update rank based on new points
+                    rankService.updateOfficeAdminRank(officeAdmin);
+                    
+                    // Check and update Rating Champion badge for office admin
+                    try {
+                        badgeService.checkRatingChampionBadge(officeAdmin.getUser());
+                    } catch (Exception e) {
+                        System.err.println("Error checking Rating Champion badge: " + e.getMessage());
+                    }
                     
                     // Log activity for office admin
                     activityLogService.logActivity(

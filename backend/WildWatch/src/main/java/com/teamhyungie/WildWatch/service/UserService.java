@@ -210,4 +210,21 @@ public class UserService {
         
         return userRepository.findByIdIn(userIds);
     }
+    
+    /**
+     * Get user by ID
+     * @param userId The user ID
+     * @return User if found, null otherwise
+     */
+    public User getUserById(Long userId) {
+        return userRepository.findById(userId).orElse(null);
+    }
+    
+    /**
+     * Get all users
+     * @return List of all users
+     */
+    public List<User> getAllUsers() {
+        return userRepository.findAll();
+    }
 } 

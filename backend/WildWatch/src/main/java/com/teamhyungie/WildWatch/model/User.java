@@ -78,6 +78,10 @@ public class User {
     @Column(name = "points")
     private Float points = 0.0f;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "user_rank")
+    private UserRank userRank = UserRank.NONE;
+
     @Column(name = "reset_token")
     private String resetToken;
 
@@ -214,6 +218,14 @@ public class User {
 
     public void setPoints(Float points) {
         this.points = points;
+    }
+
+    public UserRank getUserRank() {
+        return userRank;
+    }
+
+    public void setUserRank(UserRank userRank) {
+        this.userRank = userRank;
     }
 
     public String getVerificationToken() {

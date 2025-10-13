@@ -25,6 +25,8 @@ import { Navbar } from "@/components/Navbar"
 import { OfficeAdminNavbar } from "@/components/OfficeAdminNavbar"
 import { useSidebar } from "@/contexts/SidebarContext"
 import confetti from "canvas-confetti"
+import { RankBadge } from "@/components/RankBadge"
+import type { UserRank } from "@/types/rank"
 
 interface LeaderboardEntry {
   id: number
@@ -34,6 +36,8 @@ interface LeaderboardEntry {
   points: number
   activeIncidents?: number
   resolvedIncidents?: number
+  rank?: UserRank
+  goldRanking?: number
 }
 
 export default function LeaderboardPage() {
@@ -50,25 +54,75 @@ export default function LeaderboardPage() {
     const fetchLeaderboardData = async () => {
       setLoading(true)
       try {
+        const token = document.cookie
+          .split('; ')
+          .find((row) => row.startsWith('token='))
+          ?.split('=')[1]
+
+        if (!token) {
+          console.error("No authentication token found")
+          return
+        }
+
         const [studentsRes, officesRes] = await Promise.all([
           fetch(`${API_BASE_URL}/api/ratings/leaderboard/reporters/top`, {
-            credentials: "include",
             headers: {
+              "Authorization": `Bearer ${token}`,
               "Content-Type": "application/json",
             },
           }),
           fetch(`${API_BASE_URL}/api/ratings/leaderboard/offices/top`, {
-            credentials: "include",
             headers: {
+              "Authorization": `Bearer ${token}`,
               "Content-Type": "application/json",
             },
           }),
         ])
 
-        if (studentsRes.ok && officesRes.ok) {
+          if (studentsRes.ok && officesRes.ok) {
           const [studentsData, officesData] = await Promise.all([studentsRes.json(), officesRes.json()])
-          setTopStudents(studentsData)
-          setTopOffices(officesData)
+          
+          console.log("🔍 Raw students data:", studentsData)
+          console.log("🔍 Raw offices data:", officesData)
+          
+          // Process student data to ensure rank information is available
+          const processedStudents = studentsData.map(student => {
+            // Calculate Gold ranking for Gold rank users
+            if (student.rank === 'GOLD') {
+              // Find position among Gold users
+              const goldPosition = studentsData
+                .filter(s => s.rank === 'GOLD')
+                .sort((a, b) => b.points - a.points)
+                .findIndex(s => s.id === student.id) + 1;
+              
+              // Only set goldRanking if in top 10
+              if (goldPosition <= 10) {
+                student.goldRanking = goldPosition;
+              }
+            }
+            return student;
+          });
+          
+          // Process office data to ensure rank information is available
+          const processedOffices = officesData.map(office => {
+            // Calculate Gold ranking for Gold rank offices
+            if (office.rank === 'GOLD') {
+              // Find position among Gold offices
+              const goldPosition = officesData
+                .filter(o => o.rank === 'GOLD')
+                .sort((a, b) => b.points - a.points)
+                .findIndex(o => o.id === office.id) + 1;
+              
+              // Only set goldRanking if in top 10
+              if (goldPosition <= 10) {
+                office.goldRanking = goldPosition;
+              }
+            }
+            return office;
+          });
+          
+          setTopStudents(processedStudents)
+          setTopOffices(processedOffices)
 
           // Trigger confetti when data loads
           setTimeout(() => {
@@ -243,7 +297,18 @@ export default function LeaderboardPage() {
                     #{index + 1}
                   </span>
                 </div>
-                <h3 className="font-bold text-gray-800 text-center max-w-[120px] truncate">{entry.name}</h3>
+                <div className="flex items-center gap-1 justify-center">
+                  <h3 className="font-bold text-gray-800 text-center max-w-[120px] truncate">{entry.name}</h3>
+                  {entry.rank && (
+                    <RankBadge 
+                      rank={entry.rank} 
+                      goldRanking={entry.goldRanking}
+                      size="xs"
+                      showLabel={false}
+                      animate={false}
+                    />
+                  )}
+                </div>
                 <div className="flex items-center mt-1">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <Star
@@ -288,7 +353,18 @@ export default function LeaderboardPage() {
             <span className="text-lg font-bold text-gray-700">#{index + 1}</span>
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-gray-800 truncate">{entry.name}</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-gray-800 truncate">{entry.name}</h3>
+              {entry.rank && (
+                <RankBadge 
+                  rank={entry.rank} 
+                  goldRanking={entry.goldRanking}
+                  size="xs"
+                  showLabel={false}
+                  animate={false}
+                />
+              )}
+            </div>
           <div className="flex items-center gap-2 text-sm text-gray-600">
               <span>
                 {entry.totalRatings} {activeTab === "students" ? "reports" : "ratings"}

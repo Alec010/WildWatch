@@ -89,6 +89,20 @@
         </expiry>
     </cache>
     
+    <!-- Ranking caches -->
+    <cache alias="goldEliteUsers" uses-template="default">
+        <expiry>
+            <ttl unit="minutes">15</ttl>
+        </expiry>
+    </cache>
+    
+    <cache alias="goldEliteOffices" uses-template="default">
+        <expiry>
+            <ttl unit="minutes">15</ttl>
+        </expiry>
+    </cache>
+    
+    
     <!-- Query caches -->
     <cache alias="org.hibernate.cache.internal.StandardQueryCache" uses-template="default"/>
     <cache alias="org.hibernate.cache.spi.TimestampsCache" uses-template="default">

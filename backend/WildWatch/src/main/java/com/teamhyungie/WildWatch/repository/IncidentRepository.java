@@ -5,8 +5,10 @@ import com.teamhyungie.WildWatch.model.Office;
 import com.teamhyungie.WildWatch.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.QueryHints;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import jakarta.persistence.QueryHint;
 
 import java.util.List;
 import java.util.Optional;
@@ -25,6 +27,14 @@ public interface IncidentRepository extends JpaRepository<Incident, String> {
     @Query("SELECT i FROM Incident i WHERE (LOWER(i.status) = 'resolved' OR LOWER(i.status) = 'closed') AND i.resolutionNotes IS NOT NULL AND TRIM(i.resolutionNotes) <> ''")
     List<Incident> findResolvedWithResolutionNotes();
 
+    /**
+     * Count total upvotes received by a user's incidents
+     * @param user The user who submitted the incidents
+     * @return Total count of upvotes across all incidents
+     */
+    @Query("SELECT COALESCE(SUM(i.upvoteCount), 0) FROM Incident i WHERE i.submittedBy = :user")
+    Integer countTotalUpvotesByUser(@Param("user") User user);
+    
     @Query("SELECT i FROM Incident i WHERE (LOWER(i.status) = 'resolved' OR LOWER(i.status) = 'closed') AND i.resolutionNotes IS NOT NULL AND TRIM(i.resolutionNotes) <> '' ORDER BY i.submittedAt DESC")
     List<Incident> findResolvedWithResolutionNotesOrderBySubmittedAtDesc();
     
@@ -83,9 +93,9 @@ public interface IncidentRepository extends JpaRepository<Incident, String> {
      * Optimized query for case tracking page - returns only active cases (pending/in progress)
      * Uses query cache with name "activeCases"
      */
-    @org.springframework.data.jpa.repository.QueryHints({
-        @org.springframework.data.jpa.repository.QueryHint(name = "org.hibernate.cacheable", value = "true"),
-        @org.springframework.data.jpa.repository.QueryHint(name = "org.hibernate.cacheRegion", value = "activeCases")
+    @QueryHints({
+        @QueryHint(name = "org.hibernate.cacheable", value = "true"),
+        @QueryHint(name = "org.hibernate.cacheRegion", value = "activeCases")
     })
     @Query("SELECT new com.teamhyungie.WildWatch.dto.IncidentResponse(" +
            "i.id, i.trackingNumber, i.incidentType, i.location, i.status, " +
@@ -100,9 +110,9 @@ public interface IncidentRepository extends JpaRepository<Incident, String> {
      * Optimized query for incident history page
      * Uses query cache with name "userIncidentHistory"
      */
-    @org.springframework.data.jpa.repository.QueryHints({
-        @org.springframework.data.jpa.repository.QueryHint(name = "org.hibernate.cacheable", value = "true"),
-        @org.springframework.data.jpa.repository.QueryHint(name = "org.hibernate.cacheRegion", value = "userIncidentHistory")
+    @QueryHints({
+        @QueryHint(name = "org.hibernate.cacheable", value = "true"),
+        @QueryHint(name = "org.hibernate.cacheRegion", value = "userIncidentHistory")
     })
     @Query("SELECT new com.teamhyungie.WildWatch.dto.IncidentResponse(" +
            "i.id, i.trackingNumber, i.incidentType, i.location, i.status, " +
@@ -112,4 +122,21 @@ public interface IncidentRepository extends JpaRepository<Incident, String> {
            "WHERE i.submittedBy = :user " +
            "ORDER BY i.submittedAt DESC")
     List<com.teamhyungie.WildWatch.dto.IncidentResponse> findUserIncidentHistory(@Param("user") User user);
+    
+    /**
+     * Count resolved incidents by office admin
+     * @param officeAdmin The office admin who resolved the incidents
+     * @return Total count of resolved incidents
+     */
+    @Query("SELECT COUNT(i) FROM Incident i WHERE i.resolvedBy = :officeAdmin AND (LOWER(i.status) = 'resolved' OR LOWER(i.status) = 'closed')")
+    Integer countResolvedIncidentsByOfficeAdmin(@Param("officeAdmin") User officeAdmin);
+    
+    /**
+     * Count incidents with high ratings by office admin
+     * @param officeAdmin The office admin who handled the incidents
+     * @param minRating The minimum rating threshold
+     * @return Total count of incidents with ratings >= minRating
+     */
+    @Query("SELECT COUNT(i) FROM Incident i WHERE i.resolvedBy = :officeAdmin AND i.rating >= :minRating")
+    Integer countHighRatedIncidentsByOfficeAdmin(@Param("officeAdmin") User officeAdmin, @Param("minRating") Integer minRating);
 } 

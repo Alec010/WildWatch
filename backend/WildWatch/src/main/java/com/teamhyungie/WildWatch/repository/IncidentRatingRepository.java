@@ -38,24 +38,26 @@ public interface IncidentRatingRepository extends JpaRepository<IncidentRating, 
 
     @Query("SELECT u.id, u.firstName, u.lastName, COUNT(i.id) as totalIncidents, " +
            "COALESCE(AVG(r.officeHonesty + r.officeCredibility + r.officeResponsiveness + r.officeHelpfulness) / 4.0, 0) as avgRating, " +
-           "COALESCE(u.points, 0) as points " +
+           "COALESCE(u.points, 0) as points, " +
+           "CAST(u.userRank AS string) as userRank " +
            "FROM User u " +
            "LEFT JOIN Incident i ON i.submittedBy.id = u.id " +
            "LEFT JOIN IncidentRating r ON r.incident.id = i.id " +
            "WHERE u.points > 0 " +
-           "GROUP BY u.id, u.firstName, u.lastName " +
+           "GROUP BY u.id, u.firstName, u.lastName, u.userRank " +
            "ORDER BY points DESC " +
            "LIMIT 10")
     List<Object[]> getTopReporters();
 
     @Query("SELECT o.id, o.officeCode, COUNT(i.id) as totalIncidents, " +
            "COALESCE(AVG(r.reporterHonesty + r.reporterCredibility + r.reporterResponsiveness + r.reporterHelpfulness) / 4.0, 0) as avgRating, " +
-           "COALESCE(o.points, 0) as points " +
+           "COALESCE(o.points, 0) as points, " +
+           "CAST(o.userRank AS string) as userRank " +
            "FROM OfficeAdmin o " +
            "LEFT JOIN Incident i ON i.assignedOffice = o.officeCode " +
            "LEFT JOIN IncidentRating r ON r.incident.id = i.id " +
            "WHERE o.points > 0 " +
-           "GROUP BY o.id, o.officeCode " +
+           "GROUP BY o.id, o.officeCode, o.userRank " +
            "ORDER BY points DESC " +
            "LIMIT 10")
     List<Object[]> getTopOffices();

@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -44,7 +45,14 @@ public class RatingController {
 
     @GetMapping("/leaderboard/reporters/top")
     public ResponseEntity<List<LeaderboardEntry>> getTopReporters() {
-        return ResponseEntity.ok(ratingService.getTopReporters());
+        try {
+            List<LeaderboardEntry> reporters = ratingService.getTopReporters();
+            return ResponseEntity.ok(reporters);
+        } catch (Exception e) {
+            System.err.println("Error in getTopReporters endpoint: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(new ArrayList<>());
+        }
     }
 
     @GetMapping("/leaderboard/reporters/active")
@@ -54,8 +62,22 @@ public class RatingController {
 
     @GetMapping("/leaderboard/offices/top")
     public ResponseEntity<List<LeaderboardEntry>> getTopOffices() {
+        try {
+            List<LeaderboardEntry> offices = ratingService.getTopOffices();
+            return ResponseEntity.ok(offices);
+        } catch (Exception e) {
+            System.err.println("Error in getTopOffices endpoint: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(new ArrayList<>());
+        }
+    }
+    
+    // Previous implementations (keeping for reference)
+    /*
+    public ResponseEntity<List<LeaderboardEntry>> getTopOffices() {
         return ResponseEntity.ok(ratingService.getTopOffices());
     }
+    */
 
     @GetMapping("/leaderboard/offices/active")
     public ResponseEntity<List<LeaderboardEntry>> getMostActiveOffices() {

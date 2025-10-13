@@ -48,6 +48,8 @@ public class IncidentService {
     private final SupabaseStorageService storageService;
     private final OfficeAdminService officeAdminService;
     private final ActivityLogService activityLogService;
+    private final RankService rankService;
+    private final BadgeService badgeService;
     private final IncidentUpdateRepository incidentUpdateRepository;
     private final IncidentUpvoteRepository incidentUpvoteRepository;
     private final SimpMessagingTemplate messagingTemplate;
@@ -140,7 +142,16 @@ public class IncidentService {
         // Handle geolocation data
         handleGeolocationData(incident, request);
         
-        return incidentRepository.save(incident);
+        Incident savedIncident = incidentRepository.save(incident);
+        
+        // Check and update First Responder badge
+        try {
+            badgeService.checkFirstResponderBadge(user);
+        } catch (Exception e) {
+            log.error("Error checking First Responder badge: {}", e.getMessage());
+        }
+        
+        return savedIncident;
     }
 
     private void handleGeolocationData(Incident incident, IncidentRequest request) {
@@ -417,6 +428,23 @@ public class IncidentService {
         
         // Save the updated incident
         Incident updatedIncident = incidentRepository.save(incident);
+
+        // Check if incident was resolved and trigger badge checking
+        if (request.getStatus() != null && 
+            ("resolved".equalsIgnoreCase(request.getStatus()) || "closed".equalsIgnoreCase(request.getStatus())) &&
+            !("resolved".equalsIgnoreCase(oldStatus) || "closed".equalsIgnoreCase(oldStatus))) {
+            
+            // Set the resolvedBy field for badge tracking
+            updatedIncident.setResolvedBy(user);
+            incidentRepository.save(updatedIncident);
+            
+            // Check and update First Response badge for office admin
+            try {
+                badgeService.checkFirstResponseBadge(user);
+            } catch (Exception e) {
+                log.error("Error checking First Response badge: {}", e.getMessage());
+            }
+        }
 
         // Log verification activity if verification status changed
         if (request.isVerified() && !wasVerified) {
@@ -737,6 +765,9 @@ public class IncidentService {
                     reporter.setPoints(Math.max(0.0f, currentPoints - 1.0f)); // Ensure points don't go below 0
                     userService.save(reporter);
                     
+                    // Update rank based on new points
+                    rankService.updateUserRank(reporter);
+                    
                     // Log activity for reporter
                     activityLogService.logActivity(
                         "UPVOTE_POINTS_REMOVED",
@@ -777,6 +808,16 @@ public class IncidentService {
                     User reporter = incident.getSubmittedBy();
                     reporter.setPoints((reporter.getPoints() != null ? reporter.getPoints() : 0.0f) + 1.0f);
                     userService.save(reporter);
+                    
+                    // Update rank based on new points
+                    rankService.updateUserRank(reporter);
+                    
+                    // Check and update Community Helper badge
+                    try {
+                        badgeService.checkCommunityHelperBadge(reporter);
+                    } catch (Exception e) {
+                        log.error("Error checking Community Helper badge: {}", e.getMessage());
+                    }
                     
                     // Log activity for reporter
                     activityLogService.logActivity(
@@ -935,6 +976,12 @@ public class IncidentService {
                         incident.setDismissalNotes(req.getUpdateMessage().trim());
                     }
                 }
+                
+                // Set resolvedBy for badge tracking if resolving
+                if ("Resolved".equals(targetStatus)) {
+                    incident.setResolvedBy(userService.getUserByEmail(userEmail));
+                }
+                
                 incidentRepository.save(incident);
 
                 // Create update entry
@@ -971,6 +1018,17 @@ public class IncidentService {
                 result.failed.add(new Failure(incident.getId(), e.getMessage()));
             }
         }
+        
+        // Check badges after bulk operation if any incidents were resolved
+        if ("Resolved".equals(targetStatus) && !result.updatedIds.isEmpty()) {
+            try {
+                User adminUser = userService.getUserByEmail(userEmail);
+                badgeService.checkFirstResponseBadge(adminUser);
+            } catch (Exception e) {
+                log.error("Error checking First Response badge after bulk update: {}", e.getMessage());
+            }
+        }
+        
         return result;
     }
 } 

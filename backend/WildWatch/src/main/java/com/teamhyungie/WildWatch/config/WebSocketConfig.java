@@ -24,7 +24,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
         config.enableSimpleBroker("/topic")
-            .setHeartbeatValue(new long[] {60000, 60000}) // Set heartbeat to 60 seconds (much less frequent)
+            .setHeartbeatValue(new long[] {120000, 120000}) // Set heartbeat to 120 seconds (much less frequent)
             .setTaskScheduler(customMessageBrokerTaskScheduler());
         config.setApplicationDestinationPrefixes("/app");
     }
@@ -32,9 +32,17 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
-            .setAllowedOriginPatterns("*")
+            .setAllowedOriginPatterns(
+                "http://localhost:3000",
+                "https://jcldwuryjuqtrbsqlgoi.supabase.co",
+                "https://*.onrender.com",
+                "https://wildwatch.onrender.com",
+                "https://*.vercel.app",
+                "https://wild-watch-cca16hidi-alec010s-projects.vercel.app",
+                "wildwatch://*"
+            )
             .withSockJS()
-            .setHeartbeatTime(60000) // Set SockJS heartbeat to 60 seconds
+            .setHeartbeatTime(120000) // Set SockJS heartbeat to 120 seconds
             .setClientLibraryUrl("https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js")
             .setSessionCookieNeeded(false);
     }

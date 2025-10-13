@@ -129,6 +129,13 @@ public class Incident {
     @Column(name = "resolution_extended_at")
     private LocalDateTime resolutionExtendedAt;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "resolved_by")
+    private User resolvedBy;
+
+    @Column(name = "rating")
+    private Integer rating;
+
     @PrePersist
     protected void onCreate() {
         submittedAt = LocalDateTime.now(ZoneOffset.UTC);

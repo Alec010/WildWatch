@@ -28,6 +28,10 @@ public class OfficeAdmin {
     @Column(name = "points")
     private Float points = 0.0f;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "user_rank")
+    private UserRank userRank = UserRank.NONE;
+
     // Getters and Setters
     public Long getId() {
         return id;
@@ -83,5 +87,13 @@ public class OfficeAdmin {
 
     public void setPoints(Float points) {
         this.points = points;
+    }
+
+    public UserRank getUserRank() {
+        return userRank;
+    }
+
+    public void setUserRank(UserRank userRank) {
+        this.userRank = userRank;
     }
 } 

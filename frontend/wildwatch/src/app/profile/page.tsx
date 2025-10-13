@@ -22,6 +22,7 @@ import {
   Lock,
   Search,
   Plus,
+  Trophy,
 } from "lucide-react"
 import Cookies from "js-cookie"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -46,6 +47,16 @@ import { useSidebar } from "@/contexts/SidebarContext"
 import { Navbar } from "@/components/Navbar"
 import { OfficeAdminNavbar } from "@/components/OfficeAdminNavbar"
 import { useUser } from "@/contexts/UserContext"
+import { RankBadge } from "@/components/RankBadge"
+import { RankProgress } from "@/components/RankProgress"
+import { GoldEliteCard } from "@/components/GoldEliteCard"
+import { rankService } from "@/utils/rankService"
+import { badgeService } from "@/utils/badgeService"
+import { BadgesModal } from "@/components/badges/BadgesModal"
+import { BadgeDisplay } from "@/components/badges/BadgeDisplay"
+import type { RankProgress as RankProgressType, GoldEliteEntry } from "@/types/rank"
+import type { UserBadgeSummary, BadgeProgress } from "@/types/badge"
+import { TrendingUp } from "lucide-react"
 
 // Add keyframe animation for gradients
 const gradientAnimationStyle = `
@@ -64,6 +75,7 @@ const gradientAnimationStyle = `
 `
 
 interface UserProfile {
+  id: number
   firstName: string
   lastName: string
   middleInitial: string
@@ -369,10 +381,88 @@ function ProfileContent({ user }: { user: UserProfile }) {
   const [isEditing, setIsEditing] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+  const [rankProgress, setRankProgress] = useState<RankProgressType | null>(null)
+  const [goldEliteEntries, setGoldEliteEntries] = useState<GoldEliteEntry[]>([])
+  const [loadingRank, setLoadingRank] = useState(true)
+  
+  // Badge state
+  const [badgeSummary, setBadgeSummary] = useState<UserBadgeSummary | null>(null)
+  const [loadingBadges, setLoadingBadges] = useState(true)
+  const [isBadgeModalOpen, setIsBadgeModalOpen] = useState(false)
+  const [recentBadges, setRecentBadges] = useState<BadgeProgress[]>([])
 
   useEffect(() => {
     console.log("Current user role:", user.role)
+    // Fetch rank data and badge data
+    fetchRankData()
+    fetchBadgeData()
   }, [user.role])
+
+  const fetchRankData = async () => {
+    try {
+      console.log("🚀 Fetching rank data for role:", user.role)
+      setLoadingRank(true)
+      
+      // Fetch rank data and gold elite data based on user role
+      const [rankData, goldEliteData] = await Promise.all([
+        rankService.getMyRank(), // This endpoint handles both users and office admins
+        user.role === 'OFFICE_ADMIN' 
+          ? rankService.getGoldEliteOffices() 
+          : rankService.getGoldEliteUsers(),
+      ])
+      
+      console.log("✅ Rank data received:", rankData)
+      console.log("✅ Gold elite data received:", goldEliteData)
+      setRankProgress(rankData)
+      setGoldEliteEntries(goldEliteData)
+    } catch (error) {
+      console.error("❌ Error fetching rank data:", error)
+      // Show error state instead of just hiding
+      console.error("Full error details:", error)
+    } finally {
+      setLoadingRank(false)
+      console.log("✅ Loading complete. loadingRank:", false)
+    }
+  }
+  
+  const fetchBadgeData = async () => {
+    try {
+      console.log("🚀 Fetching badge data")
+      setLoadingBadges(true)
+      
+      const badgeSummaryData = await badgeService.getUserBadgeSummary()
+      console.log("✅ Badge data received:", badgeSummaryData)
+      setBadgeSummary(badgeSummaryData)
+      
+      // Get recent/earned badges for display
+      const earnedBadges = badgeSummaryData.badges.filter(badge => badge.currentLevel > 0)
+      // Sort by highest level first, then by badge type
+      earnedBadges.sort((a, b) => {
+        if (b.currentLevel !== a.currentLevel) return b.currentLevel - a.currentLevel
+        return a.badgeType.localeCompare(b.badgeType)
+      })
+      
+      // Take up to 3 badges for the preview
+      setRecentBadges(earnedBadges.slice(0, 3))
+    } catch (error) {
+      console.error("❌ Error fetching badge data:", error)
+      console.error("Full error details:", error)
+    } finally {
+      setLoadingBadges(false)
+      console.log("✅ Loading complete. loadingBadges:", false)
+    }
+  }
+  
+  const handleClaimBadge = async (badgeId: number) => {
+    try {
+      await badgeService.claimBadge(badgeId)
+      // Refresh badge data after claiming
+      await fetchBadgeData()
+    } catch (error) {
+      console.error("Error claiming badge:", error)
+      throw error
+    }
+  }
 
   const form = useForm<z.infer<typeof editFormSchema>>({
     resolver: zodResolver(editFormSchema),
@@ -443,6 +533,15 @@ function ProfileContent({ user }: { user: UserProfile }) {
           />
         )}
         <main className="p-6 pt-24">
+          {/* Badges Modal */}
+          <BadgesModal
+            isOpen={isBadgeModalOpen}
+            onClose={() => setIsBadgeModalOpen(false)}
+            badgeSummary={badgeSummary}
+            isLoading={loadingBadges}
+            onClaimBadge={handleClaimBadge}
+          />
+          
           {/* User Profile Header Card */}
           <Card className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden mb-6">
             <div className="bg-gradient-to-r from-[#800000] via-[#9a0000] to-[#800000] text-white p-6 relative">
@@ -461,8 +560,17 @@ function ProfileContent({ user }: { user: UserProfile }) {
                     </div>
                   </div>
                   <div>
-                    <h2 className="text-3xl font-bold flex items-center gap-3">
+                    <h2 className="text-3xl font-bold flex items-center gap-3 flex-wrap">
                       {user.firstName} {user.lastName}
+                      {rankProgress && !loadingRank && (
+                        <RankBadge 
+                          rank={rankProgress.currentRank} 
+                          goldRanking={rankProgress.goldRanking}
+                          size="md"
+                          showLabel={true}
+                          showGoldNumber={true}
+                        />
+                      )}
                       {typeof user.points === "number" && (
                         <span className="bg-gradient-to-r from-[#D4AF37] to-[#FFD700] text-[#800000] px-4 py-1 rounded-full text-sm font-semibold flex items-center gap-1 shadow-md border border-[#D4AF37]/50">
                           <Award className="h-4 w-4 text-yellow-600" />
@@ -511,6 +619,98 @@ function ProfileContent({ user }: { user: UserProfile }) {
               </div>
             </div>
           </Card>
+
+          {/* Ranking Section */}
+          {rankProgress && !loadingRank && (
+            <Card className="bg-gradient-to-br from-white via-gray-50 to-white border border-gray-200 rounded-lg shadow-lg overflow-hidden mb-6">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-gradient-to-br from-[#8B0000] to-[#6B0000] p-3 rounded-full shadow-lg">
+                      <TrendingUp className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-[#8B0000]">Your Ranking</h3>
+                      <p className="text-sm text-gray-600">Track your progress and achievements</p>
+                    </div>
+                  </div>
+                  
+                  {/* Badges Button */}
+                  <Button 
+                    onClick={() => setIsBadgeModalOpen(true)}
+                    variant="outline"
+                    className="flex items-center gap-2"
+                  >
+                    <Trophy size={16} className="text-amber-500" />
+                    <span>View Badges</span>
+                    {badgeSummary && badgeSummary.totalBadgesEarned > 0 && (
+                      <span className="bg-amber-100 text-amber-800 text-xs px-2 py-0.5 rounded-full">
+                        {badgeSummary.totalBadgesEarned}
+                      </span>
+                    )}
+                  </Button>
+                </div>
+
+                <RankProgress rankProgress={rankProgress} showDetails={true} />
+                
+                {/* Badges Preview Section */}
+                {!loadingBadges && recentBadges.length > 0 && (
+                  <div className="mt-4 p-4 bg-amber-50 rounded-lg border border-amber-200">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-medium text-amber-800 flex items-center gap-2">
+                        <Trophy size={16} />
+                        Your Badges
+                      </h4>
+                      <span className="text-xs text-amber-700">
+                        {badgeSummary?.totalBadgesEarned || 0}/{badgeSummary?.totalBadgesAvailable || 0} earned
+                      </span>
+                    </div>
+                    <div className="flex gap-4">
+                      {recentBadges.map(badge => (
+                        <BadgeDisplay 
+                          key={badge.badgeId}
+                          badge={badge}
+                          size="md"
+                          showName={true}
+                        />
+                      ))}
+                      {recentBadges.length < badgeSummary?.totalBadgesEarned && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => setIsBadgeModalOpen(true)}
+                          className="text-amber-700 hover:text-amber-800 hover:bg-amber-100"
+                        >
+                          +{(badgeSummary?.totalBadgesEarned || 0) - recentBadges.length} more
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+              {/* Show Gold Elite if user is in it */}
+              {rankProgress.currentRank === 'GOLD' && rankProgress.goldRanking && rankProgress.goldRanking <= 10 && (
+                <div className="mt-6">
+                  <GoldEliteCard 
+                    entries={goldEliteEntries} 
+                    userType={user.role === 'OFFICE_ADMIN' ? 'offices' : 'users'}
+                    currentUserId={user.id}
+                  />
+                </div>
+              )}
+              </div>
+            </Card>
+          )}
+
+          {/* Loading state for ranking */}
+          {loadingRank && (
+            <Card className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden mb-6">
+              <div className="p-6 flex items-center justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#8B0000]"></div>
+                <p className="ml-3 text-gray-600">Loading your ranking...</p>
+              </div>
+            </Card>
+          )}
 
           {/* Stats Section */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">

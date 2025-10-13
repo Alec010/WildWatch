@@ -1,5 +1,7 @@
 package com.teamhyungie.WildWatch.dto;
 
+import com.teamhyungie.WildWatch.model.UserRank;
+
 public class LeaderboardEntry {
     private Long id;
     private String name;
@@ -8,23 +10,42 @@ public class LeaderboardEntry {
     private Float points;
     private Integer activeIncidents;
     private Integer resolvedIncidents;
+    private UserRank rank;
+    private Integer goldRanking; // For Gold Elite users (1-10)
 
-    // Constructor for reporter entries
-    public LeaderboardEntry(Long id, String firstName, String lastName, Integer totalIncidents, Double averageRating, Float points) {
+    // Constructor for reporter entries (with rank)
+    public LeaderboardEntry(Long id, String firstName, String lastName, Integer totalIncidents, Double averageRating, Float points, String rankStr) {
         this.id = id;
         this.name = firstName + " " + lastName;
         this.totalIncidents = totalIncidents;
         this.averageRating = averageRating;
         this.points = points;
+        this.rank = rankStr != null ? UserRank.valueOf(rankStr) : UserRank.NONE;
     }
 
-    // Constructor for office entries
+    // Constructor for office entries (with rank)
+    public LeaderboardEntry(Long id, String name, Integer totalIncidents, Double averageRating, Float points, String rankStr) {
+        this.id = id;
+        this.name = name;
+        this.totalIncidents = totalIncidents;
+        this.averageRating = averageRating;
+        this.points = points;
+        this.rank = rankStr != null ? UserRank.valueOf(rankStr) : UserRank.NONE;
+    }
+
+    // Legacy constructor for reporter entries (without rank)
+    public LeaderboardEntry(Long id, String firstName, String lastName, Integer totalIncidents, Double averageRating, Float points) {
+        this(id, firstName, lastName, totalIncidents, averageRating, points, "NONE");
+    }
+
+    // Legacy constructor for office entries (without rank)
     public LeaderboardEntry(Long id, String name, Integer totalIncidents, Double averageRating, Float points) {
         this.id = id;
         this.name = name;
         this.totalIncidents = totalIncidents;
         this.averageRating = averageRating;
         this.points = points;
+        this.rank = UserRank.NONE;
     }
 
     // Constructor for active reporters
@@ -56,4 +77,8 @@ public class LeaderboardEntry {
     public void setActiveIncidents(Integer activeIncidents) { this.activeIncidents = activeIncidents; }
     public Integer getResolvedIncidents() { return resolvedIncidents; }
     public void setResolvedIncidents(Integer resolvedIncidents) { this.resolvedIncidents = resolvedIncidents; }
+    public UserRank getRank() { return rank; }
+    public void setRank(UserRank rank) { this.rank = rank; }
+    public Integer getGoldRanking() { return goldRanking; }
+    public void setGoldRanking(Integer goldRanking) { this.goldRanking = goldRanking; }
 } 
