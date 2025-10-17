@@ -2,6 +2,7 @@ import React from "react";
 import { View, TouchableOpacity, Text, StyleSheet } from "react-native";
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { storage } from "../../lib/storage";
 
 interface CustomTabBarProps {
   state: any;
@@ -38,12 +39,34 @@ function CustomTabBar({ state, descriptors, navigation }: CustomTabBarProps) {
           }
         };
 
-        // Special styling for Report button (FAB) - redirects to camera
+        // Special styling for Report button (FAB) - smart routing based on flow step
         if (route.name === "report") {
+          const handleReportPress = async () => {
+            // Get the current flow step from storage
+            const flowStep = await storage.getReportFlowStep();
+
+            console.log("Report tab pressed, routing to flow step:", flowStep);
+
+            // Route to the appropriate screen based on where user left off
+            switch (flowStep) {
+              case 1:
+                navigation.navigate("camera");
+                break;
+              case 2:
+                navigation.navigate("location");
+                break;
+              case 3:
+                navigation.navigate("report");
+                break;
+              default:
+                navigation.navigate("camera"); // Default to camera
+            }
+          };
+
           return (
             <TouchableOpacity
               key={route.key}
-              onPress={() => navigation.navigate("camera")}
+              onPress={handleReportPress}
               style={styles.fabContainer}
             >
               <View style={styles.fab}>

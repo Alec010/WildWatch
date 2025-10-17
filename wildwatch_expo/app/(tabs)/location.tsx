@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
 import MapView, {
   Marker,
   Polygon,
@@ -25,6 +25,7 @@ import {
   LocationData,
   CAMPUS_CONFIG,
 } from "../../src/features/location/models/LocationModels";
+import { storage } from "../../lib/storage";
 
 const MAP_BUTTON_GAP = 12;
 
@@ -43,6 +44,12 @@ const getSpacing = () => {
 export default function LocationScreen() {
   const params = useLocalSearchParams();
   const hasExistingImages = params.hasImages === "true";
+
+  console.log("Location screen received params:", {
+    hasImages: params.hasImages,
+    imageCount: params.imageCount,
+    hasExistingImages,
+  });
 
   const [selectedLocation, setSelectedLocation] = useState<LocationData | null>(
     null
@@ -70,6 +77,44 @@ export default function LocationScreen() {
     clearError,
     reverseGeocode,
   } = useLocation();
+
+  // Load persisted location data when screen focuses
+  useFocusEffect(
+    React.useCallback(() => {
+      // Mark that user is at location (flow step 2)
+      storage.setReportFlowStep(2);
+
+      const loadPersistedLocation = async () => {
+        try {
+          const persistedLocation = await storage.getLocationData();
+          if (persistedLocation) {
+            setSelectedLocation(persistedLocation);
+            // Update map region to show the persisted location
+            mapRef.current?.animateToRegion(
+              {
+                latitude: persistedLocation.latitude,
+                longitude: persistedLocation.longitude,
+                latitudeDelta: 0.005,
+                longitudeDelta: 0.005,
+              },
+              1000
+            );
+          }
+        } catch (error) {
+          console.error("Error loading persisted location:", error);
+        }
+      };
+
+      loadPersistedLocation();
+    }, [])
+  );
+
+  // Save location data whenever selectedLocation changes
+  React.useEffect(() => {
+    if (selectedLocation) {
+      storage.setLocationData(selectedLocation);
+    }
+  }, [selectedLocation]);
 
   const notifySelected = (ld: LocationData) => {
     Alert.alert(
@@ -103,6 +148,8 @@ export default function LocationScreen() {
       }
       const locationData = await getCurrentLocation();
       setSelectedLocation(locationData);
+      // Explicitly save to storage to ensure persistence
+      await storage.setLocationData(locationData);
       mapRef.current?.animateToRegion(
         {
           latitude: locationData.latitude as number,
@@ -149,6 +196,8 @@ export default function LocationScreen() {
           distanceFromCampusCenter: geoResponse.distanceFromCampusCenter,
         };
         setSelectedLocation(locationData);
+        // Explicitly save to storage to ensure persistence
+        await storage.setLocationData(locationData);
         mapRef.current?.animateToRegion(
           {
             latitude: locationData.latitude as number,
@@ -196,6 +245,8 @@ export default function LocationScreen() {
         1000
       );
       setSelectedLocation(locationData);
+      // Explicitly save to storage to ensure persistence
+      await storage.setLocationData(locationData);
       notifySelected(locationData);
     } catch (error: any) {
       Alert.alert("Error", error?.message || "Failed to get current location");
@@ -204,23 +255,37 @@ export default function LocationScreen() {
     }
   }, [getCurrentLocation]);
 
-  const handleClearLocation = () => setSelectedLocation(null);
+  const handleClearLocation = async () => {
+    setSelectedLocation(null);
+    // Also clear from storage when location is cleared
+    await storage.removeLocationData();
+  };
 
-  const handleSaveLocation = () => {
+  const handleSaveLocation = async () => {
     if (!selectedLocation) return;
+
+    console.log("Saving location data:", selectedLocation);
+
+    // Ensure location data is saved to storage before navigation
+    await storage.setLocationData(selectedLocation);
+
+    const navigationParams = {
+      latitude: selectedLocation.latitude?.toString(),
+      longitude: selectedLocation.longitude?.toString(),
+      formattedAddress: selectedLocation.formattedAddress,
+      building: selectedLocation.building,
+      buildingName: selectedLocation.buildingName,
+      buildingCode: selectedLocation.buildingCode,
+      withinCampus: selectedLocation.withinCampus?.toString(),
+      distanceFromCampusCenter:
+        selectedLocation.distanceFromCampusCenter?.toString(),
+    };
+
+    console.log("Navigating to report with params:", navigationParams);
+
     router.push({
       pathname: "/(tabs)/report",
-      params: {
-        latitude: selectedLocation.latitude?.toString(),
-        longitude: selectedLocation.longitude?.toString(),
-        formattedAddress: selectedLocation.formattedAddress,
-        building: selectedLocation.building,
-        buildingName: selectedLocation.buildingName,
-        buildingCode: selectedLocation.buildingCode,
-        withinCampus: selectedLocation.withinCampus?.toString(),
-        distanceFromCampusCenter:
-          selectedLocation.distanceFromCampusCenter?.toString(),
-      },
+      params: navigationParams,
     } as any);
   };
 

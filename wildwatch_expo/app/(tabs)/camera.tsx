@@ -110,11 +110,21 @@ export default function CameraScreen() {
 
   useFocusEffect(
     React.useCallback(() => {
+      console.log("Camera screen useFocusEffect triggered:", {
+        isReturningFromLocation,
+        currentImageCount: capturedImages.length,
+        imagesRefCount: imagesRef.current.length,
+      });
+
+      // Mark that user is at camera (flow step 1)
+      storage.setReportFlowStep(1);
+
       if (!isReturningFromLocation) {
         // Load images from storage if they exist
         const loadStoredImages = async () => {
           try {
             const storedFiles = await storage.getEvidenceFiles();
+            console.log("Loaded stored images from storage:", storedFiles);
             if (storedFiles && storedFiles.length > 0) {
               // If there are existing images, go directly to images captured state
               setCapturedImages(storedFiles);
@@ -122,6 +132,11 @@ export default function CameraScreen() {
               setShowFallback(false);
               setHasInitialized(true);
               setIsLoading(false);
+              console.log(
+                "Set camera to images captured state with",
+                storedFiles.length,
+                "images"
+              );
             } else {
               // No images, initialize camera
               setCapturedImages([]);
@@ -129,6 +144,7 @@ export default function CameraScreen() {
               setShowFallback(true);
               setHasInitialized(false);
               initializeCamera();
+              console.log("No stored images, initializing camera");
             }
           } catch (error) {
             console.error("Error loading stored images:", error);
@@ -143,6 +159,11 @@ export default function CameraScreen() {
         loadStoredImages();
       } else {
         // Returning from location, use preserved state
+        console.log(
+          "Returning from location, using preserved state with",
+          imagesRef.current.length,
+          "images"
+        );
         setCapturedImages(imagesRef.current);
         setShowFallback(imagesRef.current.length === 0);
         setHasInitialized(true);
@@ -238,6 +259,7 @@ export default function CameraScreen() {
           const newImages = [...prev, newFile];
           imagesRef.current = newImages;
           // Update storage
+          console.log("Saving captured image to storage:", newImages);
           storage.setEvidenceFiles(newImages);
           return newImages;
         });
@@ -280,6 +302,7 @@ export default function CameraScreen() {
         const newImages = [...prev, ...newFiles];
         imagesRef.current = newImages;
         // Update storage
+        console.log("Saving selected images to storage:", newImages);
         storage.setEvidenceFiles(newImages);
         return newImages;
       });
@@ -302,6 +325,7 @@ export default function CameraScreen() {
       const newImages = prev.filter((_, i) => i !== index);
       imagesRef.current = newImages;
       // Update storage
+      console.log("Removing image from storage:", newImages);
       storage.setEvidenceFiles(newImages);
       if (newImages.length === 0) {
         setShowFallback(true);
@@ -661,15 +685,25 @@ export default function CameraScreen() {
             <View style={styles.actionRow}>
               <TouchableOpacity
                 onPress={async () => {
+                  console.log("Saving images to storage:", capturedImages);
+
                   // Save images to storage before navigating
                   await storage.setEvidenceFiles(capturedImages);
+
+                  const navigationParams = {
+                    hasImages: "true",
+                    imageCount: capturedImages.length.toString(),
+                  };
+
+                  console.log(
+                    "Navigating to location with params:",
+                    navigationParams
+                  );
+
                   // Navigate to location with images data
                   router.push({
                     pathname: "/(tabs)/location",
-                    params: {
-                      hasImages: "true",
-                      imageCount: capturedImages.length.toString(),
-                    },
+                    params: navigationParams,
                   } as any);
                 }}
                 style={[styles.btn, styles.btnSuccess, styles.actionFlex]}
