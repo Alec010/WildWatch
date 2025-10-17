@@ -3,7 +3,7 @@ import { api } from '../../../../lib/api';
 export interface AnalyzeRequest {
   incidentType: string;
   description: string;
-  location: string;
+  location?: string;
   formattedAddress?: string;
   buildingName?: string;
   buildingCode?: string;
@@ -45,9 +45,9 @@ export const incidentAnalysisAPI = {
       });
 
       const response = await api.post<AnalyzeResponse>('/incidents/analyze', request, {
-              timeout: 60000, // 60 second timeout
+        timeout: 60000, // 60 second timeout
       });
-      
+
       console.log('AI analysis response:', response.data);
       return response.data;
     } catch (error: any) {

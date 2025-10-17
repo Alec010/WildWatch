@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "wildwatch_expo",
-    "slug": "wildwatch_expo",
+    "name": "WildWatch",
+    "slug": "WildWatch",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/logos/WildWatch_Logo.png",

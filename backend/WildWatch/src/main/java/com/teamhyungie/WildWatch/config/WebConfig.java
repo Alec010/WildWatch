@@ -8,21 +8,22 @@ import org.slf4j.LoggerFactory;
 
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
+
     private final Logger logger = LoggerFactory.getLogger(WebConfig.class);
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
                 .allowedOriginPatterns(
-                    "http://localhost:3000",
-                    "https://jcldwuryjuqtrbsqlgoi.supabase.co",
-                    "https://*.onrender.com",
-                    "https://wildwatch.onrender.com",
-                    "https://*.vercel.app",
-                    "https://wild-watch-cca16hidi-alec010s-projects.vercel.app"
+                        "http://localhost:3000",
+                        "https://jcldwuryjuqtrbsqlgoi.supabase.co",
+                        "https://*.onrender.com",
+                        "https://wildwatch.onrender.com",
+                        "https://*.vercel.app",
+                        "https://wild-watch-cca16hidi-alec010s-projects.vercel.app"
                 )
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 .allowCredentials(true);
     }
-} 
+}
