@@ -32,6 +32,9 @@ public class OfficeBulletin {
     @Column(name = "is_active")
     private Boolean isActive = true;
 
+    @Column(name = "upvote_count")
+    private Integer upvoteCount = 0;
+
     // Media attachments
     @OneToMany(mappedBy = "bulletin", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<BulletinMedia> mediaAttachments;

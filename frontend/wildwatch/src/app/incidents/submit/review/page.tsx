@@ -979,9 +979,9 @@ export default function ReviewSubmissionPage() {
       <Dialog open={showSimilarDialog} onOpenChange={setShowSimilarDialog}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="text-[#800000]">We found similar resolved cases</DialogTitle>
+            <DialogTitle className="text-[#800000]">We found similar cases</DialogTitle>
             <DialogDescription>
-              Review how similar cases were resolved. You can cancel if the suggested resolution already addresses your concern, or proceed to submit your report.
+              Review similar cases. For resolved cases we show resolution notes; for in-progress cases we show the latest update.
             </DialogDescription>
           </DialogHeader>
 
@@ -1006,14 +1006,24 @@ export default function ReviewSubmissionPage() {
                     <div className="text-sm font-medium text-gray-800">{s.finishedDate ? new Date(s.finishedDate).toLocaleString() : "N/A"}</div>
                   </div>
                 </div>
-                {s.resolutionNotes && (
+                {s.resolutionNotes ? (
                   <div className="mt-3">
                     <div className="text-xs text-gray-500 mb-1">Resolution Notes</div>
                     <div className="text-sm text-gray-800 whitespace-pre-line bg-white border rounded p-3">
                       {s.resolutionNotes}
                     </div>
                   </div>
-                )}
+                ) : s.latestUpdateMessage ? (
+                  <div className="mt-3">
+                    <div className="text-xs text-gray-500 mb-1">Latest Update</div>
+                    <div className="text-sm text-gray-800 whitespace-pre-line bg-white border rounded p-3">
+                      {s.latestUpdateMessage}
+                    </div>
+                    {s.latestUpdateAt && (
+                      <div className="text-xs text-gray-500 mt-1">Last Updated: {new Date(s.latestUpdateAt).toLocaleString()}</div>
+                    )}
+                  </div>
+                ) : null}
               </div>
             ))}
           </div>

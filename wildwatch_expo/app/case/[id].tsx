@@ -6,6 +6,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useIncidentDetails } from '../../src/features/incidents/hooks/useIncidentDetails';
 import { type IncidentDetailsDto } from '../../src/features/incidents/models/IncidentDetails';
 import { config } from '../../lib/config';
+import { RatingModal } from '../../src/features/ratings/components/RatingModal';
+import { RatingAnalytics } from '../../src/features/ratings/components/RatingAnalytics';
+import { useRating } from '../../src/features/ratings/hooks/useRating';
 
 interface ProgressStep {
   title: string;
@@ -18,9 +21,12 @@ export default function CaseDetailsScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const router = useRouter();
   const { token, incident, isLoading, error, refetch } = useIncidentDetails(id);
+  const { ratingStatus, fetchRatingStatus } = useRating(id || '');
   const [refreshing, setRefreshing] = React.useState<boolean>(false);
   const [selectedImage, setSelectedImage] = React.useState<string | null>(null);
   const [showImageModal, setShowImageModal] = React.useState<boolean>(false);
+  const [showRatingModal, setShowRatingModal] = React.useState<boolean>(false);
+  const [ratingType, setRatingType] = React.useState<'reporter' | 'office'>('reporter');
 
   const isSmallIPhone = Dimensions.get('window').height < 700;
   const isIPhone15Pro = Dimensions.get('window').height >= 800 && Dimensions.get('window').height < 900;
@@ -36,8 +42,17 @@ export default function CaseDetailsScreen() {
 
   const onRefresh = async (): Promise<void> => {
     setRefreshing(true);
-    await refetch();
+    await Promise.all([refetch(), fetchRatingStatus()]);
     setRefreshing(false);
+  };
+
+  const handleRatingPress = (type: 'reporter' | 'office') => {
+    setRatingType(type);
+    setShowRatingModal(true);
+  };
+
+  const handleRatingSuccess = () => {
+    fetchRatingStatus();
   };
 
   const handleUpvote = async (): Promise<void> => {
@@ -418,6 +433,111 @@ export default function CaseDetailsScreen() {
           )}
         </View>
 
+        {/* Rating Section - Only show for resolved incidents */}
+        {incident.status?.toUpperCase() === 'RESOLVED' && (
+          <View style={{ backgroundColor: '#FFFFFF', marginHorizontal: margin, marginBottom: margin, borderRadius: 12, padding: padding, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 2 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+              <Ionicons name="star" size={24} color="#8B0000" style={{ marginRight: 8 }} />
+              <Text style={{ fontSize: fontSize + 1, fontWeight: 'bold', color: '#8B0000' }}>Rating & Feedback</Text>
+            </View>
+            <View style={{ height: 1, backgroundColor: '#E5E7EB', marginBottom: 16 }} />
+            
+            {/* Rating Status Messages */}
+            {ratingStatus && (
+              <View style={{ marginBottom: 16 }}>
+                {!ratingStatus.reporterRating && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#FEF3C7', padding: 12, borderRadius: 8, marginBottom: 8 }}>
+                    <Ionicons name="information-circle" size={20} color="#F59E0B" />
+                    <Text style={{ marginLeft: 8, fontSize: fontSize - 1, color: '#92400E', flex: 1 }}>
+                      Waiting for reporter to rate this incident
+                    </Text>
+                  </View>
+                )}
+                
+                {!ratingStatus.officeRating && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#FEF3C7', padding: 12, borderRadius: 8, marginBottom: 8 }}>
+                    <Ionicons name="information-circle" size={20} color="#F59E0B" />
+                    <Text style={{ marginLeft: 8, fontSize: fontSize - 1, color: '#92400E', flex: 1 }}>
+                      Waiting for office to rate this incident
+                    </Text>
+                  </View>
+                )}
+                
+                {ratingStatus.pointsAwarded && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#D1FAE5', padding: 12, borderRadius: 8, marginBottom: 8 }}>
+                    <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+                    <Text style={{ marginLeft: 8, fontSize: fontSize - 1, color: '#065F46', flex: 1 }}>
+                      Points have been awarded for this incident
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+
+            {/* Rating Buttons */}
+            <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  backgroundColor: ratingStatus?.reporterRating ? '#F3F4F6' : '#8B0000',
+                  paddingVertical: 12,
+                  paddingHorizontal: 16,
+                  borderRadius: 8,
+                  alignItems: 'center',
+                }}
+                onPress={() => handleRatingPress('reporter')}
+                disabled={!!ratingStatus?.reporterRating}
+              >
+                <Text style={{
+                  color: ratingStatus?.reporterRating ? '#6B7280' : '#FFFFFF',
+                  fontSize: fontSize - 1,
+                  fontWeight: '600',
+                }}>
+                  {ratingStatus?.reporterRating ? 'Rated Office' : 'Rate Office'}
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  backgroundColor: ratingStatus?.officeRating ? '#F3F4F6' : '#8B0000',
+                  paddingVertical: 12,
+                  paddingHorizontal: 16,
+                  borderRadius: 8,
+                  alignItems: 'center',
+                }}
+                onPress={() => handleRatingPress('office')}
+                disabled={!!ratingStatus?.officeRating}
+              >
+                <Text style={{
+                  color: ratingStatus?.officeRating ? '#6B7280' : '#FFFFFF',
+                  fontSize: fontSize - 1,
+                  fontWeight: '600',
+                }}>
+                  {ratingStatus?.officeRating ? 'Rated Reporter' : 'Rate Reporter'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Rating Analytics */}
+            {ratingStatus?.reporterRating && (
+              <RatingAnalytics
+                rating={ratingStatus.reporterRating}
+                title="Office Rating"
+                showBreakdown={true}
+              />
+            )}
+            
+            {ratingStatus?.officeRating && (
+              <RatingAnalytics
+                rating={ratingStatus.officeRating}
+                title="Reporter Rating"
+                showBreakdown={true}
+              />
+            )}
+          </View>
+        )}
+
         <View style={{ height: 100 }} />
       </ScrollView>
 
@@ -435,6 +555,15 @@ export default function CaseDetailsScreen() {
           </View>
         </View>
       )}
+
+      {/* Rating Modal */}
+      <RatingModal
+        isOpen={showRatingModal}
+        onClose={() => setShowRatingModal(false)}
+        incidentId={id || ''}
+        type={ratingType}
+        onSuccess={handleRatingSuccess}
+      />
     </SafeAreaView>
   );
 }

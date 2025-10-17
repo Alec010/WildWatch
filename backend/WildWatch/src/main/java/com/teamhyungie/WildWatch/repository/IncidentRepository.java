@@ -29,4 +29,7 @@ public interface IncidentRepository extends JpaRepository<Incident, String> {
     List<Incident> findResolvedWithResolutionNotesOrderBySubmittedAtDesc();
     
     List<Incident> findByStatus(String status);
+
+    @Query("SELECT i FROM Incident i WHERE LOWER(i.status) IN ('in progress','in-progress') ORDER BY i.submittedAt DESC")
+    List<Incident> findInProgressOrderBySubmittedAtDesc();
 } 

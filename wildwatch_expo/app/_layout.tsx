@@ -9,6 +9,7 @@ import 'react-native-reanimated';
 import { useColorScheme } from '@/components/useColorScheme';
 import { storage } from '../lib/storage';
 import { authAPI } from '@/src/features/auth/api/auth_api';
+import GlobalLayout from '../components/GlobalLayout';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -94,11 +95,21 @@ function RootLayoutNav() {
 
   return (
     <ThemeProvider value={DefaultTheme}>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="auth" options={{ gestureEnabled: false }} />
-        <Stack.Screen name="(tabs)" options={{ gestureEnabled: false }} />
-      </Stack>
+      <GlobalLayout>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="index" />
+          <Stack.Screen name="auth" options={{ gestureEnabled: false }} />
+          <Stack.Screen name="(tabs)" options={{ gestureEnabled: false }} />
+          <Stack.Screen 
+            name="chatbot" 
+            options={{ 
+              presentation: 'modal',
+              gestureEnabled: true,
+              headerShown: false
+            }} 
+          />
+        </Stack>
+      </GlobalLayout>
     </ThemeProvider>
   );
 }

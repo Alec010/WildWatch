@@ -6,6 +6,12 @@ import com.teamhyungie.WildWatch.dto.RegisterRequest;
 import com.teamhyungie.WildWatch.service.AuthService;
 import com.teamhyungie.WildWatch.service.UserService;
 import com.teamhyungie.WildWatch.security.JwtUtil;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.Cookie;
 import jakarta.validation.Valid;
@@ -26,6 +32,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
+@Tag(name = "Authentication", description = "Authentication and user management endpoints")
 public class AuthController {
 
     private final AuthService authService;
@@ -34,6 +41,12 @@ public class AuthController {
     private final JwtUtil jwtUtil;
     private final UserDetailsService userDetailsService;
 
+    @Operation(summary = "Register a new user", description = "Create a new user account with email and password")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "User registered successfully",
+                content = @Content(schema = @Schema(implementation = AuthResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Registration failed")
+    })
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
         try {
@@ -46,6 +59,12 @@ public class AuthController {
         }
     }
 
+    @Operation(summary = "User login", description = "Authenticate user with email and password")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Login successful",
+                content = @Content(schema = @Schema(implementation = AuthResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Invalid credentials")
+    })
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         try {
@@ -63,6 +82,11 @@ public class AuthController {
         }
     }
 
+    @Operation(summary = "Get user profile", description = "Retrieve the authenticated user's profile information")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Profile retrieved successfully"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized")
+    })
     @GetMapping("/profile")
     public ResponseEntity<?> getProfile() {
         try {
@@ -162,13 +186,13 @@ public class AuthController {
     public ResponseEntity<?> refresh(HttpServletRequest request) {
         try {
             String jwt = null;
-            
+
             // Try to get token from Authorization header
             final String authHeader = request.getHeader("Authorization");
             if (authHeader != null && authHeader.startsWith("Bearer ")) {
                 jwt = authHeader.substring(7);
             }
-            
+
             // If not in header, try to get from cookie
             if (jwt == null) {
                 Cookie[] cookies = request.getCookies();
@@ -181,11 +205,11 @@ public class AuthController {
                     }
                 }
             }
-            
+
             if (jwt == null) {
                 return ResponseEntity.status(401).body(Map.of("error", "No token provided"));
             }
-            
+
             // Extract username from token (even if expired)
             String userEmail;
             try {
@@ -193,18 +217,18 @@ public class AuthController {
             } catch (Exception e) {
                 return ResponseEntity.status(401).body(Map.of("error", "Invalid token"));
             }
-            
+
             // Load user details
             UserDetails userDetails = userDetailsService.loadUserByUsername(userEmail);
-            
+
             // Generate new token
             String newToken = jwtUtil.generateToken(userDetails);
-            
+
             return ResponseEntity.ok(Map.of(
-                "token", newToken,
-                "message", "Token refreshed successfully"
+                    "token", newToken,
+                    "message", "Token refreshed successfully"
             ));
-            
+
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("error", "Failed to refresh token"));
         }
@@ -212,6 +236,7 @@ public class AuthController {
 }
 
 class SetupRequest {
+
     private String contactNumber;
     private String password;
 

@@ -208,6 +208,12 @@ export default function CasesScreen() {
                           <View className="flex-row items-center">
                             <Ionicons name="thumbs-up" size={16} color="#6B7280" />
                             <Text className="text-gray-500 ml-1 text-sm">{incident.upvoteCount || 0}</Text>
+                            {incident.status?.toLowerCase() === 'resolved' && (
+                              <View className="ml-3 flex-row items-center">
+                                <Ionicons name="star" size={16} color="#F59E0B" />
+                                <Text className="text-gray-500 ml-1 text-sm">Rate</Text>
+                              </View>
+                            )}
                           </View>
                           <View className="flex-row items-center">
                             <Ionicons name="eye" size={16} color="#8B0000" />

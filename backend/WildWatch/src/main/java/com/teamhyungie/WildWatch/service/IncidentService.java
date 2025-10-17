@@ -714,14 +714,7 @@ public class IncidentService {
                     float currentPoints = reporter.getPoints() != null ? reporter.getPoints() : 0.0f;
                     reporter.setPoints(Math.max(0.0f, currentPoints - 1.0f)); // Ensure points don't go below 0
                     userService.save(reporter);
-                    
-                    // Log activity for reporter
-                    activityLogService.logActivity(
-                        "UPVOTE_POINTS_REMOVED",
-                        "1 point was removed due to upvote removal on incident #" + incident.getTrackingNumber(),
-                        incident,
-                        reporter
-                    );
+                    // Removed upvote notifications
                 } catch (Exception e) {
                     // Log error but do not fail the transaction
                     System.err.println("Failed to remove upvote points from reporter: " + e.getMessage());
@@ -748,33 +741,19 @@ public class IncidentService {
                 incident.getUpvoteCount()
             );
 
-            // Create notification for the incident creator and award points
+            // Award points, but do not send upvote notifications
             if (!user.getId().equals(incident.getSubmittedBy().getId())) {
                 // Award +1 point to the incident reporter
                 try {
                     User reporter = incident.getSubmittedBy();
                     reporter.setPoints((reporter.getPoints() != null ? reporter.getPoints() : 0.0f) + 1.0f);
                     userService.save(reporter);
-                    
-                    // Log activity for reporter
-                    activityLogService.logActivity(
-                        "UPVOTE_POINTS",
-                        "You received 1 point for an upvote on incident #" + incident.getTrackingNumber(),
-                        incident,
-                        reporter
-                    );
+                    // Removed upvote notifications
                 } catch (Exception e) {
                     // Log error but do not fail the transaction
                     System.err.println("Failed to award upvote points to reporter: " + e.getMessage());
                 }
-                
-                // Create upvote notification
-                activityLogService.logActivity(
-                    "UPVOTE",
-                    "Your incident #" + incident.getTrackingNumber() + " received an upvote",
-                    incident,
-                    incident.getSubmittedBy()
-                );
+                // Removed upvote notifications
             }
             return true;
         }

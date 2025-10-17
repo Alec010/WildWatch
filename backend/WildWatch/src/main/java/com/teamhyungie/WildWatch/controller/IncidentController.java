@@ -7,7 +7,13 @@ import com.teamhyungie.WildWatch.dto.IncidentUpdateRequest;
 import com.teamhyungie.WildWatch.dto.IncidentUpdateResponse;
 import com.teamhyungie.WildWatch.dto.IncidentTransferRequest;
 import com.teamhyungie.WildWatch.service.IncidentService;
-import jakarta.validation.Valid;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -22,10 +28,19 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/incidents")
 @RequiredArgsConstructor
+@Tag(name = "Incidents", description = "Incident reporting and management endpoints")
+@SecurityRequirement(name = "bearerAuth")
 public class IncidentController {
+
     private final IncidentService incidentService;
     private final ObjectMapper objectMapper;
 
+    @Operation(summary = "Create a new incident", description = "Report a new incident with optional file attachments")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Incident created successfully",
+                content = @Content(schema = @Schema(implementation = IncidentResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Invalid incident data")
+    })
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<IncidentResponse> createIncident(
             @RequestParam("incidentData") String incidentDataJson,
@@ -41,6 +56,10 @@ public class IncidentController {
         }
     }
 
+    @Operation(summary = "Get user's incidents", description = "Retrieve all incidents reported by the authenticated user")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Incidents retrieved successfully")
+    })
     @GetMapping("/my-incidents")
     public ResponseEntity<List<IncidentResponse>> getUserIncidents(
             @AuthenticationPrincipal UserDetails userDetails) {
@@ -141,6 +160,7 @@ public class IncidentController {
     }
 
     public static class ExtendResolutionRequest {
+
         private LocalDateTime newEstimatedDate;
 
         public LocalDateTime getNewEstimatedDate() {
@@ -151,4 +171,4 @@ public class IncidentController {
             this.newEstimatedDate = newEstimatedDate;
         }
     }
-} 
+}

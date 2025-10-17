@@ -1,6 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const AUTH_TOKEN_KEY = 'authToken';
+const CHAT_MESSAGES_KEY = 'chatMessages';
+
+export interface ChatMessage {
+  sender: 'user' | 'bot';
+  text: string;
+  timestamp?: number;
+}
 const EVIDENCE_FILES_KEY = 'evidenceFiles';
 const LOCATION_DATA_KEY = 'locationData';
 const REPORT_FORM_KEY = 'reportForm';
@@ -36,6 +43,29 @@ export const storage = {
     }
   },
 
+  // Save chat messages
+  setChatMessages: async (messages: ChatMessage[]) => {
+    try {
+      const messagesWithTimestamp = messages.map(msg => ({
+        ...msg,
+        timestamp: msg.timestamp || Date.now()
+      }));
+      await AsyncStorage.setItem(CHAT_MESSAGES_KEY, JSON.stringify(messagesWithTimestamp));
+    } catch (error) {
+      console.error('Error saving chat messages:', error);
+    }
+  },
+
+  // Get chat messages
+  getChatMessages: async (): Promise<ChatMessage[]> => {
+    try {
+      const messages = await AsyncStorage.getItem(CHAT_MESSAGES_KEY);
+      if (messages) {
+        return JSON.parse(messages);
+      }
+      return [];
+    } catch (error) {
+      console.error('Error getting chat messages:', error);
   // Save evidence files
   setEvidenceFiles: async (files: any[]) => {
     try {
@@ -56,6 +86,12 @@ export const storage = {
     }
   },
 
+  // Clear chat messages
+  clearChatMessages: async () => {
+    try {
+      await AsyncStorage.removeItem(CHAT_MESSAGES_KEY);
+    } catch (error) {
+      console.error('Error clearing chat messages:', error);
   // Remove evidence files
   removeEvidenceFiles: async () => {
     try {
