@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -7,26 +7,33 @@ import {
   ActivityIndicator,
   RefreshControl,
   TextInput,
+  Linking,
+  Image,
+  Dimensions,
 } from "react-native";
-import TopSpacing from "../../components/TopSpacing";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, router } from "expo-router";
 import type { IncidentResponseDto } from "../../src/features/incidents/models/IncidentModels";
-import { useMyIncidents } from "../../src/features/incidents/hooks/useMyIncidents";
+import { usePublicIncidents } from "../../src/features/incidents/hooks/usePublicIncidents";
+import { useBulletins } from "../../src/features/bulletins/hooks/useBulletins";
+import type { OfficeBulletinDto } from "../../src/features/bulletins/models/BulletinModels";
 
 export default function CasesScreen() {
-  const { incidents, isLoading, error, refresh } = useMyIncidents();
-  const [filteredIncidents, setFilteredIncidents] = useState<
-    IncidentResponseDto[]
-  >([]);
+  const { incidents, isLoading: incidentsLoading, error: incidentsError, refresh: refreshIncidents } = usePublicIncidents();
+  const { bulletins, isLoading: bulletinsLoading, error: bulletinsError, refresh: refreshBulletins } = useBulletins();
+  const [filteredIncidents, setFilteredIncidents] = useState<IncidentResponseDto[]>([]);
+  const [filteredBulletins, setFilteredBulletins] = useState<OfficeBulletinDto[]>([]);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [selectedStatus, setSelectedStatus] = useState<string>("All");
   const [selectedTab, setSelectedTab] = useState<number>(0);
 
   useEffect(() => {
     filterIncidents();
-  }, [incidents, searchQuery, selectedStatus]);
+  }, [incidents, searchQuery]);
+
+  useEffect(() => {
+    filterBulletins();
+  }, [bulletins, searchQuery]);
 
   const filterIncidents = () => {
     let filtered = incidents;
@@ -38,17 +45,29 @@ export default function CasesScreen() {
           (i.description || "").toLowerCase().includes(q)
       );
     }
-    if (selectedStatus !== "All") {
+    setFilteredIncidents(filtered);
+  };
+
+  const filterBulletins = () => {
+    let filtered = bulletins;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
       filtered = filtered.filter(
-        (i) => (i.status || "").toLowerCase() === selectedStatus.toLowerCase()
+        (b) =>
+          b.title.toLowerCase().includes(q) ||
+          b.description.toLowerCase().includes(q)
       );
     }
-    setFilteredIncidents(filtered);
+    setFilteredBulletins(filtered);
   };
 
   const onRefresh = async () => {
     setIsRefreshing(true);
-    await refresh();
+    if (selectedTab === 0) {
+      await refreshIncidents();
+    } else {
+      await refreshBulletins();
+    }
     setIsRefreshing(false);
   };
 
@@ -87,20 +106,12 @@ export default function CasesScreen() {
     }
   };
 
-  const pendingCount = incidents.filter(
-    (i) => (i.status || "").toLowerCase() === "pending"
-  ).length;
-  const inProgressCount = incidents.filter(
-    (i) => (i.status || "").toLowerCase() === "in progress"
-  ).length;
-  const allCount = incidents.length;
-
-  if (isLoading) {
+  if (incidentsLoading && bulletinsLoading) {
     return (
       <View className="flex-1 bg-gray-50">
         <View className="flex-1 justify-center items-center">
           <ActivityIndicator size="large" color="#B71C1C" />
-          <Text className="text-[#B71C1C] mt-2">Loading cases...</Text>
+          <Text className="text-[#B71C1C] mt-2">Loading...</Text>
         </View>
       </View>
     );
@@ -120,11 +131,11 @@ export default function CasesScreen() {
         }}
       >
         <View>
-          <Text style={{ fontSize: 24, fontWeight: "700", color: "#D4AF37" }}>
-            Case Tracking
+          <Text style={{ fontSize: 24, fontWeight: "700", color: "#D4AF37", textAlign: "left" }}>
+            Community Reports
           </Text>
-          <Text style={{ color: "#FFFFFF", marginTop: 4 }}>
-            Track the status of your incident reports.
+          <Text style={{ color: "#FFFFFF", marginTop: 4, textAlign: "left" }}>
+            View and track community incident reports.
           </Text>
         </View>
       </View>
@@ -143,44 +154,11 @@ export default function CasesScreen() {
         </View>
       </View>
 
-      {/* Fixed Status Filters */}
-      <View className="bg-white px-4 py-3 border-b border-gray-200">
-        <View className="flex-row">
-          {[
-            { status: "Pending", count: pendingCount },
-            { status: "In Progress", count: inProgressCount },
-            { status: "All", count: allCount },
-          ].map((item, index) => (
-            <TouchableOpacity
-              key={item.status}
-              className={`flex-1 bg-white rounded-lg p-2 items-center ${
-                selectedStatus === item.status ? "bg-gray-100" : ""
-              } ${index > 0 ? "ml-1.5" : ""}`}
-              style={{
-                shadowColor: "#000",
-                shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.1,
-                shadowRadius: 2,
-                elevation: 2,
-              }}
-              onPress={() => setSelectedStatus(item.status)}
-            >
-              <Text className="text-lg font-bold text-[#B71C1C]">
-                {item.count}
-              </Text>
-              <Text className="text-xs text-[#374151] mt-0.5">
-                {item.status === "All" ? "All Cases" : item.status}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
       {/* Fixed Tab Selector */}
       <View className="bg-white px-4 py-3 border-b border-gray-200">
         <View className="bg-gray-100 rounded-lg p-1">
           <View className="flex-row">
-            {["My Cases", "Recent Activity"].map((tab, index) => (
+            {["Cases", "Office Advisories"].map((tab, index) => (
               <TouchableOpacity
                 key={tab}
                 className={`flex-1 py-2 px-2 rounded-md ${
@@ -204,7 +182,7 @@ export default function CasesScreen() {
       </View>
 
       <ScrollView
-        className="flex-1 px-4"
+        className="flex-1 px-4 pt-4"
         refreshControl={
           <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
         }
@@ -212,12 +190,12 @@ export default function CasesScreen() {
       >
         {selectedTab === 0 ? (
           <>
-            {error ? (
+            {incidentsError ? (
               <View className="bg-red-50 border border-red-200 rounded-lg p-4 mt-4">
-                <Text className="text-red-800 text-center">{error}</Text>
+                <Text className="text-red-800 text-center">{incidentsError}</Text>
                 <TouchableOpacity
                   className="bg-[#B71C1C] rounded-lg px-4 py-2 mt-2"
-                  onPress={refresh}
+                  onPress={refreshIncidents}
                 >
                   <Text className="text-white text-center font-medium">
                     Retry
@@ -227,7 +205,7 @@ export default function CasesScreen() {
             ) : filteredIncidents.length === 0 ? (
               <View className="bg-white rounded-lg p-8 mt-4 items-center">
                 <Text className="text-gray-500 text-center">
-                  No cases found matching your criteria
+                  No public cases found
                 </Text>
               </View>
             ) : (
@@ -317,12 +295,12 @@ export default function CasesScreen() {
                         <View className="flex-row justify-between items-center mt-3 pt-3 border-t border-gray-100">
                           <View className="flex-row items-center">
                             <Ionicons
-                              name="thumbs-up"
+                              name="thumbs-up-outline"
                               size={16}
                               color="#6B7280"
                             />
-                            <Text className="text-gray-500 ml-1 text-sm">
-                              {incident.upvoteCount || 0}
+                            <Text className="ml-1 text-gray-600 font-medium text-sm">
+                              {incident.upvoteCount || 0} Upvotes
                             </Text>
                             {incident.status?.toLowerCase() === "resolved" && (
                               <View className="ml-3 flex-row items-center">
@@ -352,11 +330,156 @@ export default function CasesScreen() {
             )}
           </>
         ) : (
-          <View className="bg-white rounded-lg p-8 mt-4 items-center">
-            <Text className="text-gray-500 text-center">
-              No recent activity
-            </Text>
-          </View>
+          <>
+            {bulletinsError ? (
+              <View className="bg-red-50 border border-red-200 rounded-lg p-4 mt-4">
+                <Text className="text-red-800 text-center">{bulletinsError}</Text>
+                <TouchableOpacity
+                  className="bg-[#B71C1C] rounded-lg px-4 py-2 mt-2"
+                  onPress={refreshBulletins}
+                >
+                  <Text className="text-white text-center font-medium">
+                    Retry
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : filteredBulletins.length === 0 ? (
+              <View className="bg-white rounded-lg p-8 mt-4 items-center">
+                <Ionicons name="megaphone-outline" size={64} color="#D1D5DB" />
+                <Text className="text-gray-700 font-semibold text-lg mt-4">
+                  No Office Advisories
+                </Text>
+                <Text className="text-gray-500 text-center mt-2">
+                  There are no office bulletins available at the moment.
+                </Text>
+              </View>
+            ) : (
+              <View className="mb-4">
+                {filteredBulletins.map((bulletin) => (
+                  <View
+                    key={bulletin.id}
+                    className="bg-white rounded-lg mb-3 p-4 shadow-sm"
+                    style={{
+                      shadowColor: "#000",
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.1,
+                      shadowRadius: 2,
+                      elevation: 1,
+                    }}
+                  >
+                    {/* Bulletin Header */}
+                    <View className="flex-row items-start mb-3">
+                      <View className="bg-[#8B0000]/10 p-2 rounded-lg mr-3">
+                        <Ionicons name="megaphone" size={20} color="#8B0000" />
+                      </View>
+                      <View className="flex-1">
+                        <Text className="font-bold text-gray-900 text-lg mb-1">
+                          {bulletin.title}
+                        </Text>
+                        <View className="flex-row items-center">
+                          <Ionicons name="person-circle-outline" size={14} color="#6B7280" />
+                          <Text className="text-gray-500 text-xs ml-1">
+                            {bulletin.createdBy}
+                          </Text>
+                          <Text className="text-gray-400 mx-1">•</Text>
+                          <Text className="text-gray-500 text-xs">
+                            {formatDate(bulletin.createdAt)}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+
+                    {/* Bulletin Description */}
+                    <Text className="text-gray-700 text-sm leading-5 mb-3">
+                      {bulletin.description}
+                    </Text>
+
+                    {/* Related Incidents */}
+                    {bulletin.relatedIncidents && bulletin.relatedIncidents.length > 0 && (
+                      <View className="mb-3">
+                        <Text className="text-xs font-semibold text-gray-600 mb-2">
+                          Related Cases:
+                        </Text>
+                        <View className="flex-row flex-wrap">
+                          {bulletin.relatedIncidents.map((incident) => (
+                            <TouchableOpacity
+                              key={incident.id}
+                              className="bg-green-50 border border-green-200 rounded-full px-3 py-1 mr-2 mb-2"
+                              onPress={() => handleCaseClick(incident.trackingNumber)}
+                            >
+                              <Text className="text-green-700 text-xs font-medium">
+                                #{incident.trackingNumber}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      </View>
+                    )}
+
+                    {/* Media Attachments */}
+                    {bulletin.mediaAttachments && bulletin.mediaAttachments.length > 0 && (
+                      <View className="mb-3">
+                        <Text className="text-xs font-semibold text-gray-600 mb-2">
+                          Attachments ({bulletin.mediaAttachments.length}):
+                        </Text>
+                        <View className="flex-row flex-wrap">
+                          {bulletin.mediaAttachments.map((media) => {
+                            const isImage = media.fileType?.startsWith('image/');
+                            
+                            if (isImage) {
+                              return (
+                                <TouchableOpacity
+                                  key={media.id}
+                                  className="mb-2 mr-2"
+                                  onPress={() => Linking.openURL(media.fileUrl)}
+                                  style={{ width: Dimensions.get('window').width - 60 }}
+                                >
+                                  <Image
+                                    source={{ uri: media.fileUrl }}
+                                    style={{
+                                      width: '100%',
+                                      height: 200,
+                                      borderRadius: 8,
+                                      backgroundColor: '#F3F4F6',
+                                    }}
+                                    resizeMode="cover"
+                                  />
+                                  <Text className="text-gray-500 text-xs mt-1" numberOfLines={1}>
+                                    {media.fileName}
+                                  </Text>
+                                </TouchableOpacity>
+                              );
+                            } else {
+                              return (
+                                <TouchableOpacity
+                                  key={media.id}
+                                  className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 mr-2 mb-2 flex-row items-center"
+                                  onPress={() => Linking.openURL(media.fileUrl)}
+                                >
+                                  <Ionicons name="document-attach" size={16} color="#3B82F6" />
+                                  <Text className="text-blue-700 text-xs ml-1 font-medium" numberOfLines={1}>
+                                    {media.fileName}
+                                  </Text>
+                                </TouchableOpacity>
+                              );
+                            }
+                          })}
+                        </View>
+                      </View>
+                    )}
+
+                    {/* Upvote Count */}
+                    <View className="flex-row items-center pt-3 border-t border-gray-100">
+                      <Ionicons name="thumbs-up-outline" size={16} color="#6B7280" />
+                      <Text className="ml-1 text-gray-600 font-medium text-sm">
+                        {bulletin.upvoteCount} Upvotes
+                      </Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+          </>
         )}
       </ScrollView>
     </View>
