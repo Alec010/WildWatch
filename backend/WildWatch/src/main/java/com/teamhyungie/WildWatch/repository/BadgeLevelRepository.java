@@ -19,3 +19,4 @@ public interface BadgeLevelRepository extends JpaRepository<BadgeLevel, Long> {
 
 
 
+

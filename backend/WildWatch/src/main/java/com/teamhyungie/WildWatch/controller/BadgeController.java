@@ -34,6 +34,8 @@ public class BadgeController {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         User user = userService.getUserByEmail(auth.getName());
         
+        // Ensure progress is up to date before returning
+        badgeService.checkAndUpdateBadges(user);
         List<BadgeProgressDTO> badges = badgeService.getUserBadges(user);
         
         // Process any unnotified badges
@@ -50,6 +52,8 @@ public class BadgeController {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         User user = userService.getUserByEmail(auth.getName());
         
+        // Ensure progress is up to date before returning
+        badgeService.checkAndUpdateBadges(user);
         UserBadgeSummaryDTO summary = badgeService.getUserBadgeSummary(user);
         
         // Process any unnotified badges

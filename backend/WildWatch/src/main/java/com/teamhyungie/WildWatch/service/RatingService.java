@@ -101,6 +101,18 @@ public class RatingService {
         rating.setOfficeCredibility(request.getCredibility());
         rating.setOfficeResponsiveness(request.getResponsiveness());
         rating.setOfficeHelpfulness(request.getHelpfulness());
+
+        // Persist total office-star value onto Incident for badge counting (20 = perfect)
+        try {
+            int totalOfficeStars = 0;
+            if (request.getHonesty() != null) totalOfficeStars += request.getHonesty();
+            if (request.getCredibility() != null) totalOfficeStars += request.getCredibility();
+            if (request.getResponsiveness() != null) totalOfficeStars += request.getResponsiveness();
+            if (request.getHelpfulness() != null) totalOfficeStars += request.getHelpfulness();
+            incident.setRating(totalOfficeStars);
+            incidentRepository.save(incident);
+        } catch (Exception ignored) {
+        }
         rating.setOfficeFeedback(request.getFeedback());
 
         // Check if both ratings are present and award points if not already awarded
@@ -109,6 +121,15 @@ public class RatingService {
         }
 
         IncidentRating savedRating = ratingRepository.save(rating);
+
+        // Update office-admin Rating Champion badge progress when a 20-star rating happens
+        try {
+            if (incident.getResolvedBy() != null) {
+                badgeService.checkRatingChampionBadge(incident.getResolvedBy());
+            }
+        } catch (Exception ignored) {
+        }
+
         return mapToResponse(savedRating);
     }
 
