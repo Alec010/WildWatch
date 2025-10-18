@@ -403,6 +403,34 @@ export default function ReportScreen() {
     }, [params.latitude, params.longitude])
   );
 
+  // Auto-set current date and time AFTER loading persisted data (only if not already set)
+  useEffect(() => {
+    // Only run after loading is complete
+    if (!isLoadingPersistedData) {
+      if (!form.dateOfIncident) {
+        const now = new Date();
+        const formatter = new Intl.DateTimeFormat("en-US", {
+          month: "2-digit",
+          day: "2-digit",
+          year: "numeric",
+        });
+        updateForm("dateOfIncident", formatter.format(now));
+      }
+
+      if (!form.timeOfIncident) {
+        const now = new Date();
+        const hours = now.getHours();
+        const minutes = now.getMinutes();
+        const amPm = hours >= 12 ? "PM" : "AM";
+        const hour12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+        const timeString = `${hour12.toString().padStart(2, "0")}:${minutes
+          .toString()
+          .padStart(2, "0")} ${amPm}`;
+        updateForm("timeOfIncident", timeString);
+      }
+    }
+  }, [isLoadingPersistedData, form.dateOfIncident, form.timeOfIncident]);
+
   // Save form data whenever it changes (debounced)
   const saveFormTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
