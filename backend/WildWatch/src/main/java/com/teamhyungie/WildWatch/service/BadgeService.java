@@ -43,11 +43,20 @@ public class BadgeService {
     @Autowired
     private IncidentRepository incidentRepository;
 
+    @Autowired
+    private OfficeAdminService officeAdminService;
+
     /**
      * Initialize the badge system with the default badges
      * This should be called on application startup
      */
-    @Transactional
+    @Transactional(
+        noRollbackFor = {
+            org.springframework.dao.DataIntegrityViolationException.class,
+            org.hibernate.exception.ConstraintViolationException.class,
+            jakarta.persistence.PersistenceException.class
+        }
+    )
     public void initializeDefaultBadges() {
         // First Responder Badge
         createOrUpdateBadge(
@@ -94,51 +103,57 @@ public class BadgeService {
             )
         );
 
-        // Office Admin Badges
-        // First Response Badge
-        createOrUpdateBadge(
-            Badge.BadgeType.FIRST_RESPONSE,
-            "First Response",
-            "Resolve incident reports",
-            "/images/badges/first-response.png",
-            15,
-            3,
-            List.of(
-                new String[]{"1", "Resolve 1 incident report", "1"},
-                new String[]{"2", "Resolve 10 incident reports", "10"},
-                new String[]{"3", "Resolve 25 incident reports", "25"}
-            )
-        );
+        // Office Admin Badges (guarded to avoid DB check-constraint crash on startup)
+        try {
+            // First Response Badge
+            createOrUpdateBadge(
+                Badge.BadgeType.FIRST_RESPONSE,
+                "First Response",
+                "Resolve incident reports",
+                "/images/badges/first-response.png",
+                15,
+                3,
+                List.of(
+                    new String[]{"1", "Resolve 1 incident report", "1"},
+                    new String[]{"2", "Resolve 10 incident reports", "10"},
+                    new String[]{"3", "Resolve 25 incident reports", "25"}
+                )
+            );
 
-        // Rating Champion Badge
-        createOrUpdateBadge(
-            Badge.BadgeType.RATING_CHAMPION,
-            "Rating Champion",
-            "Receive high ratings from students",
-            "/images/badges/rating-champion.png",
-            100,
-            3,
-            List.of(
-                new String[]{"1", "Receive 20-star rating on 10 incidents", "10"},
-                new String[]{"2", "Receive 20-star rating on 25 incidents", "25"},
-                new String[]{"3", "Receive 20-star rating on 50 incidents", "50"}
-            )
-        );
+            // Rating Champion Badge
+            createOrUpdateBadge(
+                Badge.BadgeType.RATING_CHAMPION,
+                "Rating Champion",
+                "Receive high ratings from students",
+                "/images/badges/rating-champion.png",
+                100,
+                3,
+                List.of(
+                    new String[]{"1", "Receive 20-star rating on 10 incidents", "10"},
+                    new String[]{"2", "Receive 20-star rating on 25 incidents", "25"},
+                    new String[]{"3", "Receive 20-star rating on 50 incidents", "50"}
+                )
+            );
 
-        // Office Legend Badge
-        createOrUpdateBadge(
-            Badge.BadgeType.OFFICE_LEGEND,
-            "Office Legend",
-            "Achieve and maintain Gold rank",
-            "/images/badges/office-legend.png",
-            200,
-            3,
-            List.of(
-                new String[]{"1", "Achieve Bronze rank (100 points)", "100"},
-                new String[]{"2", "Achieve Silver rank (200 points)", "200"},
-                new String[]{"3", "Achieve Gold rank (300 points)", "300"}
-            )
-        );
+            // Office Legend Badge
+            createOrUpdateBadge(
+                Badge.BadgeType.OFFICE_LEGEND,
+                "Office Legend",
+                "Achieve and maintain Gold rank",
+                "/images/badges/office-legend.png",
+                200,
+                3,
+                List.of(
+                    new String[]{"1", "Achieve Bronze rank (100 points)", "100"},
+                    new String[]{"2", "Achieve Silver rank (200 points)", "200"},
+                    new String[]{"3", "Achieve Gold rank (300 points)", "300"}
+                )
+            );
+        } catch (Exception e) {
+            // If the database has a check constraint that doesn't yet include the new badge types,
+            // skip creating office-admin badges to prevent startup failure. They can be initialized later.
+            System.err.println("Skipping office-admin badge initialization due to constraint: " + e.getMessage());
+        }
     }
 
     /**
@@ -295,9 +310,15 @@ public class BadgeService {
         Badge badge = badgeRepository.findByBadgeType(Badge.BadgeType.OFFICE_LEGEND)
             .orElseThrow(() -> new RuntimeException("Office Legend badge not found"));
         
-        // Get user's current points
-        Float points = user.getPoints();
-        if (points == null) points = 0f;
+        // For office admins, points are stored on OfficeAdmin
+        Float points = 0f;
+        try {
+            var officeAdminOpt = officeAdminService.findByUserEmail(user.getEmail());
+            if (officeAdminOpt.isPresent() && officeAdminOpt.get().getPoints() != null) {
+                points = officeAdminOpt.get().getPoints();
+            }
+        } catch (Exception ignored) {
+        }
         
         updateBadgeProgress(user, badge, Math.round(points));
     }

@@ -432,10 +432,27 @@ function ProfileContent({ user }: { user: UserProfile }) {
       
       const badgeSummaryData = await badgeService.getUserBadgeSummary()
       console.log("✅ Badge data received:", badgeSummaryData)
-      setBadgeSummary(badgeSummaryData)
+
+      // Restrict badges based on role
+      const allowedTypes = user.role === 'OFFICE_ADMIN'
+        ? ['FIRST_RESPONSE', 'RATING_CHAMPION', 'OFFICE_LEGEND']
+        : ['FIRST_RESPONDER', 'COMMUNITY_HELPER', 'CAMPUS_LEGEND']
+
+      const filteredBadges = (badgeSummaryData.badges || []).filter(b => allowedTypes.includes(b.badgeType))
+
+      // Recalculate summary numbers from filtered set
+      const filteredSummary = {
+        ...badgeSummaryData,
+        badges: filteredBadges,
+        totalBadgesAvailable: filteredBadges.length,
+        totalBadgesEarned: filteredBadges.filter(b => b.currentLevel > 0).length,
+        totalPointsEarned: filteredBadges.reduce((sum, b) => sum + (b.pointsAwarded ? (b.pointReward || 0) : 0), 0),
+      }
+
+      setBadgeSummary(filteredSummary)
       
       // Get recent/earned badges for display
-      const earnedBadges = badgeSummaryData.badges.filter(badge => badge.currentLevel > 0)
+      const earnedBadges = filteredBadges.filter(badge => badge.currentLevel > 0)
       // Sort by highest level first, then by badge type
       earnedBadges.sort((a, b) => {
         if (b.currentLevel !== a.currentLevel) return b.currentLevel - a.currentLevel
