@@ -981,22 +981,39 @@ export default function ReportScreen() {
     // Add evidence files if any
     evidenceFiles.forEach((file, index) => {
       if (file.uri) {
-        // Create a file object from the URI
+        // Create a file object from the URI with Android-compatible format
         const fileInfo = {
           uri: file.uri,
           type: file.type || "image/jpeg",
           name: file.name || `evidence_${index}.jpg`,
         };
 
-        formData.append("files", fileInfo as any);
+        // Android-specific file handling
+        if (Platform.OS === "android") {
+          formData.append("files", {
+            uri: file.uri,
+            type: file.type || "image/jpeg",
+            name: file.name || `evidence_${index}.jpg`,
+          } as any);
+        } else {
+          formData.append("files", fileInfo as any);
+        }
       }
     });
 
+    // Android-specific headers
+    const headers: any = {
+      Authorization: `Bearer ${token}`,
+    };
+
+    // Don't set Content-Type for FormData on Android - let the system handle it
+    if (Platform.OS !== "android") {
+      headers["Content-Type"] = "multipart/form-data";
+    }
+
     const response = await fetch(`${config.API.BASE_URL}/incidents`, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers,
       body: formData,
     });
 
@@ -1408,7 +1425,7 @@ export default function ReportScreen() {
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 100}
       >
         <ScrollView
           style={{ flex: 1 }}
