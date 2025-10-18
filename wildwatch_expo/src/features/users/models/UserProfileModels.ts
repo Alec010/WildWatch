@@ -8,6 +8,7 @@ export interface UserProfile {
   contactNumber: string;
   role: string;
   points?: number;
+  authProvider?: string;
 }
 
 export interface UserUpdateRequest {

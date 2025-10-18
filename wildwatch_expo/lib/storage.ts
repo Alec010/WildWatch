@@ -66,6 +66,19 @@ export const storage = {
       return [];
     } catch (error) {
       console.error('Error getting chat messages:', error);
+      return [];
+    }
+  },
+
+  // Clear chat messages
+  clearChatMessages: async () => {
+    try {
+      await AsyncStorage.removeItem(CHAT_MESSAGES_KEY);
+    } catch (error) {
+      console.error('Error clearing chat messages:', error);
+    }
+  },
+
   // Save evidence files
   setEvidenceFiles: async (files: any[]) => {
     try {
@@ -86,12 +99,6 @@ export const storage = {
     }
   },
 
-  // Clear chat messages
-  clearChatMessages: async () => {
-    try {
-      await AsyncStorage.removeItem(CHAT_MESSAGES_KEY);
-    } catch (error) {
-      console.error('Error clearing chat messages:', error);
   // Remove evidence files
   removeEvidenceFiles: async () => {
     try {
@@ -230,5 +237,5 @@ export const storage = {
     } catch (error) {
       console.error('Error clearing all form data:', error);
     }
-  }
+  },
 };

@@ -51,7 +51,7 @@ The system uses JWT authentication with Microsoft OAuth2 integration for secure 
 2. **Incident Report Submission & Tracking** – Users can file incident reports with details such as location, description, and supporting evidence (images/videos) and track the status of their reports.
 3. **Department Selection for Case Submission** – Users can categorize their reports by selecting the relevant department, ensuring that incidents are directed to the appropriate office for proper handling.
 4. **Automated Notifications (Email & SMS)** – Users receive real-time updates on report status through automated email and SMS alerts.
-5. **Incident Dashboard & Analytics** – Admins can view a summary of reported incidents, generate reports, and analyze trends for better campus security management.
+5. **Incident Dashboard** – Admins can view a summary of reported incidents, generate reports.
 6. **User Feedback & Follow-Up Requests** – Users can provide feedback on how their reports were handled and request follow-ups if further action is needed.
 7. **AI-Powered Chatbot** - Provides assistance and answers questions about the incident reporting process.
 
