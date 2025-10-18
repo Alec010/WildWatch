@@ -34,10 +34,13 @@ function CustomTabBar({ state, descriptors, navigation }: CustomTabBarProps) {
 
   return (
     <View style={styles.tabBar}>
-      {visibleRoutes.map((route: any, index: number) => {
+      {visibleRoutes.map((route: any, visibleIndex: number) => {
         const { options } = descriptors[route.key];
         const label = options.tabBarLabel ?? options.title ?? route.name;
-        const isFocused = state.index === index;
+
+        // Check if this route is focused by comparing with the actual focused route
+        const focusedRoute = state.routes[state.index];
+        const isFocused = route.key === focusedRoute.key;
 
         const onPress = () => {
           const event = navigation.emit({
@@ -105,10 +108,17 @@ function CustomTabBar({ state, descriptors, navigation }: CustomTabBarProps) {
               <Ionicons
                 name={getIconName(route.name)}
                 size={sizes.iconSize}
-                color="#FFFFFF"
+                color={isFocused ? "#D4AF37" : "#FFFFFF"}
               />
             </View>
-            <Text style={styles.tabLabel}>{label}</Text>
+            <Text
+              style={[
+                styles.tabLabel,
+                { color: isFocused ? "#D4AF37" : "#FFFFFF" },
+              ]}
+            >
+              {label}
+            </Text>
           </TouchableOpacity>
         );
       })}
@@ -255,6 +265,12 @@ export default function TabLayout() {
       tabBar={(props) => <CustomTabBar {...props} />}
     >
       <Tabs.Screen
+        name="index"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
         name="dashboard"
         options={{
           title: "Home",
@@ -285,6 +301,20 @@ export default function TabLayout() {
         name="leaderboard"
         options={{
           title: "Leaderboard",
+        }}
+      />
+
+      <Tabs.Screen
+        name="camera"
+        options={{
+          href: null,
+        }}
+      />
+
+      <Tabs.Screen
+        name="location"
+        options={{
+          href: null,
         }}
       />
     </Tabs>

@@ -308,7 +308,7 @@ export default function DashboardScreen() {
   if (loading) {
     return (
       <View className="flex-1 bg-white items-center justify-center">
-        <Stack.Screen options={{ title: "" }} />
+        <Stack.Screen options={{ title: "Home" }} />
         <ActivityIndicator size="large" color="#8B0000" />
         <Text className="text-[#8B0000] mt-2">Loading...</Text>
       </View>
