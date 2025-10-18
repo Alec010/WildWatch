@@ -5,12 +5,35 @@ import {
   PanResponder,
   Animated,
   Dimensions,
+  Platform,
+  StatusBar,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "../constants/Colors";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const BUTTON_POSITION_KEY = "floatingButtonPosition";
+
+// Clear old position (call this if you need to reset)
+export const clearButtonPosition = async () => {
+  try {
+    await AsyncStorage.removeItem(BUTTON_POSITION_KEY);
+    console.log("Button position cleared");
+  } catch (error) {
+    console.error("Error clearing button position:", error);
+  }
+};
+
+// Helper function to calculate dynamic heights based on device size
+const getTabBarHeight = (width: number, height: number) => {
+  const isTablet = Math.min(width, height) >= 600;
+  const baseHeight = Platform.OS === "ios" ? 95 : 95;
+  return isTablet ? baseHeight + 10 : baseHeight;
+};
+
+const getStatusBarHeight = () => {
+  return Platform.OS === "android" ? StatusBar.currentHeight || 0 : 0;
+};
 
 interface FloatingAskKatButtonProps {
   onPress: () => void;
@@ -22,14 +45,20 @@ interface FloatingAskKatButtonProps {
 const FloatingAskKatButton: React.FC<FloatingAskKatButtonProps> = ({
   onPress,
   primaryColor = Colors.maroon,
-  buttonSize = 60,
-  margin = 8,
+  buttonSize: propButtonSize,
+  margin: propMargin,
 }) => {
   const pan = useRef(new Animated.ValueXY()).current;
-  const [dimensions, setDimensions] = React.useState({
-    width: Dimensions.get("window").width,
-    height: Dimensions.get("window").height,
+  const [dimensions, setDimensions] = React.useState(() => {
+    const { width, height } = Dimensions.get("window");
+    return { width, height };
   });
+
+  // Calculate responsive sizes based on device type
+  const isTablet = Math.min(dimensions.width, dimensions.height) >= 600;
+  const buttonSize = propButtonSize || (isTablet ? 70 : 60);
+  const margin = propMargin ?? 0; // Use 0 for edge-to-edge, allow override with propMargin
+
   const currentPosition = useRef({ x: 0, y: 0 });
   const isDragging = useRef(false);
 
@@ -62,10 +91,15 @@ const FloatingAskKatButton: React.FC<FloatingAskKatButtonProps> = ({
     width: number,
     height: number
   ) => {
+    // Calculate dynamic heights based on current dimensions
+    const tabBarHeight = getTabBarHeight(width, height);
+    const statusBarHeight = getStatusBarHeight();
+
+    // Account for tab bar at bottom and status bar at top
     const maxX = width - buttonSize - margin;
-    const maxY = height - buttonSize - margin;
+    const maxY = height - buttonSize - margin - tabBarHeight;
     const minX = margin;
-    const minY = margin;
+    const minY = margin + statusBarHeight;
 
     return {
       x: Math.max(minX, Math.min(maxX, x)),
@@ -75,11 +109,15 @@ const FloatingAskKatButton: React.FC<FloatingAskKatButtonProps> = ({
 
   // Adjust position to nearest edge
   const snapToEdge = (x: number, y: number, width: number, height: number) => {
-    // Calculate distances to each edge
-    const distToLeft = x;
-    const distToRight = width - x - buttonSize;
-    const distToTop = y;
-    const distToBottom = height - y - buttonSize;
+    // Calculate dynamic heights based on current dimensions
+    const tabBarHeight = getTabBarHeight(width, height);
+    const statusBarHeight = getStatusBarHeight();
+
+    // Calculate distances to each edge (accounting for safe zones)
+    const distToLeft = x - margin;
+    const distToRight = width - buttonSize - margin - x;
+    const distToTop = y - (margin + statusBarHeight);
+    const distToBottom = height - buttonSize - margin - tabBarHeight - y;
 
     // Find the nearest edge
     const minDist = Math.min(distToLeft, distToRight, distToTop, distToBottom);
@@ -95,10 +133,10 @@ const FloatingAskKatButton: React.FC<FloatingAskKatButtonProps> = ({
       snapX = width - buttonSize - margin;
     } else if (minDist === distToTop) {
       // Snap to top edge
-      snapY = margin;
+      snapY = margin + statusBarHeight;
     } else {
       // Snap to bottom edge
-      snapY = height - buttonSize - margin;
+      snapY = height - buttonSize - margin - tabBarHeight;
     }
 
     // Ensure position is within bounds
@@ -118,21 +156,44 @@ const FloatingAskKatButton: React.FC<FloatingAskKatButtonProps> = ({
           y: (pan.y as any)._value,
         });
       },
-      onPanResponderMove: Animated.event([null, { dx: pan.x, dy: pan.y }], {
-        useNativeDriver: false,
-      }),
+      onPanResponderMove: (evt, gestureState) => {
+        // Calculate new position
+        const newX = currentPosition.current.x + gestureState.dx;
+        const newY = currentPosition.current.y + gestureState.dy;
+
+        // Constrain position to screen bounds in real-time
+        const constrainedPos = constrainPosition(
+          newX,
+          newY,
+          dimensions.width,
+          dimensions.height
+        );
+
+        // Update pan with constrained values
+        pan.setValue({
+          x: constrainedPos.x - currentPosition.current.x,
+          y: constrainedPos.y - currentPosition.current.y,
+        });
+      },
       onPanResponderRelease: (evt, gestureState) => {
         isDragging.current = false;
         pan.flattenOffset();
 
-        // Get current position from gesture
-        const currentX = gestureState.moveX - buttonSize / 2;
-        const currentY = gestureState.moveY - buttonSize / 2;
+        // Get current position from pan values
+        const currentX = currentPosition.current.x + gestureState.dx;
+        const currentY = currentPosition.current.y + gestureState.dy;
 
-        // Snap to nearest edge
-        const snappedPos = snapToEdge(
+        // Constrain first, then snap to nearest edge
+        const constrainedPos = constrainPosition(
           currentX,
           currentY,
+          dimensions.width,
+          dimensions.height
+        );
+
+        const snappedPos = snapToEdge(
+          constrainedPos.x,
+          constrainedPos.y,
           dimensions.width,
           dimensions.height
         );
@@ -153,24 +214,32 @@ const FloatingAskKatButton: React.FC<FloatingAskKatButtonProps> = ({
     })
   ).current;
 
-  // Listen for dimension changes (orientation changes)
+  // Listen for dimension changes (orientation changes and tablet/phone transitions)
   useEffect(() => {
     const subscription = Dimensions.addEventListener("change", ({ window }) => {
       const newWidth = window.width;
       const newHeight = window.height;
 
+      console.log(`Dimension change detected: ${newWidth}x${newHeight}`);
+
+      // Update dimensions state
       setDimensions({ width: newWidth, height: newHeight });
 
       // Adjust button position to stay within new bounds
       if (!isDragging.current) {
+        // Get current position relative to the old dimensions
+        const oldX = currentPosition.current.x;
+        const oldY = currentPosition.current.y;
+
+        // First, constrain to new bounds
         const constrainedPos = constrainPosition(
-          currentPosition.current.x,
-          currentPosition.current.y,
+          oldX,
+          oldY,
           newWidth,
           newHeight
         );
 
-        // Snap to nearest edge after orientation change
+        // Then snap to nearest edge after orientation change
         const snappedPos = snapToEdge(
           constrainedPos.x,
           constrainedPos.y,
@@ -178,14 +247,18 @@ const FloatingAskKatButton: React.FC<FloatingAskKatButtonProps> = ({
           newHeight
         );
 
+        // Update current position reference
         currentPosition.current = snappedPos;
+
+        // Save new position
         savePosition(snappedPos.x, snappedPos.y);
 
+        // Animate to new position smoothly
         Animated.spring(pan, {
           toValue: snappedPos,
           useNativeDriver: false,
-          tension: 100,
-          friction: 10,
+          tension: 120,
+          friction: 12,
         }).start();
       }
     });
@@ -206,16 +279,39 @@ const FloatingAskKatButton: React.FC<FloatingAskKatButtonProps> = ({
           dimensions.width,
           dimensions.height
         );
-        pan.setValue(constrainedPos);
-        currentPosition.current = constrainedPos;
+
+        // Snap to edge to apply new margin settings
+        const snappedPos = snapToEdge(
+          constrainedPos.x,
+          constrainedPos.y,
+          dimensions.width,
+          dimensions.height
+        );
+
+        pan.setValue(snappedPos);
+        currentPosition.current = snappedPos;
+        savePosition(snappedPos.x, snappedPos.y);
       } else {
-        // Use default position if no saved position
+        // Use default position if no saved position (bottom right, above tab bar)
+        const tabBarHeight = getTabBarHeight(
+          dimensions.width,
+          dimensions.height
+        );
         const initialX = dimensions.width - buttonSize - margin;
-        const initialY = dimensions.height - buttonSize - 100;
-        pan.setValue({ x: initialX, y: initialY });
-        currentPosition.current = { x: initialX, y: initialY };
+        const initialY = dimensions.height - buttonSize - margin - tabBarHeight;
+
+        // Constrain to ensure it's within bounds
+        const constrainedInitial = constrainPosition(
+          initialX,
+          initialY,
+          dimensions.width,
+          dimensions.height
+        );
+
+        pan.setValue(constrainedInitial);
+        currentPosition.current = constrainedInitial;
         // Save the initial position
-        savePosition(initialX, initialY);
+        savePosition(constrainedInitial.x, constrainedInitial.y);
       }
     };
 
@@ -234,11 +330,11 @@ const FloatingAskKatButton: React.FC<FloatingAskKatButtonProps> = ({
           alignItems: "center",
           justifyContent: "center",
           shadowColor: primaryColor,
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.3,
-          shadowRadius: 8,
-          elevation: 8,
-          borderWidth: 3,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.25,
+          shadowRadius: 4,
+          elevation: 6,
+          borderWidth: isTablet ? 4 : 3,
           borderColor: "white",
           zIndex: 1000,
         },
@@ -257,15 +353,15 @@ const FloatingAskKatButton: React.FC<FloatingAskKatButtonProps> = ({
           alignItems: "center",
           justifyContent: "center",
           shadowColor: "rgba(255, 255, 255, 0.3)",
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.5,
-          shadowRadius: 4,
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.2,
+          shadowRadius: 1,
           elevation: 2,
         }}
         onPress={onPress}
         activeOpacity={0.8}
       >
-        <Ionicons name="paw-outline" size={24} color="white" />
+        <Ionicons name="paw-outline" size={isTablet ? 28 : 24} color="white" />
       </TouchableOpacity>
     </Animated.View>
   );

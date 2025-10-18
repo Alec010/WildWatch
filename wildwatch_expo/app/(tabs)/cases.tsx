@@ -108,7 +108,7 @@ export default function CasesScreen() {
 
   return (
     <View className="flex-1 bg-gray-50">
-      <Stack.Screen options={{ title: "Cases" }} />
+      <Stack.Screen options={{ title: "Community" }} />
 
       <View
         style={{

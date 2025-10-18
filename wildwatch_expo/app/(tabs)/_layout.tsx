@@ -1,8 +1,20 @@
 import React from "react";
-import { View, TouchableOpacity, Text, StyleSheet } from "react-native";
+import {
+  View,
+  TouchableOpacity,
+  Text,
+  StyleSheet,
+  Dimensions,
+  Platform,
+} from "react-native";
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { storage } from "../../lib/storage";
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+const isSmallDevice = SCREEN_WIDTH < 375;
+const isMediumDevice = SCREEN_WIDTH >= 375 && SCREEN_WIDTH < 414;
+const isLargeDevice = SCREEN_WIDTH >= 414;
 
 interface CustomTabBarProps {
   state: any;
@@ -72,9 +84,8 @@ function CustomTabBar({ state, descriptors, navigation }: CustomTabBarProps) {
               <View style={styles.fab}>
                 <Ionicons
                   name="warning"
-                  size={42}
+                  size={sizes.fabIconSize}
                   color="#8B0000"
-                  justifyContent="center"
                 />
               </View>
               <Text style={styles.fabLabel}>Report</Text>
@@ -93,7 +104,7 @@ function CustomTabBar({ state, descriptors, navigation }: CustomTabBarProps) {
             <View style={styles.iconContainer}>
               <Ionicons
                 name={getIconName(route.name)}
-                size={24}
+                size={sizes.iconSize}
                 color="#FFFFFF"
               />
             </View>
@@ -108,11 +119,11 @@ function CustomTabBar({ state, descriptors, navigation }: CustomTabBarProps) {
 function getIconName(routeName: string) {
   switch (routeName) {
     case "dashboard":
-      return "bar-chart";
+      return "home";
     case "history":
       return "time";
     case "cases":
-      return "document-text";
+      return "globe";
     case "leaderboard":
       return "trophy";
     default:
@@ -120,54 +131,97 @@ function getIconName(routeName: string) {
   }
 }
 
+// Responsive sizing calculations
+const getResponsiveSizes = () => {
+  const baseTabBarHeight = Platform.OS === "ios" ? 85 : 80;
+  const bottomPadding =
+    Platform.OS === "ios"
+      ? SCREEN_HEIGHT >= 812
+        ? 20
+        : 10 // iPhone X and above have larger safe area
+      : 15;
+
+  const fabSize = isSmallDevice ? 65 : isMediumDevice ? 70 : 75;
+  const fabIconSize = isSmallDevice ? 34 : isMediumDevice ? 38 : 42;
+  const iconSize = isSmallDevice ? 20 : isMediumDevice ? 22 : 24;
+  const tabLabelSize = isSmallDevice ? 8 : isMediumDevice ? 9 : 10;
+  const fabLabelSize = isSmallDevice ? 9 : isMediumDevice ? 9.5 : 10;
+
+  return {
+    tabBarHeight: baseTabBarHeight + bottomPadding,
+    bottomPadding,
+    topPadding: 12,
+    fabSize,
+    fabBorderRadius: fabSize / 2,
+    fabIconSize,
+    iconSize,
+    iconContainerSize: iconSize + 6,
+    tabLabelSize,
+    fabLabelSize,
+    tabPaddingVertical: isSmallDevice ? 10 : 12,
+    fabMarginTop: isSmallDevice ? -8 : -10,
+  };
+};
+
+const sizes = getResponsiveSizes();
+
 const styles = StyleSheet.create({
   tabBar: {
     flexDirection: "row",
     backgroundColor: "#8B0000",
-    height: 95,
-    paddingBottom: 20,
-    paddingTop: 12,
+    height: sizes.tabBarHeight,
+    paddingBottom: sizes.bottomPadding,
+    paddingTop: sizes.topPadding,
+    paddingHorizontal: 0,
     elevation: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.3,
     shadowRadius: 15,
     alignItems: "center",
-    justifyContent: "space-around",
+    justifyContent: "space-evenly",
+    borderTopWidth: 0,
   },
   tab: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 15,
-    paddingHorizontal: 1,
+    paddingVertical: sizes.tabPaddingVertical,
+    paddingHorizontal: 0,
+    minWidth: 60,
+    maxWidth: SCREEN_WIDTH / 5,
   },
   iconContainer: {
-    width: 30,
-    height: 30,
+    width: sizes.iconContainerSize,
+    height: sizes.iconContainerSize,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 3,
+    marginBottom: 2,
   },
   tabLabel: {
-    fontSize: 9,
+    fontSize: sizes.tabLabelSize,
     fontWeight: "600",
     color: "#FFFFFF",
     textAlign: "center",
-    marginTop: 6,
+    marginTop: 4,
+    maxWidth: 70,
   },
   fabContainer: {
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: -10, // moved more upward
+    marginTop: sizes.fabMarginTop,
+    paddingHorizontal: 0,
+    minWidth: 60,
+    maxWidth: SCREEN_WIDTH / 5,
   },
   fab: {
-    width: 80,
-    height: 80,
-    borderRadius: 45,
-    backgroundColor: "#ffffff", // gold background
+    width: sizes.fabSize,
+    height: sizes.fabSize,
+    borderRadius: sizes.fabBorderRadius,
+    backgroundColor: "#ffffff",
     borderWidth: 4,
-    borderColor: "#8B0000", // maroon border
+    borderColor: "#8B0000",
     alignItems: "center",
     justifyContent: "center",
     elevation: 14,
@@ -177,17 +231,18 @@ const styles = StyleSheet.create({
     shadowRadius: 24,
   },
   fabLabel: {
-    fontSize: 10,
+    fontSize: sizes.fabLabelSize,
     fontWeight: "bold",
     color: "#FFFFFF",
     textAlign: "center",
-    marginTop: 4,
+    marginTop: 3,
   },
   fabSubLabel: {
-    fontSize: 10,
+    fontSize: sizes.fabLabelSize,
     fontWeight: "600",
     color: "rgba(255, 255, 255, 0.95)",
     textAlign: "center",
+    marginTop: -1,
   },
 });
 
@@ -202,27 +257,30 @@ export default function TabLayout() {
       <Tabs.Screen
         name="dashboard"
         options={{
-          title: "Dashboard",
+          title: "Home",
         }}
       />
       <Tabs.Screen
-        name="history"
+        name="cases"
         options={{
-          title: "History",
+          title: "Community",
         }}
       />
+
       <Tabs.Screen
         name="report"
         options={{
           title: "Report",
         }}
       />
+
       <Tabs.Screen
-        name="cases"
+        name="history"
         options={{
-          title: "Cases",
+          title: "History",
         }}
       />
+
       <Tabs.Screen
         name="leaderboard"
         options={{

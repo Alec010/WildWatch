@@ -37,13 +37,33 @@ export default function ChatbotScreen() {
   const [keyboardHeight, setKeyboardHeight] = useState<number>(0);
   const scrollViewRef = useRef<ScrollView>(null);
 
-  // Get screen dimensions
-  const screenHeight = Dimensions.get("window").height;
-  const screenWidth = Dimensions.get("window").width;
+  // Get screen dimensions with state for dynamic updates
+  const [dimensions, setDimensions] = useState(() => {
+    const { width, height } = Dimensions.get("window");
+    return { width, height };
+  });
+
+  // Calculate responsive values based on current dimensions
+  const isTablet = Math.min(dimensions.width, dimensions.height) >= 600;
+  const isLandscape = dimensions.width > dimensions.height;
+  const screenHeight = dimensions.height;
+  const screenWidth = dimensions.width;
 
   // Bottom sheet animation
   const translateY = useRef(new Animated.Value(0)).current;
-  const CLOSE_THRESHOLD = 150; // Drag down threshold to close
+  const CLOSE_THRESHOLD = isTablet ? 200 : 150; // Larger threshold for tablets
+
+  // Listen for dimension changes (orientation changes)
+  useEffect(() => {
+    const subscription = Dimensions.addEventListener("change", ({ window }) => {
+      setDimensions({
+        width: window.width,
+        height: window.height,
+      });
+    });
+
+    return () => subscription?.remove();
+  }, []);
 
   // Load token and chat messages on component mount
   useEffect(() => {
@@ -237,7 +257,38 @@ export default function ChatbotScreen() {
   ];
 
   // Calculate responsive dimensions
-  const bottomSheetHeight = screenHeight * 0.93;
+  const getResponsiveSizes = () => {
+    // Bottom sheet height based on device and orientation
+    let bottomSheetHeightPercent = 0.93;
+    if (isTablet) {
+      bottomSheetHeightPercent = isLandscape ? 0.88 : 0.9;
+    } else {
+      bottomSheetHeightPercent = isLandscape ? 0.85 : 0.93;
+    }
+
+    // Calculate actual pixel width for message bubbles
+    let bubbleMaxWidthPercent = 0.75; // 75% default
+    if (isTablet) {
+      bubbleMaxWidthPercent = isLandscape ? 0.6 : 0.7;
+    }
+
+    return {
+      bottomSheetHeight: screenHeight * bottomSheetHeightPercent,
+      horizontalPadding: isTablet ? 32 : 24,
+      headerFontSize: isTablet ? 24 : 20,
+      subHeaderFontSize: isTablet ? 15 : 13,
+      messageFontSize: isTablet ? 17 : 15,
+      avatarSize: isTablet ? 48 : 44,
+      avatarIconSize: isTablet ? 26 : 22,
+      borderRadius: isTablet ? 28 : 24,
+      messageBubbleMaxWidth: screenWidth * bubbleMaxWidthPercent,
+      inputMinHeight: isTablet ? 64 : 56,
+      handleBarWidth: isTablet ? 64 : 48,
+    };
+  };
+
+  const sizes = getResponsiveSizes();
+  const bottomSheetHeight = sizes.bottomSheetHeight;
 
   return (
     <View
@@ -290,7 +341,7 @@ export default function ChatbotScreen() {
         >
           <View
             style={{
-              width: 48,
+              width: sizes.handleBarWidth,
               height: 5,
               backgroundColor: "#D1D5DB",
               borderRadius: 3,
@@ -309,8 +360,8 @@ export default function ChatbotScreen() {
             flexDirection: "row",
             alignItems: "center",
             justifyContent: "space-between",
-            paddingHorizontal: 24,
-            paddingVertical: 20,
+            paddingHorizontal: sizes.horizontalPadding,
+            paddingVertical: isTablet ? 24 : 20,
             borderBottomWidth: 1,
             borderBottomColor: "#F1F5F9",
             backgroundColor: "rgba(248, 250, 252, 0.8)",
@@ -319,13 +370,13 @@ export default function ChatbotScreen() {
           <View style={{ flexDirection: "row", alignItems: "center" }}>
             <View
               style={{
-                width: 44,
-                height: 44,
-                borderRadius: 22,
+                width: sizes.avatarSize,
+                height: sizes.avatarSize,
+                borderRadius: sizes.avatarSize / 2,
                 backgroundColor: "#8B0000",
                 alignItems: "center",
                 justifyContent: "center",
-                marginRight: 14,
+                marginRight: isTablet ? 16 : 14,
                 shadowColor: "#8B0000",
                 shadowOffset: { width: 0, height: 3 },
                 shadowOpacity: 0.3,
@@ -333,12 +384,16 @@ export default function ChatbotScreen() {
                 elevation: 4,
               }}
             >
-              <Ionicons name="paw-sharp" size={22} color="white" />
+              <Ionicons
+                name="paw-sharp"
+                size={sizes.avatarIconSize}
+                color="white"
+              />
             </View>
             <View>
               <Text
                 style={{
-                  fontSize: 20,
+                  fontSize: sizes.headerFontSize,
                   fontWeight: "800",
                   color: "#8B0000",
                   letterSpacing: 0.3,
@@ -348,7 +403,7 @@ export default function ChatbotScreen() {
               </Text>
               <Text
                 style={{
-                  fontSize: 13,
+                  fontSize: sizes.subHeaderFontSize,
                   color: "#6B7280",
                   fontWeight: "500",
                 }}
@@ -416,38 +471,45 @@ export default function ChatbotScreen() {
               ref={scrollViewRef}
               style={{
                 flex: 1,
-                paddingHorizontal: 24,
+                paddingHorizontal: sizes.horizontalPadding,
               }}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{
-                paddingTop: 20,
-                paddingBottom: 20,
+                paddingTop: isTablet ? 24 : 20,
+                paddingBottom: isTablet ? 24 : 20,
                 flexGrow: 1,
               }}
               keyboardShouldPersistTaps="handled"
               automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
             >
               {messages.map((m, idx) => (
-                <MessageBubble key={idx} message={m} isFirst={idx === 0} />
+                <MessageBubble
+                  key={idx}
+                  message={m}
+                  isFirst={idx === 0}
+                  isTablet={isTablet}
+                  messageFontSize={sizes.messageFontSize}
+                  messageBubbleMaxWidth={sizes.messageBubbleMaxWidth}
+                />
               ))}
-              {isLoading && <LoadingDots />}
+              {isLoading && <LoadingDots isTablet={isTablet} />}
             </ScrollView>
 
             {messages.length === 1 && (
               <View
                 style={{
-                  paddingHorizontal: 24,
-                  paddingVertical: 20,
+                  paddingHorizontal: sizes.horizontalPadding,
+                  paddingVertical: isTablet ? 24 : 20,
                   paddingBottom: 6,
                   marginBottom: 6,
                 }}
               >
                 <Text
                   style={{
-                    fontSize: 16,
+                    fontSize: isTablet ? 18 : 16,
                     fontWeight: "700",
                     color: "#374151",
-                    marginBottom: 16,
+                    marginBottom: isTablet ? 20 : 16,
                     letterSpacing: 0.2,
                   }}
                 >
@@ -457,9 +519,11 @@ export default function ChatbotScreen() {
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={{ paddingRight: 24 }}
+                  contentContainerStyle={{
+                    paddingRight: sizes.horizontalPadding,
+                  }}
                   decelerationRate="fast"
-                  snapToInterval={200}
+                  snapToInterval={isTablet ? 220 : 200}
                   snapToAlignment="start"
                 >
                   {quickResponses.map((q, index) => (
@@ -468,17 +532,17 @@ export default function ChatbotScreen() {
                       style={{
                         borderColor: "#8B0000",
                         borderWidth: 1.5,
-                        borderRadius: 24,
-                        paddingHorizontal: 18,
-                        paddingVertical: 12,
-                        marginRight: 12,
+                        borderRadius: isTablet ? 28 : 24,
+                        paddingHorizontal: isTablet ? 22 : 18,
+                        paddingVertical: isTablet ? 14 : 12,
+                        marginRight: isTablet ? 16 : 12,
                         backgroundColor: "white",
                         shadowColor: "#8B0000",
                         shadowOffset: { width: 0, height: 2 },
                         shadowOpacity: 0.15,
                         shadowRadius: 4,
                         elevation: 3,
-                        minWidth: 160,
+                        minWidth: isTablet ? 180 : 160,
                         alignItems: "center",
                         justifyContent: "center",
                       }}
@@ -487,12 +551,12 @@ export default function ChatbotScreen() {
                     >
                       <Text
                         style={{
-                          fontSize: 13,
+                          fontSize: isTablet ? 15 : 13,
                           color: "#8B0000",
                           fontWeight: "600",
                           letterSpacing: 0.1,
                           textAlign: "center",
-                          lineHeight: 16,
+                          lineHeight: isTablet ? 18 : 16,
                         }}
                       >
                         {q}
@@ -506,9 +570,16 @@ export default function ChatbotScreen() {
             <View
               style={{
                 backgroundColor: "white",
-                paddingHorizontal: 24,
-                paddingVertical: 20,
-                paddingBottom: Platform.OS === "ios" ? 65 : 40,
+                paddingHorizontal: sizes.horizontalPadding,
+                paddingVertical: isTablet ? 24 : 20,
+                paddingBottom:
+                  Platform.OS === "ios"
+                    ? isTablet
+                      ? 36
+                      : 30
+                    : isTablet
+                    ? 36
+                    : 30,
                 borderTopWidth: 1,
                 borderTopColor: "#F1F5F9",
                 shadowColor: "#000",
@@ -523,35 +594,33 @@ export default function ChatbotScreen() {
                   flexDirection: "row",
                   alignItems: "flex-end",
                   backgroundColor: "#FFFFFF",
-                  borderRadius: 24,
+                  borderRadius: sizes.borderRadius,
                   paddingHorizontal: 4,
-                  paddingVertical: 4,
                   borderWidth: 0.5,
                   borderColor: input.trim() ? "#8B0000" : "#E2E8F0",
                   shadowColor: input.trim() ? "#8B0000" : "#000",
                   shadowOffset: { width: 0, height: 2 },
                   shadowOpacity: input.trim() ? 0.15 : 0.05,
-                  shadowRadius: 4,
-                  elevation: input.trim() ? 6 : 2,
-                  minHeight: 56,
+                  shadowRadius: 2,
+                  elevation: input.trim() ? 3 : 1,
+                  minHeight: sizes.inputMinHeight,
                 }}
               >
                 <TextInput
                   style={{
                     flex: 1,
-                    fontSize: 16,
+                    fontSize: isTablet ? 18 : 16,
                     color: "#1F2937",
-                    paddingHorizontal: 20,
-                    paddingVertical: 16,
-                    maxHeight: 120,
-                    minHeight: 48,
+                    paddingHorizontal: isTablet ? 24 : 20,
+                    maxHeight: isTablet ? 140 : 120,
+                    minHeight: isTablet ? 56 : 48,
                     fontWeight: "500",
-                    lineHeight: 22,
+                    lineHeight: isTablet ? 24 : 22,
                     textAlignVertical: "top",
                   }}
                   value={input}
                   onChangeText={setInput}
-                  placeholder="Ask me"
+                  placeholder="Ask me anything..."
                   placeholderTextColor="#9CA3AF"
                   editable={!isLoading}
                   multiline
@@ -570,15 +639,14 @@ export default function ChatbotScreen() {
                       sendMessage(input);
                     }
                   }}
-                  blurOnSubmit={false}
                 />
                 <TouchableOpacity
                   style={{
-                    width: 48,
-                    height: 48,
+                    width: isTablet ? 56 : 48,
+                    height: isTablet ? 56 : 48,
                     backgroundColor:
                       input.trim() && !isLoading ? "#8B0000" : "#F3F4F6",
-                    borderRadius: 24,
+                    borderRadius: isTablet ? 28 : 24,
                     alignItems: "center",
                     justifyContent: "center",
                     marginLeft: 8,
@@ -599,11 +667,14 @@ export default function ChatbotScreen() {
                   activeOpacity={0.8}
                 >
                   {isLoading ? (
-                    <ActivityIndicator color="white" size="small" />
+                    <ActivityIndicator
+                      color="white"
+                      size={isTablet ? "large" : "small"}
+                    />
                   ) : (
                     <Ionicons
                       name="send"
-                      size={20}
+                      size={isTablet ? 24 : 20}
                       color={input.trim() && !isLoading ? "white" : "#9CA3AF"}
                     />
                   )}
@@ -899,12 +970,23 @@ const formatBotMessage = (text: string) => {
   return elements;
 };
 
-const MessageBubble: React.FC<{ message: ChatMessage; isFirst: boolean }> = ({
+const MessageBubble: React.FC<{
+  message: ChatMessage;
+  isFirst: boolean;
+  isTablet: boolean;
+  messageFontSize: number;
+  messageBubbleMaxWidth: number;
+}> = ({
   message,
   isFirst,
+  isTablet,
+  messageFontSize,
+  messageBubbleMaxWidth,
 }) => {
   const isBot = message.sender === "bot";
   const isUser = message.sender === "user";
+
+  const avatarSize = isTablet ? 44 : 40;
 
   return (
     <View
@@ -920,13 +1002,13 @@ const MessageBubble: React.FC<{ message: ChatMessage; isFirst: boolean }> = ({
       {isBot && (
         <View
           style={{
-            width: 40,
-            height: 40,
+            width: avatarSize,
+            height: avatarSize,
             backgroundColor: "#8B0000",
-            borderRadius: "100%",
+            borderRadius: avatarSize / 2,
             alignItems: "center",
             justifyContent: "center",
-            marginRight: 12,
+            marginRight: isTablet ? 14 : 12,
             shadowColor: "#8B0000",
             shadowOffset: { width: 0, height: 4 },
             shadowOpacity: 0.35,
@@ -936,14 +1018,18 @@ const MessageBubble: React.FC<{ message: ChatMessage; isFirst: boolean }> = ({
             borderColor: "#FFD700", // gold
           }}
         >
-          <Ionicons name="paw-outline" size={16} color="white" />
+          <Ionicons
+            name="paw-outline"
+            size={isTablet ? 18 : 16}
+            color="white"
+          />
         </View>
       )}
 
       <View
         style={{
-          maxWidth: "75%",
-          minWidth: 80,
+          maxWidth: messageBubbleMaxWidth,
+          minWidth: isTablet ? 100 : 80,
         }}
       >
         {/* Message Bubble */}
@@ -957,14 +1043,26 @@ const MessageBubble: React.FC<{ message: ChatMessage; isFirst: boolean }> = ({
             shadowOpacity: isUser ? 0.35 : 0.08,
             shadowRadius: isUser ? 4 : 2,
             elevation: isUser ? 5 : 2,
-            borderTopLeftRadius: 20,
-            borderTopRightRadius: 20,
-            borderBottomLeftRadius: isUser ? 20 : 8,
-            borderBottomRightRadius: isUser ? 8 : 20,
+            borderTopLeftRadius: isTablet ? 24 : 20,
+            borderTopRightRadius: isTablet ? 24 : 20,
+            borderBottomLeftRadius: isUser
+              ? isTablet
+                ? 24
+                : 20
+              : isTablet
+              ? 10
+              : 8,
+            borderBottomRightRadius: isUser
+              ? isTablet
+                ? 10
+                : 8
+              : isTablet
+              ? 24
+              : 20,
             borderWidth: isBot ? 0.5 : 0,
             borderColor: isBot ? "#E5E7EB" : "transparent",
-            paddingHorizontal: 18,
-            paddingVertical: 14,
+            paddingHorizontal: isTablet ? 20 : 18,
+            paddingVertical: isTablet ? 16 : 14,
             ...(isUser && {
               backgroundColor: "#8B0000",
             }),
@@ -978,9 +1076,9 @@ const MessageBubble: React.FC<{ message: ChatMessage; isFirst: boolean }> = ({
           ) : (
             <Text
               style={{
-                fontSize: 15,
+                fontSize: messageFontSize,
                 color: "#FFFFFF",
-                lineHeight: 22,
+                lineHeight: isTablet ? 24 : 22,
                 fontWeight: "500",
                 letterSpacing: 0.2,
               }}
@@ -993,14 +1091,14 @@ const MessageBubble: React.FC<{ message: ChatMessage; isFirst: boolean }> = ({
         {/* Timestamp */}
         <View
           style={{
-            marginTop: 6,
+            marginTop: isTablet ? 8 : 6,
             paddingHorizontal: 4,
             alignItems: isUser ? "flex-end" : "flex-start",
           }}
         >
           <Text
             style={{
-              fontSize: 11,
+              fontSize: isTablet ? 12 : 11,
               color: "#9CA3AF",
               fontWeight: "500",
             }}
@@ -1019,13 +1117,13 @@ const MessageBubble: React.FC<{ message: ChatMessage; isFirst: boolean }> = ({
       {isUser && (
         <View
           style={{
-            width: 40,
-            height: 40,
+            width: avatarSize,
+            height: avatarSize,
             backgroundColor: "white",
-            borderRadius: 20,
+            borderRadius: avatarSize / 2,
             alignItems: "center",
             justifyContent: "center",
-            marginLeft: 12,
+            marginLeft: isTablet ? 14 : 12,
             shadowColor: "#8B0000",
             shadowOffset: { width: 0, height: 4 },
             shadowOpacity: 0.35,
@@ -1035,17 +1133,19 @@ const MessageBubble: React.FC<{ message: ChatMessage; isFirst: boolean }> = ({
             borderColor: "#8B0000", // maroon
           }}
         >
-          <Ionicons name="person" size={20} color="#FFB300" />
+          <Ionicons name="person" size={isTablet ? 22 : 20} color="#FFB300" />
         </View>
       )}
     </View>
   );
 };
 
-const LoadingDots: React.FC = () => {
+const LoadingDots: React.FC<{ isTablet: boolean }> = ({ isTablet }) => {
   const dot1 = useRef(new Animated.Value(0)).current;
   const dot2 = useRef(new Animated.Value(0)).current;
   const dot3 = useRef(new Animated.Value(0)).current;
+
+  const avatarSize = isTablet ? 44 : 40;
 
   useEffect(() => {
     const createAnimation = (animValue: Animated.Value, delay: number) => {
@@ -1116,13 +1216,13 @@ const LoadingDots: React.FC = () => {
       {/* Bot Avatar */}
       <View
         style={{
-          width: 40,
-          height: 40,
+          width: avatarSize,
+          height: avatarSize,
           backgroundColor: "#8B0000",
-          borderRadius: 20,
+          borderRadius: avatarSize / 2,
           alignItems: "center",
           justifyContent: "center",
-          marginRight: 12,
+          marginRight: isTablet ? 14 : 12,
           shadowColor: "#8B0000",
           shadowOffset: { width: 0, height: 4 },
           shadowOpacity: 0.35,
@@ -1132,7 +1232,7 @@ const LoadingDots: React.FC = () => {
           borderColor: "white",
         }}
       >
-        <Ionicons name="paw-outline" size={22} color="white" />
+        <Ionicons name="paw-outline" size={isTablet ? 24 : 22} color="white" />
       </View>
 
       {/* Loading Bubble */}
@@ -1144,26 +1244,26 @@ const LoadingDots: React.FC = () => {
           shadowOpacity: 0.08,
           shadowRadius: 6,
           elevation: 3,
-          borderTopLeftRadius: 20,
-          borderTopRightRadius: 20,
-          borderBottomLeftRadius: 8,
-          borderBottomRightRadius: 20,
+          borderTopLeftRadius: isTablet ? 24 : 20,
+          borderTopRightRadius: isTablet ? 24 : 20,
+          borderBottomLeftRadius: isTablet ? 10 : 8,
+          borderBottomRightRadius: isTablet ? 24 : 20,
           borderWidth: 1.5,
           borderColor: "#E5E7EB",
-          paddingHorizontal: 20,
-          paddingVertical: 16,
+          paddingHorizontal: isTablet ? 24 : 20,
+          paddingVertical: isTablet ? 18 : 16,
           flexDirection: "row",
           alignItems: "center",
-          gap: 8,
+          gap: isTablet ? 10 : 8,
         }}
       >
         <Animated.View
           style={[
             {
-              width: 10,
-              height: 10,
+              width: isTablet ? 12 : 10,
+              height: isTablet ? 12 : 10,
               backgroundColor: "#8B0000",
-              borderRadius: 5,
+              borderRadius: isTablet ? 6 : 5,
             },
             getAnimatedStyle(dot1),
           ]}
@@ -1171,10 +1271,10 @@ const LoadingDots: React.FC = () => {
         <Animated.View
           style={[
             {
-              width: 10,
-              height: 10,
+              width: isTablet ? 12 : 10,
+              height: isTablet ? 12 : 10,
               backgroundColor: "#8B0000",
-              borderRadius: 5,
+              borderRadius: isTablet ? 6 : 5,
             },
             getAnimatedStyle(dot2),
           ]}
@@ -1182,10 +1282,10 @@ const LoadingDots: React.FC = () => {
         <Animated.View
           style={[
             {
-              width: 10,
-              height: 10,
+              width: isTablet ? 12 : 10,
+              height: isTablet ? 12 : 10,
               backgroundColor: "#8B0000",
-              borderRadius: 5,
+              borderRadius: isTablet ? 6 : 5,
             },
             getAnimatedStyle(dot3),
           ]}
