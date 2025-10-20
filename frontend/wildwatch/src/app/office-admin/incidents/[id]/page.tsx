@@ -772,6 +772,7 @@ export default function IncidentDetailsPage() {
                       <option value="In Progress">In Progress</option>
                       <option value="Resolved">Resolved</option>
                       <option value="Dismissed">Dismissed</option>
+                      <option value="On Hold">On Hold</option>
                     </select>
                     {statusError && <div className="text-red-600 text-xs mt-1">{statusError}</div>}
                   </div>
