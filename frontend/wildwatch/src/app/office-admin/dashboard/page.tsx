@@ -32,6 +32,31 @@ import type { BadgeProgress, UserBadgeSummary } from "@/types/badge"
 
 const inter = Inter({ subsets: ["latin"] })
 
+// Utility functions for estimated resolution
+const formatEstimatedDate = (dateString: string) => {
+  const date = new Date(dateString)
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+    hour12: true,
+  })
+}
+
+const getEstimatedResolution = (submittedAt: string, priority: string, extendedDate?: string) => {
+  if (extendedDate) {
+    return new Date(extendedDate)
+  }
+  const base = new Date(submittedAt)
+  let days = 2
+  if (priority === "MEDIUM") days = 3
+  if (priority === "HIGH") days = 5
+  base.setDate(base.getDate() + days)
+  return base
+}
+
 interface Incident {
   id: string
   trackingNumber: string
@@ -43,6 +68,8 @@ interface Incident {
   description: string
   submittedAt: string
   verified: boolean
+  estimatedResolutionDate?: string
+  priorityLevel?: string
 }
 
 export default function OfficeAdminDashboard() {
@@ -77,6 +104,11 @@ export default function OfficeAdminDashboard() {
         }
 
         const incidents = await response.json()
+        
+        // Debug: Log the first incident to see what fields are available
+        console.log("Admin Dashboard - First incident data:", incidents[0])
+        console.log("Admin Dashboard - estimatedResolutionDate:", incidents[0]?.estimatedResolutionDate)
+        console.log("Admin Dashboard - priorityLevel:", incidents[0]?.priorityLevel)
 
         // Calculate statistics
         const stats = {
@@ -480,7 +512,7 @@ export default function OfficeAdminDashboard() {
               </Button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 overflow-visible">
               {(searchQuery ? filteredIncidents : recentIncidents).length > 0 ? (
                 (searchQuery ? filteredIncidents : recentIncidents).map((incident, index) => (
                   <motion.div
@@ -488,7 +520,7 @@ export default function OfficeAdminDashboard() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3, delay: index * 0.1 }}
-                    className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 border border-gray-100 overflow-hidden"
+                    className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 border border-gray-100 overflow-visible"
                   >
                     <div className="flex flex-col h-full">
                       <div
@@ -504,17 +536,37 @@ export default function OfficeAdminDashboard() {
                         <div className="mb-3">
                           <div className="flex items-center justify-between">
                             <h3 className="font-semibold text-[#8B0000]">{incident.trackingNumber}</h3>
-                            <span
-                              className={`px-2 py-0.5 text-xs rounded-full ${
-                                incident.status === "Pending"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : incident.status === "In Progress"
-                                    ? "bg-blue-100 text-blue-800"
-                                    : "bg-green-100 text-green-800"
-                              }`}
-                            >
-                              {incident.status}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              {(() => {
+                                const estimatedResolution = getEstimatedResolution(
+                                  incident.submittedAt,
+                                  incident.priorityLevel || "LOW",
+                                  incident.estimatedResolutionDate
+                                )
+                                return (
+                                  <div className="relative group">
+                                    <Calendar className="h-3.5 w-3.5 text-[#800000] cursor-help transition-all duration-200 group-hover:scale-110 group-hover:text-[#A00000]" />
+                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-3 px-4 py-3 bg-[#8B0000] text-white text-sm rounded-lg shadow-lg opacity-0 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300 whitespace-nowrap z-[9999] pointer-events-none overflow-visible group-hover:animate-in group-hover:slide-in-from-bottom-2 group-hover:fade-in-0">
+                                      <div className="font-medium">Est. Resolution</div>
+                                      <div className="text-xs text-gray-100 mt-1">
+                                        {formatEstimatedDate(estimatedResolution.toISOString())}
+                                      </div>
+                                    </div>
+                                  </div>
+                                )
+                              })()}
+                              <span
+                                className={`px-2 py-0.5 text-xs rounded-full ${
+                                  incident.status === "Pending"
+                                    ? "bg-yellow-100 text-yellow-800"
+                                    : incident.status === "In Progress"
+                                      ? "bg-blue-100 text-blue-800"
+                                      : "bg-green-100 text-green-800"
+                                }`}
+                              >
+                                {incident.status}
+                              </span>
+                            </div>
                           </div>
                           <h4 className="text-gray-800 font-medium mt-1">{incident.incidentType}</h4>
                         </div>
