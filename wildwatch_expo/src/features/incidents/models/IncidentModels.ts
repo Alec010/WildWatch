@@ -40,10 +40,12 @@ export interface IncidentResponseDto {
   witnesses?: WitnessResponseDto[];
   officeAdminName?: string | null;
   finishedDate?: string | null;
+  estimatedResolutionDate?: string | null;
   verified?: boolean | null;
   transferredFrom?: string | null;
   lastTransferredTo?: string | null;
   lastTransferNotes?: string | null;
+  resolutionNotes?: string | null;
   upvoteCount?: number | null;
 }
 

@@ -29,7 +29,8 @@ function CustomTabBar({ state, descriptors, navigation }: CustomTabBarProps) {
     (route: any) =>
       route.name !== "index" &&
       route.name !== "camera" &&
-      route.name !== "location"
+      route.name !== "location" &&
+      route.name !== "all_reports"
   );
 
   return (
@@ -313,6 +314,13 @@ export default function TabLayout() {
 
       <Tabs.Screen
         name="location"
+        options={{
+          href: null,
+        }}
+      />
+
+      <Tabs.Screen
+        name="all_reports"
         options={{
           href: null,
         }}

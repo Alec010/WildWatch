@@ -27,6 +27,7 @@ import { config } from "../lib/config";
 import Colors from "../constants/Colors";
 import { useThemeColor } from "../components/Themed";
 import TopSpacing from "../components/TopSpacing";
+import { CircularLoader } from "../components/CircularLoader";
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 
@@ -91,6 +92,7 @@ const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
 
     try {
       const token = await storage.getToken();
+      console.log("Retrieved token for password change:", token);
       const response = await fetch(
         `${config.API.BASE_URL}/api/users/me/change-password`,
         {
@@ -819,6 +821,14 @@ export default function ProfileScreen() {
   });
 
   useEffect(() => {
+    const logToken = async () => {
+      const token = await storage.getToken();
+      console.log("[Profile Screen] Current token:", token);
+    };
+    logToken();
+  }, []);
+
+  useEffect(() => {
     if (userProfile) {
       console.log("User profile in component:", userProfile);
       console.log("User points:", userProfile.points);
@@ -948,14 +958,7 @@ export default function ProfileScreen() {
         style={{ flex: 1, backgroundColor: backgroundColor }}
         edges={["left", "right", "bottom"]}
       >
-        <View
-          style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
-        >
-          <ActivityIndicator size="large" color={primaryColor} />
-          <Text style={{ color: primaryColor, marginTop: 16, fontSize: 16 }}>
-            Loading your profile...
-          </Text>
-        </View>
+        <CircularLoader subtitle="Loading your profile..." />
       </SafeAreaView>
     );
   }

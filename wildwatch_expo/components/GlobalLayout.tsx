@@ -1,6 +1,7 @@
 import React from "react";
 import { View } from "react-native";
 import { usePathname, router } from "expo-router";
+import Toast from "react-native-toast-message";
 import FloatingAskKatButton from "./FloatingAskKatButton";
 import Colors from "../constants/Colors";
 
@@ -33,6 +34,8 @@ const GlobalLayout: React.FC<GlobalLayoutProps> = ({ children }) => {
           primaryColor={Colors.maroon}
         />
       )}
+
+      <Toast />
     </View>
   );
 };

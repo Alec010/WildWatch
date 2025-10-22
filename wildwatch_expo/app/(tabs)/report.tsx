@@ -28,6 +28,7 @@ import { WitnessInput } from "../../src/features/reports/components/WitnessInput
 import { WitnessReviewCard } from "../../src/features/reports/components/WitnessReviewCard";
 import { useReportForm } from "../../src/features/reports/hooks/useReportForm";
 import { config } from "../../lib/config";
+import { CircularLoader } from "../../components/CircularLoader";
 import {
   incidentAnalysisAPI,
   type AnalyzeRequest,
@@ -1734,7 +1735,6 @@ export default function ReportScreen() {
                     Tap the fields above to select date and time
                   </Text>
 
-                  {/* Incident Type */}
                   <View style={{ marginBottom: margin }}>
                     <View
                       style={{
@@ -2615,7 +2615,7 @@ export default function ReportScreen() {
                       <Text
                         style={{ fontWeight: "600", fontSize: fontSize - 2 }}
                       >
-                        Incident Type:
+                        Incident Title:
                       </Text>
                       <Text style={{ fontSize: fontSize - 1, marginTop: 4 }}>
                         {form.incidentType}
