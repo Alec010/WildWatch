@@ -28,6 +28,11 @@ import Colors from "../constants/Colors";
 import { useThemeColor } from "../components/Themed";
 import TopSpacing from "../components/TopSpacing";
 import { CircularLoader } from "../components/CircularLoader";
+import { useBadgeSummary } from "../src/features/badges/hooks";
+import { BadgePreview, BadgesModal } from "../src/features/badges/components";
+import type { BadgeProgress } from "../src/features/badges/models/BadgeModels";
+import { useRankingSummary } from "../src/features/ranking/hooks";
+import { RankingDashboard } from "../src/features/ranking/components";
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 
@@ -92,7 +97,6 @@ const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
 
     try {
       const token = await storage.getToken();
-      console.log("Retrieved token for password change:", token);
       const response = await fetch(
         `${config.API.BASE_URL}/api/users/me/change-password`,
         {
@@ -808,6 +812,19 @@ export default function ProfileScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
 
+  // Badge state
+  const [isBadgeModalOpen, setIsBadgeModalOpen] = useState(false);
+  const [recentBadges, setRecentBadges] = useState<BadgeProgress[]>([]);
+  
+  // Badge hook
+  const { badgeSummary, isLoading: loadingBadges, error: badgeError, refetch: refetchBadges } = 
+    useBadgeSummary({ userRole: userProfile?.role, autoFetch: !!userProfile });
+  
+  // Ranking hook
+  const { rankingSummary, rankProgress, isLoading: loadingRanking, refetch: refetchRanking } =
+    useRankingSummary({ autoFetch: !!userProfile });
+
+
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [middleInitial, setMiddleInitial] = useState("");
@@ -820,18 +837,9 @@ export default function ProfileScreen() {
     contactNumber: "",
   });
 
-  useEffect(() => {
-    const logToken = async () => {
-      const token = await storage.getToken();
-      console.log("[Profile Screen] Current token:", token);
-    };
-    logToken();
-  }, []);
 
   useEffect(() => {
     if (userProfile) {
-      console.log("User profile in component:", userProfile);
-      console.log("User points:", userProfile.points);
       setFirstName(userProfile.firstName);
       setLastName(userProfile.lastName);
       setMiddleInitial(userProfile.middleInitial || "");
@@ -844,6 +852,18 @@ export default function ProfileScreen() {
       });
     }
   }, [userProfile]);
+
+  // Set recent badges when badge summary changes
+  useEffect(() => {
+    if (badgeSummary) {
+      const earnedBadges = badgeSummary.badges
+        .filter(badge => badge.currentLevel > 0)
+        .sort((a, b) => b.currentLevel - a.currentLevel)
+        .slice(0, 3);
+      
+      setRecentBadges(earnedBadges);
+    }
+  }, [badgeSummary]);
 
   const handleSaveProfile = async () => {
     if (!userProfile) return;
@@ -907,7 +927,6 @@ export default function ProfileScreen() {
         { text: "OK", style: "default" },
       ]);
     } catch (e: any) {
-      console.error("Profile update error:", e);
       Alert.alert(
         "Update Failed",
         e?.message || "Failed to update profile. Please try again.",
@@ -936,6 +955,17 @@ export default function ProfileScreen() {
       contactNumber: userProfile?.contactNumber || "",
     });
     setIsEditing(true);
+  };
+
+  const handleClaimBadge = async (badgeId: number) => {
+    try {
+      const { badgeAPI } = await import("../src/features/badges/api/badge_api");
+      await badgeAPI.claimBadge(badgeId);
+      // Refetch badges and user profile to update points
+      await Promise.all([refetchBadges(), fetchUserProfile()]);
+    } catch (error) {
+      Alert.alert("Error", "Failed to claim badge. Please try again.");
+    }
   };
 
   const handleLogout = () => {
@@ -1284,6 +1314,124 @@ export default function ProfileScreen() {
                 </View>
               </LinearGradient>
             </View>
+
+            {/* Ranking Dashboard */}
+            <RankingDashboard
+              rankingSummary={rankingSummary}
+              rankProgress={rankProgress}
+              badgeSummary={badgeSummary}
+              recentBadges={recentBadges}
+              isLoading={loadingRanking || loadingBadges}
+              onViewBadges={() => setIsBadgeModalOpen(true)}
+              onClaimBadge={handleClaimBadge}
+            />
+
+            {/* Badge Preview Section */}
+            {!loadingBadges && badgeSummary && (
+              <>
+                {recentBadges.length > 0 ? (
+                  <BadgePreview
+                    badgeSummary={badgeSummary}
+                    recentBadges={recentBadges}
+                    onViewAll={() => setIsBadgeModalOpen(true)}
+                  />
+                ) : (
+                  // Show "View Badges" button even when no badges earned
+                  <TouchableOpacity
+                    onPress={() => setIsBadgeModalOpen(true)}
+                    style={{
+                      backgroundColor: '#FFFBEB',
+                      borderRadius: 12,
+                      padding: 16,
+                      marginBottom: 16,
+                      borderWidth: 1,
+                      borderColor: '#FDE68A',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                      <View
+                        style={{
+                          backgroundColor: '#FEF3C7',
+                          padding: 12,
+                          borderRadius: 10,
+                        }}
+                      >
+                        <Ionicons name="trophy-outline" size={24} color="#D97706" />
+                      </View>
+                      <View>
+                        <Text style={{ fontSize: 16, fontWeight: '600', color: '#92400E' }}>
+                          View Your Badges
+                        </Text>
+                        <Text style={{ fontSize: 12, color: '#92400E', marginTop: 2 }}>
+                          {badgeSummary.totalBadgesAvailable} badges available to earn
+                        </Text>
+                      </View>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color="#D97706" />
+                  </TouchableOpacity>
+                )}
+              </>
+            )}
+            
+            {/* Badge Loading State */}
+            {loadingBadges && (
+              <View
+                style={{
+                  backgroundColor: '#F9FAFB',
+                  borderRadius: 12,
+                  padding: 20,
+                  marginBottom: 16,
+                  alignItems: 'center',
+                }}
+              >
+                <ActivityIndicator size="small" color="#8B0000" />
+                <Text style={{ marginTop: 8, fontSize: 12, color: '#6B7280' }}>
+                  Loading badges...
+                </Text>
+              </View>
+            )}
+
+            {/* Badge Error State */}
+            {badgeError && (
+              <View
+                style={{
+                  backgroundColor: '#FEF2F2',
+                  borderRadius: 12,
+                  padding: 16,
+                  marginBottom: 16,
+                  borderWidth: 1,
+                  borderColor: '#FECACA',
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Ionicons name="warning" size={20} color="#DC2626" />
+                  <Text style={{ fontSize: 14, fontWeight: '600', color: '#DC2626' }}>
+                    Badge Error
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 12, color: '#DC2626', marginTop: 4 }}>
+                  {badgeError}
+                </Text>
+                <TouchableOpacity
+                  onPress={refetchBadges}
+                  style={{
+                    backgroundColor: '#DC2626',
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    borderRadius: 6,
+                    marginTop: 8,
+                    alignSelf: 'flex-start',
+                  }}
+                >
+                  <Text style={{ color: 'white', fontSize: 12, fontWeight: '600' }}>
+                    Retry
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
 
             {/* Personal Information Section */}
             <ProfileSection
@@ -1693,6 +1841,15 @@ export default function ProfileScreen() {
           visible={showPasswordModal}
           onClose={() => setShowPasswordModal(false)}
           authProvider={userProfile.authProvider}
+        />
+
+        {/* Badges Modal */}
+        <BadgesModal
+          isOpen={isBadgeModalOpen}
+          onClose={() => setIsBadgeModalOpen(false)}
+          badgeSummary={badgeSummary}
+          isLoading={loadingBadges}
+          onClaimBadge={handleClaimBadge}
         />
       </SafeAreaView>
     </View>
