@@ -8,4 +8,52 @@ export interface LeaderboardEntry {
   resolvedIncidents?: number;
 }
 
+export interface RatingRequest {
+  honesty: number;
+  credibility: number;
+  responsiveness: number;
+  helpfulness: number;
+  feedback?: string;
+}
 
+export interface RatingDimension {
+  honesty: number;
+  credibility: number;
+  responsiveness: number;
+  helpfulness: number;
+  feedback?: string;
+  totalPoints: number;
+  averageRating: number;
+}
+
+export interface IncidentRatingResponse {
+  incidentId: string;
+  reporterRating?: RatingDimension;
+  officeRating?: RatingDimension;
+  pointsAwarded: boolean;
+  totalReporterPoints: number;
+  totalOfficePoints: number;
+}
+
+export interface RatingStatus {
+  reporterRating?: RatingDimension;
+  officeRating?: RatingDimension;
+  pointsAwarded: boolean;
+  totalReporterPoints: number;
+  totalOfficePoints: number;
+}
+
+export const RATING_DIMENSIONS = {
+  reporter: {
+    honesty: "Honesty",
+    credibility: "Credibility", 
+    responsiveness: "Responsiveness",
+    helpfulness: "Helpfulness"
+  },
+  office: {
+    honesty: "Honesty",
+    credibility: "Credibility",
+    responsiveness: "Responsiveness", 
+    helpfulness: "Helpfulness"
+  }
+} as const;

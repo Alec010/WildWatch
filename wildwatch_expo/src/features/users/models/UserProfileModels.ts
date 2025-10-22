@@ -7,6 +7,8 @@ export interface UserProfile {
   schoolIdNumber: string;
   contactNumber: string;
   role: string;
+  points?: number;
+  authProvider?: string;
 }
 
 export interface UserUpdateRequest {

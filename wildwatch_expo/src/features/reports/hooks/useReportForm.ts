@@ -67,7 +67,7 @@ export const useReportForm = () => {
   const removeWitness = useCallback((index: number): void => {
     setWitnesses(prev => prev.filter((_, i) => i !== index));
   }, []);
-  const updateWitness = useCallback((index: number, field: keyof WitnessInfo, value: string | number | boolean): void => {
+  const updateWitness = useCallback((index: number, field: keyof WitnessInfo, value: string | number | boolean | undefined): void => {
     setWitnesses(prev => prev.map((w, i) => (i === index ? { ...w, [field]: value } : w)));
   }, []);
 
@@ -111,7 +111,7 @@ export const useReportForm = () => {
   const handleLocationSelect = useCallback((locationData: LocationData): void => {
     // Check if this is a "cleared" location (coordinates are 0,0)
     const isClearing = locationData.latitude === 0 && locationData.longitude === 0;
-    
+
     if (isClearing) {
       // User is starting to select a new location
       console.log('Location selection started - validation disabled');

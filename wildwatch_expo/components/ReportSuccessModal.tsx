@@ -89,7 +89,7 @@ export default function ReportSuccessModal({
 
           {/* Action Button */}
           <TouchableOpacity style={styles.actionButton} onPress={onClose}>
-            <Text style={styles.actionButtonText}>Return to Dashboard</Text>
+            <Text style={styles.actionButtonText}>Return to Home</Text>
           </TouchableOpacity>
         </View>
       </View>
