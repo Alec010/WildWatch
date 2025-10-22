@@ -5,11 +5,14 @@ import {
   ScrollView,
   RefreshControl,
   Dimensions,
+  TouchableOpacity,
 } from "react-native";
 import { Stack, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useLeaderboard } from "../../src/features/ratings/hooks/useLeaderboard";
 import type { LeaderboardEntry } from "../../src/features/ratings/models/RatingModels";
+import { RankBadge } from "../../src/features/ranking/components";
+import { StarRating, LeaderboardPodium, RecognitionInfoModal } from "../../src/features/ratings/components";
 import LottieView from "lottie-react-native";
 import confettiTransparent from "../../assets/anim/confetti on transparent background.json";
 import confettiLandscape from "../../assets/anim/Confetti.json";
@@ -67,20 +70,27 @@ function LeaderboardItem({
       : rank === 3
       ? "#CD7F32"
       : "#4A5568";
+
+  // Add border color for top 3
+  const borderColor = isTopThree ? color : 'transparent';
+
   return (
     <View
       className="bg-white rounded-xl mb-2"
       style={{
         shadowColor: "#000",
         shadowOffset: { width: 0, height: isTopThree ? 4 : 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: isTopThree ? 4 : 2,
-        elevation: isTopThree ? 4 : 2,
+        shadowOpacity: isTopThree ? 0.15 : 0.1,
+        shadowRadius: isTopThree ? 6 : 2,
+        elevation: isTopThree ? 6 : 2,
         borderRadius: 12,
         marginBottom: 8,
+        borderWidth: isTopThree ? 2 : 0,
+        borderColor: borderColor,
       }}
     >
       <View style={{ padding: 16, flexDirection: "row", alignItems: "center" }}>
+        {/* Rank Number */}
         <View
           style={{
             width: 40,
@@ -91,13 +101,68 @@ function LeaderboardItem({
         >
           <Text style={{ fontWeight: "700", fontSize: 18, color }}>{rank}</Text>
         </View>
+        
         <View style={{ width: 16 }} />
+        
+        {/* Name and Details */}
         <View style={{ flex: 1 }}>
-          <Text style={{ fontWeight: "600", fontSize: 16, color: "#2D3748" }}>
-            {entry.name}
-          </Text>
-          <Text style={{ fontSize: 14, color: "#718096" }}>
-            Score: {entry.points || 0}
+          {/* Name Row with Rank Badge */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <Text style={{ fontWeight: "600", fontSize: 16, color: "#2D3748" }}>
+              {entry.name}
+            </Text>
+            
+            {/* ✨ NEW: Rank Badge */}
+            {entry.rank && entry.rank !== 'NONE' && (
+              <RankBadge 
+                rank={entry.rank} 
+                goldRanking={entry.goldRanking}
+                size="xs"
+                showLabel={false}
+              />
+            )}
+          </View>
+          
+          {/* Stats Row with Stars */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
+            {/* ✨ NEW: Star Rating */}
+            {entry.averageRating && entry.averageRating > 0 && (
+              <>
+                <StarRating 
+                  rating={entry.averageRating} 
+                  size={12}
+                  showValue={true}
+                />
+                <Text style={{ color: '#9CA3AF', fontSize: 12 }}>•</Text>
+              </>
+            )}
+            
+            {/* Total Incidents */}
+            {entry.totalIncidents && entry.totalIncidents > 0 && (
+              <>
+                <Text style={{ fontSize: 12, color: "#718096" }}>
+                  {entry.totalIncidents} reports
+                </Text>
+                <Text style={{ color: '#9CA3AF', fontSize: 12 }}>•</Text>
+              </>
+            )}
+            
+            {/* Points */}
+            <Text style={{ fontSize: 12, color: "#718096" }}>
+              {entry.points || 0} pts
+            </Text>
+          </View>
+        </View>
+        
+        {/* Points Badge */}
+        <View style={{
+          backgroundColor: '#8B0000',
+          paddingHorizontal: 12,
+          paddingVertical: 6,
+          borderRadius: 16,
+        }}>
+          <Text style={{ color: 'white', fontWeight: '600', fontSize: 12 }}>
+            {entry.points || 0}
           </Text>
         </View>
       </View>
@@ -111,6 +176,7 @@ export default function LeaderboardScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedTab, setSelectedTab] = useState(0);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [showInfoModal, setShowInfoModal] = useState(false);
   const confettiRef = useRef<any>(null);
   const [dimensions, setDimensions] = useState(Dimensions.get("window"));
   const screenWidth = dimensions.width;
@@ -247,14 +313,42 @@ export default function LeaderboardScreen() {
           </View>
         </View>
         <View style={{ paddingHorizontal: 16, marginBottom: 24 }}>
-          {list.map((entry, index) => (
-            <LeaderboardItem
-              key={entry.id}
-              entry={entry}
-              rank={index + 1}
-              isTopThree={index < 3}
+          {/* Top 3 Podium Section */}
+          {list.length > 0 && (
+            <LeaderboardPodium 
+              entries={list.slice(0, 3)} 
+              type={selectedTab === 0 ? 'students' : 'offices'}
             />
-          ))}
+          )}
+
+          {/* Leaderboard Rankings Section (4-10) */}
+          <View style={{ marginTop: 16 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+              <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: '#8B0000', justifyContent: 'center', alignItems: 'center', marginRight: 8 }}>
+                <Ionicons name="people" size={14} color="white" />
+              </View>
+              <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#8B0000' }}>
+                Leaderboard Rankings
+              </Text>
+            </View>
+            
+            {/* Show actual entries if they exist */}
+            {list.length > 3 && list.slice(3, 10).map((entry, index) => (
+              <LeaderboardItem
+                key={entry.id}
+                entry={entry}
+                rank={index + 4}
+                isTopThree={false}
+              />
+            ))}
+            
+            {/* Always show placeholder cards for ranks 4-10 */}
+            {Array(7).fill(null).map((_, i) => (
+              <PlaceholderCard key={`placeholder-${i}`} rank={i + 4} />
+            ))}
+          </View>
+
+          {/* Empty State */}
           {list.length === 0 && !error ? (
             <View className="bg-white rounded-lg p-8 items-center">
               <Ionicons name="trophy-outline" size={32} color="#9CA3AF" />
@@ -263,8 +357,121 @@ export default function LeaderboardScreen() {
               </Text>
             </View>
           ) : null}
+
+          {/* How to Earn Recognition Section */}
+          <View style={{
+            backgroundColor: '#FDF2F2',
+            borderRadius: 12,
+            padding: 16,
+            marginTop: 20,
+            marginBottom: 20,
+          }}>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+              <View style={{
+                width: 48,
+                height: 48,
+                borderRadius: 24,
+                backgroundColor: '#8B0000',
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginRight: 16,
+              }}>
+                <Ionicons name="sparkles" size={24} color="white" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{
+                  fontSize: 18,
+                  fontWeight: '600',
+                  color: '#8B0000',
+                  marginBottom: 8,
+                }}>
+                  How to Earn Recognition
+                </Text>
+                <Text style={{
+                  fontSize: 14,
+                  color: '#4B5563',
+                  lineHeight: 20,
+                  marginBottom: 12,
+                }}>
+                  Points are awarded based on the quality and quantity of your contributions. Submit detailed reports,
+                  provide helpful information, and maintain high ratings to climb the leaderboard!
+                </Text>
+                <TouchableOpacity 
+                  onPress={() => setShowInfoModal(true)}
+                  style={{ flexDirection: 'row', alignItems: 'center' }}
+                >
+                  <Text style={{
+                    fontSize: 14,
+                    fontWeight: '500',
+                    color: '#8B0000',
+                  }}>
+                    Learn more about the recognition system
+                  </Text>
+                  <Ionicons name="chevron-down" size={16} color="#8B0000" style={{ marginLeft: 4 }} />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
         </View>
       </ScrollView>
+
+      {/* Recognition Info Modal */}
+      <RecognitionInfoModal 
+        visible={showInfoModal}
+        onClose={() => setShowInfoModal(false)}
+      />
+    </View>
+  );
+}
+
+// Placeholder card for empty leaderboard slots
+function PlaceholderCard({ rank }: { rank: number }) {
+  return (
+    <View style={{
+      backgroundColor: '#F9FAFB',
+      borderRadius: 12,
+      marginBottom: 8,
+      padding: 16,
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: '#E5E7EB',
+    }}>
+      {/* Rank Number Circle */}
+      <View style={{
+        width: 40,
+        height: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#E5E7EB',
+        borderRadius: 20,
+      }}>
+        <Text style={{ fontWeight: '700', fontSize: 16, color: '#6B7280' }}>#{rank}</Text>
+      </View>
+      
+      <View style={{ width: 16 }} />
+      
+      {/* Placeholder Content */}
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontWeight: '600', fontSize: 16, color: '#6B7280', fontStyle: 'italic' }}>
+          Your name could be here!
+        </Text>
+        <Text style={{ fontSize: 12, color: '#9CA3AF', marginTop: 4 }}>
+          Compete to claim this spot
+        </Text>
+      </View>
+      
+      {/* Placeholder Points */}
+      <View style={{
+        backgroundColor: '#E5E7EB',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 16,
+      }}>
+        <Text style={{ color: '#6B7280', fontWeight: '600', fontSize: 12 }}>
+          ? pts
+        </Text>
+      </View>
     </View>
   );
 }

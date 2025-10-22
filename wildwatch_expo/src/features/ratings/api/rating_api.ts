@@ -1,5 +1,6 @@
 import { api } from '../../../../lib/api';
 import type { LeaderboardEntry, RatingRequest, IncidentRatingResponse } from '../models/RatingModels';
+import type { GoldEliteEntry } from '../../ranking/models/RankingModels';
 
 export const ratingAPI = {
   getTopReporters: async (): Promise<LeaderboardEntry[]> => {
@@ -8,6 +9,14 @@ export const ratingAPI = {
   },
   getTopOffices: async (): Promise<LeaderboardEntry[]> => {
     const res = await api.get<LeaderboardEntry[]>('/ratings/leaderboard/offices/top');
+    return res.data;
+  },
+  getGoldEliteUsers: async (): Promise<GoldEliteEntry[]> => {
+    const res = await api.get<GoldEliteEntry[]>('/ranks/gold-elite/users');
+    return res.data;
+  },
+  getGoldEliteOffices: async (): Promise<GoldEliteEntry[]> => {
+    const res = await api.get<GoldEliteEntry[]>('/ranks/gold-elite/offices');
     return res.data;
   },
   getIncidentRating: async (incidentId: string): Promise<IncidentRatingResponse> => {

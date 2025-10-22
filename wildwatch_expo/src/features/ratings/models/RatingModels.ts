@@ -1,3 +1,5 @@
+import type { UserRank } from '../../ranking/models/RankingModels';
+
 export interface LeaderboardEntry {
   id: number;
   name: string;
@@ -6,6 +8,8 @@ export interface LeaderboardEntry {
   points?: number;
   activeIncidents?: number;
   resolvedIncidents?: number;
+  rank?: UserRank;           // User rank (BRONZE/SILVER/GOLD)
+  goldRanking?: number;      // Gold Elite ranking (1-10)
 }
 
 export interface RatingRequest {
