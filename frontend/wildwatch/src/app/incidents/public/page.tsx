@@ -53,6 +53,7 @@ interface Incident {
   submittedByEmail?: string
   submittedByPhone?: string
   upvoteCount: number
+  estimatedResolutionDate?: string
 }
 
 const inter = Inter({ subsets: ["latin"] })
@@ -185,6 +186,18 @@ export default function PublicIncidentsPage() {
     return date.toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
+      hour: "numeric",
+      minute: "numeric",
+      hour12: true,
+    })
+  }
+
+  const formatEstimatedDate = (dateString: string) => {
+    const date = new Date(dateString)
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
       hour: "numeric",
       minute: "numeric",
       hour12: true,
@@ -546,7 +559,7 @@ export default function PublicIncidentsPage() {
           {/* Enhanced Incidents Grid */}
           <div className="max-w-[85vw] mx-auto">
             {filteredIncidents.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 gap-6 md:gap-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 gap-6 md:gap-8 overflow-visible">
                 {filteredIncidents.map((incident, index) => {
                   const isOptimisticallyUpvoted =
                     pendingUpvote[incident.id] !== undefined
@@ -556,7 +569,7 @@ export default function PublicIncidentsPage() {
                   return (
                     <article
                       key={incident.id}
-                      className="group relative bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200/50 hover:border-[#D4AF37]/40 transform hover:-translate-y-2 flex flex-col"
+                      className="group relative bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-visible border border-slate-200/50 hover:border-[#D4AF37]/40 transform hover:-translate-y-2 flex flex-col"
                       style={{
                         animationName: "fadeInUp",
                         animationDuration: "0.8s",
@@ -583,11 +596,24 @@ export default function PublicIncidentsPage() {
                               >
                                 {getStatusIcon(incident.status)}
                               </div>
-                              <span
-                                className={`px-4 py-1.5 rounded-full text-xs font-bold border ${getStatusBadgeColor(incident.status)} shadow-sm`}
-                              >
-                                {incident.status}
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className={`px-4 py-1.5 rounded-full text-xs font-bold border ${getStatusBadgeColor(incident.status)} shadow-sm`}
+                                >
+                                  {incident.status}
+                                </span>
+                                {incident.estimatedResolutionDate && (
+                                  <div className="relative group">
+                                    <Calendar className="h-4 w-4 text-[#800000] cursor-help transition-all duration-200 group-hover:scale-110 group-hover:text-[#A00000]" />
+                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-3 px-4 py-3 bg-[#8B0000] text-white text-sm rounded-lg shadow-lg opacity-0 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300 whitespace-nowrap z-[9999] pointer-events-none overflow-visible group-hover:animate-in group-hover:slide-in-from-bottom-2 group-hover:fade-in-0">
+                                      <div className="font-medium">Est. Resolution</div>
+                                      <div className="text-xs text-gray-100 mt-1">
+                                        {formatEstimatedDate(incident.estimatedResolutionDate)}
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                             <h2 className="text-xl font-bold text-slate-800 group-hover:text-[#800000] transition-colors duration-300 line-clamp-2 leading-tight">
                               {incident.incidentType}

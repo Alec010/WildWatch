@@ -29,6 +29,10 @@ export const incidentAPI = {
     const response = await api.get<IncidentResponseDto>(`/incidents/track/${encodeURIComponent(trackingNumber)}`);
     return response.data;
   },
+  getUpvoteStatus: async (incidentId: string): Promise<boolean> => {
+    const response = await api.get<boolean>(`/incidents/${incidentId}/upvote-status`);
+    return response.data;
+  },
 };
 
 

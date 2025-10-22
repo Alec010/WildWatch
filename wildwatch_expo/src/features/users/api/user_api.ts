@@ -24,7 +24,7 @@ export const userAPI = {
   },
 
   getMe: async (): Promise<any> => {
-    const response = await api.get('/users/me');
+    const response = await api.get('/auth/profile');
     return response.data;
   },
 

@@ -40,6 +40,7 @@ interface Incident {
   dateOfIncident: string
   status: string
   priorityLevel?: "HIGH" | "MEDIUM" | "LOW" | null
+  estimatedResolutionDate?: string
 }
 
 export default function CaseTrackingPage() {
@@ -125,6 +126,18 @@ export default function CaseTrackingPage() {
         minute: "2-digit",
       })}`
     }
+  }
+
+  const formatEstimatedDate = (dateString: string) => {
+    const date = new Date(dateString)
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "numeric",
+      hour12: true,
+    })
   }
 
   const getActivityIcon = (activityType: string) => {
@@ -383,14 +396,14 @@ export default function CaseTrackingPage() {
                   </Button>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 gap-4">
+                <div className="grid grid-cols-1 gap-4 overflow-visible">
                   {filteredCases.map((item, index) => (
                     <motion.div
                       key={item.id}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.3, delay: index * 0.05 }}
-                      className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 border border-gray-100 overflow-hidden group"
+                      className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 border border-gray-100 overflow-visible group"
                     >
                       <div className="flex flex-col md:flex-row">
                         <div
@@ -413,17 +426,30 @@ export default function CaseTrackingPage() {
                                       ? item.caseNumber
                                       : formatCaseNumber(index)}
                                 </h3>
-                                <span
-                                  className={`px-2 py-0.5 text-xs rounded-full ${
-                                    item.status === "Pending"
-                                      ? "bg-yellow-100 text-yellow-800"
-                                      : item.status === "In Progress"
-                                        ? "bg-blue-100 text-blue-800"
-                                        : "bg-green-100 text-green-800"
-                                  }`}
-                                >
-                                  {item.status}
-                                </span>
+                                <div className="flex items-center gap-2">
+                                  <span
+                                    className={`px-2 py-0.5 text-xs rounded-full ${
+                                      item.status === "Pending"
+                                        ? "bg-yellow-100 text-yellow-800"
+                                        : item.status === "In Progress"
+                                          ? "bg-blue-100 text-blue-800"
+                                          : "bg-green-100 text-green-800"
+                                    }`}
+                                  >
+                                    {item.status}
+                                  </span>
+                                  {item.estimatedResolutionDate && (
+                                    <div className="relative group">
+                                      <Calendar className="h-4 w-4 text-[#800000] cursor-help transition-all duration-200 group-hover:scale-110 group-hover:text-[#A00000]" />
+                                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-3 px-4 py-3 bg-[#8B0000] text-white text-sm rounded-lg shadow-lg opacity-0 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300 whitespace-nowrap z-[9999] pointer-events-none overflow-visible group-hover:animate-in group-hover:slide-in-from-bottom-2 group-hover:fade-in-0">
+                                        <div className="font-medium">Est. Resolution</div>
+                                        <div className="text-xs text-gray-100 mt-1">
+                                          {formatEstimatedDate(item.estimatedResolutionDate)}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                               <h4 className="text-gray-800 font-medium mt-1">{item.incidentType}</h4>
                             </div>

@@ -21,6 +21,7 @@ import {
   ChevronRight,
   BarChart2,
   RefreshCw,
+  Calendar,
 } from "lucide-react"
 import { Sidebar } from "@/components/Sidebar"
 import { Inter } from "next/font/google"
@@ -46,6 +47,8 @@ interface Incident {
   isAnonymous: boolean
   submittedBy: string
   upvoteCount?: number
+  estimatedResolutionDate?: string
+  priorityLevel?: string
 }
 
 export default function DashboardPage() {
@@ -93,6 +96,12 @@ export default function DashboardPage() {
         }
 
         const myIncidentsData = await myResponse.json()
+        console.log('My Incidents Data:', myIncidentsData) // Debug log
+        // Check if estimatedResolutionDate is present in any incident
+        myIncidentsData.forEach((incident: any, index: number) => {
+          console.log(`Incident ${index} estimatedResolutionDate:`, incident.estimatedResolutionDate, 'Type:', typeof incident.estimatedResolutionDate)
+          console.log(`Full incident ${index}:`, incident)
+        })
         setMyIncidents(myIncidentsData)
 
         // Calculate statistics from user's incidents
@@ -137,6 +146,33 @@ export default function DashboardPage() {
       minute: "numeric",
       hour12: true,
     })
+  }
+
+  const formatEstimatedDate = (dateString: string) => {
+    const date = new Date(dateString)
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "numeric",
+      hour12: true,
+    })
+  }
+
+  const getEstimatedResolution = (submittedAt: string, priority: string, extendedDate?: string) => {
+    // If there's an extended date from the backend, use that
+    if (extendedDate) {
+      return new Date(extendedDate)
+    }
+    
+    // Otherwise, calculate based on priority
+    const base = new Date(submittedAt)
+    let days = 2
+    if (priority === "MEDIUM") days = 3
+    if (priority === "HIGH") days = 5
+    base.setDate(base.getDate() + days)
+    return base
   }
 
   const handleUpvote = async (incidentId: string, wasUpvoted?: boolean) => {
@@ -493,7 +529,7 @@ export default function DashboardPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3 }}
             >
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 overflow-visible">
                 {(searchQuery ? filteredMyIncidents : myIncidents).length > 0 ? (
                   (searchQuery ? filteredMyIncidents : myIncidents).slice(0, 3).map((incident, index) => (
                     <motion.div
@@ -502,14 +538,34 @@ export default function DashboardPage() {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.3, delay: index * 0.1 }}
                     >
-                      <Card className="bg-white border border-gray-100 rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-200 h-[220px]">
+                      <Card className="bg-white border border-gray-100 rounded-xl shadow-sm overflow-visible hover:shadow-md transition-shadow duration-200 h-[220px]">
                         <div className="p-5 h-full flex flex-col">
                           <div className="flex justify-between items-start mb-3">
-                            <div
-                              className={`px-2.5 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${getStatusColor(incident.status).bg} ${getStatusColor(incident.status).text}`}
-                            >
-                              {getStatusColor(incident.status).icon}
-                              {incident.status}
+                            <div className="flex items-center gap-2">
+                              <div
+                                className={`px-2.5 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${getStatusColor(incident.status).bg} ${getStatusColor(incident.status).text}`}
+                              >
+                                {getStatusColor(incident.status).icon}
+                                {incident.status}
+                              </div>
+                              {(() => {
+                                const estimatedResolution = getEstimatedResolution(
+                                  incident.submittedAt, 
+                                  incident.priorityLevel || "LOW", 
+                                  incident.estimatedResolutionDate
+                                )
+                                return (
+                                  <div className="relative group">
+                                    <Calendar className="h-3.5 w-3.5 text-[#800000] cursor-help transition-all duration-200 group-hover:scale-110 group-hover:text-[#A00000]" />
+                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-3 px-4 py-3 bg-[#8B0000] text-white text-sm rounded-lg shadow-lg opacity-0 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300 whitespace-nowrap z-[9999] pointer-events-none overflow-visible group-hover:animate-in group-hover:slide-in-from-bottom-2 group-hover:fade-in-0">
+                                      <div className="font-medium">Est. Resolution</div>
+                                      <div className="text-xs text-gray-100 mt-1">
+                                        {formatEstimatedDate(estimatedResolution.toISOString())}
+                                      </div>
+                                    </div>
+                                  </div>
+                                )
+                              })()}
                             </div>
                             <div className="flex items-center text-xs text-gray-500">
                               <Clock className="h-3.5 w-3.5 mr-1" />

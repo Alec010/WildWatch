@@ -24,6 +24,7 @@ export interface IncidentDetailsDto {
   priorityLevel: string;
   submittedAt: string;
   finishedDate?: string;
+  estimatedResolutionDate?: string;
   assignedOffice?: string;
   officeAdminName?: string;
   preferAnonymous: boolean;
@@ -33,6 +34,7 @@ export interface IncidentDetailsDto {
   submittedByEmail: string;
   submittedByFullName?: string;
   submittedByPhone?: string;
+  resolutionNotes?: string;
   upvoteCount: number;
 }
 
