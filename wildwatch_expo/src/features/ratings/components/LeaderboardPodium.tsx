@@ -195,7 +195,7 @@ export const LeaderboardPodium: React.FC<LeaderboardPodiumProps> = ({
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerIcon}>
-          <Ionicons name="trophy" size={20} color="#8B0000" />
+          <Ionicons name="ribbon" size={20} color="white" />
         </View>
         <Text style={styles.headerTitle}>Top 3 Champions</Text>
       </View>
