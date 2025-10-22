@@ -8,7 +8,7 @@ COPY mvnw pom.xml ./
 
 # Download dependencies (this step is cached unless pom.xml changes)
 RUN chmod +x mvnw
-RUN ./mvnw dependency:go-offline
+RUN ./mvnw dependency:go-offline -s .mvn/settings.xml
 
 # Copy the rest of the application code
 COPY . .
@@ -17,7 +17,7 @@ COPY . .
 RUN chmod +x mvnw
 
 # Build the application
-RUN ./mvnw clean package -DskipTests
+RUN ./mvnw clean package -DskipTests -s .mvn/settings.xml
 
 EXPOSE 8080
 
