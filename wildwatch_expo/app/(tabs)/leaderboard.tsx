@@ -1,10 +1,18 @@
-import React, { useState } from "react";
-import { View, Text, ScrollView, RefreshControl } from "react-native";
-import TopSpacing from "../../components/TopSpacing";
-import { Stack } from "expo-router";
+import React, { useState, useEffect, useRef } from "react";
+import {
+  View,
+  Text,
+  ScrollView,
+  RefreshControl,
+  Dimensions,
+} from "react-native";
+import { Stack, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useLeaderboard } from "../../src/features/ratings/hooks/useLeaderboard";
 import type { LeaderboardEntry } from "../../src/features/ratings/models/RatingModels";
+import LottieView from "lottie-react-native";
+import confettiTransparent from "../../assets/anim/confetti on transparent background.json";
+import confettiLandscape from "../../assets/anim/Confetti.json";
 
 function CustomTab({
   text,
@@ -102,11 +110,43 @@ export default function LeaderboardScreen() {
     useLeaderboard();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedTab, setSelectedTab] = useState(0);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const confettiRef = useRef<any>(null);
+  const [dimensions, setDimensions] = useState(Dimensions.get("window"));
+  const screenWidth = dimensions.width;
+  const screenHeight = dimensions.height;
+  const isLandscape = screenWidth > screenHeight;
+  const isLargeDevice = screenWidth > 670;
+
+  useEffect(() => {
+    const subscription = Dimensions.addEventListener("change", ({ window }) => {
+      setDimensions(window);
+      if (showConfetti) {
+        setShowConfetti(false);
+        setTimeout(() => setShowConfetti(true), 100);
+      }
+    });
+    return () => subscription?.remove();
+  }, [showConfetti]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      if (!isLoading && (topReporters.length > 0 || topOffices.length > 0)) {
+        setShowConfetti(false);
+        const timer = setTimeout(() => {
+          setShowConfetti(true);
+        }, 300);
+        return () => clearTimeout(timer);
+      }
+    }, [isLoading, topReporters, topOffices])
+  );
 
   const onRefresh = async () => {
     setIsRefreshing(true);
     await refresh();
     setIsRefreshing(false);
+    setShowConfetti(false);
+    setTimeout(() => setShowConfetti(true), 300);
   };
 
   if (isLoading) {
@@ -119,10 +159,40 @@ export default function LeaderboardScreen() {
   }
 
   const list = selectedTab === 0 ? topReporters : topOffices;
+  const confettiAnimation =
+    isLargeDevice && isLandscape ? confettiLandscape : confettiTransparent;
 
   return (
     <View className="flex-1" style={{ backgroundColor: "#F8F9FA" }}>
       <Stack.Screen options={{ title: "Leaderboard" }} />
+
+      {showConfetti && (
+        <View
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: screenWidth,
+            height: screenHeight,
+            zIndex: 1000,
+            pointerEvents: "none",
+          }}
+        >
+          <LottieView
+            ref={confettiRef}
+            source={confettiAnimation}
+            autoPlay
+            loop={false}
+            resizeMode="cover"
+            style={{
+              width: "100%",
+              height: "100%",
+            }}
+          />
+        </View>
+      )}
 
       <View
         style={{
