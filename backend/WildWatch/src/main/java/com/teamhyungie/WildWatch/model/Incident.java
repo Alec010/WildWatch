@@ -116,6 +116,9 @@ public class Incident {
     @Column(name = "prefer_anonymous")
     private Boolean preferAnonymous;
 
+    @Column(name = "is_private")
+    private Boolean isPrivate;
+
     @Column(name = "upvote_count")
     private Integer upvoteCount = 0;
 

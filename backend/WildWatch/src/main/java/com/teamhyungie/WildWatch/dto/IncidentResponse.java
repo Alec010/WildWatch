@@ -54,6 +54,8 @@ public class IncidentResponse {
     private LocalDateTime estimatedResolutionDate;
     private String resolutionExtendedBy;
     private LocalDateTime resolutionExtendedAt;
+    private Boolean preferAnonymous;
+    private Boolean isPrivate;
     
     /**
      * Constructor for optimized dashboard queries
@@ -226,6 +228,8 @@ public class IncidentResponse {
         response.setResolutionExtendedBy(incident.getResolutionExtendedBy() != null ? 
             incident.getResolutionExtendedBy().getFirstName() + " " + incident.getResolutionExtendedBy().getLastName() : null);
         response.setResolutionExtendedAt(incident.getResolutionExtendedAt());
+        response.setPreferAnonymous(incident.getPreferAnonymous());
+        response.setIsPrivate(incident.getIsPrivate());
 
         // Map evidence
         if (incident.getEvidence() != null) {

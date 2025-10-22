@@ -7,7 +7,9 @@ import com.teamhyungie.WildWatch.dto.IncidentUpdateRequest;
 import com.teamhyungie.WildWatch.dto.IncidentUpdateResponse;
 import com.teamhyungie.WildWatch.dto.IncidentTransferRequest;
 import com.teamhyungie.WildWatch.dto.BulkIncidentUpdateRequest;
+import com.teamhyungie.WildWatch.dto.FollowUpResponse;
 import com.teamhyungie.WildWatch.service.IncidentService;
+import com.teamhyungie.WildWatch.service.FollowUpService;
 import com.teamhyungie.WildWatch.service.IncidentService.BulkResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -35,6 +37,7 @@ import java.util.List;
 public class IncidentController {
 
     private final IncidentService incidentService;
+    private final FollowUpService followUpService;
     private final ObjectMapper objectMapper;
 
     @Operation(summary = "Create a new incident", description = "Report a new incident with optional file attachments")
@@ -189,6 +192,27 @@ public class IncidentController {
             @AuthenticationPrincipal UserDetails userDetails) {
         BulkResult result = incidentService.bulkDismiss(userDetails.getUsername(), request);
         return ResponseEntity.ok(result);
+    }
+    
+    @Operation(summary = "Send follow-up for incident", description = "Send a follow-up notification to the office admin handling this incident (limited to once per day)")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Follow-up sent successfully"),
+        @ApiResponse(responseCode = "400", description = "Cannot send follow-up (e.g., already sent within 24 hours)"),
+        @ApiResponse(responseCode = "403", description = "Not authorized to send follow-up for this incident"),
+        @ApiResponse(responseCode = "404", description = "Incident not found")
+    })
+    @PostMapping("/{id}/follow-up")
+    public ResponseEntity<FollowUpResponse> sendFollowUp(
+            @PathVariable String id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        try {
+            FollowUpResponse response = followUpService.createFollowUp(id, userDetails.getUsername());
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(
+                FollowUpResponse.error(e.getMessage(), null)
+            );
+        }
     }
 
     public static class ExtendResolutionRequest {

@@ -137,6 +137,7 @@ public class IncidentService {
         incident.setAssignedOffice(request.getAssignedOffice());
         incident.setSubmittedBy(user);
         incident.setPreferAnonymous(request.getPreferAnonymous());
+        incident.setIsPrivate(request.getIsPrivate());
         incident.setTags(tags);
         
         // Handle geolocation data
@@ -296,11 +297,30 @@ public class IncidentService {
     }
 
     /**
+     * Map incident to response for public views - handles anonymity
+     */
+    private IncidentResponse mapToPublicIncidentResponse(Incident incident) {
+        IncidentResponse response = mapToIncidentResponseWithExtras(incident);
+        
+        // If incident is anonymous, hide reporter details
+        if (incident.getIsAnonymous() != null && incident.getIsAnonymous()) {
+            response.setSubmittedBy("Anonymous Reporter");
+            response.setSubmittedByFullName("Anonymous Reporter");
+            response.setSubmittedByIdNumber("***");
+            response.setSubmittedByEmail("***");
+            response.setSubmittedByPhone("***");
+        }
+        
+        return response;
+    }
+
+    /**
      * Get user incidents for dashboard view - optimized version
      * Uses a specialized query that fetches only necessary data in a single query
      */
     public List<IncidentResponse> getUserIncidents(String userEmail) {
         User user = userService.getUserByEmail(userEmail);
+        // Users can see their own reports even if private
         return incidentRepository.findUserIncidentHistory(user);
     }
     
@@ -309,14 +329,22 @@ public class IncidentService {
      */
     public List<IncidentResponse> getActiveCases(String userEmail) {
         User user = userService.getUserByEmail(userEmail);
+        // Users can see their own active cases even if private
         return incidentRepository.findActiveCasesByUser(user);
     }
 
     public List<IncidentResponse> getPublicIncidents() {
         return incidentRepository.findAll()
             .stream()
-            .filter(incident -> incident.getIsAnonymous() == null || !incident.getIsAnonymous())
-            .map(this::mapToIncidentResponseWithExtras)
+            .filter(incident -> {
+                // Filter out private incidents from public view
+                if (incident.getIsPrivate() != null && incident.getIsPrivate()) {
+                    return false;
+                }
+                // Keep all non-private incidents (including anonymous ones)
+                return true;
+            })
+            .map(this::mapToPublicIncidentResponse)
             .collect(Collectors.toList());
     }
 
@@ -354,8 +382,18 @@ public class IncidentService {
             .orElseThrow(() -> new RuntimeException("Incident not found"));
         boolean isOfficeAdmin = officeAdminService.findByUserEmail(userEmail).isPresent();
         boolean isSubmitter = incident.getSubmittedBy().getEmail().equals(userEmail);
-        if (!isOfficeAdmin && !isSubmitter) {
-            throw new RuntimeException("Not authorized to view this incident");
+        
+        // Check if user is a witness for this incident
+        boolean isWitness = witnessRepository.findByIncident(incident).stream()
+            .anyMatch(witness -> witness.getUser() != null && witness.getUser().getEmail().equals(userEmail));
+        
+        // Check privacy settings
+        if (!isOfficeAdmin && !isSubmitter && !isWitness) {
+            // If incident is private, only submitter, office admins, and witnesses can view
+            if (incident.getIsPrivate() != null && incident.getIsPrivate()) {
+                throw new RuntimeException("Not authorized to view this private incident");
+            }
+            // For public incidents, allow viewing but may need to anonymize
         }
         // Get witnesses for this incident
         List<Witness> witnesses = witnessRepository.findByIncident(incident);
@@ -363,8 +401,15 @@ public class IncidentService {
         // Get evidence for this incident
         List<Evidence> evidence = evidenceRepository.findByIncident(incident);
         
-        // Create the response
-        IncidentResponse response = mapToIncidentResponseWithExtras(incident);
+        // Create the response - handle anonymity based on viewer
+        IncidentResponse response;
+        if (isOfficeAdmin || isSubmitter || isWitness) {
+            // Office admins, submitters, and witnesses see full details
+            response = mapToIncidentResponseWithExtras(incident);
+        } else {
+            // Public viewers see anonymized version if incident is anonymous
+            response = mapToPublicIncidentResponse(incident);
+        }
         
         // Add witnesses and evidence to response
         response.setWitnesses(witnesses.stream()
@@ -420,6 +465,15 @@ public class IncidentService {
             incident.setPriorityLevel(request.getPriorityLevel());
         }
         incident.setVerified(request.isVerified());
+        
+        // Update privacy and anonymity fields
+        if (request.getPreferAnonymous() != null) {
+            incident.setPreferAnonymous(request.getPreferAnonymous());
+        }
+        if (request.getIsPrivate() != null) {
+            incident.setIsPrivate(request.getIsPrivate());
+        }
+        
         // If resolution notes provided and status is resolved/closed, store them on the incident
         if (request.getResolutionNotes() != null && request.getStatus() != null &&
             ("resolved".equalsIgnoreCase(request.getStatus()) || "closed".equalsIgnoreCase(request.getStatus()))) {
@@ -505,6 +559,29 @@ public class IncidentService {
             verificationUpdate.setUpdatedByName(request.getUpdatedBy());
             
             incidentUpdateRepository.save(verificationUpdate);
+
+            // Notify tagged witnesses (registered users) if the incident is not private
+            try {
+                Boolean isPrivate = incident.getIsPrivate();
+                if (isPrivate == null || !isPrivate) {
+                    List<Witness> taggedWitnesses = witnessRepository.findByIncident(updatedIncident);
+                    for (Witness w : taggedWitnesses) {
+                        if (w.getUser() != null) {
+                            // Avoid notifying the original reporter twice if they were also tagged as witness
+                            if (!w.getUser().getId().equals(incident.getSubmittedBy().getId())) {
+                                activityLogService.logActivity(
+                                    "WITNESS_TAGGED",
+                                    "Incident #" + incident.getTrackingNumber() + " you were tagged as a witness on has been verified by " + officeName,
+                                    updatedIncident,
+                                    w.getUser()
+                                );
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.error("Failed to notify tagged witnesses for incident {}: {}", incident.getId(), e.getMessage());
+            }
         }
 
         // Create an incident update if a message is provided
@@ -596,7 +673,11 @@ public class IncidentService {
         boolean isOfficeAdmin = officeAdminService.findByUserEmail(userEmail).isPresent();
         boolean isSubmitter = incident.getSubmittedBy().getEmail().equals(userEmail);
         
-        if (!isOfficeAdmin && !isSubmitter) {
+        // Check if user is a witness for this incident
+        boolean isWitness = witnessRepository.findByIncident(incident).stream()
+            .anyMatch(witness -> witness.getUser() != null && witness.getUser().getEmail().equals(userEmail));
+        
+        if (!isOfficeAdmin && !isSubmitter && !isWitness) {
             throw new RuntimeException("Not authorized to view this incident");
         }
 

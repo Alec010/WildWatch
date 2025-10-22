@@ -25,6 +25,7 @@ import {
 } from "lucide-react"
 import { API_BASE_URL } from "@/utils/api"
 import { formatLocationDisplay } from "@/utils/locationFormatter"
+import { filterIncidentsByPrivacy, getReporterDisplayName } from "@/utils/anonymization"
 import { Inter } from "next/font/google"
 import { Client } from "@stomp/stompjs"
 // @ts-ignore
@@ -43,9 +44,14 @@ interface Incident {
   status: string
   description: string
   submittedAt: string
-  isAnonymous: boolean
+  isAnonymous?: boolean
+  isPrivate?: boolean
+  preferAnonymous?: boolean
   submittedBy: string
   submittedByFullName?: string
+  submittedByIdNumber?: string
+  submittedByEmail?: string
+  submittedByPhone?: string
   upvoteCount: number
 }
 
@@ -100,10 +106,12 @@ export default function PublicIncidentsPage() {
         }
 
         const data = await response.json()
-        setIncidents(data)
+        // Filter incidents based on privacy settings (public view)
+        const filteredData = filterIncidentsByPrivacy(data, false, false)
+        setIncidents(filteredData)
 
         // Fetch upvote status for each incident
-        const upvotePromises = data.map((incident: Incident) =>
+        const upvotePromises = filteredData.map((incident: Incident) =>
           fetch(`${API_BASE_URL}/api/incidents/${incident.id}/upvote-status`, {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -114,7 +122,7 @@ export default function PublicIncidentsPage() {
 
         const upvoteResults = await Promise.all(upvotePromises)
         const upvoted = new Set<string>()
-        data.forEach((incident: Incident, index: number) => {
+        filteredData.forEach((incident: Incident, index: number) => {
           if (upvoteResults[index] === true) {
             upvoted.add(incident.id)
           }
@@ -133,9 +141,6 @@ export default function PublicIncidentsPage() {
 
   useEffect(() => {
     const filtered = incidents.filter((incident) => {
-      const notPendingOrExplicitlyPublic = incident.status.toLowerCase() !== "pending" || incident.isAnonymous === false
-      if (!notPendingOrExplicitlyPublic) return false
-
       const matchesSearch =
         searchQuery === "" ||
         incident.incidentType.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -358,8 +363,10 @@ export default function PublicIncidentsPage() {
       })
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
       const data = await response.json()
-      data.sort((a: Incident, b: Incident) => (b.upvoteCount || 0) - (a.upvoteCount || 0))
-      setIncidents(data)
+      // Filter incidents based on privacy settings (public view)
+      const filteredData = filterIncidentsByPrivacy(data, false, false)
+      filteredData.sort((a: Incident, b: Incident) => (b.upvoteCount || 0) - (a.upvoteCount || 0))
+      setIncidents(filteredData)
     } catch (error) {
       setError(error instanceof Error ? error.message : "Failed to refresh incidents")
     } finally {
@@ -636,10 +643,7 @@ export default function PublicIncidentsPage() {
                           <div className="flex items-center gap-2 text-xs text-slate-500">
                             <User className="h-3 w-3" />
                             <span className="font-medium">
-                              {incident.isAnonymous 
-                                ? "Anonymous" 
-                                : (incident.submittedByFullName || "Verified User")
-                              }
+                              {getReporterDisplayName(incident, false, false)}
                             </span>
                           </div>
                           <div className="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 px-2 py-1 rounded-md">

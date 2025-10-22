@@ -27,6 +27,7 @@ import { Button } from "@/components/ui/button"
 import { Inter } from "next/font/google"
 import { API_BASE_URL } from "@/utils/api"
 import { motion } from "framer-motion"
+import { filterIncidentsByPrivacy } from "@/utils/anonymization"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -82,7 +83,10 @@ export default function CaseTrackingPage() {
 
         const incidentsData = await incidentsResponse.json()
         // Only show PENDING and IN PROGRESS status (case-insensitive, with space)
-        setIncidents(incidentsData.filter((i: Incident) => ["pending", "in progress"].includes(i.status.toLowerCase())))
+        const statusFiltered = incidentsData.filter((i: Incident) => ["pending", "in progress"].includes(i.status.toLowerCase()))
+        // Users can see their own reports even if private (isViewerSubmitter = true)
+        const anonymizedData = filterIncidentsByPrivacy(statusFiltered, false, true)
+        setIncidents(anonymizedData)
       } catch (error: any) {
         console.error("Error fetching data:", error)
         setError(error.message || "Failed to load data.")

@@ -44,6 +44,8 @@ public class IncidentRequest {
 
     private Boolean preferAnonymous;
 
+    private Boolean isPrivate;
+
     private List<String> tags;
 
     @Data

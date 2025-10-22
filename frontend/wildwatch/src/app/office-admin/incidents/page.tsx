@@ -21,6 +21,7 @@ import {
 import { API_BASE_URL } from "@/utils/api"
 import { formatLocationCompact } from "@/utils/locationFormatter"
 import { api } from "@/utils/apiClient"
+import { filterIncidentsByPrivacy } from "@/utils/anonymization"
 import { motion } from "framer-motion"
 import { useSidebar } from "@/contexts/SidebarContext"
 import { Badge } from "@/components/ui/badge"
@@ -99,9 +100,12 @@ export default function IncidentManagementPage() {
       }
 
       const data = await response.json()
+      
+      // Office admins see all incidents with full details (isViewerAdmin = true)
+      const anonymizedData = filterIncidentsByPrivacy(data, true, false)
 
       // Pending cases: status is pending and lastTransferredTo is not set or empty string
-      const filteredData = data.filter(
+      const filteredData = anonymizedData.filter(
         (incident: Incident) =>
           incident.status &&
           incident.status.toLowerCase() === "pending" &&
@@ -109,7 +113,7 @@ export default function IncidentManagementPage() {
       )
 
       // Transferred cases: lastTransferredTo matches current office and transferredFrom is set and not equal to current office
-      const transferredData = data.filter(
+      const transferredData = anonymizedData.filter(
         (incident: Incident) =>
           incident.lastTransferredTo &&
           officeCode &&

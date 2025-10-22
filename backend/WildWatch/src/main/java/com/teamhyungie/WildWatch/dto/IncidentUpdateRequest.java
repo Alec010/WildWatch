@@ -12,4 +12,6 @@ public class IncidentUpdateRequest {
     private PriorityLevel priorityLevel;
     private boolean isVerified;
     private String resolutionNotes;
+    private Boolean preferAnonymous;
+    private Boolean isPrivate;
 } 

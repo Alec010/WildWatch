@@ -178,6 +178,170 @@ export const api = {
 
     return response.json();
   },
+  
+  // Bulletin upvote methods
+  toggleBulletinUpvote: async (bulletinId: string) => {
+    const response = await fetch(`${getBackendUrl()}/api/office-bulletins/${bulletinId}/upvote`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${await tokenService.getValidToken()}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to toggle upvote');
+    }
+
+    return response.json();
+  },
+  
+  getBulletinUpvoteStatus: async (bulletinId: string) => {
+    const response = await fetch(`${getBackendUrl()}/api/office-bulletins/${bulletinId}/upvote-status`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${await tokenService.getValidToken()}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to get upvote status');
+    }
+
+    return response.json();
+  },
+  
+  getBulletinUpvoteCount: async (bulletinId: string) => {
+    const response = await fetch(`${getBackendUrl()}/api/office-bulletins/${bulletinId}/upvote-count`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${await tokenService.getValidToken()}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to get upvote count');
+    }
+
+    return response.json();
+  },
+  
+  // Notification methods
+  getNotifications: async () => {
+    const response = await fetch(`${getBackendUrl()}/api/notifications`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${await tokenService.getValidToken()}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to fetch notifications');
+    }
+
+    return response.json();
+  },
+  
+  getUnreadNotificationCount: async () => {
+    const response = await fetch(`${getBackendUrl()}/api/notifications/count`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${await tokenService.getValidToken()}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to get notification count');
+    }
+
+    return response.json();
+  },
+  
+  markNotificationAsRead: async (notificationId: string) => {
+    const response = await fetch(`${getBackendUrl()}/api/notifications/${notificationId}/read`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${await tokenService.getValidToken()}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to mark notification as read');
+    }
+
+    return true;
+  },
+  
+  markAllNotificationsAsRead: async () => {
+    const response = await fetch(`${getBackendUrl()}/api/notifications/read-all`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${await tokenService.getValidToken()}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to mark all notifications as read');
+    }
+
+    return true;
+  },
+  
+  // Activity Log methods (existing notification system)
+  getActivityLogs: async (page = 0, size = 10) => {
+    const response = await fetch(`${getBackendUrl()}/api/activity-logs?page=${page}&size=${size}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${await tokenService.getValidToken()}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to fetch activity logs');
+    }
+
+    const data = await response.json();
+    return data.content || data; // Return the content array or the data itself
+  },
+  
+  markActivityLogAsRead: async (activityLogId: string) => {
+    const response = await fetch(`${getBackendUrl()}/api/activity-logs/${activityLogId}/read`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${await tokenService.getValidToken()}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to mark activity log as read');
+    }
+
+    return true;
+  },
+  
+  markAllActivityLogsAsRead: async () => {
+    const response = await fetch(`${getBackendUrl()}/api/activity-logs/read-all`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${await tokenService.getValidToken()}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to mark all activity logs as read');
+    }
+
+    return true;
+  },
 };
 
 export default apiClient;

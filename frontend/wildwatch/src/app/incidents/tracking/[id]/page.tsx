@@ -28,11 +28,13 @@ import {
   Users,
   MessageSquare,
   XCircle,
+  Bell,
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { API_BASE_URL } from "@/utils/api"
 import { formatLocationDisplay } from "@/utils/locationFormatter"
+import { getReporterDisplayName, shouldShowReporterDetails } from "@/utils/anonymization"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -43,10 +45,10 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { RatingModal } from "@/components/RatingModal"
-import { toast } from "sonner"
-import { Toaster } from "sonner"
+import { Toaster, toast } from "sonner"
 import { motion } from "framer-motion"
 import { Inter } from "next/font/google"
+import { FollowUpDialog } from "@/components/ui/follow-up-dialog"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -82,6 +84,9 @@ interface IncidentDetails {
   submittedByEmail?: string
   submittedByPhone?: string
   assignedOffice?: string
+  isAnonymous?: boolean
+  isPrivate?: boolean
+  preferAnonymous?: boolean
 }
 
 interface IncidentUpdate {
@@ -155,6 +160,9 @@ export default function CaseDetailsPage() {
   const [incidentRating, setIncidentRating] = useState<any>(null)
   const [userEmail, setUserEmail] = useState<string | null>(null)
   const [showRatingSuccessModal, setShowRatingSuccessModal] = useState(false)
+  const [showFollowUpDialog, setShowFollowUpDialog] = useState(false)
+  const [isFollowUpLoading, setIsFollowUpLoading] = useState(false)
+  const [followUpCooldown, setFollowUpCooldown] = useState<Date | null>(null)
   const [keepSidebar, setKeepSidebar] = useState<boolean>(() => {
     try {
       return sessionStorage.getItem('ww_keep_sidebar') === '1'
@@ -180,6 +188,57 @@ export default function CaseDetailsPage() {
       : statusOrder.findIndex((s) => normalizedStatus.includes(s.toLowerCase()))
 
   const isOfficeAdmin = userRole === "OFFICE_ADMIN"
+  const isSubmitter = incident && userEmail && incident.submittedByEmail === userEmail
+  
+  // Function to handle sending a follow-up request
+  const handleSendFollowUp = async () => {
+    if (!incident) return;
+    
+    setIsFollowUpLoading(true);
+    try {
+      const token = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("token="))
+        ?.split("=")[1];
+        
+      if (!token) {
+        throw new Error("Authentication token not found");
+      }
+      
+      const response = await fetch(`${API_BASE_URL}/api/incidents/${incident.id}/follow-up`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to send follow-up");
+      }
+      
+      // Set cooldown time if provided
+      if (data.nextAvailableTime) {
+        setFollowUpCooldown(new Date(data.nextAvailableTime));
+      }
+      
+      // Show success message
+      toast.success("Follow-up sent successfully", {
+        description: "The office admin has been notified about your request.",
+      });
+      
+      setShowFollowUpDialog(false);
+    } catch (error) {
+      console.error("Error sending follow-up:", error);
+      toast.error("Failed to send follow-up", {
+        description: error instanceof Error ? error.message : "Please try again later",
+      });
+    } finally {
+      setIsFollowUpLoading(false);
+    }
+  };
 
   // Fetch user profile (role and email) on mount
   useEffect(() => {
@@ -286,6 +345,18 @@ export default function CaseDetailsPage() {
   const estimatedResolution = incident
     ? getEstimatedResolution(incident.submittedAt || incident.dateOfIncident, incident.priorityLevel, incident.estimatedResolutionDate)
     : null
+
+  // Check privacy access after both incident and user data are loaded
+  useEffect(() => {
+    if (incident && userEmail && userRole) {
+      // Check if incident is private and user is not authorized to view it
+      if (incident.isPrivate && userRole !== "OFFICE_ADMIN" && incident.submittedByEmail !== userEmail) {
+        setError("This incident is private and you are not authorized to view it.")
+        setLoading(false)
+        return
+      }
+    }
+  }, [incident, userEmail, userRole])
 
   // Show rating modal for regular user if eligible (run after both user info and incident are loaded)
   useEffect(() => {
@@ -559,6 +630,13 @@ export default function CaseDetailsPage() {
                         <div>
                           <h1 className="text-2xl font-bold text-[#8B0000]">Case {incident.trackingNumber}</h1>
                           <p className="text-gray-600">Security Incident Report</p>
+                          {(incident.isAnonymous || incident.preferAnonymous) && !isOfficeAdmin && !isSubmitter && (
+                            <div className="mt-2">
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200">
+                                Anonymous Report
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
                       <div className="flex flex-wrap items-center gap-2 mt-3">
@@ -1075,33 +1153,40 @@ export default function CaseDetailsPage() {
                       <div className="bg-white/50 rounded-lg p-3 border border-gray-100">
                         <div className="text-sm font-medium text-gray-500 mb-1">Name</div>
                         <p className="text-gray-800 font-medium">
-                          {incident.submittedByFullName ? (
-                            incident.submittedByFullName
-                          ) : (
-                            <span className="italic text-gray-400">Anonymous</span>
-                          )}
+                          {getReporterDisplayName(incident, isOfficeAdmin, isSubmitter)}
                         </p>
                       </div>
-                      <div className="bg-white/50 rounded-lg p-3 border border-gray-100">
-                        <div className="text-sm font-medium text-gray-500 mb-1">Email</div>
-                        <p className="text-gray-800 font-medium">
-                          {incident.submittedByEmail ? (
-                            incident.submittedByEmail
-                          ) : (
-                            <span className="italic text-gray-400">Not provided</span>
-                          )}
-                        </p>
-                      </div>
-                      <div className="bg-white/50 rounded-lg p-3 border border-gray-100">
-                        <div className="text-sm font-medium text-gray-500 mb-1">Phone</div>
-                        <p className="text-gray-800 font-medium">
-                          {incident.submittedByPhone ? (
-                            incident.submittedByPhone
-                          ) : (
-                            <span className="italic text-gray-400">Not provided</span>
-                          )}
-                        </p>
-                      </div>
+                      {shouldShowReporterDetails(incident, isOfficeAdmin, isSubmitter) ? (
+                        <>
+                          <div className="bg-white/50 rounded-lg p-3 border border-gray-100">
+                            <div className="text-sm font-medium text-gray-500 mb-1">Email</div>
+                            <p className="text-gray-800 font-medium">
+                              {incident.submittedByEmail ? (
+                                incident.submittedByEmail
+                              ) : (
+                                <span className="italic text-gray-400">Not provided</span>
+                              )}
+                            </p>
+                          </div>
+                          <div className="bg-white/50 rounded-lg p-3 border border-gray-100">
+                            <div className="text-sm font-medium text-gray-500 mb-1">Phone</div>
+                            <p className="text-gray-800 font-medium">
+                              {incident.submittedByPhone ? (
+                                incident.submittedByPhone
+                              ) : (
+                                <span className="italic text-gray-400">Not provided</span>
+                              )}
+                            </p>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="bg-white/50 rounded-lg p-3 border border-gray-100">
+                          <div className="text-sm font-medium text-gray-500 mb-1">Contact Information</div>
+                          <p className="text-gray-800 font-medium italic text-gray-400">
+                            Contact details are not available for anonymous reports
+                          </p>
+                        </div>
+                      )}
 
                       {/* Student Rating */}
                       {isDismissed ? (
@@ -1146,6 +1231,29 @@ export default function CaseDetailsPage() {
                       <CheckCircle className="mr-2 h-5 w-5 text-[#8B0000]" />
                       Next Steps
                     </h2>
+                    {/* Follow-up Button - Only show to the submitter and not for dismissed cases */}
+                    {isSubmitter && !isDismissed && (
+                      <div className="mb-6">
+                        <Button 
+                          onClick={() => setShowFollowUpDialog(true)}
+                          disabled={!!followUpCooldown && new Date() < followUpCooldown}
+                          className="w-full bg-[#8B0000] hover:bg-[#6B0000] text-white flex items-center justify-center gap-2 py-3"
+                        >
+                          <Bell className="h-4 w-4" />
+                          {followUpCooldown && new Date() < followUpCooldown ? (
+                            <>
+                              Follow-up Available {followUpCooldown.toLocaleDateString()} at {followUpCooldown.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                            </>
+                          ) : (
+                            "Send Follow-up Request"
+                          )}
+                        </Button>
+                        <p className="text-xs text-gray-500 text-center mt-2">
+                          Send a notification to the office handling your case
+                        </p>
+                      </div>
+                    )}
+                    
                     {isDismissed ? (
                       <div className="flex items-center gap-3 bg-gray-50 rounded-lg p-4">
                         <AlertCircle className="w-6 h-6 text-gray-500" />
@@ -1322,6 +1430,15 @@ export default function CaseDetailsPage() {
         incidentId={incident?.trackingNumber || ""}
         type={userRole === "OFFICE_ADMIN" ? "office" : "reporter"}
         onSuccess={handleRatingSuccess}
+      />
+
+      {/* Follow-up Dialog */}
+      <FollowUpDialog
+        isOpen={showFollowUpDialog}
+        onClose={() => setShowFollowUpDialog(false)}
+        onConfirm={handleSendFollowUp}
+        isLoading={isFollowUpLoading}
+        trackingNumber={incident?.trackingNumber || ""}
       />
 
       {/* Add Toaster for notifications */}

@@ -3,6 +3,7 @@ package com.teamhyungie.WildWatch.controller;
 import com.teamhyungie.WildWatch.dto.CreateBulletinRequest;
 import com.teamhyungie.WildWatch.dto.OfficeBulletinResponse;
 import com.teamhyungie.WildWatch.dto.ResolvedIncidentResponse;
+import com.teamhyungie.WildWatch.service.BulletinUpvoteService;
 import com.teamhyungie.WildWatch.service.OfficeBulletinService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +20,7 @@ import java.util.List;
 public class OfficeBulletinController {
 
     private final OfficeBulletinService officeBulletinService;
+    private final BulletinUpvoteService bulletinUpvoteService;
 
     @PostMapping
     public ResponseEntity<OfficeBulletinResponse> createBulletin(
@@ -60,5 +62,28 @@ public class OfficeBulletinController {
             @AuthenticationPrincipal UserDetails userDetails) {
         List<ResolvedIncidentResponse> incidents = officeBulletinService.getResolvedIncidents(userDetails.getUsername());
         return ResponseEntity.ok(incidents);
+    }
+    
+    @PostMapping("/{id}/upvote")
+    public ResponseEntity<Boolean> toggleUpvote(
+            @PathVariable String id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        boolean isUpvoted = bulletinUpvoteService.toggleUpvote(id, userDetails.getUsername());
+        return ResponseEntity.ok(isUpvoted);
+    }
+    
+    @GetMapping("/{id}/upvote-status")
+    public ResponseEntity<Boolean> getUpvoteStatus(
+            @PathVariable String id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        boolean hasUpvoted = bulletinUpvoteService.hasUserUpvoted(id, userDetails.getUsername());
+        return ResponseEntity.ok(hasUpvoted);
+    }
+    
+    @GetMapping("/{id}/upvote-count")
+    public ResponseEntity<Integer> getUpvoteCount(
+            @PathVariable String id) {
+        int count = bulletinUpvoteService.getUpvoteCount(id);
+        return ResponseEntity.ok(count);
     }
 }

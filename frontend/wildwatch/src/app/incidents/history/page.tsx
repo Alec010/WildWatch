@@ -28,6 +28,7 @@ import "jspdf-autotable"
 import { API_BASE_URL } from "@/utils/api"
 import { formatLocationCompact } from "@/utils/locationFormatter"
 import { api } from "@/utils/apiClient"
+import { filterIncidentsByPrivacy } from "@/utils/anonymization"
 import { motion } from "framer-motion"
 import { useSidebar } from "@/contexts/SidebarContext"
 import { Toaster, toast } from "sonner"
@@ -100,7 +101,10 @@ export default function IncidentHistoryPage() {
 
       const data = await res.json()
       // Only show Resolved or Dismissed (case-insensitive)
-      setIncidents(data.filter((i: Incident) => ["resolved", "dismissed"].includes(i.status.toLowerCase())))
+      const statusFiltered = data.filter((i: Incident) => ["resolved", "dismissed"].includes(i.status.toLowerCase()))
+      // Users can see their own reports even if private (isViewerSubmitter = true)
+      const anonymizedData = filterIncidentsByPrivacy(statusFiltered, false, true)
+      setIncidents(anonymizedData)
     } catch (e) {
       console.error("Error fetching incidents:", e)
       setError(e instanceof Error ? e.message : "Failed to load incidents")

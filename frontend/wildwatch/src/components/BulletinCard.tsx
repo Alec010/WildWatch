@@ -1,9 +1,11 @@
 "use client"
 
-import React from "react"
+import React, { useState, useEffect } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { FileText, Download, ExternalLink, Calendar, User } from "lucide-react"
+import { FileText, Download, ExternalLink, Calendar, User, ThumbsUp } from "lucide-react"
+import { api } from "@/utils/apiClient"
+import { toast } from "sonner"
 import { format } from "date-fns"
 
 interface BulletinMedia {
@@ -39,6 +41,81 @@ interface BulletinCardProps {
 }
 
 export function BulletinCard({ bulletin, isAdmin = false }: BulletinCardProps) {
+  const [upvoteCount, setUpvoteCount] = useState(0)
+  const [hasUpvoted, setHasUpvoted] = useState(false)
+  const [isUpvoting, setIsUpvoting] = useState(false)
+
+  // Fetch upvote status and count on mount
+  useEffect(() => {
+    const fetchUpvoteData = async () => {
+      try {
+        const [statusData, countData] = await Promise.all([
+          api.getBulletinUpvoteStatus(bulletin.id),
+          api.getBulletinUpvoteCount(bulletin.id)
+        ])
+        setHasUpvoted(statusData)
+        setUpvoteCount(countData)
+      } catch (error) {
+        console.error("Failed to fetch upvote data:", error)
+      }
+    }
+    
+    fetchUpvoteData()
+    
+    // Set up WebSocket listener for real-time upvote updates
+    const socket = new WebSocket(`${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`)
+    
+    socket.onopen = () => {
+      socket.send(JSON.stringify({
+        type: 'SUBSCRIBE',
+        destination: `/topic/bulletins/${bulletin.id}/upvotes`
+      }))
+    }
+    
+    socket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data)
+        if (data.body) {
+          const count = parseInt(data.body)
+          if (!isNaN(count)) {
+            setUpvoteCount(count)
+          }
+        }
+      } catch (error) {
+        console.error("Error parsing WebSocket message:", error)
+      }
+    }
+    
+    return () => {
+      socket.close()
+    }
+  }, [bulletin.id])
+  
+  const handleUpvoteClick = async () => {
+    if (isUpvoting) return
+    
+    setIsUpvoting(true)
+    try {
+      const isNowUpvoted = await api.toggleBulletinUpvote(bulletin.id)
+      setHasUpvoted(isNowUpvoted)
+      
+      // Update count locally (WebSocket will update it officially)
+      setUpvoteCount(prev => isNowUpvoted ? prev + 1 : Math.max(0, prev - 1))
+      
+      // Show toast
+      if (isNowUpvoted) {
+        toast.success("Bulletin upvoted")
+      } else {
+        toast.info("Upvote removed")
+      }
+    } catch (error) {
+      console.error("Failed to toggle upvote:", error)
+      toast.error("Failed to process upvote")
+    } finally {
+      setIsUpvoting(false)
+    }
+  }
+  
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes'
     const k = 1024
@@ -81,11 +158,29 @@ export function BulletinCard({ bulletin, isAdmin = false }: BulletinCardProps) {
             </div>
           </div>
         </div>
-        {isAdmin && (
-          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-            Admin Post
-          </Badge>
-        )}
+        <div className="flex items-center gap-2">
+          {/* Upvote Button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleUpvoteClick}
+            disabled={isUpvoting}
+            className={`flex items-center gap-1 px-2 py-1 rounded-md transition-colors ${
+              hasUpvoted 
+                ? 'bg-red-50 text-red-600 hover:bg-red-100' 
+                : 'hover:bg-gray-100 text-gray-600'
+            }`}
+          >
+            <ThumbsUp className={`h-4 w-4 ${hasUpvoted ? 'fill-red-600 text-red-600' : ''}`} />
+            <span className="text-xs font-medium">{upvoteCount}</span>
+          </Button>
+          
+          {isAdmin && (
+            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+              Admin Post
+            </Badge>
+          )}
+        </div>
       </div>
       
       {/* Description */}

@@ -82,6 +82,9 @@ interface Incident {
   submittedByIdNumber: string
   submittedByEmail: string
   submittedByPhone: string
+  // Backend may return either camelCase or snake_case
+  preferAnonymous?: boolean
+  isPrivate?: boolean
 }
 
 export default function IncidentDetailsPage() {
@@ -115,6 +118,7 @@ export default function IncidentDetailsPage() {
   const [officesError, setOfficesError] = useState<string | null>(null)
   const [priorityError, setPriorityError] = useState("")
   const [isAnonymous, setIsAnonymous] = useState<boolean>(false)
+  const [isPrivate, setIsPrivate] = useState<boolean>(false)
   const [verifyError, setVerifyError] = useState("")
   const [statusError, setStatusError] = useState("")
 
@@ -127,13 +131,19 @@ export default function IncidentDetailsPage() {
           throw new Error(`HTTP error! status: ${response.status}`)
         }
 
-        const data: Incident = await response.json()
+        const data: Incident & { prefer_anonymous?: boolean; is_private?: boolean } = await response.json()
+        
         setIncident(data)
         setAdministrativeNotes(data.administrativeNotes || "")
         setVerificationNotes(data.verificationNotes || "")
         setIsVerified(data.verified)
         setStatus(data.status)
         setPriorityLevel(data.priorityLevel)
+        // Initialize anonymity toggle to OFF by default (admin controls this, not reporter preference)
+        setIsAnonymous(false)
+        // Initialize privacy from backend payload (supports snake_case and camelCase)
+        const initialPrivate = (data as any).isPrivate ?? (data as any).is_private ?? false
+        setIsPrivate(!!initialPrivate)
       } catch (err) {
         console.error("Error fetching incident:", err)
         setError(err instanceof Error ? err.message : "Failed to load incident")
@@ -185,7 +195,8 @@ export default function IncidentDetailsPage() {
         verificationNotes,
         status: "In Progress",
         priorityLevel,
-        isAnonymous,
+        preferAnonymous: isAnonymous,
+        isPrivate: isPrivate,
       })
 
       if (!response.ok) {
@@ -242,7 +253,8 @@ export default function IncidentDetailsPage() {
         verificationNotes,
         status: "Dismissed",
         priorityLevel: null,
-        isAnonymous,
+        preferAnonymous: isAnonymous,
+        isPrivate: isPrivate,
       })
 
       if (!response.ok) {
@@ -289,7 +301,8 @@ export default function IncidentDetailsPage() {
         verificationNotes,
         status,
         priorityLevel,
-        isAnonymous,
+        preferAnonymous: isAnonymous,
+        isPrivate: isPrivate,
       })
 
       if (!response.ok) {
@@ -343,7 +356,8 @@ export default function IncidentDetailsPage() {
       const response = await api.post(`/api/incidents/${id}/transfer`, {
         newOffice: selectedOffice,
         transferNotes: transferNotes,
-        isAnonymous,
+        preferAnonymous: isAnonymous,
+        isPrivate: isPrivate,
       })
 
       if (!response.ok) {
@@ -452,6 +466,7 @@ export default function IncidentDetailsPage() {
     }
   }
 
+
   if (loading) {
     return (
       <div className="min-h-screen flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9]">
@@ -524,6 +539,16 @@ export default function IncidentDetailsPage() {
                 <h1 className="text-2xl font-bold text-[#8B0000]">Review Incident</h1>
                 {getStatusBadge(incident.status)}
                 {getPriorityBadge(incident.priorityLevel)}
+                {isAnonymous && (
+                  <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-200">
+                    Anonymous
+                  </Badge>
+                )}
+                {isPrivate && (
+                  <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-200">
+                    Private
+                  </Badge>
+                )}
               </div>
               <p className="text-gray-500 mt-1">
                 Case #{incident.trackingNumber} • {incident.incidentType}
@@ -825,6 +850,21 @@ export default function IncidentDetailsPage() {
                       If enabled, this report will not be displayed in public listings.
                     </p>
                   </div>
+
+                  {/* Private */}
+                  <div className="mb-4">
+                    <label htmlFor="is-private" className="flex items-center gap-3 cursor-pointer">
+                      <Switch
+                        id="is-private"
+                        checked={isPrivate}
+                        onCheckedChange={(checked) => setIsPrivate(checked)}
+                      />
+                      <span className="text-sm font-medium text-[#8B0000]">Mark this incident as private</span>
+                    </label>
+                    <p className="text-xs text-gray-500 ml-9">
+                      If enabled, this incident will be restricted to authorized personnel only.
+                    </p>
+                  </div>
                 </div>
               </motion.div>
 
@@ -844,6 +884,24 @@ export default function IncidentDetailsPage() {
                   </div>
                 </div>
                 <div className="p-4">
+                  {incident.preferAnonymous && (
+                    <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-md text-amber-800 flex items-start gap-2">
+                      <AlertTriangle className="h-4 w-4 mt-0.5" />
+                      <div>
+                        <p className="font-medium">Reporter requested anonymity</p>
+                        <p className="text-sm">Treat this reporter's identity as private. Do not disclose or share personally identifiable details.</p>
+                      </div>
+                    </div>
+                  )}
+                  {isPrivate && (
+                    <div className="mb-4 p-3 bg-purple-50 border border-purple-200 rounded-md text-purple-800 flex items-start gap-2">
+                      <AlertTriangle className="h-4 w-4 mt-0.5" />
+                      <div>
+                        <p className="font-medium">Private Incident</p>
+                        <p className="text-sm">This incident has been marked as private and is restricted to authorized personnel only.</p>
+                      </div>
+                    </div>
+                  )}
                   <div className="space-y-4">
                     <div className="flex items-start gap-3">
                       <div className="bg-[#8B0000]/10 p-2 rounded-lg">

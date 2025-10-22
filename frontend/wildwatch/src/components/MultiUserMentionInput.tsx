@@ -180,6 +180,8 @@ const MultiUserMentionInput: React.FC<MultiUserMentionInputProps> = ({
     }
   }, [])
 
+  const atLimit = !!maxUsers && selectedUsers.length >= maxUsers;
+
   return (
     <div className="relative w-full">
       {/* Selected users display */}
@@ -206,34 +208,36 @@ const MultiUserMentionInput: React.FC<MultiUserMentionInputProps> = ({
         </div>
       )}
 
-      {/* Input field */}
-      <div className={`relative ${className}`}>
-        <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-          <span className="text-gray-400">@</span>
-        </div>
-        <input
-          ref={inputRef}
-          type="text"
-          value={query}
-          onChange={handleInputChange}
-          onKeyDown={handleKeyDown}
-          placeholder={
-            maxUsers && selectedUsers.length >= maxUsers && maxUsers !== 1
-              ? `Maximum ${maxUsers} user${maxUsers > 1 ? 's' : ''} selected`
-              : placeholder
-          }
-          disabled={disabled || (maxUsers && selectedUsers.length >= maxUsers && maxUsers !== 1)}
-          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] disabled:bg-gray-50 disabled:text-gray-500"
-        />
-        {loading && (
-          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-            <Loader2 size={16} className="animate-spin text-gray-400" />
+      {/* Input field - hidden when atLimit to remove extra space */}
+      {!atLimit && (
+        <div className={`relative ${className}`}>
+          <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+            <span className="text-gray-400">@</span>
           </div>
-        )}
-      </div>
+          <input
+            ref={inputRef}
+            type="text"
+            value={query}
+            onChange={handleInputChange}
+            onKeyDown={handleKeyDown}
+            placeholder={
+              maxUsers && selectedUsers.length >= maxUsers
+                ? `Maximum ${maxUsers} user${maxUsers > 1 ? 's' : ''} selected`
+                : placeholder
+            }
+            disabled={disabled || (maxUsers && selectedUsers.length >= maxUsers)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] disabled:bg-gray-50 disabled:text-gray-500"
+          />
+          {loading && (
+            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+              <Loader2 size={16} className="animate-spin text-gray-400" />
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Dropdown results */}
-      {isMentioning && searchResults.length > 0 && (
+      {!atLimit && isMentioning && searchResults.length > 0 && (
         <div
           ref={resultsRef}
           className="absolute z-10 mt-1 w-full bg-white rounded-md shadow-lg border border-gray-200 max-h-60 overflow-y-auto"
@@ -262,7 +266,7 @@ const MultiUserMentionInput: React.FC<MultiUserMentionInputProps> = ({
       )}
 
       {/* No results message */}
-      {isMentioning && query.length > 1 && !loading && searchResults.length === 0 && (
+      {!atLimit && isMentioning && query.length > 1 && !loading && searchResults.length === 0 && (
         <div className="absolute z-10 mt-1 w-full bg-white rounded-md shadow-lg border border-gray-200 p-3 text-center">
           <p className="text-gray-500 text-sm">No users found matching "{query.substring(1)}"</p>
         </div>
