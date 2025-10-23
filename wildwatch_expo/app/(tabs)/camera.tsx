@@ -108,6 +108,15 @@ export default function CameraScreen() {
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
 
+  // Responsive calculations for image grid
+  const screenWidth = width;
+  const isSmallDevice = screenWidth < 375; // iPhone SE, small Android phones
+  const isMediumDevice = screenWidth >= 375 && screenWidth < 414;
+  const imageGap = isSmallDevice ? 6 : isMediumDevice ? 10 : 12;
+  const horizontalPadding = isSmallDevice ? 16 : 24;
+  const availableWidth = screenWidth - horizontalPadding * 2 - imageGap * 2;
+  const imageSize = availableWidth / 3;
+
   useFocusEffect(
     React.useCallback(() => {
       console.log("Camera screen useFocusEffect triggered:", {
@@ -559,8 +568,14 @@ export default function CameraScreen() {
 
   if (capturedImages.length > 0) {
     const showClearAll = capturedImages.length > 1;
-    const bottomDockHeight = 64;
-    const bottomPad = bottomDockHeight + Math.max(insets.bottom, 8) + 12;
+    const bottomDockHeight = Platform.OS === "ios" ? 72 : 68;
+    const bottomPad = bottomDockHeight + Math.max(insets.bottom, 8) + 16;
+
+    // Responsive icon and text sizes
+    const actionIconSize = isSmallDevice ? 24 : 32;
+    const actionTextSize = isSmallDevice ? 11 : 13;
+    const infoTextSize = isSmallDevice ? 10 : 12;
+    const indexBadgeSize = isSmallDevice ? 20 : 24;
 
     return (
       <SafeAreaView
@@ -579,7 +594,7 @@ export default function CameraScreen() {
           <ScrollView
             style={{ flex: 1 }}
             contentContainerStyle={{
-              paddingHorizontal: 24,
+              paddingHorizontal: horizontalPadding,
               paddingTop: 16,
               paddingBottom: bottomPad,
             }}
@@ -588,37 +603,84 @@ export default function CameraScreen() {
             <View
               style={[
                 styles.imagesGrid,
-                { alignSelf: "center", maxWidth: 640 },
+                {
+                  alignSelf: "center",
+                  maxWidth: 640,
+                  gap: imageGap,
+                },
               ]}
             >
               <TouchableOpacity
                 onPress={() => openCamera({ origin: "add" })}
-                style={styles.imageItem}
+                style={[
+                  styles.imageItem,
+                  {
+                    width: imageSize,
+                    height: imageSize,
+                  },
+                ]}
                 activeOpacity={0.7}
               >
                 <View style={styles.actionCardContent}>
                   <View style={styles.actionCardIcon}>
-                    <Ionicons name="camera" size={32} color={COLORS.maroon} />
+                    <Ionicons
+                      name="camera"
+                      size={actionIconSize}
+                      color={COLORS.maroon}
+                    />
                   </View>
-                  <Text style={styles.actionCardText}>Add More</Text>
+                  <Text
+                    style={[
+                      styles.actionCardText,
+                      { fontSize: actionTextSize },
+                    ]}
+                  >
+                    Add More
+                  </Text>
                 </View>
               </TouchableOpacity>
 
               <TouchableOpacity
                 onPress={pickImageFromGallery}
-                style={styles.imageItem}
+                style={[
+                  styles.imageItem,
+                  {
+                    width: imageSize,
+                    height: imageSize,
+                  },
+                ]}
                 activeOpacity={0.7}
               >
                 <View style={styles.actionCardContent}>
                   <View style={styles.actionCardIcon}>
-                    <Ionicons name="images" size={32} color={COLORS.maroon} />
+                    <Ionicons
+                      name="images"
+                      size={actionIconSize}
+                      color={COLORS.maroon}
+                    />
                   </View>
-                  <Text style={styles.actionCardText}>From Gallery</Text>
+                  <Text
+                    style={[
+                      styles.actionCardText,
+                      { fontSize: actionTextSize },
+                    ]}
+                  >
+                    From Gallery
+                  </Text>
                 </View>
               </TouchableOpacity>
 
               {capturedImages.map((image, index) => (
-                <View key={`captured-${index}`} style={styles.imageItem}>
+                <View
+                  key={`captured-${index}`}
+                  style={[
+                    styles.imageItem,
+                    {
+                      width: imageSize,
+                      height: imageSize,
+                    },
+                  ]}
+                >
                   <TouchableOpacity
                     onPress={() => handleImagePress(index)}
                     style={styles.imageTouchable}
@@ -655,21 +717,53 @@ export default function CameraScreen() {
 
                   <TouchableOpacity
                     onPress={() => handleRemoveImage(index)}
-                    style={styles.removeButton}
+                    style={[
+                      styles.removeButton,
+                      {
+                        width: indexBadgeSize,
+                        height: indexBadgeSize,
+                        borderRadius: indexBadgeSize / 2,
+                      },
+                    ]}
                   >
-                    <Ionicons name="close" size={16} color="#FFFFFF" />
+                    <Ionicons
+                      name="close"
+                      size={isSmallDevice ? 14 : 16}
+                      color="#FFFFFF"
+                    />
                   </TouchableOpacity>
 
                   <View style={styles.imageInfo}>
-                    <Text style={styles.imageName} numberOfLines={1}>
+                    <Text
+                      style={[styles.imageName, { fontSize: infoTextSize }]}
+                      numberOfLines={1}
+                    >
                       {image.name}
                     </Text>
-                    <Text style={styles.imageSize}>
+                    <Text
+                      style={[styles.imageSize, { fontSize: infoTextSize - 1 }]}
+                    >
                       {(image.size / 1024 / 1024).toFixed(2)} MB
                     </Text>
                   </View>
-                  <View style={styles.imageIndex}>
-                    <Text style={styles.imageIndexText}>{index + 1}</Text>
+                  <View
+                    style={[
+                      styles.imageIndex,
+                      {
+                        width: indexBadgeSize,
+                        height: indexBadgeSize,
+                        borderRadius: indexBadgeSize / 2,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.imageIndexText,
+                        { fontSize: infoTextSize },
+                      ]}
+                    >
+                      {index + 1}
+                    </Text>
                   </View>
                 </View>
               ))}
@@ -679,7 +773,13 @@ export default function CameraScreen() {
           <View
             style={[
               styles.bottomDock,
-              { paddingBottom: Math.max(insets.bottom, 8) },
+              {
+                paddingBottom: Math.max(
+                  insets.bottom,
+                  Platform.OS === "ios" ? 8 : 12
+                ),
+                minHeight: bottomDockHeight,
+              },
             ]}
           >
             <View style={styles.actionRow}>
@@ -711,11 +811,24 @@ export default function CameraScreen() {
               >
                 <Ionicons
                   name="cloud-upload"
-                  size={18}
+                  size={isSmallDevice ? 16 : 18}
                   color="#FFFFFF"
-                  style={{ marginRight: 8 }}
+                  style={{ marginRight: isSmallDevice ? 6 : 8 }}
                 />
-                <Text style={styles.btnSuccessText}>Upload to Report</Text>
+                <Text
+                  style={[
+                    styles.btnSuccessText,
+                    {
+                      fontSize: isSmallDevice
+                        ? 13
+                        : Platform.OS === "ios"
+                        ? 15
+                        : 14,
+                    },
+                  ]}
+                >
+                  Upload to Report
+                </Text>
               </TouchableOpacity>
 
               {showClearAll && (
@@ -726,11 +839,18 @@ export default function CameraScreen() {
                 >
                   <Ionicons
                     name="trash"
-                    size={18}
+                    size={isSmallDevice ? 16 : 18}
                     color="#FFFFFF"
-                    style={{ marginRight: 8 }}
+                    style={{ marginRight: isSmallDevice ? 6 : 8 }}
                   />
-                  <Text style={styles.btnDangerText}>Clear All</Text>
+                  <Text
+                    style={[
+                      styles.btnDangerText,
+                      { fontSize: isSmallDevice ? 11 : 12 },
+                    ]}
+                  >
+                    Clear All
+                  </Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -952,12 +1072,13 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   btn: {
-    height: 52,
-    borderRadius: 14,
+    height: Platform.OS === "ios" ? 52 : 48,
+    borderRadius: Platform.OS === "ios" ? 14 : 12,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
-    minWidth: 120,
+    minWidth: Platform.OS === "ios" ? 120 : 100,
+    paddingHorizontal: Platform.OS === "ios" ? 16 : 12,
   },
   btnPrimary: {
     backgroundColor: COLORS.maroon,
@@ -1127,15 +1248,13 @@ const styles = StyleSheet.create({
   imagesGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 12,
+    width: "100%",
   },
   imageItem: {
-    width: "31%",
-    aspectRatio: 1,
-    borderRadius: RADIUS,
+    borderRadius: Platform.OS === "ios" ? RADIUS : 12,
     overflow: "hidden",
     backgroundColor: COLORS.card,
-    marginBottom: 12,
+    marginBottom: 0, // Removed since we're using gap in parent
     ...Platform.select({
       ios: {
         shadowColor: "#000",
@@ -1149,37 +1268,42 @@ const styles = StyleSheet.create({
   capturedImage: { width: "100%", height: "100%" },
   removeButton: {
     position: "absolute",
-    top: 8,
-    right: 8,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    top: Platform.OS === "ios" ? 8 : 6,
+    right: Platform.OS === "ios" ? 8 : 6,
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
     alignItems: "center",
     justifyContent: "center",
+    ...Platform.select({
+      android: {
+        elevation: 2,
+      },
+    }),
   },
   imageInfo: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
-    padding: 8,
+    backgroundColor: "rgba(0, 0, 0, 0.75)",
+    paddingVertical: Platform.OS === "ios" ? 8 : 6,
+    paddingHorizontal: Platform.OS === "ios" ? 8 : 6,
   },
-  imageName: { color: "#FFFFFF", fontSize: 12, fontWeight: "600" },
-  imageSize: { color: "#E5E7EB", fontSize: 10, marginTop: 2 },
+  imageName: { color: "#FFFFFF", fontWeight: "600" },
+  imageSize: { color: "#E5E7EB", marginTop: 2 },
   imageIndex: {
     position: "absolute",
-    top: 8,
-    left: 8,
+    top: Platform.OS === "ios" ? 8 : 6,
+    left: Platform.OS === "ios" ? 8 : 6,
     backgroundColor: "rgba(0, 0, 0, 0.7)",
-    borderRadius: 12,
-    width: 24,
-    height: 24,
     alignItems: "center",
     justifyContent: "center",
+    ...Platform.select({
+      android: {
+        elevation: 2,
+      },
+    }),
   },
-  imageIndexText: { color: "#FFFFFF", fontSize: 12, fontWeight: "600" },
+  imageIndexText: { color: "#FFFFFF", fontWeight: "700" },
 
   imageTouchable: { width: "100%", height: "100%" },
 
@@ -1192,35 +1316,48 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
     backgroundColor: COLORS.card,
-    borderRadius: RADIUS,
+    borderRadius: Platform.OS === "ios" ? RADIUS : 12,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 16,
-    paddingHorizontal: 12,
+    paddingVertical: Platform.OS === "ios" ? 16 : 12,
+    paddingHorizontal: Platform.OS === "ios" ? 12 : 8,
   },
   actionCardIcon: {
-    marginBottom: 8,
+    marginBottom: Platform.OS === "ios" ? 8 : 6,
   },
   actionCardText: {
     color: COLORS.maroon,
-    fontWeight: "600",
-    fontSize: 13,
+    fontWeight: "700",
     textAlign: "center",
+    lineHeight: 16,
   },
 
   bottomDock: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
     borderTopWidth: 1,
     borderTopColor: "#E5E7EB",
     backgroundColor: "#FAFBFC",
-    paddingHorizontal: 16,
-    paddingTop: 4,
+    paddingHorizontal: Platform.OS === "ios" ? 16 : 14,
+    paddingTop: Platform.OS === "ios" ? 8 : 6,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+      },
+      android: { elevation: 8 },
+    }),
   },
 
   actionRow: {
     flexDirection: "row",
-    marginBottom: 12,
-    marginTop: 8,
-    gap: 8,
+    marginBottom: Platform.OS === "ios" ? 8 : 6,
+    marginTop: Platform.OS === "ios" ? 4 : 2,
+    gap: Platform.OS === "ios" ? 10 : 8,
     width: "100%",
   },
   actionFlex: { flex: 1 },
@@ -1332,5 +1469,9 @@ const styles = StyleSheet.create({
       android: { elevation: 6 },
     }),
   },
-  btnSuccessText: { color: "#FFFFFF", fontWeight: "700", fontSize: 15 },
+  btnSuccessText: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+    fontSize: Platform.OS === "ios" ? 15 : 14,
+  },
 });

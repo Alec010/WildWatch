@@ -8,6 +8,7 @@ import {
   Dimensions,
   Platform,
   Image,
+  StatusBar,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, router, useLocalSearchParams } from "expo-router";
@@ -132,6 +133,18 @@ export default function ReportDocumentScreen() {
   const generateHTMLContent = () => {
     if (!incident) return "";
 
+    const isIOS = Platform.OS === "ios";
+    const pageMargin = isIOS ? "1in" : "0.75in";
+    const bodyMargin = isIOS ? "0.25in" : "0";
+    const bodyPadding = isIOS ? "0.5in" : "0";
+    const wrapperPadding = isIOS ? "0.75in" : "0.5in";
+    const headerPrintPadding = isIOS ? "40px 30px" : "30px 20px";
+    const sectionMarginBottom = isIOS ? "28px" : "32px";
+    const footerMarginTop = isIOS ? "40px" : "48px";
+    const printBodyPadding = isIOS ? "0.5in" : "0";
+    const printBodyMargin = isIOS ? "0.25in" : "0";
+    const printWrapperPadding = isIOS ? "0.5in" : "0";
+
     return `
       <!DOCTYPE html>
       <html>
@@ -146,7 +159,7 @@ export default function ReportDocumentScreen() {
             }
             
             @page {
-              margin: 0.75in;
+              margin: ${pageMargin};
               size: letter;
             }
             
@@ -156,8 +169,8 @@ export default function ReportDocumentScreen() {
               color: #1a1a1a;
               background: #ffffff;
               max-width: 100%;
-              margin: 0;
-              padding: 0;
+              margin: ${bodyMargin};
+              padding: ${bodyPadding};
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
               color-adjust: exact !important;
@@ -166,7 +179,7 @@ export default function ReportDocumentScreen() {
             .document-wrapper {
               max-width: 8.5in;
               margin: 0 auto;
-              padding: 0.5in;
+              padding: ${wrapperPadding};
               background: white;
             }
             
@@ -523,20 +536,22 @@ export default function ReportDocumentScreen() {
             /* Print Optimization */
             @media print {
               body {
-                padding: 0;
+                padding: ${printBodyPadding};
+                margin: ${printBodyMargin};
               }
               
               .document-wrapper {
-                padding: 0;
+                padding: ${printWrapperPadding};
                 max-width: 100%;
               }
               
               .header {
-                padding: 30px 20px;
+                padding: ${headerPrintPadding};
               }
               
               .section {
                 page-break-inside: avoid;
+                margin-bottom: ${sectionMarginBottom};
               }
               
               .info-item,
@@ -553,6 +568,7 @@ export default function ReportDocumentScreen() {
               
               .footer {
                 page-break-before: avoid;
+                margin-top: ${footerMarginTop};
               }
             }
           </style>
@@ -876,6 +892,14 @@ export default function ReportDocumentScreen() {
         base64: false,
         width: 612, // 8.5 inches at 72 DPI
         height: 792, // 11 inches at 72 DPI
+        ...(Platform.OS === "ios" && {
+          margins: {
+            left: 72, // 1 inch
+            top: 72,
+            right: 72,
+            bottom: 72,
+          },
+        }),
       });
 
       Toast.show({
@@ -947,7 +971,18 @@ export default function ReportDocumentScreen() {
 
   if (isLoading) {
     return (
-      <View className="flex-1 bg-gray-50">
+      <View
+        className="flex-1 bg-gray-50"
+        style={{
+          paddingTop:
+            Platform.OS === "android" ? StatusBar.currentHeight || 0 : 0,
+        }}
+      >
+        <StatusBar
+          barStyle="light-content"
+          backgroundColor="#8B0000"
+          translucent={false}
+        />
         <CircularLoader subtitle="Loading report document..." />
       </View>
     );
@@ -955,11 +990,30 @@ export default function ReportDocumentScreen() {
 
   if (error || !incident) {
     return (
-      <View className="flex-1 bg-gray-50">
+      <View
+        className="flex-1 bg-gray-50"
+        style={{
+          paddingTop:
+            Platform.OS === "android" ? StatusBar.currentHeight || 0 : 0,
+        }}
+      >
+        <StatusBar
+          barStyle="light-content"
+          backgroundColor="#8B0000"
+          translucent={false}
+        />
         <Stack.Screen
           options={{
             title: "Report Document",
             headerShown: true,
+            headerStyle: {
+              backgroundColor: "#8B0000",
+            },
+            headerTintColor: "#D4AF37",
+            headerTitleStyle: {
+              fontWeight: "bold",
+              fontSize: 18,
+            },
           }}
         />
         <View className="flex-1 justify-center items-center p-6">
@@ -979,7 +1033,18 @@ export default function ReportDocumentScreen() {
   }
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View
+      className="flex-1 bg-gray-50"
+      style={{
+        paddingTop:
+          Platform.OS === "android" ? StatusBar.currentHeight || 0 : 0,
+      }}
+    >
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor="#8B0000"
+        translucent={false}
+      />
       <Stack.Screen
         options={{
           title: "Report Document",

@@ -10,6 +10,7 @@ import {
   StyleSheet,
   StatusBar,
   useWindowDimensions,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -64,7 +65,27 @@ export default function LocationScreen() {
 
   const mapRef = useRef<MapView>(null);
   const { height: windowHeight } = useWindowDimensions();
-  const mapHeight = Math.max(0, windowHeight * 0.7);
+
+  // Calculate map height dynamically based on available space
+  // Account for: StatusBar, Header, Buttons, Padding, and Buffer
+  // iOS: SafeAreaView handles status bar automatically, so we don't subtract it
+  // Android: Need to account for status bar height explicitly
+  const HEADER_HEIGHT = Platform.OS === "ios" ? 70 : 80;
+  const BUTTON_SECTION_HEIGHT = 80;
+  const PADDING_AND_BUFFER = Platform.OS === "ios" ? 50 : 66;
+  const STATUS_BAR_HEIGHT =
+    Platform.OS === "android" ? StatusBar.currentHeight || 24 : 0;
+
+  const availableHeight =
+    windowHeight -
+    STATUS_BAR_HEIGHT -
+    HEADER_HEIGHT -
+    BUTTON_SECTION_HEIGHT -
+    PADDING_AND_BUFFER;
+  const mapHeight = Math.max(
+    300,
+    Math.min(availableHeight, windowHeight * 0.65)
+  );
 
   const { padding, margin, fontSize } = getSpacing();
 

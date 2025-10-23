@@ -1,189 +1,302 @@
 /**
  * LeaderboardPodium Component
- * Displays top 3 users in a podium-style layout
- * Matches web design with mobile-friendly responsive layout
+ * Displays top 3 users in a horizontal podium-style layout with trophy images
+ * Features gradient backgrounds and static positioning
  */
 
-import React from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import type { LeaderboardEntry } from '../models/RatingModels';
-import { RankBadge } from '../../ranking/components';
-import { StarRating } from './StarRating';
+import React from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Dimensions,
+  Image,
+  Platform,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import type { LeaderboardEntry } from "../models/RatingModels";
 
 interface LeaderboardPodiumProps {
-  entries: LeaderboardEntry[];  // First 3 entries
-  type: 'students' | 'offices';
+  entries: LeaderboardEntry[]; // First 3 entries
+  type: "students" | "offices";
 }
 
-export const LeaderboardPodium: React.FC<LeaderboardPodiumProps> = ({ 
-  entries, 
-  type 
+export const LeaderboardPodium: React.FC<LeaderboardPodiumProps> = ({
+  entries,
+  type,
 }) => {
-  const screenWidth = Dimensions.get('window').width;
+  const screenWidth = Dimensions.get("window").width;
+  const screenHeight = Dimensions.get("window").height;
   const isTablet = screenWidth > 768;
-  
+  const isLargeDevice = screenWidth > 670;
+  const isLandscape = screenWidth > screenHeight;
+
+  // Responsive scaling factors
+  const getScaleFactor = () => {
+    if (isTablet) return 1.3;
+    if (isLargeDevice) return 1.1;
+    if (screenWidth < 350) return 0.8;
+    if (screenWidth < 400) return 0.9;
+    return 1.0;
+  };
+
+  const scaleFactor = getScaleFactor();
+
+  // Removed floating animation for static cards
+
   // Ensure we have exactly 3 entries (fill with placeholders if needed)
   const podiumEntries = [...entries];
   while (podiumEntries.length < 3) {
     podiumEntries.push({
       id: 0,
-      name: '',
+      name: "",
       points: 0,
-      rank: 'NONE',
+      rank: "NONE",
       averageRating: 0,
       totalIncidents: 0,
     });
   }
 
+  // Office podium design
+  if (type === "offices") {
+    return <OfficePodium entries={podiumEntries} />;
+  }
+
   const getPodiumData = (index: number) => {
     const entry = podiumEntries[index];
     const isEmpty = !entry.name;
-    
-    // Calculate responsive widths based on screen size
-    const availableWidth = screenWidth - 40; // Account for padding
-    const cardWidth = Math.min(availableWidth / 3.2, isTablet ? 120 : 100);
-    
+
     switch (index) {
-      case 0: // 1st place - Center, tallest
+      case 0: // 1st Place - Center
         return {
-          height: isTablet ? 140 : 120,
-          width: cardWidth,
-          color: '#FFD700', // Gold
-          icon: 'crown' as const,
-          position: 'center',
-          rank: 1,
-          gradient: ['#FFD700', '#FFA500'],
-          textColor: '#8B0000',
+          height: Math.round(150 * scaleFactor),
+          width: Math.round(140 * scaleFactor),
+          color: "#FFD700",
+          borderColor: "#FFD700",
+          gradient: ["#FFD700", "#FFA500", "#FF8C00"],
+          pointsColor: "#8B4513",
+          trophyImage: require("../../../../assets/images/trophies/gold_student.png"),
         };
-      case 1: // 2nd place - Left
+      case 1: // 2nd Place - Left
         return {
-          height: isTablet ? 120 : 100,
-          width: cardWidth,
-          color: '#C0C0C0', // Silver
-          icon: 'trophy' as const,
-          position: 'left',
-          rank: 2,
-          gradient: ['#C0C0C0', '#A8A8A8'],
-          textColor: '#4A5568',
+          height: Math.round(120 * scaleFactor),
+          width: Math.round(125 * scaleFactor),
+          color: "#2C6FFF",
+          borderColor: "#2C6FFF",
+          gradient: [
+            "rgba(44, 111, 255, 0.35)",
+            "rgba(30, 64, 175, 0.25)",
+            "rgba(30, 58, 138, 0.15)",
+          ],
+          pointsColor: "#1E3A8A",
+          trophyImage: require("../../../../assets/images/trophies/silver_student.png"),
         };
-      case 2: // 3rd place - Right
+      case 2: // 3rd Place - Right
         return {
-          height: isTablet ? 100 : 80,
-          width: cardWidth,
-          color: '#CD7F32', // Bronze
-          icon: 'medal' as const,
-          position: 'right',
-          rank: 3,
-          gradient: ['#CD7F32', '#B8860B'],
-          textColor: '#4A5568',
+          height: Math.round(120 * scaleFactor),
+          width: Math.round(125 * scaleFactor),
+          color: "#00C37A",
+          borderColor: "#00C37A",
+          gradient: [
+            "rgba(0, 195, 122, 0.35)",
+            "rgba(5, 150, 105, 0.25)",
+            "rgba(4, 120, 87, 0.15)",
+          ],
+          pointsColor: "#065F46",
+          trophyImage: require("../../../../assets/images/trophies/bronze_student.png"),
         };
       default:
         return {
-          height: 80,
-          width: cardWidth,
-          color: '#E5E7EB',
-          icon: 'person' as const,
-          position: 'center',
-          rank: index + 1,
-          gradient: ['#E5E7EB', '#D1D5DB'],
-          textColor: '#6B7280',
+          height: Math.round(200 * scaleFactor),
+          width: Math.round(110 * scaleFactor),
+          color: "#4A5568",
+          borderColor: "#4A5568",
+          gradient: ["#4A5568", "#2D3748", "#1A202C"],
+          pointsColor: "#718096",
+          trophyImage: null,
         };
     }
   };
 
-  const PodiumCard = ({ entry, index }: { entry: LeaderboardEntry; index: number }) => {
+  const PodiumCard = ({
+    entry,
+    index,
+  }: {
+    entry: LeaderboardEntry;
+    index: number;
+  }) => {
     const podiumData = getPodiumData(index);
     const isEmpty = !entry.name;
-    
+
     if (isEmpty) {
       return (
-        <View style={[styles.podiumCard, { 
-          height: podiumData.height,
-          width: podiumData.width,
-          backgroundColor: '#F3F4F6',
-          borderColor: '#E5E7EB',
-          borderWidth: 2,
-          borderStyle: 'dashed',
-        }]}>
-          <View style={styles.emptyCard}>
-            <Ionicons name="person-outline" size={24} color="#9CA3AF" />
-            <Text style={styles.emptyText}>
-              {type === 'students' ? 'Your name could be here!' : 'Your office could be here!'}
-            </Text>
+        <View
+          style={[
+            styles.podiumCard,
+            {
+              height: podiumData.height,
+              width: podiumData.width,
+              zIndex: index === 0 ? 10 : 1,
+            },
+          ]}
+        >
+          {/* Trophy Icon - Outside the gradient container for iOS */}
+          <View
+            style={[
+              styles.trophyContainer,
+              {
+                height: 50 * scaleFactor,
+                top: -50 * scaleFactor,
+                width: 160 * scaleFactor,
+                marginLeft: -80 * scaleFactor,
+              },
+            ]}
+          >
+            <Ionicons
+              name="trophy-outline"
+              size={40 * scaleFactor}
+              color="rgba(255, 255, 255, 0.9)"
+            />
           </View>
+
+          <LinearGradient
+            colors={podiumData.gradient as [string, string, ...string[]]}
+            style={styles.podiumGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <Text
+              style={[
+                styles.podiumName,
+                {
+                  color: "rgba(255, 255, 255, 0.9)",
+                  fontSize: 13 * scaleFactor,
+                  marginTop: 8 * scaleFactor, // Add padding between image and name
+                },
+                index !== 0 && { marginTop: 4 * scaleFactor }, // Less padding for 2nd and 3rd place
+              ]}
+            >
+              {index === 0 ? "1st" : index === 1 ? "2nd" : "3rd"}
+            </Text>
+            <Text
+              style={[
+                styles.podiumPoints,
+                {
+                  color: "rgba(255, 255, 255, 0.85)",
+                  fontSize: 18 * scaleFactor,
+                },
+              ]}
+            >
+              Open
+            </Text>
+            <Text
+              style={[
+                styles.podiumUsername,
+                {
+                  color: "rgba(255, 255, 255, 0.75)",
+                  fontSize: 10 * scaleFactor,
+                },
+              ]}
+            >
+              {index === 0 ? "Be first!" : "Join now"}
+            </Text>
+          </LinearGradient>
         </View>
       );
     }
 
     return (
-      <View style={[styles.podiumCard, { 
-        height: podiumData.height,
-        width: podiumData.width,
-      }]}>
+      <View
+        style={[
+          styles.podiumCard,
+          {
+            height: podiumData.height,
+            width: podiumData.width,
+            zIndex: index === 0 ? 10 : 1,
+          },
+        ]}
+      >
+        {/* Trophy Image - Outside the gradient container for iOS */}
+        <View
+          style={[
+            styles.trophyContainer,
+            {
+              width: 160 * scaleFactor,
+              height: 160 * scaleFactor,
+              top: -100 * scaleFactor,
+              marginLeft: -80 * scaleFactor,
+            },
+          ]}
+        >
+          <Image
+            source={podiumData.trophyImage}
+            style={[
+              styles.trophyImage,
+              {
+                width: 120 * scaleFactor,
+                height: 120 * scaleFactor,
+              },
+              index !== 0 && {
+                width: 100 * scaleFactor,
+                height: 100 * scaleFactor,
+              },
+            ]}
+            resizeMode="contain"
+          />
+        </View>
+
         <LinearGradient
-          colors={podiumData.gradient}
+          colors={[...podiumData.gradient] as [string, string, ...string[]]}
           style={styles.podiumGradient}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
         >
-          {/* Sparkle overlay for 1st place */}
-          {index === 0 && (
-            <View style={styles.sparkleOverlay}>
-              <View style={[styles.sparkle, { top: 10, left: 20 }]} />
-              <View style={[styles.sparkle, { top: 30, right: 15 }]} />
-              <View style={[styles.sparkle, { bottom: 20, left: 30 }]} />
-            </View>
-          )}
-
-          {/* Avatar Circle */}
-          <View style={[styles.avatarCircle, { 
-            borderColor: podiumData.color,
-            backgroundColor: 'white',
-          }]}>
-            {entry.name ? (
-              <Text style={[styles.avatarText, { color: '#8B0000' }]}>
-                {entry.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-              </Text>
-            ) : (
-              <Ionicons name="person" size={20} color="#9CA3AF" />
-            )}
-          </View>
-
           {/* Name */}
-          <Text style={[styles.podiumName, { color: 'white' }]} numberOfLines={1}>
+          <Text
+            style={[
+              styles.podiumName,
+              {
+                color: "white",
+                fontSize: 13 * scaleFactor,
+                marginTop: 8 * scaleFactor, // Add padding between image and name
+              },
+              index !== 0 && { marginTop: 4 * scaleFactor }, // Less padding for 2nd and 3rd place
+            ]}
+            numberOfLines={1}
+          >
             {entry.name}
           </Text>
 
-          {/* Rank Badge */}
-          {entry.rank && entry.rank !== 'NONE' && (
-            <View style={styles.rankBadgeContainer}>
-              <RankBadge 
-                rank={entry.rank} 
-                goldRanking={entry.goldRanking}
-                size="xs"
-                showLabel={false}
-              />
-            </View>
-          )}
-
           {/* Points */}
-          <Text style={[styles.podiumPoints, { color: 'white' }]}>
-            {entry.points || 0} pts
+          <Text
+            style={[
+              styles.podiumPoints,
+              {
+                color: podiumData.pointsColor,
+                fontSize: 18 * scaleFactor,
+              },
+              index !== 0 && { marginTop: -2 * scaleFactor },
+            ]}
+          >
+            {entry.points || 0}
           </Text>
 
-          {/* Star Rating */}
-          {entry.averageRating && entry.averageRating > 0 && (
-            <View style={styles.starContainer}>
-              <StarRating 
-                rating={entry.averageRating} 
-                size={10}
-                showValue={false}
-                color="white"
-                emptyColor="rgba(255,255,255,0.5)"
-              />
-            </View>
+          {/* Username (if available) */}
+          {entry.name && (
+            <Text
+              style={[
+                styles.podiumUsername,
+                {
+                  color: "#9BA3B4",
+                  fontSize: 10 * scaleFactor,
+                },
+                index !== 0 && { marginTop: -2 * scaleFactor },
+              ]}
+              numberOfLines={1}
+            >
+              @{entry.name.toLowerCase().replace(/\s+/g, "")}
+            </Text>
           )}
         </LinearGradient>
       </View>
@@ -192,31 +305,31 @@ export const LeaderboardPodium: React.FC<LeaderboardPodiumProps> = ({
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerIcon}>
-          <Ionicons name="ribbon" size={20} color="white" />
-        </View>
-        <Text style={styles.headerTitle}>Top 3 Champions</Text>
-      </View>
-
-      {/* Podium */}
-      <View style={styles.podiumContainer}>
-        {/* Background decoration */}
-        <View style={styles.backgroundDecoration}>
-          <View style={[styles.decorationCircle, { top: 20, left: 20 }]} />
-          <View style={[styles.decorationCircle, { top: 40, right: 30 }]} />
-          <View style={[styles.decorationCircle, { bottom: 30, left: 40 }]} />
-        </View>
-
-        {/* Podium Cards */}
-        <View style={styles.podiumCards}>
+      {/* Podium Wrapper with overflow protection */}
+      <View
+        style={[
+          styles.podiumWrapper,
+          {
+            paddingTop: 80 * scaleFactor,
+            paddingBottom: 8 * scaleFactor,
+          },
+        ]}
+      >
+        {/* Podium Container */}
+        <View
+          style={[
+            styles.podiumContainer,
+            {
+              paddingHorizontal: 16 * scaleFactor,
+            },
+          ]}
+        >
           {/* 2nd Place - Left */}
           <PodiumCard entry={podiumEntries[1]} index={1} />
-          
+
           {/* 1st Place - Center */}
           <PodiumCard entry={podiumEntries[0]} index={0} />
-          
+
           {/* 3rd Place - Right */}
           <PodiumCard entry={podiumEntries[2]} index={2} />
         </View>
@@ -227,135 +340,451 @@ export const LeaderboardPodium: React.FC<LeaderboardPodiumProps> = ({
 
 const styles = StyleSheet.create({
   container: {
+    marginTop: 24,
     marginBottom: 24,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-    paddingHorizontal: 4,
-  },
-  headerIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#8B0000',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 8,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#8B0000',
+  podiumWrapper: {
+    paddingTop: 80, // Space for trophy and crown to extend above
+    paddingBottom: 8, // 8px space between podium and tabs
+    overflow: "visible",
+    ...(Platform.OS === "ios" && {
+      overflow: undefined,
+    }),
   },
   podiumContainer: {
-    position: 'relative',
-    backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 16,
-    marginHorizontal: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  backgroundDecoration: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    opacity: 0.05,
-  },
-  decorationCircle: {
-    position: 'absolute',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#8B0000',
-  },
-  podiumCards: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    minHeight: 140,
-    paddingHorizontal: 4,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "flex-end",
+    paddingHorizontal: 16,
+    overflow: "visible",
+    ...(Platform.OS === "ios" && {
+      overflow: undefined,
+    }),
   },
   podiumCard: {
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+    overflow: "visible",
+    position: "relative",
+    ...(Platform.OS === "ios" && {
+      overflow: undefined,
+    }),
   },
   podiumGradient: {
     flex: 1,
-    borderRadius: 12,
-    padding: 8,
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    position: 'relative',
-    minHeight: 120,
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+    padding: 6,
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+    overflow: "visible",
+    ...(Platform.OS === "ios" && {
+      overflow: undefined,
+    }),
   },
-  sparkleOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    opacity: 0.3,
+  trophyContainer: {
+    position: "absolute",
+    top: -100,
+    left: "50%",
+    marginLeft: -80, // Half of width to center
+    width: 160,
+    height: 160,
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 20,
   },
-  sparkle: {
-    position: 'absolute',
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: 'white',
-  },
-  avatarCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 3,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  avatarText: {
-    fontSize: 14,
-    fontWeight: 'bold',
+  trophyImage: {
+    width: 120,
+    height: 120,
   },
   podiumName: {
-    fontSize: 12,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginBottom: 2,
-    flexWrap: 'wrap',
-  },
-  rankBadgeContainer: {
-    marginBottom: 4,
+    fontSize: 13,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 1,
   },
   podiumPoints: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    textAlign: 'center',
+    fontSize: 18,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 1,
   },
-  starContainer: {
-    marginTop: 4,
-  },
-  emptyCard: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 8,
-  },
-  emptyText: {
+  podiumUsername: {
     fontSize: 10,
-    color: '#9CA3AF',
-    textAlign: 'center',
-    marginTop: 4,
+    textAlign: "center",
+    opacity: 0.8,
+  },
+  // Office Podium Styles
+  officePodiumContainer: {
+    marginTop: 24,
+    marginBottom: 24,
+  },
+  officePodiumWrapper: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "flex-end",
+    paddingHorizontal: 16,
+    gap: 0,
+    paddingTop: 160, // Space for floating elements
+  },
+  officeStageWrapper: {
+    alignItems: "center",
+    position: "relative",
+    zIndex: 10,
+  },
+  officeStageWrapper2nd: {
+    marginRight: -15,
+    zIndex: 5,
+  },
+  officeStageWrapper3rd: {
+    marginLeft: -15,
+    zIndex: 5,
+  },
+  officeFloatingTrophyContainer: {
+    position: "absolute",
+    top: -98,
+    zIndex: 20,
+    width: 100,
+    height: 100,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  officeFloatingTrophyImage: {
+    width: 120,
+    height: 120,
+  },
+  officeFloatingName: {
+    position: "absolute",
+    top: -180,
+    fontSize: 18,
+    fontWeight: "bold",
+    textAlign: "center",
+    lineHeight: 22,
+    zIndex: 25,
+    maxWidth: 140,
+    marginBottom: 2,
+  },
+  officePointsContainer: {
+    position: "absolute",
+    top: -158,
+    alignItems: "center",
+    zIndex: 20,
+    marginBottom: 2,
+    gap: 2,
+  },
+  officeFloatingStats: {
+    position: "absolute",
+    top: -40,
+    alignItems: "center",
+    zIndex: 15,
+  },
+  officeFloatingStatsBelow: {
+    position: "absolute",
+    top: -140,
+    alignItems: "center",
+    zIndex: 15,
+    gap: 4,
+  },
+  officeStage: {
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+    borderWidth: 0,
+    padding: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  officePoints: {
+    fontSize: 20,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 0,
+  },
+  officeUsername: {
+    position: "absolute",
+    top: -128,
+    fontSize: 14,
+    textAlign: "center",
+    opacity: 0.8,
+    fontWeight: "500",
+    zIndex: 15,
+    marginBottom: 2,
+  },
+  officeJoinText: {
+    fontSize: 14,
+    textAlign: "center",
+    opacity: 0.8,
+    fontWeight: "500",
+  },
+  officeRankContainer: {
+    alignItems: "center",
+  },
+  officeRankText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    textAlign: "center",
   },
 });
+
+// Office Podium Component with stage-like design
+const OfficePodium: React.FC<{ entries: LeaderboardEntry[] }> = ({
+  entries,
+}) => {
+  const screenWidth = Dimensions.get("window").width;
+  const screenHeight = Dimensions.get("window").height;
+  const isTablet = screenWidth > 768;
+  const isLargeDevice = screenWidth > 670;
+
+  // Responsive scaling factors
+  const getScaleFactor = () => {
+    if (isTablet) return 1.3;
+    if (isLargeDevice) return 1.1;
+    if (screenWidth < 350) return 0.8;
+    if (screenWidth < 400) return 0.9;
+    return 1.0;
+  };
+
+  const scaleFactor = getScaleFactor();
+  const getOfficePodiumData = (index: number) => {
+    switch (index) {
+      case 0: // 1st Place - Center
+        return {
+          height: Math.round(60 * scaleFactor),
+          width: Math.round(140 * scaleFactor),
+          backgroundColor: "#FFD700",
+          borderColor: "#FFA500",
+          gradient: ["#FFD700", "#FFDB00", "#FFDF00", "#FFDB00", "#FFD700"], // Solid gold
+          trophyImage: require("../../../../assets/images/trophies/gold_office.png"),
+          rankText: "1st",
+          rankColor: "#8B4513",
+          pointsColor: "#FFD700", // Yellow Gold
+        };
+      case 1: // 2nd Place - Left
+        return {
+          height: Math.round(45 * scaleFactor),
+          width: Math.round(120 * scaleFactor),
+          backgroundColor: "#C0C0C0",
+          borderColor: "#A0A0A0",
+          gradient: ["#E8E8E8", "#EBEBEB", "#EFEFEF", "#EBEBEB", "#E8E8E8"], // Solid silver
+          trophyImage: require("../../../../assets/images/trophies/silver_office.png"),
+          rankText: "2nd",
+          rankColor: "#4A5568",
+          pointsColor: "#A9A9A9", // Darker Silver
+        };
+      case 2: // 3rd Place - Right
+        return {
+          height: Math.round(45 * scaleFactor),
+          width: Math.round(120 * scaleFactor),
+          backgroundColor: "#CD7F32",
+          borderColor: "#B8860B",
+          gradient: ["#D4976F", "#D99E74", "#DDA579", "#D99E74", "#D4976F"], // Solid bronze
+          trophyImage: require("../../../../assets/images/trophies/bronze_office.png"),
+          rankText: "3rd",
+          rankColor: "#8B4513",
+          pointsColor: "#D2691E", // Rust Orange
+        };
+      default:
+        return {
+          height: Math.round(150 * scaleFactor),
+          width: Math.round(130 * scaleFactor),
+          backgroundColor: "#E5E7EB",
+          borderColor: "#D1D5DB",
+          trophyImage: null,
+          rankText: "N/A",
+          rankColor: "#6B7280",
+        };
+    }
+  };
+
+  const OfficeStage = ({
+    entry,
+    index,
+  }: {
+    entry: LeaderboardEntry;
+    index: number;
+  }) => {
+    const podiumData = getOfficePodiumData(index);
+    const isEmpty = !entry.name;
+
+    return (
+      <View
+        style={[
+          styles.officeStageWrapper,
+          index === 1 && styles.officeStageWrapper2nd,
+          index === 2 && styles.officeStageWrapper3rd,
+        ]}
+      >
+        {/* Office Name / "# Place" */}
+        <Text
+          style={[
+            styles.officeFloatingName,
+            {
+              color: "#000000",
+              fontSize: 18 * scaleFactor,
+              top: -180 * scaleFactor,
+            },
+            index !== 0 && { top: -160 * scaleFactor },
+          ]}
+          numberOfLines={2}
+        >
+          {isEmpty
+            ? index === 0
+              ? "1st Place"
+              : index === 1
+              ? "2nd Place"
+              : "3rd Place"
+            : entry.name}
+        </Text>
+
+        {/* Points / "Join the Competition" */}
+        <View
+          style={[
+            styles.officePointsContainer,
+            { top: -158 * scaleFactor },
+            index !== 0 && { top: -135 * scaleFactor },
+          ]}
+        >
+          {!isEmpty ? (
+            <Text
+              style={[
+                styles.officePoints,
+                {
+                  color: podiumData.pointsColor,
+                  fontSize: 20 * scaleFactor,
+                },
+              ]}
+            >
+              {entry.points || 0} pts
+            </Text>
+          ) : (
+            <Text
+              style={[
+                styles.officeJoinText,
+                {
+                  color: "rgba(0, 0, 0, 0.6)",
+                  fontSize: 14 * scaleFactor,
+                },
+              ]}
+            >
+              {index === 0 ? "Be the first!" : "Join the competition"}
+            </Text>
+          )}
+        </View>
+
+        {/* Username */}
+        {!isEmpty ? (
+          <Text
+            style={[
+              styles.officeUsername,
+              {
+                color: "rgba(0, 0, 0, 0.8)",
+                fontSize: 14 * scaleFactor,
+                top: -128 * scaleFactor,
+              },
+              index !== 0 && { top: -105 * scaleFactor },
+            ]}
+          >
+            @{entry.name.toLowerCase().replace(/\s+/g, "")}
+          </Text>
+        ) : null}
+
+        {/* Trophy Image */}
+        <View
+          style={[
+            styles.officeFloatingTrophyContainer,
+            {
+              top: -98 * scaleFactor,
+              width: 100 * scaleFactor,
+              height: 100 * scaleFactor,
+            },
+          ]}
+        >
+          {isEmpty ? (
+            <Ionicons
+              name="business-outline"
+              size={60 * scaleFactor}
+              color="rgba(255, 255, 255, 0.9)"
+            />
+          ) : (
+            <Image
+              source={podiumData.trophyImage}
+              style={[
+                styles.officeFloatingTrophyImage,
+                {
+                  width: 120 * scaleFactor,
+                  height: 120 * scaleFactor,
+                },
+                index !== 0 && {
+                  width: 100 * scaleFactor,
+                  height: 100 * scaleFactor,
+                  marginTop: 20 * scaleFactor,
+                },
+              ]}
+              resizeMode="contain"
+            />
+          )}
+        </View>
+
+        {/* Small Stage Box - Just for Rank Label */}
+        <LinearGradient
+          colors={podiumData.gradient as [string, string, ...string[]]}
+          style={[
+            styles.officeStage,
+            {
+              height: podiumData.height,
+              width: podiumData.width,
+              zIndex: index === 0 ? 10 : 1,
+            },
+          ]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+        >
+          {/* Only Rank Number in Box */}
+          <View style={styles.officeRankContainer}>
+            <Text
+              style={[
+                styles.officeRankText,
+                {
+                  color: podiumData.rankColor,
+                  fontSize: 16 * scaleFactor,
+                },
+              ]}
+            >
+              {podiumData.rankText}
+            </Text>
+          </View>
+        </LinearGradient>
+      </View>
+    );
+  };
+
+  return (
+    <View style={styles.officePodiumContainer}>
+      <View
+        style={[
+          styles.officePodiumWrapper,
+          {
+            paddingTop: 160 * scaleFactor,
+            paddingHorizontal: 16 * scaleFactor,
+          },
+        ]}
+      >
+        {/* 2nd Place - Left */}
+        <OfficeStage entry={entries[1]} index={1} />
+
+        {/* 1st Place - Center */}
+        <OfficeStage entry={entries[0]} index={0} />
+
+        {/* 3rd Place - Right */}
+        <OfficeStage entry={entries[2]} index={2} />
+      </View>
+    </View>
+  );
+};

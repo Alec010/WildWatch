@@ -2,6 +2,7 @@
  * RecognitionInfoModal Component
  * Mobile-friendly modal explaining how the recognition system works
  * Matches the web frontend design and functionality
+ * Optimized for both iOS and Android with platform-specific styling
  */
 
 import React from 'react';
@@ -12,7 +13,10 @@ import {
   ScrollView, 
   TouchableOpacity, 
   StyleSheet, 
-  Dimensions 
+  Dimensions,
+  Platform,
+  StatusBar,
+  Animated
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -27,30 +31,75 @@ export const RecognitionInfoModal: React.FC<RecognitionInfoModalProps> = ({
   onClose 
 }) => {
   const screenHeight = Dimensions.get('window').height;
+  const fadeAnim = React.useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    if (visible) {
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      fadeAnim.setValue(0);
+    }
+  }, [visible]);
 
   return (
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="pageSheet"
+      presentationStyle={Platform.OS === 'ios' ? 'pageSheet' : 'fullScreen'}
       onRequestClose={onClose}
+      statusBarTranslucent
     >
       <View style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerContent}>
-            <View style={styles.headerIcon}>
-              <Ionicons name="trophy" size={24} color="white" />
-            </View>
-            <View style={styles.headerText}>
+        <StatusBar 
+          barStyle={Platform.OS === 'ios' ? 'dark-content' : 'light-content'} 
+          backgroundColor="#8B0000"
+        />
+        
+        {/* Header with Gradient */}
+        <LinearGradient
+          colors={['#8B0000', '#A52A2A']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.headerGradient}
+        >
+          <View style={styles.header}>
+            <TouchableOpacity 
+              onPress={onClose} 
+              style={styles.closeButton}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <View style={styles.closeButtonCircle}>
+                <Ionicons name="close" size={22} color="#8B0000" />
+              </View>
+            </TouchableOpacity>
+            
+            <Animated.View 
+              style={[
+                styles.headerContent,
+                { opacity: fadeAnim }
+              ]}
+            >
+              <View style={styles.headerIconLarge}>
+                <LinearGradient
+                  colors={['#DAA520', '#FFD700']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.iconGradient}
+                >
+                  <Ionicons name="trophy" size={40} color="white" />
+                </LinearGradient>
+              </View>
               <Text style={styles.headerTitle}>Recognition System</Text>
-              <Text style={styles.headerSubtitle}>Learn how our recognition and points system works</Text>
-            </View>
+              <Text style={styles.headerSubtitle}>
+                Learn how points and recognition work
+              </Text>
+            </Animated.View>
           </View>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <Ionicons name="close" size={24} color="#8B0000" />
-          </TouchableOpacity>
-        </View>
+        </LinearGradient>
 
         {/* Content */}
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -184,47 +233,94 @@ const BenefitItem: React.FC<{ text: string }> = ({ text }) => (
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: '#F8F9FA',
+  },
+  headerGradient: {
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight || 0 : 50,
+    paddingBottom: 20,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
   },
   header: {
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    paddingTop: 10,
   },
   headerContent: {
-    flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
+    width: '100%',
   },
-  headerIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#8B0000',
+  headerIconLarge: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginBottom: 16,
+    overflow: 'hidden',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
+  },
+  iconGradient: {
+    width: '100%',
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
-  },
-  headerText: {
-    flex: 1,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#8B0000',
+    fontSize: 28,
+    fontWeight: '800',
+    color: 'white',
+    textAlign: 'center',
+    marginBottom: 8,
+    letterSpacing: 0.5,
   },
   headerSubtitle: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginTop: 2,
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.9)',
+    textAlign: 'center',
+    paddingHorizontal: 20,
   },
   closeButton: {
-    padding: 8,
+    position: 'absolute',
+    top: Platform.OS === 'android' ? 10 : 0,
+    right: 20,
+    zIndex: 10,
+  },
+  closeButtonCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'white',
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
   content: {
     flex: 1,
@@ -232,131 +328,206 @@ const styles = StyleSheet.create({
   },
   section: {
     marginTop: 20,
-    backgroundColor: '#F8F5F5',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 20,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#8B0000',
-    marginLeft: 8,
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginLeft: 10,
+    flex: 1,
   },
   sectionDescription: {
-    fontSize: 14,
-    color: '#4B5563',
-    marginBottom: 16,
-    lineHeight: 20,
+    fontSize: 15,
+    color: '#6B7280',
+    marginBottom: 20,
+    lineHeight: 22,
   },
   pointsList: {
-    gap: 12,
+    gap: 16,
   },
   pointItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
+    backgroundColor: '#F9FAFB',
+    padding: 14,
+    borderRadius: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: '#DAA520',
   },
   pointNumber: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: '#8B0000',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 14,
     marginTop: 2,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#8B0000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
   },
   pointNumberText: {
     color: 'white',
-    fontSize: 12,
-    fontWeight: 'bold',
+    fontSize: 14,
+    fontWeight: '800',
   },
   pointContent: {
     flex: 1,
   },
   pointTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 2,
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 4,
   },
   pointDescription: {
     fontSize: 14,
-    color: '#6B7280',
+    color: '#4B5563',
+    fontWeight: '500',
   },
   pointSubDescription: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    marginTop: 4,
-    lineHeight: 16,
+    fontSize: 13,
+    color: '#6B7280',
+    marginTop: 6,
+    lineHeight: 18,
+    paddingLeft: 8,
   },
   recognitionGrid: {
     marginTop: 20,
     gap: 16,
   },
   recognitionCard: {
-    backgroundColor: '#F8F5F5',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 2,
+    borderColor: '#8B0000',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#8B0000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
   cardDescription: {
-    fontSize: 14,
+    fontSize: 15,
     color: '#4B5563',
-    marginBottom: 12,
-    lineHeight: 20,
+    marginBottom: 14,
+    lineHeight: 22,
   },
   cardHighlight: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#FFF9E6',
+    padding: 12,
+    borderRadius: 10,
+    borderLeftWidth: 3,
+    borderLeftColor: '#DAA520',
   },
   cardHighlightText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
+    fontWeight: '700',
+    color: '#854D0E',
     marginLeft: 8,
+    flex: 1,
   },
   benefitsSection: {
     marginTop: 20,
     marginBottom: 40,
-    backgroundColor: '#FDF2F2',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 2,
+    borderColor: '#16A34A',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#16A34A',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
   benefitsList: {
-    marginTop: 12,
-    gap: 12,
+    marginTop: 16,
+    gap: 14,
   },
   benefitItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
+    backgroundColor: '#F0FDF4',
+    padding: 12,
+    borderRadius: 10,
+    borderLeftWidth: 3,
+    borderLeftColor: '#16A34A',
   },
   benefitCheck: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#DAA520',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#16A34A',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
-    marginTop: 2,
+    marginTop: 1,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#16A34A',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
   },
   benefitCheckText: {
     color: 'white',
-    fontSize: 12,
-    fontWeight: 'bold',
+    fontSize: 14,
+    fontWeight: '900',
   },
   benefitText: {
     flex: 1,
-    fontSize: 14,
-    color: '#4B5563',
-    lineHeight: 20,
+    fontSize: 15,
+    color: '#166534',
+    lineHeight: 22,
+    fontWeight: '500',
   },
 });

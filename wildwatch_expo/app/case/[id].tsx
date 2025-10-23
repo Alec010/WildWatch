@@ -11,6 +11,7 @@ import {
   StyleSheet,
   Platform,
   Modal,
+  Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -697,12 +698,58 @@ export default function CaseDetailsScreen() {
             iconColor={PALETTE.maroon}
           />
           <Divider />
-          <Row
-            icon="location"
-            label="Location"
-            value={incident.location}
-            iconColor={PALETTE.maroon}
-          />
+
+          {/* Location Row - Clickable to open Google Maps */}
+          <TouchableOpacity
+            onPress={() => {
+              if (incident.location) {
+                const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                  incident.location
+                )}`;
+                Linking.openURL(url);
+              }
+            }}
+            disabled={!incident.location}
+            activeOpacity={0.7}
+            style={{
+              flexDirection: "row",
+              alignItems: "flex-start",
+            }}
+          >
+            <View style={styles.rowIcon}>
+              <Ionicons name="location" size={16} color={PALETTE.maroon} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <Text style={styles.rowLabel}>Location</Text>
+                {incident.location && (
+                  <Ionicons
+                    name="open-outline"
+                    size={14}
+                    color={PALETTE.maroon}
+                  />
+                )}
+              </View>
+              <Text
+                style={[
+                  styles.rowValue,
+                  incident.location && {
+                    color: PALETTE.maroon,
+                    textDecorationLine: "underline",
+                  },
+                ]}
+              >
+                {incident.location || "Not specified"}
+              </Text>
+            </View>
+          </TouchableOpacity>
+
           <Divider />
           <Row
             icon="time"
@@ -855,6 +902,50 @@ export default function CaseDetailsScreen() {
             iconColor={PALETTE.maroon}
           />
         </Card>
+
+        {/* RESOLUTION DETAILS - Only for Resolved Cases */}
+        {incident.status?.toUpperCase().replace(/\s+/g, "_") === "RESOLVED" && (
+          <Card title="Resolution Details">
+            {incident.resolutionNotes && (
+              <>
+                <Row
+                  icon="document-text"
+                  label="Resolution Notes"
+                  value={incident.resolutionNotes}
+                  multiline
+                  iconColor={PALETTE.success}
+                />
+                <Divider />
+              </>
+            )}
+            {incident.finishedDate && (
+              <>
+                <Row
+                  icon="checkmark-circle"
+                  label="Completed On"
+                  value={formatFullDate(incident.finishedDate)}
+                  iconColor={PALETTE.success}
+                />
+                <Divider />
+              </>
+            )}
+            <Row
+              icon="calendar-outline"
+              label="Case Closed"
+              value={formatFullDate(incident.finishedDate || incident.submittedAt)}
+              iconColor={PALETTE.success}
+            />
+            
+            {/* Success Banner */}
+            <View style={{ marginTop: 12 }}>
+              <Banner
+                icon="checkmark-circle"
+                tone="success"
+                text="This case has been successfully resolved and closed."
+              />
+            </View>
+          </Card>
+        )}
 
         {/* NEXT STEPS */}
         <Card title="Next Steps">

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -8,13 +8,13 @@ import {
   TextInput,
   Linking,
   Image,
-  Dimensions,
   Modal,
   StyleSheet,
   Platform,
+  useWindowDimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Stack, router } from "expo-router";
+import { Stack, router, useFocusEffect } from "expo-router";
 import Toast from "react-native-toast-message";
 import type { IncidentResponseDto } from "../../src/features/incidents/models/IncidentModels";
 import { usePublicIncidents } from "../../src/features/incidents/hooks/usePublicIncidents";
@@ -24,6 +24,7 @@ import type { OfficeBulletinDto } from "../../src/features/bulletins/models/Bull
 import { bulletinAPI } from "../../src/features/bulletins/api/bulletin_api";
 import { useBulletinUpvoteStatus } from "../../src/features/bulletins/hooks/useBulletinUpvoteStatus";
 import { storage } from "../../lib/storage";
+import { config } from "../../lib/config";
 import { useOffices } from "../../src/features/offices/hooks/useOffices";
 
 // Media Viewer Component
@@ -264,31 +265,62 @@ const styles = StyleSheet.create({
 interface BulletinCardProps {
   bulletin: OfficeBulletinDto;
   isTwoColumnLayout: boolean;
+  screenWidth: number;
   onRelatedIncidentClick: (trackingNumber?: string) => void;
   formatDate: (dateString?: string | null) => string;
+  onUpvoteSuccess: () => void;
 }
 
 const BulletinCard: React.FC<BulletinCardProps> = ({
   bulletin,
   isTwoColumnLayout,
+  screenWidth,
   onRelatedIncidentClick,
   formatDate,
+  onUpvoteSuccess,
 }) => {
   const { hasUpvoted, setHasUpvoted, refetchUpvoteStatus } =
     useBulletinUpvoteStatus(bulletin.id);
-  const [localUpvoteCount, setLocalUpvoteCount] = useState(
-    bulletin.upvoteCount || 0
-  );
   const [selectedMedia, setSelectedMedia] = useState<{
     url: string;
     fileName: string;
     fileType: string;
   } | null>(null);
+  const [upvoteCount, setUpvoteCount] = useState<number>(
+    bulletin.upvoteCount || 0
+  );
 
-  // Sync local count with bulletin data when it changes
+  // Fetch upvote count from API endpoint
+  const fetchUpvoteCount = async () => {
+    try {
+      const response = await fetch(
+        `${config.API.BASE_URL}/office-bulletins/${bulletin.id}/upvote-count`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${await storage.getToken()}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.ok) {
+        const count = await response.json();
+        setUpvoteCount(
+          typeof count === "number"
+            ? count
+            : count.count || count.upvoteCount || 0
+        );
+      }
+    } catch (error) {
+      console.error("Error fetching upvote count:", error);
+    }
+  };
+
+  // Fetch upvote count on mount and when bulletin changes
   useEffect(() => {
-    setLocalUpvoteCount(bulletin.upvoteCount || 0);
-  }, [bulletin.upvoteCount]);
+    fetchUpvoteCount();
+  }, [bulletin.id]);
 
   const handleUpvote = async () => {
     try {
@@ -306,7 +338,6 @@ const BulletinCard: React.FC<BulletinCardProps> = ({
       await bulletinAPI.upvoteBulletin(bulletin.id);
       const wasUpvoted = !hasUpvoted;
       setHasUpvoted(wasUpvoted);
-      setLocalUpvoteCount((prev) => (wasUpvoted ? prev + 1 : prev - 1));
 
       Toast.show({
         type: "success",
@@ -317,7 +348,10 @@ const BulletinCard: React.FC<BulletinCardProps> = ({
         visibilityTime: 2000,
       });
 
-      refetchUpvoteStatus();
+      // Refresh upvote status and bulletin data to get updated count
+      await refetchUpvoteStatus();
+      await fetchUpvoteCount();
+      onUpvoteSuccess();
     } catch (error: any) {
       Toast.show({
         type: "error",
@@ -332,89 +366,140 @@ const BulletinCard: React.FC<BulletinCardProps> = ({
   return (
     <View
       key={bulletin.id}
-      className="bg-white rounded-2xl p-4 border border-gray-100"
+      className="bg-white rounded-2xl border border-gray-100"
       style={{
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.06,
         shadowRadius: 6,
         elevation: 2,
-        width: isTwoColumnLayout ? `${(100 - 1.5) / 2}%` : "100%",
+        width: isTwoColumnLayout ? "48%" : "100%",
         marginBottom: isTwoColumnLayout ? 0 : 12,
+        display: "flex",
+        flexDirection: "column",
       }}
     >
-      {/* Header */}
-      <View className="flex-row items-start mb-2">
-        <View className="bg-[#8B0000]/10 p-2 rounded-xl mr-3">
-          <Ionicons name="megaphone" size={20} color="#8B0000" />
-        </View>
-        <View className="flex-1">
-          <Text
-            className="font-extrabold text-gray-900 text-[17px]"
-            numberOfLines={2}
-            ellipsizeMode="tail"
-          >
-            {bulletin.title}
-          </Text>
-          <View className="flex-row items-center mt-1">
-            <Ionicons name="person-circle-outline" size={14} color="#6B7280" />
-            <Text className="text-gray-500 text-xs ml-1 mr-1" numberOfLines={1}>
-              {bulletin.createdBy.replace(/ Admin$/i, "")}
-            </Text>
-            <Text className="text-gray-300 mx-1">•</Text>
-            <Text className="text-gray-500 text-xs">
-              {formatDate(bulletin.createdAt)}
-            </Text>
+      {/* Content Area */}
+      <View className="p-4 flex-1">
+        {/* Header */}
+        <View className="flex-row items-start mb-2">
+          <View className="bg-[#8B0000]/10 p-2 rounded-xl mr-3">
+            <Ionicons name="megaphone" size={20} color="#8B0000" />
           </View>
-        </View>
-      </View>
-
-      {/* Body */}
-      <Text
-        className="text-gray-700 text-[13px] leading-5 mb-3"
-        numberOfLines={4}
-        ellipsizeMode="tail"
-      >
-        {bulletin.description}
-      </Text>
-
-      {/* Related Reports */}
-      {bulletin.relatedIncidents && bulletin.relatedIncidents.length > 0 && (
-        <View className="mb-3">
-          <Text className="text-[11px] font-semibold text-gray-600 mb-2">
-            Related Reports ({bulletin.relatedIncidents.length}):
-          </Text>
-          <View className="flex-row flex-wrap">
-            {bulletin.relatedIncidents.map((incident) => (
-              <TouchableOpacity
-                key={incident.id}
-                className="bg-green-50 border border-green-200 rounded-full px-3 py-1 mr-2 mb-2 flex-row items-center"
-                onPress={() => onRelatedIncidentClick(incident.trackingNumber)}
+          <View className="flex-1">
+            <Text
+              className="font-extrabold text-gray-900 text-[17px]"
+              numberOfLines={2}
+              ellipsizeMode="tail"
+            >
+              {bulletin.title}
+            </Text>
+            <View className="flex-row items-center mt-1">
+              <Ionicons
+                name="person-circle-outline"
+                size={14}
+                color="#6B7280"
+              />
+              <Text
+                className="text-gray-500 text-xs ml-1 mr-1"
+                numberOfLines={1}
               >
-                <Ionicons name="link" size={10} color="#15803D" />
-                <Text className="text-green-700 text-[11px] font-semibold ml-1">
-                  #{incident.trackingNumber}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                {bulletin.createdBy.replace(/ Admin$/i, "")}
+              </Text>
+              <Text className="text-gray-300 mx-1">•</Text>
+              <Text className="text-gray-500 text-xs">
+                {formatDate(bulletin.createdAt)}
+              </Text>
+            </View>
           </View>
         </View>
-      )}
 
-      {/* Media */}
-      {bulletin.mediaAttachments && bulletin.mediaAttachments.length > 0 && (
-        <View className="mb-1">
-          <Text className="text-[11px] font-semibold text-gray-600 mb-2">
-            Attachments ({bulletin.mediaAttachments.length}):
-          </Text>
-          <View className="flex-row flex-wrap">
-            {bulletin.mediaAttachments.map((media) => {
-              const isImage = media.fileType?.startsWith("image/");
-              if (isImage) {
+        {/* Body */}
+        <Text
+          className="text-gray-700 text-[13px] leading-5 mb-3"
+          numberOfLines={4}
+          ellipsizeMode="tail"
+        >
+          {bulletin.description}
+        </Text>
+
+        {/* Related Reports */}
+        {bulletin.relatedIncidents && bulletin.relatedIncidents.length > 0 && (
+          <View className="mb-3">
+            <Text className="text-[11px] font-semibold text-gray-600 mb-2">
+              Related Reports ({bulletin.relatedIncidents.length}):
+            </Text>
+            <View className="flex-row flex-wrap">
+              {bulletin.relatedIncidents.map((incident) => (
+                <TouchableOpacity
+                  key={incident.id}
+                  className="bg-green-50 border border-green-200 rounded-full px-3 py-1 mr-2 mb-2 flex-row items-center"
+                  onPress={() =>
+                    onRelatedIncidentClick(incident.trackingNumber)
+                  }
+                >
+                  <Ionicons name="link" size={10} color="#15803D" />
+                  <Text className="text-green-700 text-[11px] font-semibold ml-1">
+                    #{incident.trackingNumber}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Media */}
+        {bulletin.mediaAttachments && bulletin.mediaAttachments.length > 0 && (
+          <View className="mb-1">
+            <Text className="text-[11px] font-semibold text-gray-600 mb-2">
+              Attachments ({bulletin.mediaAttachments.length}):
+            </Text>
+            <View className="flex-row flex-wrap">
+              {bulletin.mediaAttachments.map((media) => {
+                const isImage = media.fileType?.startsWith("image/");
+                if (isImage) {
+                  return (
+                    <TouchableOpacity
+                      key={media.id}
+                      className="mb-2"
+                      onPress={() =>
+                        setSelectedMedia({
+                          url: media.fileUrl,
+                          fileName: media.fileName,
+                          fileType: media.fileType,
+                        })
+                      }
+                      style={{
+                        width: "100%",
+                      }}
+                    >
+                      <Image
+                        source={{ uri: media.fileUrl }}
+                        style={{
+                          width: "100%",
+                          height: isTwoColumnLayout ? 180 : 200,
+                          borderRadius: 12,
+                          backgroundColor: "#F3F4F6",
+                        }}
+                        resizeMode="cover"
+                      />
+                      <Text
+                        className="text-gray-500 text-[11px] mt-1"
+                        numberOfLines={1}
+                        ellipsizeMode="middle"
+                      >
+                        {media.fileName}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                }
                 return (
                   <TouchableOpacity
                     key={media.id}
-                    className="mb-2 mr-2"
+                    className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 mr-2 mb-2 flex-row items-center"
+                    style={{
+                      maxWidth: "100%",
+                    }}
                     onPress={() =>
                       setSelectedMedia({
                         url: media.fileUrl,
@@ -422,22 +507,14 @@ const BulletinCard: React.FC<BulletinCardProps> = ({
                         fileType: media.fileType,
                       })
                     }
-                    style={{
-                      width: Dimensions.get("window").width - 60,
-                    }}
                   >
-                    <Image
-                      source={{ uri: media.fileUrl }}
-                      style={{
-                        width: "100%",
-                        height: 200,
-                        borderRadius: 12,
-                        backgroundColor: "#F3F4F6",
-                      }}
-                      resizeMode="cover"
+                    <Ionicons
+                      name="document-attach"
+                      size={16}
+                      color="#3B82F6"
                     />
                     <Text
-                      className="text-gray-500 text-[11px] mt-1"
+                      className="text-blue-700 text-[12px] ml-1 font-semibold flex-1"
                       numberOfLines={1}
                       ellipsizeMode="middle"
                     >
@@ -445,49 +522,29 @@ const BulletinCard: React.FC<BulletinCardProps> = ({
                     </Text>
                   </TouchableOpacity>
                 );
-              }
-              return (
-                <TouchableOpacity
-                  key={media.id}
-                  className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 mr-2 mb-2 flex-row items-center max-w-[85%]"
-                  onPress={() =>
-                    setSelectedMedia({
-                      url: media.fileUrl,
-                      fileName: media.fileName,
-                      fileType: media.fileType,
-                    })
-                  }
-                >
-                  <Ionicons name="document-attach" size={16} color="#3B82F6" />
-                  <Text
-                    className="text-blue-700 text-[12px] ml-1 font-semibold flex-1"
-                    numberOfLines={1}
-                    ellipsizeMode="middle"
-                  >
-                    {media.fileName}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+              })}
+            </View>
           </View>
-        </View>
-      )}
+        )}
+      </View>
 
-      {/* Footer */}
-      <TouchableOpacity
-        className="flex-row items-center justify-end pt-3 border-t border-gray-100"
-        onPress={handleUpvote}
-        activeOpacity={0.7}
-      >
-        <Ionicons
-          name={hasUpvoted ? "thumbs-up" : "thumbs-up-outline"}
-          size={22}
-          color={hasUpvoted ? "#F4C430" : "#6B7280"}
-        />
-        <Text className="ml-2 text-gray-700 font-semibold text-base">
-          {localUpvoteCount}
-        </Text>
-      </TouchableOpacity>
+      {/* Footer - Always at bottom right */}
+      <View className="px-4 pb-4">
+        <TouchableOpacity
+          className="flex-row items-center justify-end pt-3 border-t border-gray-100"
+          onPress={handleUpvote}
+          activeOpacity={0.7}
+        >
+          <Ionicons
+            name={hasUpvoted ? "thumbs-up" : "thumbs-up-outline"}
+            size={22}
+            color={hasUpvoted ? "#F4C430" : "#6B7280"}
+          />
+          <Text className="ml-2 text-gray-700 font-semibold text-base">
+            {upvoteCount}
+          </Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Media Viewer Modal */}
       {selectedMedia && (
@@ -533,9 +590,6 @@ export default function CasesScreen() {
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedTab, setSelectedTab] = useState<number>(0);
-  const [screenWidth, setScreenWidth] = useState<number>(
-    Dimensions.get("window").width
-  );
 
   // Filter and Sort states
   const [statusFilter, setStatusFilter] = useState<string>("All");
@@ -547,47 +601,15 @@ export default function CasesScreen() {
     "desc"
   );
 
-  // ====== EFFECTS ======
-  useEffect(() => {
-    filterIncidents();
-  }, [incidents, searchQuery, statusFilter, incidentSortOrder]);
-
-  useEffect(() => {
-    filterBulletins();
-  }, [bulletins, searchQuery, officeFilter, bulletinSortOrder, offices]);
-
-  useEffect(() => {
-    const subscription = Dimensions.addEventListener("change", ({ window }) => {
-      setScreenWidth(window.width);
-    });
-    return () => subscription?.remove();
-  }, []);
-
-  // ====== HELPERS ======
+  // ====== RESPONSIVE DIMENSIONS ======
+  // useWindowDimensions automatically updates on orientation change
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+  const isLandscape = screenWidth > screenHeight;
   const isTwoColumnLayout = screenWidth > 670;
 
-  // Get unique statuses from incidents
-  const getUniqueStatuses = () => {
-    const statuses = new Set(
-      incidents.map((i) => i.status || "Unknown").filter(Boolean)
-    );
-    return ["All", ...Array.from(statuses)];
-  };
-
-  // Get unique offices from API
-  const getUniqueOffices = () => {
-    if (!offices || offices.length === 0) {
-      return ["All"];
-    }
-    const officeNames = offices
-      .map((office) => office.fullName)
-      .filter(Boolean)
-      .sort();
-    return ["All", ...officeNames];
-  };
-
-  const filterIncidents = () => {
-    let filtered = incidents;
+  // ====== FILTER FUNCTIONS ======
+  const filterIncidents = useCallback(() => {
+    let filtered = [...incidents]; // Create a copy to avoid mutation
 
     // Search filter
     if (searchQuery.trim()) {
@@ -606,18 +628,18 @@ export default function CasesScreen() {
       );
     }
 
-    // Sort by date
-    filtered = filtered.sort((a, b) => {
+    // Sort by date (on the copied array)
+    filtered.sort((a, b) => {
       const dateA = new Date(a.dateOfIncident).getTime();
       const dateB = new Date(b.dateOfIncident).getTime();
       return incidentSortOrder === "desc" ? dateB - dateA : dateA - dateB;
     });
 
     setFilteredIncidents(filtered);
-  };
+  }, [incidents, searchQuery, statusFilter, incidentSortOrder]);
 
-  const filterBulletins = () => {
-    let filtered = bulletins;
+  const filterBulletins = useCallback(() => {
+    let filtered = [...bulletins]; // Create a copy to avoid mutation
 
     // Search filter
     if (searchQuery.trim()) {
@@ -638,14 +660,35 @@ export default function CasesScreen() {
       });
     }
 
-    // Sort by date
-    filtered = filtered.sort((a, b) => {
+    // Sort by date (on the copied array)
+    filtered.sort((a, b) => {
       const dateA = new Date(a.createdAt).getTime();
       const dateB = new Date(b.createdAt).getTime();
       return bulletinSortOrder === "desc" ? dateB - dateA : dateA - dateB;
     });
 
     setFilteredBulletins(filtered);
+  }, [bulletins, searchQuery, officeFilter, bulletinSortOrder]);
+
+  // ====== HELPER FUNCTIONS ======
+  // Get unique statuses from incidents
+  const getUniqueStatuses = () => {
+    const statuses = new Set(
+      incidents.map((i) => i.status || "Unknown").filter(Boolean)
+    );
+    return ["All", ...Array.from(statuses)];
+  };
+
+  // Get unique offices from API
+  const getUniqueOffices = () => {
+    if (!offices || offices.length === 0) {
+      return ["All"];
+    }
+    const officeNames = offices
+      .map((office) => office.fullName)
+      .filter(Boolean)
+      .sort();
+    return ["All", ...officeNames];
   };
 
   const onRefresh = async () => {
@@ -692,6 +735,23 @@ export default function CasesScreen() {
       return "N/A";
     }
   };
+
+  // ====== EFFECTS ======
+  useEffect(() => {
+    filterIncidents();
+  }, [filterIncidents]);
+
+  useEffect(() => {
+    filterBulletins();
+  }, [filterBulletins]);
+
+  // Refresh data when screen comes into focus (e.g., returning from case details)
+  useFocusEffect(
+    React.useCallback(() => {
+      refreshIncidents();
+      refreshBulletins();
+    }, [refreshIncidents, refreshBulletins])
+  );
 
   // ====== LOADING STATE ======
   if (incidentsLoading && bulletinsLoading && officesLoading) {
@@ -972,7 +1032,7 @@ export default function CasesScreen() {
           <>
             {/* LOADING */}
             {incidentsLoading ? (
-              <View className="flex-1 items-center justify-center py-20">
+              <View className="flex-1 items-center justify-center py-20 bg-gray-50">
                 <CircularLoader subtitle="Loading reports..." />
               </View>
             ) : incidentsError ? (
@@ -1005,7 +1065,11 @@ export default function CasesScreen() {
                 style={{
                   flexDirection: isTwoColumnLayout ? "row" : "column",
                   flexWrap: isTwoColumnLayout ? "wrap" : "nowrap",
-                  gap: 12,
+                  justifyContent: isTwoColumnLayout
+                    ? "space-between"
+                    : "flex-start",
+                  rowGap: 12,
+                  columnGap: 12,
                 }}
               >
                 {filteredIncidents.map((incident) => (
@@ -1019,7 +1083,7 @@ export default function CasesScreen() {
                       shadowOpacity: 0.06,
                       shadowRadius: 6,
                       elevation: 2,
-                      width: isTwoColumnLayout ? `${(100 - 1.5) / 2}%` : "100%",
+                      width: isTwoColumnLayout ? "48%" : "100%",
                       marginBottom: isTwoColumnLayout ? 0 : 12,
                     }}
                   >
@@ -1183,7 +1247,7 @@ export default function CasesScreen() {
           <>
             {/* LOADING */}
             {bulletinsLoading ? (
-              <View className="flex-1 items-center justify-center py-20">
+              <View className="flex-1 items-center justify-center py-20 bg-gray-50">
                 <CircularLoader subtitle="Loading bulletins..." />
               </View>
             ) : bulletinsError ? (
@@ -1216,7 +1280,11 @@ export default function CasesScreen() {
                 style={{
                   flexDirection: isTwoColumnLayout ? "row" : "column",
                   flexWrap: isTwoColumnLayout ? "wrap" : "nowrap",
-                  gap: 12,
+                  justifyContent: isTwoColumnLayout
+                    ? "space-between"
+                    : "flex-start",
+                  rowGap: 12,
+                  columnGap: 12,
                 }}
               >
                 {filteredBulletins.map((bulletin) => (
@@ -1224,8 +1292,10 @@ export default function CasesScreen() {
                     key={bulletin.id}
                     bulletin={bulletin}
                     isTwoColumnLayout={isTwoColumnLayout}
+                    screenWidth={screenWidth}
                     onRelatedIncidentClick={handleCaseClick}
                     formatDate={formatDate}
+                    onUpvoteSuccess={refreshBulletins}
                   />
                 ))}
               </View>

@@ -91,6 +91,9 @@ function IncidentCard({
   onPress: () => void;
 }) {
   const status = getStatusInfo(incident.status);
+  const upvotes = incident.upvoteCount || 0;
+  const hasUpvotes = upvotes > 0;
+
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -157,10 +160,28 @@ function IncidentCard({
 
         <View className="flex-row justify-between items-center border-t border-gray-100 pt-3">
           <View className="flex-row items-center">
-            <Ionicons name="thumbs-up-outline" size={16} color="#6B7280" />
-            <Text className="ml-1 text-gray-600 font-medium text-sm">
-              {incident.upvoteCount || 0} Upvotes
-            </Text>
+            <View
+              style={{
+                backgroundColor: hasUpvotes ? "#FEF3C7" : "#F3F4F6",
+                borderRadius: 999,
+                paddingHorizontal: 8,
+                paddingVertical: 4,
+                flexDirection: "row",
+                alignItems: "center",
+              }}
+            >
+              <Ionicons
+                name={hasUpvotes ? "thumbs-up" : "thumbs-up-outline"}
+                size={14}
+                color={hasUpvotes ? "#F4C430" : "#6B7280"}
+              />
+              <Text
+                className="ml-1 font-medium text-xs"
+                style={{ color: hasUpvotes ? "#92400E" : "#6B7280" }}
+              >
+                {upvotes} {upvotes === 1 ? "Upvote" : "Upvotes"}
+              </Text>
+            </View>
           </View>
           <Text className="text-[#8B0000] font-semibold text-sm">
             View Details
