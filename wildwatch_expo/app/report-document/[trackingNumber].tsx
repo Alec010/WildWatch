@@ -18,6 +18,7 @@ import Toast from "react-native-toast-message";
 import { incidentAPI } from "../../src/features/incidents/api/incident_api";
 import type { IncidentResponseDto } from "../../src/features/incidents/models/IncidentModels";
 import { CircularLoader } from "../../components/CircularLoader";
+import { getReporterDisplayName, getReporterDisplayEmail, getReporterDisplayPhone } from "../../src/utils/anonymousUtils";
 
 export default function ReportDocumentScreen() {
   const { trackingNumber } = useLocalSearchParams<{ trackingNumber: string }>();
@@ -645,21 +646,21 @@ export default function ReportDocumentScreen() {
               <div class="info-item">
                 <div class="info-label">Reporter Name</div>
                 <div class="info-value">${
-                  incident.submittedByFullName || "Not provided"
+                  getReporterDisplayName(incident)
                 }</div>
               </div>
               <div class="info-item">
                 <div class="info-label">Email Address</div>
                 <div class="info-value">${
-                  incident.submittedByEmail || "Not provided"
+                  getReporterDisplayEmail(incident)
                 }</div>
               </div>
               ${
-                incident.submittedByPhone
+                getReporterDisplayPhone(incident) !== "Not provided"
                   ? `
               <div class="info-item">
                 <div class="info-label">Phone Number</div>
-                <div class="info-value">${incident.submittedByPhone}</div>
+                <div class="info-value">${getReporterDisplayPhone(incident)}</div>
               </div>
               `
                   : ""
@@ -1285,18 +1286,18 @@ export default function ReportDocumentScreen() {
               <View className="flex-row flex-wrap -mx-1">
                 <InfoItem
                   label="Reporter Name"
-                  value={incident.submittedByFullName || "Not provided"}
+                  value={getReporterDisplayName(incident)}
                   isCompact={isCompact}
                 />
                 <InfoItem
                   label="Email Address"
-                  value={incident.submittedByEmail || "Not provided"}
+                  value={getReporterDisplayEmail(incident)}
                   isCompact={isCompact}
                 />
-                {incident.submittedByPhone && (
+                {getReporterDisplayPhone(incident) !== "Not provided" && (
                   <InfoItem
                     label="Phone Number"
-                    value={incident.submittedByPhone}
+                    value={getReporterDisplayPhone(incident)}
                     isCompact={isCompact}
                   />
                 )}
