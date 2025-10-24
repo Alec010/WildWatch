@@ -24,6 +24,7 @@ import { config } from "../../lib/config";
 import { RatingModal } from "../../src/features/ratings/components/RatingModal";
 import { RatingAnalytics } from "../../src/features/ratings/components/RatingAnalytics";
 import { useRating } from "../../src/features/ratings/hooks/useRating";
+import { useUserProfile } from "../../src/features/users/hooks/useUserProfile";
 import { CircularLoader } from "../../components/CircularLoader";
 
 interface ProgressStep {
@@ -83,6 +84,7 @@ export default function CaseDetailsScreen() {
   const { hasUpvoted, setHasUpvoted, refetchUpvoteStatus } = useUpvoteStatus(
     incident?.id?.toString()
   );
+  const { userProfile } = useUserProfile();
 
   const [refreshing, setRefreshing] = React.useState(false);
   const [selectedImage, setSelectedImage] = React.useState<string | null>(null);
@@ -111,6 +113,12 @@ export default function CaseDetailsScreen() {
   };
 
   const handleRatingSuccess = () => fetchRatingStatus();
+
+  // Check if current user is the reporter to prevent self-rating
+  const isCurrentUserReporter = React.useMemo(() => {
+    if (!userProfile?.email || !incident?.submittedByEmail) return false;
+    return userProfile.email.toLowerCase() === incident.submittedByEmail.toLowerCase();
+  }, [userProfile?.email, incident?.submittedByEmail]);
 
   const handleUpvote = async () => {
     if (!token || !incident) return;
@@ -1082,6 +1090,13 @@ export default function CaseDetailsScreen() {
                     text="Points have been awarded for this incident"
                   />
                 )}
+                {isCurrentUserReporter && (
+                  <Banner
+                    icon="information-circle"
+                    tone="warn"
+                    text="You cannot rate your own report. Only other users can rate you."
+                  />
+                )}
               </View>
             )}
 
@@ -1117,34 +1132,64 @@ export default function CaseDetailsScreen() {
                 </Text>
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={[
+              {/* Only show "Rate Reporter" button if current user is NOT the reporter */}
+              {!isCurrentUserReporter && (
+                <TouchableOpacity
+                  style={[
+                    styles.btn,
+                    {
+                      backgroundColor: ratingStatus?.officeRating
+                        ? PALETTE.border
+                        : PALETTE.maroon,
+                    },
+                  ]}
+                  onPress={() => handleRatingPress("office")}
+                  disabled={!!ratingStatus?.officeRating}
+                >
+                  <Ionicons
+                    name="star-outline"
+                    size={16}
+                    color={ratingStatus?.officeRating ? PALETTE.text : "#FFFFFF"}
+                  />
+                  <Text
+                    style={[
+                      styles.btnText,
+                      ratingStatus?.officeRating && { color: PALETTE.text },
+                    ]}
+                  >
+                    {ratingStatus?.officeRating
+                      ? "Rated Reporter"
+                      : "Rate Reporter"}
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {/* Show message if current user is the reporter */}
+              {isCurrentUserReporter && (
+                <View style={[
                   styles.btn,
                   {
-                    backgroundColor: ratingStatus?.officeRating
-                      ? PALETTE.border
-                      : PALETTE.maroon,
-                  },
-                ]}
-                onPress={() => handleRatingPress("office")}
-                disabled={!!ratingStatus?.officeRating}
-              >
-                <Ionicons
-                  name="star-outline"
-                  size={16}
-                  color={ratingStatus?.officeRating ? PALETTE.text : "#FFFFFF"}
-                />
-                <Text
-                  style={[
-                    styles.btnText,
-                    ratingStatus?.officeRating && { color: PALETTE.text },
-                  ]}
-                >
-                  {ratingStatus?.officeRating
-                    ? "Rated Reporter"
-                    : "Rate Reporter"}
-                </Text>
-              </TouchableOpacity>
+                    backgroundColor: PALETTE.border,
+                    flex: 1,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }
+                ]}>
+                  <Ionicons
+                    name="information-circle"
+                    size={16}
+                    color={PALETTE.subtext}
+                  />
+                  <Text
+                    style={[
+                      styles.btnText,
+                      { color: PALETTE.subtext, fontSize: 12 }
+                    ]}
+                  >
+                    Cannot rate yourself
+                  </Text>
+                </View>
+              )}
             </View>
 
             {ratingStatus?.reporterRating && (
