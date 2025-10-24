@@ -26,6 +26,7 @@ import { RatingAnalytics } from "../../src/features/ratings/components/RatingAna
 import { useRating } from "../../src/features/ratings/hooks/useRating";
 import { useUserProfile } from "../../src/features/users/hooks/useUserProfile";
 import { CircularLoader } from "../../components/CircularLoader";
+import { getReporterDisplayName, getReporterDisplayEmail, getReporterDisplayPhone } from "../../src/utils/anonymousUtils";
 
 interface ProgressStep {
   title: string;
@@ -892,21 +893,21 @@ export default function CaseDetailsScreen() {
           <Row
             icon="person"
             label="Name"
-            value={incident.submittedByFullName || "Anonymous"}
+            value={getReporterDisplayName(incident)}
             iconColor={PALETTE.maroon}
           />
           <Divider />
           <Row
             icon="mail"
             label="Email"
-            value={incident.submittedByEmail || "Not provided"}
+            value={getReporterDisplayEmail(incident)}
             iconColor={PALETTE.maroon}
           />
           <Divider />
           <Row
             icon="call"
             label="Phone"
-            value={incident.submittedByPhone || "Not provided"}
+            value={getReporterDisplayPhone(incident)}
             iconColor={PALETTE.maroon}
           />
         </Card>
