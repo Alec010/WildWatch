@@ -74,7 +74,8 @@ export default function OfficeAdminIncidentHistoryPage() {
       const searchParams = new URLSearchParams(window.location.search)
       const statusFromUrl = searchParams.get("status")
       if (statusFromUrl) {
-      setStatusFilter(statusFromUrl)
+        setStatusFilter(statusFromUrl)
+      }
     }
   }, [])
 

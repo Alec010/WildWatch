@@ -96,7 +96,8 @@ export default function IncidentHistoryPage() {
       const searchParams = new URLSearchParams(window.location.search)
       const statusFromUrl = searchParams.get("status")
       if (statusFromUrl) {
-      setStatusFilter(statusFromUrl)
+        setStatusFilter(statusFromUrl)
+      }
     }
   }, [])
 
