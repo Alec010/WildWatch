@@ -55,16 +55,16 @@ export default function MapPickerModal({
     if (!isOpen) return;
 
     const loadGoogleMaps = () => {
-      if (window.google) {
+      if (typeof window !== 'undefined' && window.google) {
         initializeMap();
         return;
       }
 
       // Check if script is already loading
-      if (document.querySelector('script[src*="maps.googleapis.com"]')) {
+      if (typeof document !== 'undefined' && document.querySelector('script[src*="maps.googleapis.com"]')) {
         // Wait for it to load
         const checkLoaded = setInterval(() => {
-          if (window.google) {
+          if (typeof window !== 'undefined' && window.google) {
             clearInterval(checkLoaded);
             initializeMap();
           }
@@ -73,18 +73,20 @@ export default function MapPickerModal({
       }
 
       // Load the script
-      const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=geometry`;
-      script.async = true;
-      script.defer = true;
-      script.onload = initializeMap;
-      script.onerror = () => {
-        setIsLoading(false);
-        toast.error('Failed to load Google Maps', {
-          description: 'Please check your internet connection and try again.',
-        });
-      };
-      document.head.appendChild(script);
+      if (typeof document !== 'undefined') {
+        const script = document.createElement('script');
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=geometry`;
+        script.async = true;
+        script.defer = true;
+        script.onload = initializeMap;
+        script.onerror = () => {
+          setIsLoading(false);
+          toast.error('Failed to load Google Maps', {
+            description: 'Please check your internet connection and try again.',
+          });
+        };
+        document.head.appendChild(script);
+      }
     };
 
     loadGoogleMaps();
@@ -110,7 +112,7 @@ export default function MapPickerModal({
   }, [isOpen]);
 
   const initializeMap = useCallback(() => {
-    if (!mapRef.current || !window.google) return;
+    if (!mapRef.current || typeof window === 'undefined' || !window.google) return;
 
     // Define campus boundary coordinates (same as backend)
     const campusPolygon = [
@@ -132,7 +134,7 @@ export default function MapPickerModal({
 
     // Campus polygon is defined above for visual boundary
 
-    const map = new window.google.maps.Map(mapRef.current, {
+    const map = new window.google!.maps.Map(mapRef.current, {
       center: CAMPUS_CENTER,
       zoom: CAMPUS_ZOOM,
       mapTypeId: 'hybrid', // Satellite view with labels
@@ -142,7 +144,7 @@ export default function MapPickerModal({
       fullscreenControl: false,
       mapTypeControl: true,
       mapTypeControlOptions: {
-        style: window.google.maps.MapTypeControlStyle.COMPACT,
+        style: window.google!.maps.MapTypeControlStyle.COMPACT,
         mapTypeIds: ['roadmap', 'satellite', 'hybrid'],
       },
       minZoom: 15, // Prevent zooming out too far
@@ -203,7 +205,7 @@ export default function MapPickerModal({
 
   const drawCampusBoundary = useCallback((map: any, campusPolygon: any[]) => {
     // Draw campus boundary polygon with red outline
-    const campusBoundaryPolygon = new window.google.maps.Polygon({
+    const campusBoundaryPolygon = new window.google!.maps.Polygon({
       paths: campusPolygon,
       strokeColor: '#dc2626', // Red stroke
       strokeOpacity: 0.8,
@@ -222,13 +224,13 @@ export default function MapPickerModal({
     buildingOverlaysRef.current = [];
 
     buildings.forEach((building) => {
-      const bounds = new window.google.maps.LatLngBounds(
-        new window.google.maps.LatLng(building.bounds.southWestLat, building.bounds.southWestLng),
-        new window.google.maps.LatLng(building.bounds.northEastLat, building.bounds.northEastLng)
+      const bounds = new window.google!.maps.LatLngBounds(
+        new window.google!.maps.LatLng(building.bounds.southWestLat, building.bounds.southWestLng),
+        new window.google!.maps.LatLng(building.bounds.northEastLat, building.bounds.northEastLng)
       );
 
       // Create rectangle overlay
-      const rectangle = new window.google.maps.Rectangle({
+      const rectangle = new window.google!.maps.Rectangle({
         bounds: bounds,
         editable: false,
         draggable: false,
@@ -243,9 +245,9 @@ export default function MapPickerModal({
       buildingOverlaysRef.current.push(rectangle);
 
       // Add building label
-      const label = new window.google.maps.InfoWindow({
+      const label = new window.google!.maps.InfoWindow({
         content: `<div class="text-sm font-medium text-[#800000]">${building.name}</div>`,
-        position: new window.google.maps.LatLng(building.centerLatitude, building.centerLongitude),
+        position: new window.google!.maps.LatLng(building.centerLatitude, building.centerLongitude),
       });
 
       // Show label on hover
@@ -275,7 +277,7 @@ export default function MapPickerModal({
         markerRef.current.setMap(null);
       }
 
-      const marker = new window.google.maps.Marker({
+      const marker = new window.google!.maps.Marker({
         position: { lat, lng },
         map: mapInstanceRef.current,
         title: 'Selected Location',
@@ -285,7 +287,7 @@ export default function MapPickerModal({
               <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="#800000"/>
             </svg>
           `),
-          scaledSize: new window.google.maps.Size(24, 24),
+          scaledSize: new window.google!.maps.Size(24, 24),
         },
       });
 

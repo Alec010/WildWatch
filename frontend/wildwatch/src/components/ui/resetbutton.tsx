@@ -32,7 +32,7 @@ const ResetButton = React.forwardRef<HTMLButtonElement, ResetButtonProps>(
   ) => {
     const handleReset = (event: React.MouseEvent<HTMLButtonElement>) => {
       event.preventDefault();
-      if (confirmationMessage && !window.confirm(confirmationMessage)) {
+      if (confirmationMessage && typeof window !== 'undefined' && !window.confirm(confirmationMessage)) {
         return;
       }
       onReset();
