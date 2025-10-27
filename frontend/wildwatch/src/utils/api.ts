@@ -17,10 +17,16 @@ export const WS_BASE_URL = getWsUrl();
  * @returns Promise with search results
  */
 export const searchUsers = async (query: string, page = 0, size = 10) => {
-  const token = document.cookie
-    .split('; ')
-    .find((row) => row.startsWith('token='))
-    ?.split('=')[1];
+  // Check if we're in a browser environment
+  const isClient = typeof window !== 'undefined';
+  
+  let token = null;
+  if (isClient) {
+    token = document.cookie
+      .split('; ')
+      .find((row) => row.startsWith('token='))
+      ?.split('=')[1];
+  }
 
   if (!token) {
     console.error('No authentication token found. User might need to log in again.');
@@ -41,8 +47,10 @@ export const searchUsers = async (query: string, page = 0, size = 10) => {
 
     if (response.status === 401 || response.status === 403) {
       console.error('Authentication token expired or invalid. Redirecting to login...');
-      // Clear the token cookie
-      document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+      // Clear the token cookie if in browser
+      if (isClient) {
+        document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+      }
       
       // Don't redirect immediately, just return empty results
       // The component using this function can handle the redirection if needed
