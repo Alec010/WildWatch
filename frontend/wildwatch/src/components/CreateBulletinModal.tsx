@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { ClientOnlyDialog, DialogHeader, DialogTitle } from "@/components/ClientOnlyDialog"
 import { X, Plus, Loader2, FileText, Upload } from "lucide-react"
 import { toast } from "sonner"
 import { FileUpload } from "@/components/FileUpload"
@@ -126,8 +126,7 @@ export function CreateBulletinModal({ isOpen, onClose, onSuccess }: CreateBullet
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="w-[98vw] sm:w-[95vw] md:w-[85vw] lg:w-[75vw] xl:w-[65vw] max-h-[90vh] bg-white p-0 rounded-lg shadow-xl flex flex-col overflow-hidden">
+    <ClientOnlyDialog open={isOpen} onOpenChange={handleClose} className="w-[98vw] sm:w-[95vw] md:w-[85vw] lg:w-[75vw] xl:w-[65vw] max-h-[90vh] bg-white p-0 rounded-lg shadow-xl flex flex-col overflow-hidden">
         <DialogHeader className="p-4 sm:p-6 pb-4 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <DialogTitle className="text-xl font-bold text-[#8B0000] flex items-center gap-2">
@@ -287,7 +286,6 @@ export function CreateBulletinModal({ isOpen, onClose, onSuccess }: CreateBullet
             </Button>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </ClientOnlyDialog>
   )
 }

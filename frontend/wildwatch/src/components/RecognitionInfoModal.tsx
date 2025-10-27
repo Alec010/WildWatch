@@ -1,6 +1,6 @@
 "use client"
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { ClientOnlyDialog, DialogHeader, DialogTitle, DialogDescription } from "@/components/ClientOnlyDialog"
 import { Trophy, Star, Award, Users, Building2, Sparkles } from "lucide-react"
 
 interface RecognitionInfoModalProps {
@@ -10,8 +10,7 @@ interface RecognitionInfoModalProps {
 
 export function RecognitionInfoModal({ isOpen, onClose }: RecognitionInfoModalProps) {
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-7xl h-[750px] overflow-y-auto">
+    <ClientOnlyDialog open={isOpen} onOpenChange={onClose} className="max-w-7xl h-[750px] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl flex items-center gap-2 text-[#8B0000]">
             <Trophy className="h-6 w-6" />
@@ -142,7 +141,6 @@ export function RecognitionInfoModal({ isOpen, onClose }: RecognitionInfoModalPr
             </ul>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </ClientOnlyDialog>
   )
 }
