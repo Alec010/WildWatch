@@ -18,6 +18,7 @@ export interface AnonymizedIncident {
   submittedByEmail: string;
   submittedByPhone: string;
   submittedAt: string;
+  priorityLevel: "HIGH" | "MEDIUM" | "LOW" | null;
   isAnonymous?: boolean;
   isPrivate?: boolean;
   preferAnonymous?: boolean;

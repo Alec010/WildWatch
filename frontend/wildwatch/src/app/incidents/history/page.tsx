@@ -103,7 +103,7 @@ export default function IncidentHistoryPage() {
       // Only show Resolved or Dismissed (case-insensitive)
       const statusFiltered = data.filter((i: Incident) => ["resolved", "dismissed"].includes(i.status.toLowerCase()))
       // Users can see their own reports even if private (isViewerSubmitter = true)
-      const anonymizedData = filterIncidentsByPrivacy(statusFiltered, false, true)
+      const anonymizedData = filterIncidentsByPrivacy(statusFiltered, false, true) as Incident[]
       setIncidents(anonymizedData)
     } catch (e) {
       console.error("Error fetching incidents:", e)
