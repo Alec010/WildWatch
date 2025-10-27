@@ -10,7 +10,6 @@ import { OfficeAdminSidebar } from "@/components/OfficeAdminSidebar"
 import { OfficeAdminNavbar } from "@/components/OfficeAdminNavbar"
 import { useSidebar } from "@/contexts/SidebarContext"
 import { api } from "@/utils/apiClient"
-import dynamic from 'next/dynamic'
 
 // Import all components with client-side only rendering
 const BulletinCard = dynamic(
