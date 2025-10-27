@@ -1,10 +1,14 @@
 // Import configuration
 import { getBackendUrl, getWsUrl } from '../config';
 
-// Use the configured backend URL directly instead of relying on Next.js proxy
-export const API_BASE_URL = getBackendUrl();
+// Function to get the current backend URL (dynamic)
+export const getApiBaseUrl = () => getBackendUrl();
 
-// WebSocket still needs the full URL since it can't be proxied by Next.js
+// Function to get the current WebSocket URL (dynamic)
+export const getWsBaseUrl = () => getWsUrl();
+
+// Legacy exports for backward compatibility (but these are evaluated at module load time)
+export const API_BASE_URL = getBackendUrl();
 export const WS_BASE_URL = getWsUrl(); 
 
 /**
@@ -36,7 +40,7 @@ export const searchUsers = async (query: string, page = 0, size = 10) => {
 
   try {
     const response = await fetch(
-      `${API_BASE_URL}/api/users/search?query=${encodeURIComponent(query)}&page=${page}&size=${size}`,
+      `${getApiBaseUrl()}/api/users/search?query=${encodeURIComponent(query)}&page=${page}&size=${size}`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
