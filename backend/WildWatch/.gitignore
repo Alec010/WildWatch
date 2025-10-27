@@ -39,3 +39,8 @@ build/
 .env.*
 !.env.example
 src/main/resources/.env
+
+### Logs ###
+logs/
+*.log
+*.log.*
