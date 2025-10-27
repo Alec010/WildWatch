@@ -63,6 +63,9 @@ export function BulletinCard({ bulletin, isAdmin = false }: BulletinCardProps) {
     fetchUpvoteData()
     
     // Set up WebSocket listener for real-time upvote updates
+    // Only create WebSocket on client-side
+    if (typeof window === 'undefined') return;
+    
     const socket = new WebSocket(`${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`)
     
     socket.onopen = () => {
@@ -133,12 +136,16 @@ export function BulletinCard({ bulletin, isAdmin = false }: BulletinCardProps) {
   }
 
   const handleDownload = (media: BulletinMedia) => {
-    window.open(media.fileUrl, '_blank')
+    if (typeof window !== 'undefined') {
+      window.open(media.fileUrl, '_blank')
+    }
   }
 
   const handleIncidentClick = (incident: IncidentSummary) => {
     // Open incident details page in new tab using tracking number
-    window.open(`/incidents/tracking/${incident.trackingNumber}`, '_blank')
+    if (typeof window !== 'undefined') {
+      window.open(`/incidents/tracking/${incident.trackingNumber}`, '_blank')
+    }
   }
 
   return (
