@@ -7,19 +7,31 @@ export default function ZoomController() {
     // Check if we're on a desktop screen and apply zoom
     const applyZoom = () => {
       if (window.innerWidth >= 1024) {
-        // Apply CSS zoom if supported
         const html = document.documentElement;
+        const body = document.body;
+        
+        // Apply CSS zoom
         html.style.zoom = '0.75';
         
-        // Fallback for browsers that don't support CSS zoom
-        if (html.style.zoom === '') {
-          // Use transform scale as fallback
-          html.style.transform = 'scale(0.75)';
-          html.style.transformOrigin = 'top left';
-          html.style.width = '133.33%';
-          html.style.height = '133.33%';
-          html.style.overflow = 'hidden';
-        }
+        // Fix viewport height issues
+        html.style.height = '100vh';
+        html.style.overflow = 'hidden';
+        body.style.height = '100vh';
+        body.style.overflow = 'auto';
+        
+        // Ensure proper scaling
+        body.style.transform = 'scale(1)';
+        body.style.transformOrigin = 'top left';
+      } else {
+        // Reset zoom on mobile
+        const html = document.documentElement;
+        const body = document.body;
+        html.style.zoom = '1';
+        html.style.height = 'auto';
+        html.style.overflow = 'auto';
+        body.style.height = 'auto';
+        body.style.overflow = 'auto';
+        body.style.transform = 'none';
       }
     };
 
