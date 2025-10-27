@@ -120,7 +120,6 @@
   body {
     @apply bg-background text-foreground;
   }
-  /* Zoom will be handled by JavaScript component */
 }
 
 @keyframes gradient-x {
