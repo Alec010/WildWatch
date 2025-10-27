@@ -120,6 +120,12 @@
   body {
     @apply bg-background text-foreground;
   }
+  /* Apply 75% zoom only on desktop screens */
+  @media (min-width: 1024px) {
+    html {
+      zoom: 0.75;
+    }
+  }
 }
 
 @keyframes gradient-x {
