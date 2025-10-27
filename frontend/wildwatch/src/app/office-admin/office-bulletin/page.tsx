@@ -12,7 +12,10 @@ import { api } from "@/utils/apiClient"
 import dynamic from 'next/dynamic'
 
 // Import BulletinCard with client-side only rendering
-const BulletinCard = dynamic(() => import('@/components/BulletinCard'), { ssr: false })
+const BulletinCard = dynamic(
+  () => import('@/components/BulletinCard').then(mod => mod.BulletinCard), 
+  { ssr: false }
+)
 
 interface Bulletin {
   id: string
