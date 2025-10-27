@@ -25,7 +25,6 @@ import { Navbar } from "@/components/Navbar"
 import { OfficeAdminNavbar } from "@/components/OfficeAdminNavbar"
 import { useSidebar } from "@/contexts/SidebarContext"
 import dynamic from "next/dynamic"
-import type { CanvasConfettiFunction } from "canvas-confetti"
 import { RankBadge } from "@/components/RankBadge"
 import type { UserRank } from "@/types/rank"
 
@@ -144,7 +143,7 @@ export default function LeaderboardPage() {
 
   // Dynamically import confetti to avoid SSR issues
 const confetti = dynamic(() => 
-  import("canvas-confetti").then((mod) => mod.default as CanvasConfettiFunction),
+  import("canvas-confetti").then((mod) => mod.default),
   { ssr: false }
 );
 
