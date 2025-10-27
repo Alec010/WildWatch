@@ -7,6 +7,11 @@ const nextConfig = {
         hostname: 'jcldwuryjuqtrbsqlgoi.supabase.co',
         pathname: '/storage/v1/object/public/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'wildwatch-9djc.onrender.com',
+        pathname: '/api/images/**',
+      },
     ],
     unoptimized: true,
   },
