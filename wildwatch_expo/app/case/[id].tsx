@@ -1065,8 +1065,8 @@ export default function CaseDetailsScreen() {
           )}
         </Card>
 
-        {/* RATING SECTION */}
-        {incident.status?.toUpperCase() === "RESOLVED" && (
+        {/* RATING SECTION - Only show for the reporter or office admin */}
+        {incident.status?.toUpperCase() === "RESOLVED" && isCurrentUserReporter && (
           <Card title="Rating & Feedback">
             {ratingStatus && (
               <View style={{ gap: 8, marginBottom: 10 }}>
@@ -1089,13 +1089,6 @@ export default function CaseDetailsScreen() {
                     icon="checkmark-circle"
                     tone="success"
                     text="Points have been awarded for this incident"
-                  />
-                )}
-                {isCurrentUserReporter && (
-                  <Banner
-                    icon="information-circle"
-                    tone="warn"
-                    text="You cannot rate your own report. Only other users can rate you."
                   />
                 )}
               </View>
@@ -1133,64 +1126,30 @@ export default function CaseDetailsScreen() {
                 </Text>
               </TouchableOpacity>
 
-              {/* Only show "Rate Reporter" button if current user is NOT the reporter */}
-              {!isCurrentUserReporter && (
-                <TouchableOpacity
+              {/* Show message that other users can rate you */}
+              <View style={[
+                styles.btn,
+                {
+                  backgroundColor: PALETTE.border,
+                  flex: 1,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }
+              ]}>
+                <Ionicons
+                  name="information-circle"
+                  size={16}
+                  color={PALETTE.subtext}
+                />
+                <Text
                   style={[
-                    styles.btn,
-                    {
-                      backgroundColor: ratingStatus?.officeRating
-                        ? PALETTE.border
-                        : PALETTE.maroon,
-                    },
+                    styles.btnText,
+                    { color: PALETTE.subtext, fontSize: 12 }
                   ]}
-                  onPress={() => handleRatingPress("office")}
-                  disabled={!!ratingStatus?.officeRating}
                 >
-                  <Ionicons
-                    name="star-outline"
-                    size={16}
-                    color={ratingStatus?.officeRating ? PALETTE.text : "#FFFFFF"}
-                  />
-                  <Text
-                    style={[
-                      styles.btnText,
-                      ratingStatus?.officeRating && { color: PALETTE.text },
-                    ]}
-                  >
-                    {ratingStatus?.officeRating
-                      ? "Rated Reporter"
-                      : "Rate Reporter"}
-                  </Text>
-                </TouchableOpacity>
-              )}
-
-              {/* Show message if current user is the reporter */}
-              {isCurrentUserReporter && (
-                <View style={[
-                  styles.btn,
-                  {
-                    backgroundColor: PALETTE.border,
-                    flex: 1,
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                  }
-                ]}>
-                  <Ionicons
-                    name="information-circle"
-                    size={16}
-                    color={PALETTE.subtext}
-                  />
-                  <Text
-                    style={[
-                      styles.btnText,
-                      { color: PALETTE.subtext, fontSize: 12 }
-                    ]}
-                  >
-                    Cannot rate yourself
-                  </Text>
-                </View>
-              )}
+                  Cannot rate yourself
+                </Text>
+              </View>
             </View>
 
             {ratingStatus?.reporterRating && (
