@@ -7,6 +7,12 @@ export function getBackendUrl(): string {
     return process.env.NEXT_PUBLIC_API_URL;
   }
   
+  // Check if we're in production (Vercel deployment)
+  if (process.env.NODE_ENV === 'production') {
+    // Use Render backend URL for production
+    return 'https://wildwatch-9djc.onrender.com';
+  }
+  
   // Default to localhost in development
   return 'http://localhost:8080';
 }

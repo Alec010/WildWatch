@@ -1,22 +1,34 @@
-// Simple configuration toggle
-// Set to true to use local backend, false to use deployed backend
-const useLocalBackend = true;
-
 // Backend URLs
 const LOCAL_BACKEND = "http://localhost:8080";
 const DEPLOYED_BACKEND = "https://wildwatch-9djc.onrender.com";
 
-// Get the active backend URL based on the toggle
-const getBackendUrl = () => useLocalBackend ? LOCAL_BACKEND : DEPLOYED_BACKEND;
+// Get the active backend URL based on environment
+const getBackendUrl = () => {
+  // Use environment variable if available
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+  
+  // Check if we're in production (Vercel deployment)
+  if (process.env.NODE_ENV === 'production') {
+    return DEPLOYED_BACKEND;
+  }
+  
+  // Default to localhost in development
+  return LOCAL_BACKEND;
+};
 
 // WebSocket URLs - SockJS works with HTTP/HTTPS URLs
 const LOCAL_WS = "http://localhost:8080"; 
 const DEPLOYED_WS = "https://wildwatch-9djc.onrender.com";
 
-// Get the active WebSocket URL based on the toggle
+// Get the active WebSocket URL based on environment
 const getWsUrl = () => {
-  // For development in Next.js, use the backend URL directly
-  return useLocalBackend ? LOCAL_WS : DEPLOYED_WS;
+  const backendUrl = getBackendUrl();
+  if (backendUrl.startsWith('https')) {
+    return backendUrl.replace('https', 'wss');
+  }
+  return backendUrl.replace('http', 'ws');
 };
 
 // Google Maps Configuration
@@ -35,7 +47,6 @@ if (!GOOGLE_MAPS_API_KEY) {
 
 // Export for ES modules (frontend)
 export {
-  useLocalBackend,
   LOCAL_BACKEND,
   DEPLOYED_BACKEND,
   getBackendUrl,
