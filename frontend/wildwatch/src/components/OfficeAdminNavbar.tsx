@@ -39,8 +39,11 @@ export function OfficeAdminNavbar({
     const handleScroll = () => {
       setScrolled(window.scrollY > 10)
     }
-    window.addEventListener("scroll", handleScroll)
-    return () => window.removeEventListener("scroll", handleScroll)
+    
+    if (typeof window !== 'undefined') {
+      window.addEventListener("scroll", handleScroll)
+      return () => window.removeEventListener("scroll", handleScroll)
+    }
   }, [])
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
