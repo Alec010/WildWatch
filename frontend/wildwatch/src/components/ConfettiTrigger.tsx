@@ -39,14 +39,17 @@ export default function ConfettiTrigger() {
       }, 250)
     }
 
-    // Listen for the custom event
-    window.addEventListener('trigger-confetti', handleTriggerConfetti)
+    // Only run on client side
+    if (typeof window !== 'undefined') {
+      // Listen for the custom event
+      window.addEventListener('trigger-confetti', handleTriggerConfetti)
 
-    // Trigger confetti on mount
-    handleTriggerConfetti()
+      // Trigger confetti on mount
+      handleTriggerConfetti()
 
-    return () => {
-      window.removeEventListener('trigger-confetti', handleTriggerConfetti)
+      return () => {
+        window.removeEventListener('trigger-confetti', handleTriggerConfetti)
+      }
     }
   }, [])
 

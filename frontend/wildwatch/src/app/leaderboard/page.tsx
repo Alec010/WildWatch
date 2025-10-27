@@ -54,10 +54,12 @@ export default function LeaderboardPage() {
     const fetchLeaderboardData = async () => {
       setLoading(true)
       try {
-        const token = document.cookie
-          .split('; ')
-          .find((row) => row.startsWith('token='))
-          ?.split('=')[1]
+        const token = typeof document !== 'undefined' 
+          ? document.cookie
+              .split('; ')
+              .find((row) => row.startsWith('token='))
+              ?.split('=')[1]
+          : null
 
         if (!token) {
           console.error("No authentication token found")
