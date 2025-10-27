@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { ClientPageWrapper } from "@/components/ClientPageWrapper"
 import { Button } from "@/components/ui/button"
 import { Loader2, FileText, RefreshCw } from "lucide-react"
 import { toast } from "sonner"
@@ -84,9 +85,10 @@ export default function OfficeBulletinPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Sidebar />
-      <Navbar title="Office Bulletin" />
+    <ClientPageWrapper>
+      <div className="min-h-screen bg-gray-50">
+        <Sidebar />
+        <Navbar title="Office Bulletin" />
       
       <div className={`pt-16 transition-all duration-300 ${
         collapsed ? 'lg:ml-20' : 'lg:ml-64'
@@ -146,6 +148,7 @@ export default function OfficeBulletinPage() {
           )}
         </div>
       </div>
-    </div>
+      </div>
+    </ClientPageWrapper>
   )
 }

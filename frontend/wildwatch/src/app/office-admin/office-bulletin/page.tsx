@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { ClientPageWrapper } from "@/components/ClientPageWrapper"
 import { Button } from "@/components/ui/button"
 import { Plus, Loader2, FileText, RefreshCw } from "lucide-react"
 import { toast } from "sonner"
@@ -90,9 +91,10 @@ export default function OfficeAdminBulletinPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <OfficeAdminSidebar />
-      <OfficeAdminNavbar title="Office Bulletin Management" />
+    <ClientPageWrapper>
+      <div className="min-h-screen bg-gray-50">
+        <OfficeAdminSidebar />
+        <OfficeAdminNavbar title="Office Bulletin Management" />
       
       <div className={`pt-16 transition-all duration-300 ${
         collapsed ? 'lg:ml-20' : 'lg:ml-72'
@@ -175,6 +177,7 @@ export default function OfficeAdminBulletinPage() {
         onClose={() => setShowCreateModal(false)}
         onSuccess={handleCreateSuccess}
       />
-    </div>
+      </div>
+    </ClientPageWrapper>
   )
 }
