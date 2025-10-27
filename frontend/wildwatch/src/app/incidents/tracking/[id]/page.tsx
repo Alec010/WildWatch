@@ -83,7 +83,7 @@ interface IncidentDetails {
   submittedByFullName?: string
   submittedByEmail?: string
   submittedByPhone?: string
-  assignedOffice?: string
+  assignedOffice?: string | { code?: string, fullName?: string } | any
   isAnonymous?: boolean
   isPrivate?: boolean
   preferAnonymous?: boolean
