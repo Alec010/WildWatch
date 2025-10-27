@@ -33,6 +33,7 @@ import { BadgePreview, BadgesModal } from "../src/features/badges/components";
 import type { BadgeProgress } from "../src/features/badges/models/BadgeModels";
 import { useRankingSummary } from "../src/features/ranking/hooks";
 import { RankingDashboard } from "../src/features/ranking/components";
+import { RANK_COLORS, RANK_NAMES } from "../src/features/ranking/models/RankingModels";
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 
@@ -1351,54 +1352,62 @@ export default function ProfileScreen() {
                       width: 36,
                       height: 36,
                       borderRadius: 18,
-                      backgroundColor: '#F3F4F6',
+                      backgroundColor: rankProgress ? `${RANK_COLORS[rankProgress.currentRank]}20` : '#F3F4F6',
                       alignItems: 'center',
                       justifyContent: 'center',
                       marginRight: 12,
                     }}>
-                      <Ionicons name="person-outline" size={18} color="#6B7280" />
+                      <Ionicons 
+                        name={rankProgress?.currentRank === 'NONE' ? "person-outline" : "medal"} 
+                        size={18} 
+                        color={rankProgress ? RANK_COLORS[rankProgress.currentRank] : '#6B7280'} 
+                      />
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={{ 
                         fontSize: 15, 
                         fontWeight: '600', 
-                        color: '#374151',
+                        color: rankProgress ? RANK_COLORS[rankProgress.currentRank] : '#374151',
                         marginBottom: 2,
                       }}>
-                        Unranked
+                        {rankProgress?.rankDisplayName || 'Loading...'}
                       </Text>
                       <Text style={{ 
                         fontSize: 12, 
                         color: '#6B7280',
                       }}>
-                        71 points
+                        {rankProgress?.currentPoints?.toLocaleString() || '0'} points
                       </Text>
                     </View>
-                    <View style={{
-                      backgroundColor: '#F3F4F6',
-                      paddingHorizontal: 8,
-                      paddingVertical: 4,
-                      borderRadius: 16,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                    }}>
-                      <Text style={{ 
-                        color: '#6B7280', 
-                        marginRight: 4, 
-                        fontSize: 11,
-                      }}>Next Rank</Text>
+                    {rankProgress?.nextRank && (
                       <View style={{
-                        backgroundColor: '#CD7F32',
-                        paddingHorizontal: 6,
-                        paddingVertical: 2,
-                        borderRadius: 8,
+                        backgroundColor: '#F3F4F6',
+                        paddingHorizontal: 8,
+                        paddingVertical: 4,
+                        borderRadius: 16,
                         flexDirection: 'row',
                         alignItems: 'center',
                       }}>
-                        <Ionicons name="medal" size={12} color="white" style={{ marginRight: 2 }} />
-                        <Text style={{ color: 'white', fontWeight: '600', fontSize: 10 }}>Bronze</Text>
+                        <Text style={{ 
+                          color: '#6B7280', 
+                          marginRight: 4, 
+                          fontSize: 11,
+                        }}>Next Rank</Text>
+                        <View style={{
+                          backgroundColor: RANK_COLORS[rankProgress.nextRank],
+                          paddingHorizontal: 6,
+                          paddingVertical: 2,
+                          borderRadius: 8,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                        }}>
+                          <Ionicons name="medal" size={12} color="white" style={{ marginRight: 2 }} />
+                          <Text style={{ color: 'white', fontWeight: '600', fontSize: 10 }}>
+                            {RANK_NAMES[rankProgress.nextRank]}
+                          </Text>
+                        </View>
                       </View>
-                    </View>
+                    )}
                   </View>
 
                   {/* Progress Bar */}
@@ -1410,24 +1419,35 @@ export default function ProfileScreen() {
                       overflow: 'hidden',
                       marginBottom: 6,
                     }}>
-                      <LinearGradient
-                        colors={['#9CA3AF', '#CD7F32']}
-                        style={{
-                          width: '71%',
-                          height: '100%',
-                          borderRadius: 3,
-                        }}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 0 }}
-                      />
+                      {rankProgress && (
+                        <LinearGradient
+                          colors={[
+                            RANK_COLORS[rankProgress.currentRank],
+                            rankProgress.nextRank ? RANK_COLORS[rankProgress.nextRank] : RANK_COLORS[rankProgress.currentRank]
+                          ]}
+                          style={{
+                            width: `${rankProgress.progressPercentage}%`,
+                            height: '100%',
+                            borderRadius: 3,
+                          }}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 0 }}
+                        />
+                      )}
                     </View>
                     <View style={{
                       flexDirection: 'row',
                       justifyContent: 'space-between',
                       alignItems: 'center',
                     }}>
-                      <Text style={{ color: '#6B7280', fontSize: 11 }}>Unranked</Text>
-                      <Text style={{ color: '#6B7280', fontSize: 11 }}>29 more points to reach Bronze</Text>
+                      <Text style={{ color: '#6B7280', fontSize: 11 }}>
+                        {rankProgress?.rankDisplayName || 'Unranked'}
+                      </Text>
+                      {rankProgress?.nextRank && (
+                        <Text style={{ color: '#6B7280', fontSize: 11 }}>
+                          {rankProgress.pointsToNextRank.toLocaleString()} more points to reach {RANK_NAMES[rankProgress.nextRank]}
+                        </Text>
+                      )}
                     </View>
                   </View>
 

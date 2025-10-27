@@ -50,7 +50,12 @@ export const rankingAPI = {
         `${API_BASE_URL}/ranks/my-rank`,
         {
           method: 'GET',
-          headers,
+          headers: {
+            ...headers,
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0',
+          },
         }
       );
 
