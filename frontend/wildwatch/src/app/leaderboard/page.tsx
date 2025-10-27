@@ -141,47 +141,15 @@ export default function LeaderboardPage() {
     fetchLeaderboardData()
   }, [])
 
-  // Dynamically import confetti to avoid SSR issues
-const confetti = dynamic(() => 
-  import("canvas-confetti").then((mod) => mod.default),
-  { ssr: false }
-);
+  // Create a separate component for confetti to avoid SSR issues
+const ConfettiTrigger = dynamic(() => import('@/components/ConfettiTrigger'), { ssr: false })
 
 const triggerConfetti = () => {
-    // Skip if confetti is not loaded yet
-    if (!confetti) return;
-    
-    const duration = 3 * 1000
-    const animationEnd = Date.now() + duration
-    const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 }
-
-    function randomInRange(min: number, max: number) {
-      return Math.random() * (max - min) + min
+    // We'll use a custom event to trigger confetti
+    if (typeof window !== 'undefined') {
+      const event = new CustomEvent('trigger-confetti')
+      window.dispatchEvent(event)
     }
-
-    const interval: any = setInterval(() => {
-      const timeLeft = animationEnd - Date.now()
-
-      if (timeLeft <= 0) {
-        return clearInterval(interval)
-      }
-
-      const particleCount = 50 * (timeLeft / duration)
-
-      // Gold and maroon colors
-      confetti({
-        ...defaults,
-        particleCount,
-        origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 },
-        colors: ["#DAA520", "#8B0000", "#FFD700"],
-      })
-      confetti({
-        ...defaults,
-        particleCount,
-        origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
-        colors: ["#DAA520", "#8B0000", "#FFD700"],
-      })
-    }, 250)
   }
 
   const getMedalColor = (index: number) => {
@@ -461,6 +429,8 @@ const triggerConfetti = () => {
 
   return (
     <div className="min-h-screen bg-[#f5f5f5]">
+      {/* Include the confetti component */}
+      <ConfettiTrigger />
       {userRole === 'OFFICE_ADMIN' ? <OfficeAdminSidebar /> : <Sidebar />}
       <div className={`transition-all duration-300 ${getContentMargin()}`}>
         {userRole === 'OFFICE_ADMIN' ? (
