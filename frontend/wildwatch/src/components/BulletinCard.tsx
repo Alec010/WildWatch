@@ -7,6 +7,8 @@ import { FileText, Download, ExternalLink, Calendar, User, ThumbsUp } from "luci
 import { api } from "@/utils/apiClient"
 import { toast } from "sonner"
 import { format } from "date-fns"
+import { BulletinWebSocket } from "@/components/BulletinWebSocket"
+import { openInNewTab } from "@/utils/clientNavigation"
 
 interface BulletinMedia {
   id: string
@@ -61,37 +63,6 @@ export function BulletinCard({ bulletin, isAdmin = false }: BulletinCardProps) {
     }
     
     fetchUpvoteData()
-    
-    // Set up WebSocket listener for real-time upvote updates
-    // Only create WebSocket on client-side
-    if (typeof window === 'undefined') return;
-    
-    const socket = new WebSocket(`${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`)
-    
-    socket.onopen = () => {
-      socket.send(JSON.stringify({
-        type: 'SUBSCRIBE',
-        destination: `/topic/bulletins/${bulletin.id}/upvotes`
-      }))
-    }
-    
-    socket.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data)
-        if (data.body) {
-          const count = parseInt(data.body)
-          if (!isNaN(count)) {
-            setUpvoteCount(count)
-          }
-        }
-      } catch (error) {
-        console.error("Error parsing WebSocket message:", error)
-      }
-    }
-    
-    return () => {
-      socket.close()
-    }
   }, [bulletin.id])
   
   const handleUpvoteClick = async () => {
@@ -136,20 +107,21 @@ export function BulletinCard({ bulletin, isAdmin = false }: BulletinCardProps) {
   }
 
   const handleDownload = (media: BulletinMedia) => {
-    if (typeof window !== 'undefined') {
-      window.open(media.fileUrl, '_blank')
-    }
+    openInNewTab(media.fileUrl);
   }
 
   const handleIncidentClick = (incident: IncidentSummary) => {
     // Open incident details page in new tab using tracking number
-    if (typeof window !== 'undefined') {
-      window.open(`/incidents/tracking/${incident.trackingNumber}`, '_blank')
-    }
+    openInNewTab(`/incidents/tracking/${incident.trackingNumber}`);
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+    <>
+      <BulletinWebSocket 
+        bulletinId={bulletin.id}
+        onUpvoteUpdate={setUpvoteCount}
+      />
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
       {/* Header */}
       <div className="flex justify-between items-start mb-4">
         <div className="flex-1">
@@ -254,5 +226,6 @@ export function BulletinCard({ bulletin, isAdmin = false }: BulletinCardProps) {
         </div>
       )}
     </div>
+    </>
   )
 }
