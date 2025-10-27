@@ -1,20 +1,25 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import dynamic from "next/dynamic"
 import { ClientPageWrapper } from "@/components/ClientPageWrapper"
 import { Button } from "@/components/ui/button"
 import { Plus, Loader2, FileText, RefreshCw } from "lucide-react"
 import { toast } from "sonner"
 import { OfficeAdminSidebar } from "@/components/OfficeAdminSidebar"
 import { OfficeAdminNavbar } from "@/components/OfficeAdminNavbar"
-import { CreateBulletinModal } from "@/components/CreateBulletinModal"
 import { useSidebar } from "@/contexts/SidebarContext"
 import { api } from "@/utils/apiClient"
 import dynamic from 'next/dynamic'
 
-// Import BulletinCard with client-side only rendering
+// Import all components with client-side only rendering
 const BulletinCard = dynamic(
   () => import('@/components/BulletinCard').then(mod => mod.BulletinCard), 
+  { ssr: false }
+)
+
+const CreateBulletinModal = dynamic(
+  () => import('@/components/CreateBulletinModal').then(mod => mod.CreateBulletinModal),
   { ssr: false }
 )
 

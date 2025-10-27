@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import dynamic from "next/dynamic"
 import { ClientPageWrapper } from "@/components/ClientPageWrapper"
 import { Button } from "@/components/ui/button"
 import { Loader2, FileText, RefreshCw } from "lucide-react"
@@ -9,7 +10,6 @@ import { Sidebar } from "@/components/Sidebar"
 import { Navbar } from "@/components/Navbar"
 import { useSidebar } from "@/contexts/SidebarContext"
 import { api } from "@/utils/apiClient"
-import dynamic from 'next/dynamic'
 
 // Import BulletinCard with client-side only rendering
 const BulletinCard = dynamic(
