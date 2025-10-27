@@ -24,7 +24,8 @@ import { OfficeAdminSidebar } from "@/components/OfficeAdminSidebar"
 import { Navbar } from "@/components/Navbar"
 import { OfficeAdminNavbar } from "@/components/OfficeAdminNavbar"
 import { useSidebar } from "@/contexts/SidebarContext"
-import confetti from "canvas-confetti"
+import dynamic from "next/dynamic"
+import type { CanvasConfettiFunction } from "canvas-confetti"
 import { RankBadge } from "@/components/RankBadge"
 import type { UserRank } from "@/types/rank"
 
@@ -124,10 +125,12 @@ export default function LeaderboardPage() {
           setTopStudents(processedStudents)
           setTopOffices(processedOffices)
 
-          // Trigger confetti when data loads
-          setTimeout(() => {
-            triggerConfetti()
-          }, 500)
+          // Trigger confetti when data loads - only on client side
+          if (typeof window !== 'undefined') {
+            setTimeout(() => {
+              triggerConfetti()
+            }, 500)
+          }
         }
       } catch (error) {
         console.error("Error fetching leaderboard data:", error)
@@ -139,9 +142,15 @@ export default function LeaderboardPage() {
     fetchLeaderboardData()
   }, [])
 
-  const triggerConfetti = () => {
-    // Only run confetti on the client side
-    if (typeof window === 'undefined') return;
+  // Dynamically import confetti to avoid SSR issues
+const confetti = dynamic(() => 
+  import("canvas-confetti").then((mod) => mod.default as CanvasConfettiFunction),
+  { ssr: false }
+);
+
+const triggerConfetti = () => {
+    // Skip if confetti is not loaded yet
+    if (!confetti) return;
     
     const duration = 3 * 1000
     const animationEnd = Date.now() + duration
