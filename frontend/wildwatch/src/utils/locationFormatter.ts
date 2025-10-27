@@ -152,3 +152,4 @@ export function hasBuilding(locationData: LocationData): boolean {
 
 
 
+

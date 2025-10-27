@@ -2,6 +2,14 @@ import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { API_BASE_URL } from "@/utils/api";
 
+// Define witness interface to fix TypeScript error
+interface Witness {
+  userId?: string | number;
+  name?: string;
+  additionalNotes?: string;
+  contactInformation?: string;
+}
+
 export async function POST(request: Request) {
   try {
     // Get the token from either the Authorization header or cookie
@@ -56,7 +64,7 @@ export async function POST(request: Request) {
       // Log witness details for verification
       if (incidentData.witnesses && incidentData.witnesses.length > 0) {
         console.log('Witness details in API route:', 
-          incidentData.witnesses.map(w => ({
+          incidentData.witnesses.map((w: Witness) => ({
             hasUserId: !!w.userId,
             userId: w.userId,
             name: w.name,
