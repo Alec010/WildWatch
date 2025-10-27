@@ -22,7 +22,7 @@ export interface AnonymizedIncident {
   isAnonymous?: boolean;
   isPrivate?: boolean;
   preferAnonymous?: boolean;
-  upvoteCount?: number;
+  upvoteCount?: number | undefined;
   [key: string]: any;
 }
 

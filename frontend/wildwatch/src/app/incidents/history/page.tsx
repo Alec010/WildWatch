@@ -55,6 +55,15 @@ interface Incident {
   evidence?: any[]
   witnesses?: any[]
   updates?: any[]
+  upvoteCount?: number
+  // Add other fields that might be in AnonymizedIncident
+  timeOfIncident?: string
+  submittedBy?: string
+  submittedByIdNumber?: string
+  formattedAddress?: string
+  isAnonymous?: boolean
+  isPrivate?: boolean
+  preferAnonymous?: boolean
 }
 
 interface EvidenceFile {

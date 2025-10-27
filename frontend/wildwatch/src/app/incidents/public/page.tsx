@@ -108,7 +108,7 @@ export default function PublicIncidentsPage() {
 
         const data = await response.json()
         // Filter incidents based on privacy settings (public view)
-        const filteredData = filterIncidentsByPrivacy(data, false, false)
+        const filteredData = filterIncidentsByPrivacy(data, false, false) as Incident[]
         setIncidents(filteredData)
 
         // Fetch upvote status for each incident
