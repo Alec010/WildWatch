@@ -87,6 +87,7 @@ interface IncidentDetails {
   isAnonymous?: boolean
   isPrivate?: boolean
   preferAnonymous?: boolean
+  estimatedResolutionDate?: string
 }
 
 interface IncidentUpdate {
