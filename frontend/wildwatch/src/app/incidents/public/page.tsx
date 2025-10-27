@@ -107,9 +107,15 @@ export default function PublicIncidentsPage() {
         }
 
         const data = await response.json()
-        // Filter incidents based on privacy settings (public view)
-        const filteredData = filterIncidentsByPrivacy(data, false, false) as Incident[]
-        setIncidents(filteredData)
+      // Filter incidents based on privacy settings (public view)
+      const filteredData = filterIncidentsByPrivacy(data, false, false) as Incident[]
+      // Sort by upvote count (descending)
+      filteredData.sort((a, b) => {
+        const aCount = typeof a.upvoteCount === 'number' ? a.upvoteCount : 0;
+        const bCount = typeof b.upvoteCount === 'number' ? b.upvoteCount : 0;
+        return bCount - aCount;
+      })
+      setIncidents(filteredData)
 
         // Fetch upvote status for each incident
         const upvotePromises = filteredData.map((incident: Incident) =>
@@ -377,8 +383,13 @@ export default function PublicIncidentsPage() {
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
       const data = await response.json()
       // Filter incidents based on privacy settings (public view)
-      const filteredData = filterIncidentsByPrivacy(data, false, false)
-      filteredData.sort((a: Incident, b: Incident) => (b.upvoteCount || 0) - (a.upvoteCount || 0))
+      const filteredData = filterIncidentsByPrivacy(data, false, false) as Incident[]
+      // Sort by upvote count (descending)
+      filteredData.sort((a, b) => {
+        const aCount = typeof a.upvoteCount === 'number' ? a.upvoteCount : 0;
+        const bCount = typeof b.upvoteCount === 'number' ? b.upvoteCount : 0;
+        return bCount - aCount;
+      })
       setIncidents(filteredData)
     } catch (error) {
       setError(error instanceof Error ? error.message : "Failed to refresh incidents")
@@ -426,7 +437,7 @@ export default function PublicIncidentsPage() {
                   <h3 className="text-red-800 font-bold text-xl mb-2">Unable to Load Incidents</h3>
                   <p className="text-red-700 text-lg">{error}</p>
                   <button
-                    onClick={() => window.location.reload()}
+                    onClick={() => typeof window !== 'undefined' && window.location.reload()}
                     className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
                   >
                     Try Again

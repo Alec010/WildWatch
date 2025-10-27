@@ -57,7 +57,7 @@ const MultiUserMentionInput: React.FC<MultiUserMentionInputProps> = ({
         if (response && response.content) {
           // Filter out already selected users
           const filteredResults = response.content.filter(
-            user => !selectedUsers.some(selected => selected.id === user.id)
+            (user: { id: string | number }) => !selectedUsers.some(selected => selected.id === user.id)
           )
           setSearchResults(filteredResults)
           setError(null)
@@ -225,7 +225,7 @@ const MultiUserMentionInput: React.FC<MultiUserMentionInputProps> = ({
                 ? `Maximum ${maxUsers} user${maxUsers > 1 ? 's' : ''} selected`
                 : placeholder
             }
-            disabled={disabled || (maxUsers && selectedUsers.length >= maxUsers)}
+            disabled={disabled || (!!maxUsers && selectedUsers.length >= maxUsers)}
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] disabled:bg-gray-50 disabled:text-gray-500"
           />
           {loading && (

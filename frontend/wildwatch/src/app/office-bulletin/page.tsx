@@ -1,14 +1,21 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import dynamic from "next/dynamic"
+import { ClientPageWrapper } from "@/components/ClientPageWrapper"
 import { Button } from "@/components/ui/button"
 import { Loader2, FileText, RefreshCw } from "lucide-react"
 import { toast } from "sonner"
 import { Sidebar } from "@/components/Sidebar"
 import { Navbar } from "@/components/Navbar"
-import { BulletinCard } from "@/components/BulletinCard"
 import { useSidebar } from "@/contexts/SidebarContext"
 import { api } from "@/utils/apiClient"
+
+// Import BulletinCard with client-side only rendering
+const BulletinCard = dynamic(
+  () => import('@/components/BulletinCard').then(mod => mod.BulletinCard), 
+  { ssr: false }
+)
 
 interface Bulletin {
   id: string
@@ -59,7 +66,7 @@ export default function OfficeBulletinPage() {
     return (
       <div className="min-h-screen bg-gray-50">
         <Sidebar />
-        <Navbar />
+        <Navbar title="Office Bulletin" />
         
         <div className={`pt-16 transition-all duration-300 ${
           collapsed ? 'lg:ml-20' : 'lg:ml-64'
@@ -78,9 +85,10 @@ export default function OfficeBulletinPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Sidebar />
-      <Navbar />
+    <ClientPageWrapper>
+      <div className="min-h-screen bg-gray-50">
+        <Sidebar />
+        <Navbar title="Office Bulletin" />
       
       <div className={`pt-16 transition-all duration-300 ${
         collapsed ? 'lg:ml-20' : 'lg:ml-64'
@@ -140,6 +148,7 @@ export default function OfficeBulletinPage() {
           )}
         </div>
       </div>
-    </div>
+      </div>
+    </ClientPageWrapper>
   )
 }

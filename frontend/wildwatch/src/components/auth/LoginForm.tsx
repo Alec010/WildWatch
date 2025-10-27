@@ -15,7 +15,7 @@ import { Eye, EyeOff, X, Shield, Mail, CheckCircle2, AlertCircle } from "lucide-
 import Cookies from "js-cookie"
 import { MicrosoftLogo } from "@/components/icons/MicrosoftLogo"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { API_BASE_URL } from "@/utils/api"
+import { getApiBaseUrl } from "@/utils/api"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { toast } from "sonner"
 import { Toaster } from "sonner"
@@ -52,7 +52,7 @@ export function LoginForm() {
       setIsLoading(true)
       setError(null)
 
-      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+      const response = await fetch(`${getApiBaseUrl()}/api/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -85,7 +85,7 @@ export function LoginForm() {
       if (!data.user || typeof data.user.termsAccepted === 'undefined') {
         setLoadingMessage("Fetching your profile...")
         // If user data is missing, fetch the user profile
-        const profileResponse = await fetch(`${API_BASE_URL}/api/auth/profile`, {
+        const profileResponse = await fetch(`${getApiBaseUrl()}/api/auth/profile`, {
           headers: {
             'Authorization': `Bearer ${data.token}`,
             'Content-Type': 'application/json',
@@ -125,7 +125,7 @@ export function LoginForm() {
     setResetMessage("")
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/reset-password-request`, {
+      const response = await fetch(`${getApiBaseUrl()}/api/auth/reset-password-request`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -316,7 +316,12 @@ export function LoginForm() {
               variant="outline"
               className="w-full flex items-center justify-center gap-2 border-[#D4AF37]/30 hover:bg-[#D4AF37]/10 py-5"
               onClick={() => {
-                window.location.href = `${API_BASE_URL}/oauth2/authorization/microsoft`
+                if (typeof window !== 'undefined') {
+                  // Import getBackendUrl dynamically to get the current value
+                  import('@/config').then(({ getBackendUrl }) => {
+                    window.location.href = `${getBackendUrl()}/oauth2/authorization/microsoft`
+                  })
+                }
               }}
             >
               <MicrosoftLogo />

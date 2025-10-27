@@ -87,6 +87,7 @@ interface IncidentDetails {
   isAnonymous?: boolean
   isPrivate?: boolean
   preferAnonymous?: boolean
+  estimatedResolutionDate?: string
 }
 
 interface IncidentUpdate {
@@ -1153,10 +1154,10 @@ export default function CaseDetailsPage() {
                       <div className="bg-white/50 rounded-lg p-3 border border-gray-100">
                         <div className="text-sm font-medium text-gray-500 mb-1">Name</div>
                         <p className="text-gray-800 font-medium">
-                          {getReporterDisplayName(incident, isOfficeAdmin, isSubmitter)}
+                          {getReporterDisplayName(incident, isOfficeAdmin || false, isSubmitter || false)}
                         </p>
                       </div>
-                      {shouldShowReporterDetails(incident, isOfficeAdmin, isSubmitter) ? (
+                      {shouldShowReporterDetails(incident, isOfficeAdmin || false, isSubmitter || false) ? (
                         <>
                           <div className="bg-white/50 rounded-lg p-3 border border-gray-100">
                             <div className="text-sm font-medium text-gray-500 mb-1">Email</div>

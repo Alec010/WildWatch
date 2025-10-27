@@ -21,7 +21,7 @@ import {
 import { API_BASE_URL } from "@/utils/api"
 import { formatLocationCompact } from "@/utils/locationFormatter"
 import { api } from "@/utils/apiClient"
-import { filterIncidentsByPrivacy } from "@/utils/anonymization"
+import { filterIncidentsByPrivacy, AnonymizedIncident } from "@/utils/anonymization"
 import { motion } from "framer-motion"
 import { useSidebar } from "@/contexts/SidebarContext"
 import { Badge } from "@/components/ui/badge"
@@ -39,7 +39,7 @@ interface Incident {
   timeOfIncident: string
   location: string
   description: string
-  assignedOffice: string
+  assignedOffice?: string
   status: string
   priorityLevel: string | null
   submittedBy: string
@@ -106,15 +106,15 @@ export default function IncidentManagementPage() {
 
       // Pending cases: status is pending and lastTransferredTo is not set or empty string
       const filteredData = anonymizedData.filter(
-        (incident: Incident) =>
+        (incident: AnonymizedIncident) =>
           incident.status &&
           incident.status.toLowerCase() === "pending" &&
           (!incident.lastTransferredTo || incident.lastTransferredTo.trim() === ""),
-      )
+      ) as Incident[]
 
       // Transferred cases: lastTransferredTo matches current office and transferredFrom is set and not equal to current office
       const transferredData = anonymizedData.filter(
-        (incident: Incident) =>
+        (incident: AnonymizedIncident) =>
           incident.lastTransferredTo &&
           officeCode &&
           incident.lastTransferredTo.trim().toUpperCase() === officeCode.trim().toUpperCase() &&
@@ -122,7 +122,7 @@ export default function IncidentManagementPage() {
           incident.transferredFrom.trim().toUpperCase() !== officeCode.trim().toUpperCase() &&
           incident.status &&
           ["pending", "in progress"].includes(incident.status.toLowerCase()),
-      )
+      ) as Incident[]
 
       setIncidents(filteredData)
       setTransferredIncidents(transferredData)
@@ -310,7 +310,7 @@ export default function IncidentManagementPage() {
                   <p className="text-red-700">{error}</p>
                   <Button
                     className="mt-4 bg-[#8B0000] hover:bg-[#6B0000] text-white"
-                    onClick={() => window.location.reload()}
+                    onClick={() => typeof window !== 'undefined' && window.location.reload()}
                   >
                     <RefreshCw className="mr-2 h-4 w-4" /> Try Again
                   </Button>

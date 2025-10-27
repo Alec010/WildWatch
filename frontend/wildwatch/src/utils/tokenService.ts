@@ -1,4 +1,7 @@
 import Cookies from 'js-cookie';
+
+// Helper to check if we're on the client side
+const isClient = typeof window !== 'undefined';
 import { getBackendUrl } from '@/config';
 
 interface TokenInfo {
@@ -49,6 +52,7 @@ class TokenService {
    * Get current token from cookies
    */
   getToken(): string | null {
+    if (!isClient) return null;
     return Cookies.get('token') || null;
   }
 
@@ -56,6 +60,8 @@ class TokenService {
    * Set token in cookies and schedule refresh
    */
   setToken(token: string): void {
+    if (!isClient) return;
+    
     Cookies.set('token', token, {
       expires: 7,
       secure: true,
@@ -71,10 +77,12 @@ class TokenService {
    * Remove token and clear refresh timer
    */
   removeToken(): void {
-    Cookies.remove('token');
-    if (this.refreshTimer) {
-      clearTimeout(this.refreshTimer);
-      this.refreshTimer = null;
+    if (isClient) {
+      Cookies.remove('token');
+      if (this.refreshTimer) {
+        clearTimeout(this.refreshTimer);
+        this.refreshTimer = null;
+      }
     }
   }
 
@@ -160,9 +168,14 @@ class TokenService {
       return newToken;
     } catch (error) {
       console.error('Token refresh failed:', error);
-      // If refresh fails, redirect to login
+      // If refresh fails, clean up
       this.removeToken();
-      window.location.href = '/login';
+      
+      // Only redirect on client side
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login';
+      }
+      
       throw error;
     }
   }

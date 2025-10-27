@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { API_BASE_URL } from "@/utils/api"
 import { Button } from "@/components/ui/button"
@@ -11,7 +11,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { Eye, EyeOff, Shield, CheckCircle2, AlertCircle } from "lucide-react"
 
-export default function ResetPassword() {
+function ResetPasswordForm() {
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
@@ -227,5 +227,31 @@ export default function ResetPassword() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function ResetPassword() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#f5f5f7" }}>
+        <div className="relative w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-xl border border-[#D4AF37]/20">
+          <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#800000] via-[#D4AF37] to-[#800000] rounded-t-lg animate-gradient-x"></div>
+          <div className="flex flex-col items-center space-y-4">
+            <div className="relative">
+              <div className="relative bg-white rounded-full p-1">
+                <Image src="/logo.png" alt="WildWatch Logo" width={150} height={50} priority className="relative" />
+              </div>
+            </div>
+            <h1 className="text-3xl font-bold text-[#800000]">Reset Password</h1>
+            <div className="flex items-center justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#800000]"></div>
+            </div>
+            <p className="text-sm text-muted-foreground">Loading...</p>
+          </div>
+        </div>
+      </div>
+    }>
+      <ResetPasswordForm />
+    </Suspense>
   )
 }

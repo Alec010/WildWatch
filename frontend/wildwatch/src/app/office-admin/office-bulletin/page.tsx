@@ -1,15 +1,26 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import dynamic from "next/dynamic"
+import { ClientPageWrapper } from "@/components/ClientPageWrapper"
 import { Button } from "@/components/ui/button"
 import { Plus, Loader2, FileText, RefreshCw } from "lucide-react"
 import { toast } from "sonner"
 import { OfficeAdminSidebar } from "@/components/OfficeAdminSidebar"
 import { OfficeAdminNavbar } from "@/components/OfficeAdminNavbar"
-import { BulletinCard } from "@/components/BulletinCard"
-import { CreateBulletinModal } from "@/components/CreateBulletinModal"
 import { useSidebar } from "@/contexts/SidebarContext"
 import { api } from "@/utils/apiClient"
+
+// Import all components with client-side only rendering
+const BulletinCard = dynamic(
+  () => import('@/components/BulletinCard').then(mod => mod.BulletinCard), 
+  { ssr: false }
+)
+
+const CreateBulletinModal = dynamic(
+  () => import('@/components/CreateBulletinModal').then(mod => mod.CreateBulletinModal),
+  { ssr: false }
+)
 
 interface Bulletin {
   id: string
@@ -65,7 +76,7 @@ export default function OfficeAdminBulletinPage() {
     return (
       <div className="min-h-screen bg-gray-50">
         <OfficeAdminSidebar />
-        <OfficeAdminNavbar />
+        <OfficeAdminNavbar title="Office Bulletin Management" />
         
         <div className={`pt-16 transition-all duration-300 ${
           collapsed ? 'lg:ml-20' : 'lg:ml-72'
@@ -84,9 +95,10 @@ export default function OfficeAdminBulletinPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <OfficeAdminSidebar />
-      <OfficeAdminNavbar />
+    <ClientPageWrapper>
+      <div className="min-h-screen bg-gray-50">
+        <OfficeAdminSidebar />
+        <OfficeAdminNavbar title="Office Bulletin Management" />
       
       <div className={`pt-16 transition-all duration-300 ${
         collapsed ? 'lg:ml-20' : 'lg:ml-72'
@@ -169,6 +181,7 @@ export default function OfficeAdminBulletinPage() {
         onClose={() => setShowCreateModal(false)}
         onSuccess={handleCreateSuccess}
       />
-    </div>
+      </div>
+    </ClientPageWrapper>
   )
 }

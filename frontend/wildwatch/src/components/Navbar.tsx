@@ -39,8 +39,11 @@ export function Navbar({
     const handleScroll = () => {
       setScrolled(window.scrollY > 10)
     }
-    window.addEventListener("scroll", handleScroll)
-    return () => window.removeEventListener("scroll", handleScroll)
+    
+    if (typeof window !== 'undefined') {
+      window.addEventListener("scroll", handleScroll)
+      return () => window.removeEventListener("scroll", handleScroll)
+    }
   }, [])
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -111,7 +114,7 @@ export function Navbar({
               {/* Desktop search */}
               {showSearch && (
                 <AnimatePresence>
-                  {(!showSearchMobile && window.innerWidth >= 640) || showSearchMobile ? (
+                  {(!showSearchMobile && typeof window !== 'undefined' && window.innerWidth >= 640) || showSearchMobile ? (
                     <motion.div
                       initial={{ opacity: 0, width: 0 }}
                       animate={{ opacity: 1, width: "auto" }}

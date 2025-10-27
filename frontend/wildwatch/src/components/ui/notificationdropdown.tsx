@@ -67,18 +67,23 @@ export default function NotificationDropdown({
         setShowNotifications(false);
       }
     }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    
+    if (typeof document !== 'undefined') {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+      };
+    }
   }, []);
 
   const fetchNotifications = async () => {
     try {
-      const token = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("token="))
-        ?.split("=")[1];
+      const token = typeof document !== 'undefined' 
+        ? document.cookie
+            .split("; ")
+            .find((row) => row.startsWith("token="))
+            ?.split("=")[1]
+        : null;
 
       if (!token) {
         throw new Error("No authentication token found");
@@ -282,10 +287,12 @@ export default function NotificationDropdown({
       setNotifications(prev => prev.map(notification => ({ ...notification, isRead: true })));
       setUnreadCount(0);
 
-      const token = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("token="))
-        ?.split("=")[1];
+      const token = typeof document !== 'undefined' 
+        ? document.cookie
+            .split("; ")
+            .find((row) => row.startsWith("token="))
+            ?.split("=")[1]
+        : null;
 
       if (!token) {
         throw new Error("No authentication token found");
@@ -312,10 +319,12 @@ export default function NotificationDropdown({
 
   const markAsRead = async (id: string) => {
     try {
-      const token = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("token="))
-        ?.split("=")[1];
+      const token = typeof document !== 'undefined' 
+        ? document.cookie
+            .split("; ")
+            .find((row) => row.startsWith("token="))
+            ?.split("=")[1]
+        : null;
 
       if (!token) {
         throw new Error("No authentication token found");

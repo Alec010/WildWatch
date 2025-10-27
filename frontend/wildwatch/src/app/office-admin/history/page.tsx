@@ -70,10 +70,12 @@ export default function OfficeAdminIncidentHistoryPage() {
 
   useEffect(() => {
     // Get status from URL query parameter
-    const searchParams = new URLSearchParams(window.location.search)
-    const statusFromUrl = searchParams.get("status")
-    if (statusFromUrl) {
-      setStatusFilter(statusFromUrl)
+    if (typeof window !== 'undefined') {
+      const searchParams = new URLSearchParams(window.location.search)
+      const statusFromUrl = searchParams.get("status")
+      if (statusFromUrl) {
+        setStatusFilter(statusFromUrl)
+      }
     }
   }, [])
 

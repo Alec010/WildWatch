@@ -24,7 +24,7 @@ import { OfficeAdminSidebar } from "@/components/OfficeAdminSidebar"
 import { Navbar } from "@/components/Navbar"
 import { OfficeAdminNavbar } from "@/components/OfficeAdminNavbar"
 import { useSidebar } from "@/contexts/SidebarContext"
-import confetti from "canvas-confetti"
+import dynamic from "next/dynamic"
 import { RankBadge } from "@/components/RankBadge"
 import type { UserRank } from "@/types/rank"
 
@@ -54,10 +54,12 @@ export default function LeaderboardPage() {
     const fetchLeaderboardData = async () => {
       setLoading(true)
       try {
-        const token = document.cookie
-          .split('; ')
-          .find((row) => row.startsWith('token='))
-          ?.split('=')[1]
+        const token = typeof document !== 'undefined' 
+          ? document.cookie
+              .split('; ')
+              .find((row) => row.startsWith('token='))
+              ?.split('=')[1]
+          : null
 
         if (!token) {
           console.error("No authentication token found")
@@ -86,14 +88,14 @@ export default function LeaderboardPage() {
           console.log("🔍 Raw offices data:", officesData)
           
           // Process student data to ensure rank information is available
-          const processedStudents = studentsData.map(student => {
+          const processedStudents = studentsData.map((student: LeaderboardEntry) => {
             // Calculate Gold ranking for Gold rank users
             if (student.rank === 'GOLD') {
               // Find position among Gold users
               const goldPosition = studentsData
-                .filter(s => s.rank === 'GOLD')
-                .sort((a, b) => b.points - a.points)
-                .findIndex(s => s.id === student.id) + 1;
+                .filter((s: LeaderboardEntry) => s.rank === 'GOLD')
+                .sort((a: LeaderboardEntry, b: LeaderboardEntry) => b.points - a.points)
+                .findIndex((s: LeaderboardEntry) => s.id === student.id) + 1;
               
               // Only set goldRanking if in top 10
               if (goldPosition <= 10) {
@@ -104,14 +106,14 @@ export default function LeaderboardPage() {
           });
           
           // Process office data to ensure rank information is available
-          const processedOffices = officesData.map(office => {
+          const processedOffices = officesData.map((office: LeaderboardEntry) => {
             // Calculate Gold ranking for Gold rank offices
             if (office.rank === 'GOLD') {
               // Find position among Gold offices
               const goldPosition = officesData
-                .filter(o => o.rank === 'GOLD')
-                .sort((a, b) => b.points - a.points)
-                .findIndex(o => o.id === office.id) + 1;
+                .filter((o: LeaderboardEntry) => o.rank === 'GOLD')
+                .sort((a: LeaderboardEntry, b: LeaderboardEntry) => b.points - a.points)
+                .findIndex((o: LeaderboardEntry) => o.id === office.id) + 1;
               
               // Only set goldRanking if in top 10
               if (goldPosition <= 10) {
@@ -124,10 +126,12 @@ export default function LeaderboardPage() {
           setTopStudents(processedStudents)
           setTopOffices(processedOffices)
 
-          // Trigger confetti when data loads
-          setTimeout(() => {
-            triggerConfetti()
-          }, 500)
+          // Trigger confetti when data loads - only on client side
+          if (typeof window !== 'undefined') {
+            setTimeout(() => {
+              triggerConfetti()
+            }, 500)
+          }
         }
       } catch (error) {
         console.error("Error fetching leaderboard data:", error)
@@ -139,38 +143,15 @@ export default function LeaderboardPage() {
     fetchLeaderboardData()
   }, [])
 
-  const triggerConfetti = () => {
-    const duration = 3 * 1000
-    const animationEnd = Date.now() + duration
-    const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 }
+  // Create a separate component for confetti to avoid SSR issues
+const ConfettiTrigger = dynamic(() => import('@/components/ConfettiTrigger'), { ssr: false })
 
-    function randomInRange(min: number, max: number) {
-      return Math.random() * (max - min) + min
+const triggerConfetti = () => {
+    // We'll use a custom event to trigger confetti
+    if (typeof window !== 'undefined') {
+      const event = new CustomEvent('trigger-confetti')
+      window.dispatchEvent(event)
     }
-
-    const interval: any = setInterval(() => {
-      const timeLeft = animationEnd - Date.now()
-
-      if (timeLeft <= 0) {
-        return clearInterval(interval)
-      }
-
-      const particleCount = 50 * (timeLeft / duration)
-
-      // Gold and maroon colors
-      confetti({
-        ...defaults,
-        particleCount,
-        origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 },
-        colors: ["#DAA520", "#8B0000", "#FFD700"],
-      })
-      confetti({
-        ...defaults,
-        particleCount,
-        origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
-        colors: ["#DAA520", "#8B0000", "#FFD700"],
-      })
-    }, 250)
   }
 
   const getMedalColor = (index: number) => {
@@ -450,6 +431,8 @@ export default function LeaderboardPage() {
 
   return (
     <div className="min-h-screen bg-[#f5f5f5]">
+      {/* Include the confetti component */}
+      <ConfettiTrigger />
       {userRole === 'OFFICE_ADMIN' ? <OfficeAdminSidebar /> : <Sidebar />}
       <div className={`transition-all duration-300 ${getContentMargin()}`}>
         {userRole === 'OFFICE_ADMIN' ? (

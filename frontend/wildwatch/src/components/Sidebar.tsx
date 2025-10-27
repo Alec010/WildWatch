@@ -42,15 +42,20 @@ export function Sidebar() {
 
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 1024)
-      if (window.innerWidth < 1024) {
-        setCollapsed(true)
+      if (typeof window !== 'undefined') {
+        setIsMobile(window.innerWidth < 1024)
+        if (window.innerWidth < 1024) {
+          setCollapsed(true)
+        }
       }
     }
 
     checkMobile()
-    window.addEventListener("resize", checkMobile)
-    return () => window.removeEventListener("resize", checkMobile)
+    
+    if (typeof window !== 'undefined') {
+      window.addEventListener("resize", checkMobile)
+      return () => window.removeEventListener("resize", checkMobile)
+    }
   }, [])
 
   useEffect(() => {

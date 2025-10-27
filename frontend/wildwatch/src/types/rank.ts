@@ -41,7 +41,7 @@ export const RANK_THRESHOLDS = {
   BRONZE: 100,
   SILVER: 200,
   GOLD: 300,
-} as const
+}
 
 // Rank colors
 export const RANK_COLORS = {
