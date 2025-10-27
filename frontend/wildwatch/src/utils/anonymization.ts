@@ -108,13 +108,18 @@ export function filterIncidentsByPrivacy(
  * @returns The display name for the reporter
  */
 export function getReporterDisplayName(
-  incident: AnonymizedIncident,
+  incident: {
+    submittedByFullName?: string;
+    submittedBy?: string;
+    isAnonymous?: boolean;
+    preferAnonymous?: boolean;
+  },
   isViewerAdmin: boolean = false,
   isViewerSubmitter: boolean = false
 ): string {
   // If viewer is admin or submitter, show real name
   if (isViewerAdmin || isViewerSubmitter) {
-    return incident.submittedByFullName || incident.submittedBy;
+    return incident.submittedByFullName || incident.submittedBy || "Unknown";
   }
 
   // If incident is anonymous, show anonymous
@@ -122,7 +127,7 @@ export function getReporterDisplayName(
     return "Anonymous Reporter";
   }
 
-  return incident.submittedByFullName || incident.submittedBy;
+  return incident.submittedByFullName || incident.submittedBy || "Unknown";
 }
 
 /**
@@ -133,7 +138,10 @@ export function getReporterDisplayName(
  * @returns Whether reporter details should be shown
  */
 export function shouldShowReporterDetails(
-  incident: AnonymizedIncident,
+  incident: {
+    isAnonymous?: boolean;
+    preferAnonymous?: boolean;
+  },
   isViewerAdmin: boolean = false,
   isViewerSubmitter: boolean = false
 ): boolean {
