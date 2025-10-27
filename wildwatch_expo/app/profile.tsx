@@ -968,13 +968,18 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     Alert.alert("Logout", "Are you sure you want to logout?", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Logout",
         onPress: async () => {
-          await storage.removeToken();
+          // Clear all form data and authentication data
+          await Promise.all([
+            storage.removeToken(),
+            storage.clearAllFormData(),
+            storage.clearChatMessages(),
+          ]);
           router.replace("/auth/login" as never);
         },
         style: "destructive",
