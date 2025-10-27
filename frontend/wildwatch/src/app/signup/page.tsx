@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function SignUpPage() {
   return (
-    <main className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#f5f5f7" }}>
+    <main className="min-h-screen flex items-center justify-center responsive-container" style={{ backgroundColor: "#f5f5f7" }}>
       <div className="bg-none mt-10 mb-10">
         <SignUpForm />
       </div>

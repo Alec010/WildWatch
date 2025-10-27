@@ -30,7 +30,7 @@ export default function Home() {
   }, [api, scrollNext])
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-white to-gray-50">
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-white to-gray-50 responsive-container">
       {/* Navigation */}
       <nav className="bg-white py-3 px-6 md:px-12 flex justify-between items-center shadow-sm sticky top-0 z-50 border-b border-[#FFD700]/20">
         <div className="flex items-center">
