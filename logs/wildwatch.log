@@ -170,3 +170,295 @@
 2025-10-22 21:54:22 INFO  o.s.w.s.m.SubProtocolWebSocketHandler - No messages received after 126471 ms. Closing WebSocketServerSockJsSession[id=wof3ocwy].
 2025-10-22 21:57:57 WARN  o.s.w.s.m.s.DefaultHandlerExceptionResolver - Ignoring exception, response committed already: org.springframework.http.converter.HttpMessageNotWritableException: No converter for [class java.util.LinkedHashMap] with preset Content-Type 'application/javascript;charset=UTF-8'
 2025-10-22 21:57:57 WARN  o.s.w.s.m.s.DefaultHandlerExceptionResolver - Resolved [org.springframework.http.converter.HttpMessageNotWritableException: No converter for [class java.util.LinkedHashMap] with preset Content-Type 'application/javascript;charset=UTF-8']
+2025-10-27 21:42:23 INFO  c.t.WildWatch.WildWatchApplication - Starting WildWatchApplication using Java 22.0.2 with PID 40356 (C:\Users\Alec\WildWatch\backend\WildWatch\target\classes started by Alec in C:\Users\Alec\WildWatch)
+2025-10-27 21:42:23 INFO  c.t.WildWatch.WildWatchApplication - No active profile set, falling back to 1 default profile: "default"
+2025-10-27 21:42:25 INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2025-10-27 21:42:25 INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 149 ms. Found 17 JPA repository interfaces.
+2025-10-27 21:42:26 INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8080 (http)
+2025-10-27 21:42:26 INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2025-10-27 21:42:26 INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.39]
+2025-10-27 21:42:26 INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2025-10-27 21:42:26 INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 3195 ms
+2025-10-27 21:42:27 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 10.0MB in chunks
+2025-10-27 21:42:27 INFO  org.ehcache.core.EhcacheManager - Cache 'goldEliteUsers' created in EhcacheManager.
+2025-10-27 21:42:27 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 10.0MB in chunks
+2025-10-27 21:42:27 INFO  org.ehcache.core.EhcacheManager - Cache 'activeCases' created in EhcacheManager.
+2025-10-27 21:42:27 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Evidence' created in EhcacheManager.
+2025-10-27 21:42:27 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 10.0MB in chunks
+2025-10-27 21:42:27 INFO  org.ehcache.core.EhcacheManager - Cache 'userIncidentHistory' created in EhcacheManager.
+2025-10-27 21:42:27 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 10.0MB in chunks
+2025-10-27 21:42:27 INFO  org.ehcache.core.EhcacheManager - Cache 'org.hibernate.cache.spi.TimestampsCache' created in EhcacheManager.
+2025-10-27 21:42:27 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 10.0MB in chunks
+2025-10-27 21:42:27 INFO  org.ehcache.core.EhcacheManager - Cache 'org.hibernate.cache.internal.StandardQueryCache' created in EhcacheManager.
+2025-10-27 21:42:27 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 10.0MB in chunks
+2025-10-27 21:42:27 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.User' created in EhcacheManager.
+2025-10-27 21:42:27 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 10.0MB in chunks
+2025-10-27 21:42:27 INFO  org.ehcache.core.EhcacheManager - Cache 'goldEliteOffices' created in EhcacheManager.
+2025-10-27 21:42:27 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident.witnesses' created in EhcacheManager.
+2025-10-27 21:42:27 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 20.0MB in chunks
+2025-10-27 21:42:27 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident' created in EhcacheManager.
+2025-10-27 21:42:27 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 10.0MB in chunks
+2025-10-27 21:42:27 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Witness' created in EhcacheManager.
+2025-10-27 21:42:27 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 10.0MB in chunks
+2025-10-27 21:42:27 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.OfficeAdmin' created in EhcacheManager.
+2025-10-27 21:42:27 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident.evidence' created in EhcacheManager.
+2025-10-27 21:42:27 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident.tags' created in EhcacheManager.
+2025-10-27 21:42:27 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./C./Users/Alec/WildWatch/backend/WildWatch/target/classes/ehcache.xml,Cache=goldEliteUsers
+2025-10-27 21:42:27 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./C./Users/Alec/WildWatch/backend/WildWatch/target/classes/ehcache.xml,Cache=activeCases
+2025-10-27 21:42:27 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./C./Users/Alec/WildWatch/backend/WildWatch/target/classes/ehcache.xml,Cache=com.teamhyungie.WildWatch.model.Evidence
+2025-10-27 21:42:27 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./C./Users/Alec/WildWatch/backend/WildWatch/target/classes/ehcache.xml,Cache=userIncidentHistory
+2025-10-27 21:42:27 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./C./Users/Alec/WildWatch/backend/WildWatch/target/classes/ehcache.xml,Cache=org.hibernate.cache.spi.TimestampsCache
+2025-10-27 21:42:27 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./C./Users/Alec/WildWatch/backend/WildWatch/target/classes/ehcache.xml,Cache=org.hibernate.cache.internal.StandardQueryCache
+2025-10-27 21:42:27 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./C./Users/Alec/WildWatch/backend/WildWatch/target/classes/ehcache.xml,Cache=com.teamhyungie.WildWatch.model.User
+2025-10-27 21:42:27 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./C./Users/Alec/WildWatch/backend/WildWatch/target/classes/ehcache.xml,Cache=goldEliteOffices
+2025-10-27 21:42:27 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./C./Users/Alec/WildWatch/backend/WildWatch/target/classes/ehcache.xml,Cache=com.teamhyungie.WildWatch.model.Incident.witnesses
+2025-10-27 21:42:27 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./C./Users/Alec/WildWatch/backend/WildWatch/target/classes/ehcache.xml,Cache=com.teamhyungie.WildWatch.model.Incident
+2025-10-27 21:42:27 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./C./Users/Alec/WildWatch/backend/WildWatch/target/classes/ehcache.xml,Cache=com.teamhyungie.WildWatch.model.Witness
+2025-10-27 21:42:27 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./C./Users/Alec/WildWatch/backend/WildWatch/target/classes/ehcache.xml,Cache=com.teamhyungie.WildWatch.model.OfficeAdmin
+2025-10-27 21:42:27 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./C./Users/Alec/WildWatch/backend/WildWatch/target/classes/ehcache.xml,Cache=com.teamhyungie.WildWatch.model.Incident.evidence
+2025-10-27 21:42:28 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./C./Users/Alec/WildWatch/backend/WildWatch/target/classes/ehcache.xml,Cache=com.teamhyungie.WildWatch.model.Incident.tags
+2025-10-27 21:42:28 INFO  o.h.jpa.internal.util.LogHelper - HHH000204: Processing PersistenceUnitInfo [name: default]
+2025-10-27 21:42:28 INFO  org.hibernate.Version - HHH000412: Hibernate ORM core version 6.6.11.Final
+2025-10-27 21:42:28 INFO  o.h.c.i.RegionFactoryInitiator - HHH000025: Second-level cache region factory [org.hibernate.cache.jcache.internal.JCacheRegionFactory]
+2025-10-27 21:42:28 INFO  o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2025-10-27 21:42:28 INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Starting...
+2025-10-27 21:43:10 INFO  com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@4d529bc0
+2025-10-27 21:43:10 INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Start completed.
+2025-10-27 21:43:10 WARN  org.hibernate.orm.deprecation - HHH90000025: PostgreSQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2025-10-27 21:43:10 INFO  o.hibernate.orm.connections.pooling - HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 15.8
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2025-10-27 21:43:11 INFO  org.ehcache.core.EhcacheManager - Cache 'default-update-timestamps-region' created in EhcacheManager.
+2025-10-27 21:43:11 INFO  org.ehcache.core.EhcacheManager - Cache 'default-query-results-region' created in EhcacheManager.
+2025-10-27 21:43:11 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident' created in EhcacheManager.
+2025-10-27 21:43:12 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident.tags' created in EhcacheManager.
+2025-10-27 21:43:12 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident.evidence' created in EhcacheManager.
+2025-10-27 21:43:12 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.User' created in EhcacheManager.
+2025-10-27 21:43:12 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident.witnesses' created in EhcacheManager.
+2025-10-27 21:43:13 INFO  o.h.e.t.j.p.i.JtaPlatformInitiator - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2025-10-27 21:43:20 INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2025-10-27 21:43:21 INFO  o.s.d.j.r.query.QueryEnhancerFactory - Hibernate is in classpath; If applicable, HQL parser will be used.
+2025-10-27 21:43:23 INFO  c.t.W.service.SupabaseStorageService - Initializing Supabase Storage Service with URL: https://jcldwuryjuqtrbsqlgoi.supabase.co
+2025-10-27 21:43:24 WARN  o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2025-10-27 21:43:24 INFO  o.s.s.c.a.a.c.InitializeUserDetailsBeanManagerConfigurer$InitializeUserDetailsManagerConfigurer - Global AuthenticationManager configured with UserDetailsService bean with name userDetailsService
+2025-10-27 21:43:25 INFO  o.s.m.s.b.SimpleBrokerMessageHandler - Starting...
+2025-10-27 21:43:25 INFO  o.s.m.s.b.SimpleBrokerMessageHandler - BrokerAvailabilityEvent[available=true, SimpleBrokerMessageHandler [org.springframework.messaging.simp.broker.DefaultSubscriptionRegistry@4951555f]]
+2025-10-27 21:43:25 INFO  o.s.m.s.b.SimpleBrokerMessageHandler - Started.
+2025-10-27 21:43:25 INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat started on port 8080 (http) with context path '/'
+2025-10-27 21:43:27 INFO  c.t.WildWatch.WildWatchApplication - Started WildWatchApplication in 64.377 seconds (process running for 64.794)
+2025-10-27 21:43:30 INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2025-10-27 21:43:30 INFO  o.s.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2025-10-27 21:43:30 INFO  o.s.web.servlet.DispatcherServlet - Completed initialization in 2 ms
+2025-10-27 21:43:30 ERROR c.t.W.security.MobileRedirectFilter - Error processing state parameter
+com.fasterxml.jackson.core.JsonParseException: Unexpected character ('�' (code 65533 / 0xfffd)): expected a valid value (JSON String, Number, Array, Object or token 'null', 'true' or 'false')
+ at [Source: REDACTED (`StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION` disabled); line: 1, column: 1]
+	at com.fasterxml.jackson.core.JsonParser._constructReadException(JsonParser.java:2660)
+	at com.fasterxml.jackson.core.base.ParserMinimalBase._reportUnexpectedChar(ParserMinimalBase.java:741)
+	at com.fasterxml.jackson.core.json.ReaderBasedJsonParser._handleOddValue(ReaderBasedJsonParser.java:2054)
+	at com.fasterxml.jackson.core.json.ReaderBasedJsonParser.nextToken(ReaderBasedJsonParser.java:780)
+	at com.fasterxml.jackson.databind.ObjectMapper._readTreeAndClose(ObjectMapper.java:4960)
+	at com.fasterxml.jackson.databind.ObjectMapper.readTree(ObjectMapper.java:3281)
+	at com.teamhyungie.WildWatch.security.MobileRedirectFilter.doFilterInternal(MobileRedirectFilter.java:39)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.context.SecurityContextHolderFilter.doFilter(SecurityContextHolderFilter.java:82)
+	at org.springframework.security.web.context.SecurityContextHolderFilter.doFilter(SecurityContextHolderFilter.java:69)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter.doFilterInternal(WebAsyncManagerIntegrationFilter.java:62)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.session.DisableEncodeUrlFilter.doFilterInternal(DisableEncodeUrlFilter.java:42)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.FilterChainProxy.doFilterInternal(FilterChainProxy.java:233)
+	at org.springframework.security.web.FilterChainProxy.doFilter(FilterChainProxy.java:191)
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113)
+	at org.springframework.web.servlet.handler.HandlerMappingIntrospector.lambda$createCacheFilter$3(HandlerMappingIntrospector.java:243)
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113)
+	at org.springframework.web.filter.CompositeFilter.doFilter(CompositeFilter.java:74)
+	at org.springframework.security.config.annotation.web.configuration.WebMvcSecurityConfiguration$CompositeFilterChainProxy.doFilter(WebMvcSecurityConfiguration.java:238)
+	at org.springframework.web.filter.DelegatingFilterProxy.invokeDelegate(DelegatingFilterProxy.java:362)
+	at org.springframework.web.filter.DelegatingFilterProxy.doFilter(DelegatingFilterProxy.java:278)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:167)
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:90)
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:483)
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:115)
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:93)
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:74)
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:344)
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:397)
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63)
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:905)
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1743)
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1190)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:659)
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63)
+	at java.base/java.lang.Thread.run(Thread.java:1570)
+2025-10-27 21:43:36 INFO  org.ehcache.core.EhcacheManager - Cache 'userIncidentHistory' created in EhcacheManager.
+2025-10-27 21:44:25 INFO  o.s.w.s.c.WebSocketMessageBrokerStats - WebSocketSession[0 current WS(0)-HttpStream(0)-HttpPoll(0), 0 total, 0 closed abnormally (0 connect failure, 0 send limit, 0 transport error)], stompSubProtocol[processed CONNECT(0)-CONNECTED(0)-DISCONNECT(0)], stompBrokerRelay[null], inboundChannel[pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0], outboundChannel[pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0], sockJsScheduler[pool size = 1, active threads = 1, queued tasks = 0, completed tasks = 0]
+2025-10-27 21:45:23 ERROR c.t.W.security.MobileRedirectFilter - Error processing state parameter
+com.fasterxml.jackson.core.JsonParseException: Unexpected character ('~' (code 126)): expected a valid value (JSON String, Number, Array, Object or token 'null', 'true' or 'false')
+ at [Source: REDACTED (`StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION` disabled); line: 1, column: 1]
+	at com.fasterxml.jackson.core.JsonParser._constructReadException(JsonParser.java:2660)
+	at com.fasterxml.jackson.core.base.ParserMinimalBase._reportUnexpectedChar(ParserMinimalBase.java:741)
+	at com.fasterxml.jackson.core.json.ReaderBasedJsonParser._handleOddValue(ReaderBasedJsonParser.java:2054)
+	at com.fasterxml.jackson.core.json.ReaderBasedJsonParser.nextToken(ReaderBasedJsonParser.java:780)
+	at com.fasterxml.jackson.databind.ObjectMapper._readTreeAndClose(ObjectMapper.java:4960)
+	at com.fasterxml.jackson.databind.ObjectMapper.readTree(ObjectMapper.java:3281)
+	at com.teamhyungie.WildWatch.security.MobileRedirectFilter.doFilterInternal(MobileRedirectFilter.java:39)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.context.SecurityContextHolderFilter.doFilter(SecurityContextHolderFilter.java:82)
+	at org.springframework.security.web.context.SecurityContextHolderFilter.doFilter(SecurityContextHolderFilter.java:69)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter.doFilterInternal(WebAsyncManagerIntegrationFilter.java:62)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.session.DisableEncodeUrlFilter.doFilterInternal(DisableEncodeUrlFilter.java:42)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.FilterChainProxy.doFilterInternal(FilterChainProxy.java:233)
+	at org.springframework.security.web.FilterChainProxy.doFilter(FilterChainProxy.java:191)
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113)
+	at org.springframework.web.servlet.handler.HandlerMappingIntrospector.lambda$createCacheFilter$3(HandlerMappingIntrospector.java:243)
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113)
+	at org.springframework.web.filter.CompositeFilter.doFilter(CompositeFilter.java:74)
+	at org.springframework.security.config.annotation.web.configuration.WebMvcSecurityConfiguration$CompositeFilterChainProxy.doFilter(WebMvcSecurityConfiguration.java:238)
+	at org.springframework.web.filter.DelegatingFilterProxy.invokeDelegate(DelegatingFilterProxy.java:362)
+	at org.springframework.web.filter.DelegatingFilterProxy.doFilter(DelegatingFilterProxy.java:278)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:167)
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:90)
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:483)
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:115)
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:93)
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:74)
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:344)
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:397)
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63)
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:905)
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1743)
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1190)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:659)
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63)
+	at java.base/java.lang.Thread.run(Thread.java:1570)
+2025-10-27 21:53:06 INFO  c.t.WildWatch.WildWatchApplication - Starting WildWatchApplication using Java 22.0.2 with PID 40312 (C:\Users\Alec\WildWatch\backend\WildWatch\target\classes started by Alec in C:\Users\Alec\WildWatch)
+2025-10-27 21:53:06 INFO  c.t.WildWatch.WildWatchApplication - No active profile set, falling back to 1 default profile: "default"
+2025-10-27 21:53:09 INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2025-10-27 21:53:10 INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 412 ms. Found 17 JPA repository interfaces.
+2025-10-27 21:53:12 INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8080 (http)
+2025-10-27 21:53:12 INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2025-10-27 21:53:12 INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.39]
+2025-10-27 21:53:12 INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2025-10-27 21:53:12 INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 6332 ms
+2025-10-27 21:53:14 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 10.0MB in chunks
+2025-10-27 21:53:14 INFO  org.ehcache.core.EhcacheManager - Cache 'goldEliteUsers' created in EhcacheManager.
+2025-10-27 21:53:14 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 10.0MB in chunks
+2025-10-27 21:53:14 INFO  org.ehcache.core.EhcacheManager - Cache 'activeCases' created in EhcacheManager.
+2025-10-27 21:53:14 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Evidence' created in EhcacheManager.
+2025-10-27 21:53:14 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 10.0MB in chunks
+2025-10-27 21:53:14 INFO  org.ehcache.core.EhcacheManager - Cache 'userIncidentHistory' created in EhcacheManager.
+2025-10-27 21:53:14 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 10.0MB in chunks
+2025-10-27 21:53:14 INFO  org.ehcache.core.EhcacheManager - Cache 'org.hibernate.cache.spi.TimestampsCache' created in EhcacheManager.
+2025-10-27 21:53:14 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 10.0MB in chunks
+2025-10-27 21:53:14 INFO  org.ehcache.core.EhcacheManager - Cache 'org.hibernate.cache.internal.StandardQueryCache' created in EhcacheManager.
+2025-10-27 21:53:14 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 10.0MB in chunks
+2025-10-27 21:53:14 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.User' created in EhcacheManager.
+2025-10-27 21:53:14 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 10.0MB in chunks
+2025-10-27 21:53:14 INFO  org.ehcache.core.EhcacheManager - Cache 'goldEliteOffices' created in EhcacheManager.
+2025-10-27 21:53:14 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident.witnesses' created in EhcacheManager.
+2025-10-27 21:53:14 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 20.0MB in chunks
+2025-10-27 21:53:14 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident' created in EhcacheManager.
+2025-10-27 21:53:14 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 10.0MB in chunks
+2025-10-27 21:53:14 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Witness' created in EhcacheManager.
+2025-10-27 21:53:14 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 10.0MB in chunks
+2025-10-27 21:53:14 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.OfficeAdmin' created in EhcacheManager.
+2025-10-27 21:53:14 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident.evidence' created in EhcacheManager.
+2025-10-27 21:53:14 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident.tags' created in EhcacheManager.
+2025-10-27 21:53:15 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./C./Users/Alec/WildWatch/backend/WildWatch/target/classes/ehcache.xml,Cache=goldEliteUsers
+2025-10-27 21:53:15 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./C./Users/Alec/WildWatch/backend/WildWatch/target/classes/ehcache.xml,Cache=activeCases
+2025-10-27 21:53:15 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./C./Users/Alec/WildWatch/backend/WildWatch/target/classes/ehcache.xml,Cache=com.teamhyungie.WildWatch.model.Evidence
+2025-10-27 21:53:15 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./C./Users/Alec/WildWatch/backend/WildWatch/target/classes/ehcache.xml,Cache=userIncidentHistory
+2025-10-27 21:53:15 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./C./Users/Alec/WildWatch/backend/WildWatch/target/classes/ehcache.xml,Cache=org.hibernate.cache.spi.TimestampsCache
+2025-10-27 21:53:15 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./C./Users/Alec/WildWatch/backend/WildWatch/target/classes/ehcache.xml,Cache=org.hibernate.cache.internal.StandardQueryCache
+2025-10-27 21:53:15 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./C./Users/Alec/WildWatch/backend/WildWatch/target/classes/ehcache.xml,Cache=com.teamhyungie.WildWatch.model.User
+2025-10-27 21:53:15 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./C./Users/Alec/WildWatch/backend/WildWatch/target/classes/ehcache.xml,Cache=goldEliteOffices
+2025-10-27 21:53:15 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./C./Users/Alec/WildWatch/backend/WildWatch/target/classes/ehcache.xml,Cache=com.teamhyungie.WildWatch.model.Incident.witnesses
+2025-10-27 21:53:15 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./C./Users/Alec/WildWatch/backend/WildWatch/target/classes/ehcache.xml,Cache=com.teamhyungie.WildWatch.model.Incident
+2025-10-27 21:53:15 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./C./Users/Alec/WildWatch/backend/WildWatch/target/classes/ehcache.xml,Cache=com.teamhyungie.WildWatch.model.Witness
+2025-10-27 21:53:15 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./C./Users/Alec/WildWatch/backend/WildWatch/target/classes/ehcache.xml,Cache=com.teamhyungie.WildWatch.model.OfficeAdmin
+2025-10-27 21:53:15 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./C./Users/Alec/WildWatch/backend/WildWatch/target/classes/ehcache.xml,Cache=com.teamhyungie.WildWatch.model.Incident.evidence
+2025-10-27 21:53:15 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./C./Users/Alec/WildWatch/backend/WildWatch/target/classes/ehcache.xml,Cache=com.teamhyungie.WildWatch.model.Incident.tags
+2025-10-27 21:53:15 INFO  o.h.jpa.internal.util.LogHelper - HHH000204: Processing PersistenceUnitInfo [name: default]
+2025-10-27 21:53:15 INFO  org.hibernate.Version - HHH000412: Hibernate ORM core version 6.6.11.Final
+2025-10-27 21:53:16 INFO  o.h.c.i.RegionFactoryInitiator - HHH000025: Second-level cache region factory [org.hibernate.cache.jcache.internal.JCacheRegionFactory]
+2025-10-27 21:53:16 INFO  o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2025-10-27 21:53:16 INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Starting...
+2025-10-27 21:53:18 INFO  com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@64745270
+2025-10-27 21:53:18 INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Start completed.
+2025-10-27 21:53:18 WARN  org.hibernate.orm.deprecation - HHH90000025: PostgreSQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2025-10-27 21:53:19 INFO  o.hibernate.orm.connections.pooling - HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 15.8
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2025-10-27 21:53:20 INFO  org.ehcache.core.EhcacheManager - Cache 'default-update-timestamps-region' created in EhcacheManager.
+2025-10-27 21:53:20 INFO  org.ehcache.core.EhcacheManager - Cache 'default-query-results-region' created in EhcacheManager.
+2025-10-27 21:53:21 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident.witnesses' created in EhcacheManager.
+2025-10-27 21:53:21 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident.tags' created in EhcacheManager.
+2025-10-27 21:53:21 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.User' created in EhcacheManager.
+2025-10-27 21:53:21 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident' created in EhcacheManager.
+2025-10-27 21:53:21 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident.evidence' created in EhcacheManager.
+2025-10-27 21:53:25 INFO  o.h.e.t.j.p.i.JtaPlatformInitiator - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2025-10-27 21:53:33 INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2025-10-27 21:53:34 INFO  o.s.d.j.r.query.QueryEnhancerFactory - Hibernate is in classpath; If applicable, HQL parser will be used.
+2025-10-27 21:53:36 INFO  c.t.W.service.SupabaseStorageService - Initializing Supabase Storage Service with URL: https://jcldwuryjuqtrbsqlgoi.supabase.co
+2025-10-27 21:53:37 WARN  o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2025-10-27 21:53:37 INFO  o.s.s.c.a.a.c.InitializeUserDetailsBeanManagerConfigurer$InitializeUserDetailsManagerConfigurer - Global AuthenticationManager configured with UserDetailsService bean with name userDetailsService
+2025-10-27 21:53:39 INFO  o.s.m.s.b.SimpleBrokerMessageHandler - Starting...
+2025-10-27 21:53:39 INFO  o.s.m.s.b.SimpleBrokerMessageHandler - BrokerAvailabilityEvent[available=true, SimpleBrokerMessageHandler [org.springframework.messaging.simp.broker.DefaultSubscriptionRegistry@34564e35]]
+2025-10-27 21:53:39 INFO  o.s.m.s.b.SimpleBrokerMessageHandler - Started.
+2025-10-27 21:53:39 INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat started on port 8080 (http) with context path '/'
+2025-10-27 21:53:41 INFO  c.t.WildWatch.WildWatchApplication - Started WildWatchApplication in 37.216 seconds (process running for 38.477)
+2025-10-27 21:53:55 INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2025-10-27 21:53:55 INFO  o.s.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2025-10-27 21:53:55 INFO  o.s.web.servlet.DispatcherServlet - Completed initialization in 2 ms
+2025-10-27 21:54:39 INFO  o.s.w.s.c.WebSocketMessageBrokerStats - WebSocketSession[0 current WS(0)-HttpStream(0)-HttpPoll(0), 0 total, 0 closed abnormally (0 connect failure, 0 send limit, 0 transport error)], stompSubProtocol[processed CONNECT(0)-CONNECTED(0)-DISCONNECT(0)], stompBrokerRelay[null], inboundChannel[pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0], outboundChannel[pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0], sockJsScheduler[pool size = 1, active threads = 1, queued tasks = 0, completed tasks = 0]
+2025-10-27 21:55:03 INFO  org.ehcache.core.EhcacheManager - Cache 'userIncidentHistory' created in EhcacheManager.

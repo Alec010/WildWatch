@@ -58,10 +58,7 @@ public class AuthService {
     }
 
     public Map<String, Object> getUserProfile(String email) {
-        User user = userService.findByUsername(email);
-        if (user == null) {
-            throw new RuntimeException("User not found");
-        }
+        User user = userService.getUserByEmail(email);
 
         Map<String, Object> profile = new HashMap<>();
         profile.put("id", user.getId());

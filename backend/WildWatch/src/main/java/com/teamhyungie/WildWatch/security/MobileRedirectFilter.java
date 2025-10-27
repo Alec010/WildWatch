@@ -33,21 +33,29 @@ public class MobileRedirectFilter extends OncePerRequestFilter {
         if (state != null && !state.isEmpty()) {
             logger.debug("Found state parameter: {}", state);
             try {
+                // First, try to decode as Base64
                 String decoded = new String(Base64.getDecoder().decode(state), StandardCharsets.UTF_8);
                 logger.debug("Decoded state: {}", decoded);
                 
-                JsonNode stateJson = objectMapper.readTree(decoded);
-                if (stateJson.has("mobile_redirect_uri")) {
-                    String mobileRedirectUri = stateJson.get("mobile_redirect_uri").asText();
-                    logger.debug("Extracted mobile_redirect_uri: {}", mobileRedirectUri);
-                    
-                    request.getSession().setAttribute("mobile_redirect_uri", mobileRedirectUri);
-                    logger.debug("Set mobile_redirect_uri in session");
+                // Check if the decoded string looks like JSON
+                if (decoded.trim().startsWith("{") && decoded.trim().endsWith("}")) {
+                    JsonNode stateJson = objectMapper.readTree(decoded);
+                    if (stateJson.has("mobile_redirect_uri")) {
+                        String mobileRedirectUri = stateJson.get("mobile_redirect_uri").asText();
+                        logger.debug("Extracted mobile_redirect_uri: {}", mobileRedirectUri);
+                        
+                        request.getSession().setAttribute("mobile_redirect_uri", mobileRedirectUri);
+                        logger.debug("Set mobile_redirect_uri in session");
+                    } else {
+                        logger.debug("No mobile_redirect_uri found in state JSON");
+                    }
                 } else {
-                    logger.debug("No mobile_redirect_uri found in state JSON");
+                    logger.debug("Decoded state is not valid JSON, skipping mobile redirect URI extraction");
                 }
+            } catch (IllegalArgumentException e) {
+                logger.warn("State parameter is not valid Base64, skipping mobile redirect URI extraction: {}", e.getMessage());
             } catch (Exception e) {
-                logger.error("Error processing state parameter", e);
+                logger.warn("Error processing state parameter, skipping mobile redirect URI extraction: {}", e.getMessage());
             }
         }
         

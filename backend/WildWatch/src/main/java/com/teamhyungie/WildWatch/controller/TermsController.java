@@ -17,10 +17,7 @@ public class TermsController {
     @PostMapping("/accept")
     public ResponseEntity<String> acceptTerms(Authentication authentication) {
         try {
-            User user = userService.findByUsername(authentication.getName());
-            if (user == null) {
-                return ResponseEntity.badRequest().body("User not found");
-            }
+            User user = userService.getUserByEmail(authentication.getName());
             
             user.setTermsAccepted(true);
             user = userService.save(user);
@@ -38,10 +35,7 @@ public class TermsController {
     @GetMapping("/status")
     public ResponseEntity<Boolean> getTermsStatus(Authentication authentication) {
         try {
-            User user = userService.findByUsername(authentication.getName());
-            if (user == null) {
-                return ResponseEntity.badRequest().body(false);
-            }
+            User user = userService.getUserByEmail(authentication.getName());
             return ResponseEntity.ok(user.isTermsAccepted());
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(false);
