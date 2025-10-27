@@ -86,14 +86,14 @@ export default function LeaderboardPage() {
           console.log("🔍 Raw offices data:", officesData)
           
           // Process student data to ensure rank information is available
-          const processedStudents = studentsData.map(student => {
+          const processedStudents = studentsData.map((student: LeaderboardEntry) => {
             // Calculate Gold ranking for Gold rank users
             if (student.rank === 'GOLD') {
               // Find position among Gold users
               const goldPosition = studentsData
-                .filter(s => s.rank === 'GOLD')
-                .sort((a, b) => b.points - a.points)
-                .findIndex(s => s.id === student.id) + 1;
+                .filter((s: LeaderboardEntry) => s.rank === 'GOLD')
+                .sort((a: LeaderboardEntry, b: LeaderboardEntry) => b.points - a.points)
+                .findIndex((s: LeaderboardEntry) => s.id === student.id) + 1;
               
               // Only set goldRanking if in top 10
               if (goldPosition <= 10) {
@@ -104,14 +104,14 @@ export default function LeaderboardPage() {
           });
           
           // Process office data to ensure rank information is available
-          const processedOffices = officesData.map(office => {
+          const processedOffices = officesData.map((office: LeaderboardEntry) => {
             // Calculate Gold ranking for Gold rank offices
             if (office.rank === 'GOLD') {
               // Find position among Gold offices
               const goldPosition = officesData
-                .filter(o => o.rank === 'GOLD')
-                .sort((a, b) => b.points - a.points)
-                .findIndex(o => o.id === office.id) + 1;
+                .filter((o: LeaderboardEntry) => o.rank === 'GOLD')
+                .sort((a: LeaderboardEntry, b: LeaderboardEntry) => b.points - a.points)
+                .findIndex((o: LeaderboardEntry) => o.id === office.id) + 1;
               
               // Only set goldRanking if in top 10
               if (goldPosition <= 10) {

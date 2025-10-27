@@ -59,7 +59,7 @@ export default function OfficeBulletinPage() {
     return (
       <div className="min-h-screen bg-gray-50">
         <Sidebar />
-        <Navbar />
+        <Navbar title="Office Bulletin" />
         
         <div className={`pt-16 transition-all duration-300 ${
           collapsed ? 'lg:ml-20' : 'lg:ml-64'
@@ -80,7 +80,7 @@ export default function OfficeBulletinPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Sidebar />
-      <Navbar />
+      <Navbar title="Office Bulletin" />
       
       <div className={`pt-16 transition-all duration-300 ${
         collapsed ? 'lg:ml-20' : 'lg:ml-64'

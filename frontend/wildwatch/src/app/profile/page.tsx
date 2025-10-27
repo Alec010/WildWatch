@@ -691,7 +691,7 @@ function ProfileContent({ user }: { user: UserProfile }) {
                           showName={true}
                         />
                       ))}
-                      {recentBadges.length < badgeSummary?.totalBadgesEarned && (
+                      {badgeSummary?.totalBadgesEarned && recentBadges.length < badgeSummary.totalBadgesEarned && (
                         <Button 
                           variant="ghost" 
                           size="sm" 

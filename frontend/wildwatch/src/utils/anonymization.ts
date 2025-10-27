@@ -23,6 +23,10 @@ export interface AnonymizedIncident {
   isPrivate?: boolean;
   preferAnonymous?: boolean;
   upvoteCount?: number | undefined;
+  assignedOffice?: string;
+  transferredFrom?: string;
+  lastTransferredTo?: string;
+  lastTransferNotes?: string;
   [key: string]: any;
 }
 

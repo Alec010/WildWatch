@@ -65,7 +65,7 @@ export default function OfficeAdminBulletinPage() {
     return (
       <div className="min-h-screen bg-gray-50">
         <OfficeAdminSidebar />
-        <OfficeAdminNavbar />
+        <OfficeAdminNavbar title="Office Bulletin Management" />
         
         <div className={`pt-16 transition-all duration-300 ${
           collapsed ? 'lg:ml-20' : 'lg:ml-72'
@@ -86,7 +86,7 @@ export default function OfficeAdminBulletinPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <OfficeAdminSidebar />
-      <OfficeAdminNavbar />
+      <OfficeAdminNavbar title="Office Bulletin Management" />
       
       <div className={`pt-16 transition-all duration-300 ${
         collapsed ? 'lg:ml-20' : 'lg:ml-72'
