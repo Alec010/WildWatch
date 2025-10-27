@@ -6,10 +6,13 @@ import { Plus, Loader2, FileText, RefreshCw } from "lucide-react"
 import { toast } from "sonner"
 import { OfficeAdminSidebar } from "@/components/OfficeAdminSidebar"
 import { OfficeAdminNavbar } from "@/components/OfficeAdminNavbar"
-import { BulletinCard } from "@/components/BulletinCard"
 import { CreateBulletinModal } from "@/components/CreateBulletinModal"
 import { useSidebar } from "@/contexts/SidebarContext"
 import { api } from "@/utils/apiClient"
+import dynamic from 'next/dynamic'
+
+// Import BulletinCard with client-side only rendering
+const BulletinCard = dynamic(() => import('@/components/BulletinCard'), { ssr: false })
 
 interface Bulletin {
   id: string

@@ -6,9 +6,12 @@ import { Loader2, FileText, RefreshCw } from "lucide-react"
 import { toast } from "sonner"
 import { Sidebar } from "@/components/Sidebar"
 import { Navbar } from "@/components/Navbar"
-import { BulletinCard } from "@/components/BulletinCard"
 import { useSidebar } from "@/contexts/SidebarContext"
 import { api } from "@/utils/apiClient"
+import dynamic from 'next/dynamic'
+
+// Import BulletinCard with client-side only rendering
+const BulletinCard = dynamic(() => import('@/components/BulletinCard'), { ssr: false })
 
 interface Bulletin {
   id: string

@@ -140,6 +140,9 @@ export default function LeaderboardPage() {
   }, [])
 
   const triggerConfetti = () => {
+    // Only run confetti on the client side
+    if (typeof window === 'undefined') return;
+    
     const duration = 3 * 1000
     const animationEnd = Date.now() + duration
     const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 }
