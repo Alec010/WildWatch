@@ -66,7 +66,9 @@ export const getCurrentUser = async () => {
 export const logout = async () => {
   const tokenService = (await import('./tokenService')).default;
   tokenService.removeToken();
-  window.location.href = '/login';
+  if (typeof window !== 'undefined') {
+    window.location.href = '/login';
+  }
 };
 
 export const handleAuthRedirect = (user: { role: string; termsAccepted: boolean }) => {

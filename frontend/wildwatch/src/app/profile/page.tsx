@@ -514,7 +514,9 @@ function ProfileContent({ user }: { user: UserProfile }) {
       }
 
       // Refresh the page to show updated data
-      window.location.reload()
+      if (typeof window !== 'undefined') {
+        window.location.reload()
+      }
     } catch (error) {
       console.error("Error updating profile:", error)
       alert("Failed to update profile. Please try again.")

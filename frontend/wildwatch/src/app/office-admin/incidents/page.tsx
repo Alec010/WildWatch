@@ -310,7 +310,7 @@ export default function IncidentManagementPage() {
                   <p className="text-red-700">{error}</p>
                   <Button
                     className="mt-4 bg-[#8B0000] hover:bg-[#6B0000] text-white"
-                    onClick={() => window.location.reload()}
+                    onClick={() => typeof window !== 'undefined' && window.location.reload()}
                   >
                     <RefreshCw className="mr-2 h-4 w-4" /> Try Again
                   </Button>

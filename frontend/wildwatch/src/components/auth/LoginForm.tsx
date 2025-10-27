@@ -316,7 +316,9 @@ export function LoginForm() {
               variant="outline"
               className="w-full flex items-center justify-center gap-2 border-[#D4AF37]/30 hover:bg-[#D4AF37]/10 py-5"
               onClick={() => {
-                window.location.href = `${API_BASE_URL}/oauth2/authorization/microsoft`
+                if (typeof window !== 'undefined') {
+                  window.location.href = `${API_BASE_URL}/oauth2/authorization/microsoft`
+                }
               }}
             >
               <MicrosoftLogo />

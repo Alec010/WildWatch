@@ -437,7 +437,7 @@ export default function PublicIncidentsPage() {
                   <h3 className="text-red-800 font-bold text-xl mb-2">Unable to Load Incidents</h3>
                   <p className="text-red-700 text-lg">{error}</p>
                   <button
-                    onClick={() => window.location.reload()}
+                    onClick={() => typeof window !== 'undefined' && window.location.reload()}
                     className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
                   >
                     Try Again

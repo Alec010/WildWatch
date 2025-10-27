@@ -114,7 +114,7 @@ export function OfficeAdminNavbar({
               {/* Desktop search */}
               {showSearch && (
                 <AnimatePresence>
-                  {(!showSearchMobile && window.innerWidth >= 640) || showSearchMobile ? (
+                  {(!showSearchMobile && typeof window !== 'undefined' && window.innerWidth >= 640) || showSearchMobile ? (
                     <motion.div
                       initial={{ opacity: 0, width: 0 }}
                       animate={{ opacity: 1, width: "auto" }}
