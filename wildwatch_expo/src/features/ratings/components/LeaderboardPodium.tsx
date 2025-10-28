@@ -538,7 +538,7 @@ const styles = StyleSheet.create({
   },
   tooltipOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: 'transparent',
     justifyContent: 'flex-start',
     alignItems: 'center',
   },
@@ -546,15 +546,13 @@ const styles = StyleSheet.create({
     position: 'absolute',
     alignItems: 'center',
     zIndex: 9999,
-    width: '85%',
-    maxWidth: 300,
   },
   tooltipBubble: {
     backgroundColor: 'rgba(0, 0, 0, 0.75)',
     borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    width: '100%',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    alignSelf: 'center',
   },
   tooltipText: {
     color: '#FFFFFF',
