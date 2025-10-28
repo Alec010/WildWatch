@@ -625,33 +625,27 @@ const OfficePodium: React.FC<{ entries: LeaderboardEntry[] }> = ({
     };
   }, []);
 
-  const showTooltip = (officeName: string, index: number) => {
+  const showTooltip = (officeName: string, index: number, pressY: number, pressX: number) => {
     const fullName = getOfficeFullName(officeName);
     setTooltipText(fullName);
     setTooltipAcronym(officeName);
     setTooltipRank(index + 1);
     
-    // Calculate position based on podium index
-    let xPos = screenWidth / 2; // Default center
+    // Calculate arrow alignment based on horizontal position
     let arrowAlign: 'left' | 'center' | 'right' = 'center';
     
     if (index === 1) {
-      // 2nd place - left side
-      xPos = screenWidth * 0.25;
       arrowAlign = 'left';
     } else if (index === 0) {
-      // 1st place - center
-      xPos = screenWidth / 2;
       arrowAlign = 'center';
     } else if (index === 2) {
-      // 3rd place - right side
-      xPos = screenWidth * 0.75;
       arrowAlign = 'right';
     }
     
-    const yPos = 150 * scaleFactor; // Position tooltip above podium
+    // Position tooltip at exact press location (slightly above to avoid finger covering it)
+    const yPos = pressY - 40; // 40px above the press point
     
-    setTooltipPosition({ x: xPos, y: yPos, arrowAlign });
+    setTooltipPosition({ x: pressX, y: yPos, arrowAlign });
     setTooltipVisible(true);
     
     // Haptic feedback (light vibration)
@@ -778,9 +772,10 @@ const OfficePodium: React.FC<{ entries: LeaderboardEntry[] }> = ({
     return (
       <TouchableOpacity
         activeOpacity={isEmpty ? 1 : 0.7}
-        onPress={() => {
+        onPress={(event) => {
           if (!isEmpty) {
-            showTooltip(entry.name, index);
+            const { pageY, pageX } = event.nativeEvent;
+            showTooltip(entry.name, index, pageY, pageX);
           }
         }}
         disabled={isEmpty}
