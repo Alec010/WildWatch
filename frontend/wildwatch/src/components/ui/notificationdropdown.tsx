@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
@@ -19,9 +19,9 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
-import { API_BASE_URL, WS_BASE_URL } from "@/utils/api";
-import { Client } from '@stomp/stompjs';
-import SockJS from 'sockjs-client';
+import { API_BASE_URL, getWsBaseUrl } from "@/utils/api";
+import { Client } from "@stomp/stompjs";
+import SockJS from "sockjs-client";
 
 interface ActivityLog {
   id: string;
@@ -53,9 +53,8 @@ export default function NotificationDropdown({
   const stompClientRef = useRef<Client | null>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const notificationAudio = typeof window !== "undefined"
-    ? new Audio("/notification_sound.mp3")
-    : null;
+  const notificationAudio =
+    typeof window !== "undefined" ? new Audio("/notification_sound.mp3") : null;
 
   // Close notifications when clicking outside
   useEffect(() => {
@@ -67,8 +66,8 @@ export default function NotificationDropdown({
         setShowNotifications(false);
       }
     }
-    
-    if (typeof document !== 'undefined') {
+
+    if (typeof document !== "undefined") {
       document.addEventListener("mousedown", handleClickOutside);
       return () => {
         document.removeEventListener("mousedown", handleClickOutside);
@@ -78,23 +77,27 @@ export default function NotificationDropdown({
 
   const fetchNotifications = async () => {
     try {
-      const token = typeof document !== 'undefined' 
-        ? document.cookie
-            .split("; ")
-            .find((row) => row.startsWith("token="))
-            ?.split("=")[1]
-        : null;
+      const token =
+        typeof document !== "undefined"
+          ? document.cookie
+              .split("; ")
+              .find((row) => row.startsWith("token="))
+              ?.split("=")[1]
+          : null;
 
       if (!token) {
         throw new Error("No authentication token found");
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/activity-logs?page=0&size=10`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/api/activity-logs?page=0&size=10`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -106,7 +109,9 @@ export default function NotificationDropdown({
       }
 
       setNotifications(data.content);
-      const unreadCount = data.content.filter((notification: ActivityLog) => !notification.isRead).length;
+      const unreadCount = data.content.filter(
+        (notification: ActivityLog) => !notification.isRead
+      ).length;
       setUnreadCount(unreadCount);
     } catch (error) {
       console.error("Error fetching notifications:", error);
@@ -125,73 +130,90 @@ export default function NotificationDropdown({
 
     const connectStomp = () => {
       try {
-        console.log("Connecting to WebSocket at:", `${WS_BASE_URL}/ws`);
+        const wsBaseUrl = getWsBaseUrl();
+        console.log("WebSocket base URL:", wsBaseUrl);
+        console.log("Full WebSocket URL:", `${wsBaseUrl}/ws`);
+
+        // Validate that we're using HTTP/HTTPS URL for SockJS
+        if (!wsBaseUrl.startsWith("http")) {
+          console.error(
+            "ERROR: WebSocket URL should start with http/https for SockJS, got:",
+            wsBaseUrl
+          );
+          throw new Error(`Invalid WebSocket URL for SockJS: ${wsBaseUrl}`);
+        }
         // Create SockJS connection with error handling
-        const socket = new SockJS(`${WS_BASE_URL}/ws`, null, {
-          transports: ['websocket', 'xhr-streaming', 'xhr-polling'],
-          timeout: 10000
+        const socket = new SockJS(`${wsBaseUrl}/ws`, null, {
+          transports: ["websocket", "xhr-streaming", "xhr-polling"],
+          timeout: 10000,
         });
         const stompClient = new Client({
           webSocketFactory: () => socket as any,
           reconnectDelay: RECONNECT_DELAY,
           heartbeatIncoming: 60000, // Set client heartbeat to 60 seconds
           heartbeatOutgoing: 60000, // Set server heartbeat to 60 seconds
-        onConnect: () => {
-          setWsConnected(true);
-          reconnectAttempts = 0;
-          if (pollInterval) {
-            clearInterval(pollInterval);
-            pollInterval = null;
-          }
-          stompClient.subscribe('/topic/notifications', (message) => {
-            const notification = JSON.parse(message.body);
-            setNotifications(prev => {
-              const exists = prev.some(n => n.id === notification.id);
-              if (exists) {
-                const updatedNotifications = prev.map(n => n.id === notification.id ? notification : n);
-                const newUnreadCount = updatedNotifications.filter(n => !n.isRead).length;
-                setUnreadCount(newUnreadCount);
-                return updatedNotifications;
-              } else {
-                // Play sound for new notification
-                if (notificationAudio) {
-                  notificationAudio.play();
-                  console.log('Notification sound played');
+          onConnect: () => {
+            setWsConnected(true);
+            reconnectAttempts = 0;
+            if (pollInterval) {
+              clearInterval(pollInterval);
+              pollInterval = null;
+            }
+            stompClient.subscribe("/topic/notifications", (message) => {
+              const notification = JSON.parse(message.body);
+              setNotifications((prev) => {
+                const exists = prev.some((n) => n.id === notification.id);
+                if (exists) {
+                  const updatedNotifications = prev.map((n) =>
+                    n.id === notification.id ? notification : n
+                  );
+                  const newUnreadCount = updatedNotifications.filter(
+                    (n) => !n.isRead
+                  ).length;
+                  setUnreadCount(newUnreadCount);
+                  return updatedNotifications;
+                } else {
+                  // Play sound for new notification
+                  if (notificationAudio) {
+                    notificationAudio.play();
+                    console.log("Notification sound played");
+                  }
+                  const updatedNotifications = [notification, ...prev];
+                  const newUnreadCount = updatedNotifications.filter(
+                    (n) => !n.isRead
+                  ).length;
+                  setUnreadCount(newUnreadCount);
+                  setHasNewNotification(true);
+                  setTimeout(() => setHasNewNotification(false), 3000);
+                  return updatedNotifications;
                 }
-                const updatedNotifications = [notification, ...prev];
-                const newUnreadCount = updatedNotifications.filter(n => !n.isRead).length;
-                setUnreadCount(newUnreadCount);
-                setHasNewNotification(true);
-                setTimeout(() => setHasNewNotification(false), 3000);
-                return updatedNotifications;
-              }
+              });
             });
-          });
-        },
-        onStompError: () => {
-          setWsConnected(false);
-          if (!pollInterval) {
-            pollInterval = setInterval(fetchNotifications, 30000); // Increase to 30 seconds
-          }
-        },
-        onWebSocketClose: () => {
-          setWsConnected(false);
-          if (!pollInterval) {
-            pollInterval = setInterval(fetchNotifications, 30000); // Increase to 30 seconds
-          }
-          if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
-            reconnectAttempts++;
-            setTimeout(connectStomp, RECONNECT_DELAY);
-          }
-        },
-      });
-      // Add debug event listeners
-      socket.onopen = () => console.log("SockJS connection opened");
-      socket.onclose = (e) => console.log("SockJS connection closed", e);
-      socket.onerror = (e) => console.error("SockJS connection error", e);
-      
-      stompClient.activate();
-      stompClientRef.current = stompClient;
+          },
+          onStompError: () => {
+            setWsConnected(false);
+            if (!pollInterval) {
+              pollInterval = setInterval(fetchNotifications, 30000); // Increase to 30 seconds
+            }
+          },
+          onWebSocketClose: () => {
+            setWsConnected(false);
+            if (!pollInterval) {
+              pollInterval = setInterval(fetchNotifications, 30000); // Increase to 30 seconds
+            }
+            if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+              reconnectAttempts++;
+              setTimeout(connectStomp, RECONNECT_DELAY);
+            }
+          },
+        });
+        // Add debug event listeners
+        socket.onopen = () => console.log("SockJS connection opened");
+        socket.onclose = (e) => console.log("SockJS connection closed", e);
+        socket.onerror = (e) => console.error("SockJS connection error", e);
+
+        stompClient.activate();
+        stompClientRef.current = stompClient;
       } catch (error) {
         console.error("WebSocket connection error:", error);
         // Fall back to polling if WebSocket fails
@@ -204,10 +226,10 @@ export default function NotificationDropdown({
 
     // Connect to WebSocket first, only fetch notifications once
     connectStomp();
-    
+
     // Initial fetch of notifications
     fetchNotifications();
-    
+
     // Don't set up polling here - it will only be set up if WebSocket fails
 
     return () => {
@@ -221,10 +243,10 @@ export default function NotificationDropdown({
       // Parse the UTC date string
       const date = new Date(dateString);
       const now = new Date();
-      
+
       // Get the time difference in milliseconds
       const diffMs = now.getTime() - date.getTime();
-      
+
       // Convert to minutes, hours, and days
       const diffMins = Math.floor(diffMs / 60000);
       const diffHours = Math.floor(diffMs / 3600000);
@@ -240,18 +262,18 @@ export default function NotificationDropdown({
         return `${diffDays} day${diffDays !== 1 ? "s" : ""} ago`;
       } else {
         // For older notifications, show the actual date in local timezone
-        return date.toLocaleString('en-US', {
-          month: 'short',
-          day: 'numeric',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+        return date.toLocaleString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         });
       }
     } catch (error) {
-      console.error('Error formatting date:', error);
-      return 'Invalid date';
+      console.error("Error formatting date:", error);
+      return "Invalid date";
     }
   };
 
@@ -265,7 +287,7 @@ export default function NotificationDropdown({
       if (!notification.isRead) {
         await markAsRead(notification.id);
         // Immediately update the unread count
-        setUnreadCount(prev => Math.max(0, prev - 1));
+        setUnreadCount((prev) => Math.max(0, prev - 1));
       }
 
       // Redirect to the correct page if there's an incident
@@ -273,7 +295,9 @@ export default function NotificationDropdown({
         if (notification.activityType === "NEW_CASE_ASSIGNED") {
           router.push(`/office-admin/incidents/${notification.incident.id}`);
         } else {
-          router.push(`/incidents/tracking/${notification.incident.trackingNumber}`);
+          router.push(
+            `/incidents/tracking/${notification.incident.trackingNumber}`
+          );
         }
       }
     } catch (error) {
@@ -284,32 +308,42 @@ export default function NotificationDropdown({
   const markAllAsRead = async () => {
     try {
       // Immediately update local state
-      setNotifications(prev => prev.map(notification => ({ ...notification, isRead: true })));
+      setNotifications((prev) =>
+        prev.map((notification) => ({ ...notification, isRead: true }))
+      );
       setUnreadCount(0);
 
-      const token = typeof document !== 'undefined' 
-        ? document.cookie
-            .split("; ")
-            .find((row) => row.startsWith("token="))
-            ?.split("=")[1]
-        : null;
+      const token =
+        typeof document !== "undefined"
+          ? document.cookie
+              .split("; ")
+              .find((row) => row.startsWith("token="))
+              ?.split("=")[1]
+          : null;
 
       if (!token) {
         throw new Error("No authentication token found");
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/activity-logs/read-all`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/api/activity-logs/read-all`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       if (!response.ok) {
         // If the API call fails, revert the local state
-        setNotifications(prev => prev.map(notification => ({ ...notification, isRead: false })));
-        setUnreadCount(prev => prev + notifications.filter(n => !n.isRead).length);
+        setNotifications((prev) =>
+          prev.map((notification) => ({ ...notification, isRead: false }))
+        );
+        setUnreadCount(
+          (prev) => prev + notifications.filter((n) => !n.isRead).length
+        );
         throw new Error(`HTTP error! status: ${response.status}`);
       }
     } catch (error) {
@@ -319,36 +353,42 @@ export default function NotificationDropdown({
 
   const markAsRead = async (id: string) => {
     try {
-      const token = typeof document !== 'undefined' 
-        ? document.cookie
-            .split("; ")
-            .find((row) => row.startsWith("token="))
-            ?.split("=")[1]
-        : null;
+      const token =
+        typeof document !== "undefined"
+          ? document.cookie
+              .split("; ")
+              .find((row) => row.startsWith("token="))
+              ?.split("=")[1]
+          : null;
 
       if (!token) {
         throw new Error("No authentication token found");
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/activity-logs/${id}/read`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/api/activity-logs/${id}/read`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       // Update local state after successful API call
-      setNotifications(prev => 
-        prev.map(notification => 
-          notification.id === id ? { ...notification, isRead: true } : notification
+      setNotifications((prev) =>
+        prev.map((notification) =>
+          notification.id === id
+            ? { ...notification, isRead: true }
+            : notification
         )
       );
-      setUnreadCount(prev => Math.max(0, prev - 1));
+      setUnreadCount((prev) => Math.max(0, prev - 1));
     } catch (error) {
       console.error("Error marking notification as read:", error);
     }
@@ -374,7 +414,10 @@ export default function NotificationDropdown({
         accent: "border-l-emerald-400",
       };
     }
-    if (activityType.includes("verification") || activityType.includes("verify")) {
+    if (
+      activityType.includes("verification") ||
+      activityType.includes("verify")
+    ) {
       return {
         bg: isRead ? "bg-amber-50/30" : "bg-amber-50/50",
         border: `border-amber-${isRead ? "100" : "200"}`,
@@ -382,7 +425,11 @@ export default function NotificationDropdown({
         accent: "border-l-amber-400",
       };
     }
-    if (activityType.includes("new report") || activityType.includes("new incident") || activityType.includes("new_report_received")) {
+    if (
+      activityType.includes("new report") ||
+      activityType.includes("new incident") ||
+      activityType.includes("new_report_received")
+    ) {
       return {
         bg: isRead ? "bg-rose-50/30" : "bg-rose-50/50",
         border: `border-rose-${isRead ? "100" : "200"}`,
@@ -406,7 +453,10 @@ export default function NotificationDropdown({
         accent: "border-l-blue-400",
       };
     }
-    if (activityType.includes("resolution_extended") || activityType.includes("extended")) {
+    if (
+      activityType.includes("resolution_extended") ||
+      activityType.includes("extended")
+    ) {
       return {
         bg: isRead ? "bg-indigo-50/30" : "bg-indigo-50/50",
         border: `border-indigo-${isRead ? "100" : "200"}`,
@@ -440,16 +490,26 @@ export default function NotificationDropdown({
 
   const getNotificationIcon = (type: string) => {
     const activityType = type.toLowerCase();
-    if (activityType.includes("incident") || activityType.includes("report") || activityType.includes("new_report_received")) {
+    if (
+      activityType.includes("incident") ||
+      activityType.includes("report") ||
+      activityType.includes("new_report_received")
+    ) {
       return <AlertTriangle className="h-5 w-5 text-red-400" />;
     }
     if (activityType.includes("status") || activityType.includes("update")) {
       return <TrendingUp className="h-5 w-5 text-blue-400" />;
     }
-    if (activityType.includes("resolution_extended") || activityType.includes("extended")) {
+    if (
+      activityType.includes("resolution_extended") ||
+      activityType.includes("extended")
+    ) {
       return <CalendarPlus className="h-5 w-5 text-indigo-400" />;
     }
-    if (activityType.includes("verification") || activityType.includes("verify")) {
+    if (
+      activityType.includes("verification") ||
+      activityType.includes("verify")
+    ) {
       return <CheckCircle className="h-5 w-5 text-amber-400" />;
     }
     if (activityType.includes("points") || activityType.includes("reward")) {
@@ -489,7 +549,7 @@ export default function NotificationDropdown({
       case "RESOLUTION_EXTENDED":
         return "Resolution Extended";
       default:
-        return type.replace(/_/g, ' ');
+        return type.replace(/_/g, " ");
     }
   };
 
@@ -529,9 +589,17 @@ export default function NotificationDropdown({
         className="relative"
         onClick={handleNotificationClick}
       >
-        <Bell className={`h-5 w-5 text-gray-600 ${hasNewNotification ? 'animate-pulse' : ''}`} />
+        <Bell
+          className={`h-5 w-5 text-gray-600 ${
+            hasNewNotification ? "animate-pulse" : ""
+          }`}
+        />
         {unreadCount > 0 && (
-          <span className={`absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center ${unreadCount > 0 ? 'animate-bounce' : ''}`}>
+          <span
+            className={`absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center ${
+              unreadCount > 0 ? "animate-bounce" : ""
+            }`}
+          >
             {unreadCount}
           </span>
         )}
@@ -573,7 +641,10 @@ export default function NotificationDropdown({
               </div>
             ) : (
               notifications.map((notification) => {
-                const colors = getNotificationColor(notification.activityType, notification.isRead ?? false);
+                const colors = getNotificationColor(
+                  notification.activityType,
+                  notification.isRead ?? false
+                );
                 return (
                   <div
                     key={notification.id}
@@ -583,24 +654,43 @@ export default function NotificationDropdown({
                     onClick={() => handleNotificationItemClick(notification)}
                   >
                     <div className="flex items-start">
-                      <div className={`p-2 rounded-lg ${colors.icon} bg-opacity-10`}>
+                      <div
+                        className={`p-2 rounded-lg ${colors.icon} bg-opacity-10`}
+                      >
                         {getNotificationIcon(notification.activityType)}
                       </div>
                       <div className="flex-1">
                         <div className="flex justify-between items-start">
-                          <h4 className={`font-medium text-sm ${notification.isRead ? "text-gray-900" : "text-gray-900"}`}>
+                          <h4
+                            className={`font-medium text-sm ${
+                              notification.isRead
+                                ? "text-gray-900"
+                                : "text-gray-900"
+                            }`}
+                          >
                             {formatActivityType(notification.activityType)}
                           </h4>
                           <span className="text-xs text-gray-500">
                             {formatNotificationTime(notification.createdAt)}
                           </span>
                         </div>
-                        <p className={`text-xs mt-1 ${notification.isRead ? "text-gray-600" : "text-gray-800"}`}>
+                        <p
+                          className={`text-xs mt-1 ${
+                            notification.isRead
+                              ? "text-gray-600"
+                              : "text-gray-800"
+                          }`}
+                        >
                           {notification.description}
                         </p>
                         {!notification.isRead && (
                           <div className="mt-2 flex items-center gap-2">
-                            <div className={`w-2 h-2 rounded-full ${colors.accent.replace('border-l-', 'bg-')}`}></div>
+                            <div
+                              className={`w-2 h-2 rounded-full ${colors.accent.replace(
+                                "border-l-",
+                                "bg-"
+                              )}`}
+                            ></div>
                             <span className="text-xs text-gray-500">New</span>
                           </div>
                         )}

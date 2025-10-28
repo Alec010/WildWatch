@@ -1,7 +1,377 @@
-2025-10-24 00:06:55 INFO  o.s.w.s.c.WebSocketMessageBrokerStats - WebSocketSession[0 current WS(0)-HttpStream(0)-HttpPoll(0), 0 total, 0 closed abnormally (0 connect failure, 0 send limit, 0 transport error)], stompSubProtocol[processed CONNECT(0)-CONNECTED(0)-DISCONNECT(0)], stompBrokerRelay[null], inboundChannel[pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0], outboundChannel[pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0], sockJsScheduler[pool size = 11, active threads = 1, queued tasks = 0, completed tasks = 10]
-2025-10-24 00:36:55 INFO  o.s.w.s.c.WebSocketMessageBrokerStats - WebSocketSession[0 current WS(0)-HttpStream(0)-HttpPoll(0), 0 total, 0 closed abnormally (0 connect failure, 0 send limit, 0 transport error)], stompSubProtocol[processed CONNECT(0)-CONNECTED(0)-DISCONNECT(0)], stompBrokerRelay[null], inboundChannel[pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0], outboundChannel[pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0], sockJsScheduler[pool size = 12, active threads = 1, queued tasks = 0, completed tasks = 11]
-2025-10-24 01:06:55 INFO  o.s.w.s.c.WebSocketMessageBrokerStats - WebSocketSession[0 current WS(0)-HttpStream(0)-HttpPoll(0), 0 total, 0 closed abnormally (0 connect failure, 0 send limit, 0 transport error)], stompSubProtocol[processed CONNECT(0)-CONNECTED(0)-DISCONNECT(0)], stompBrokerRelay[null], inboundChannel[pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0], outboundChannel[pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0], sockJsScheduler[pool size = 12, active threads = 1, queued tasks = 0, completed tasks = 12]
-2025-10-24 01:12:13 WARN  c.t.WildWatch.service.ChatbotService - Gemini primary model failed (503 Service Unavailable on POST request for "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent": "{<EOL>  "error": {<EOL>    "code": 503,<EOL>    "message": "The model is overloaded. Please try again later.",<EOL>    "status": "UNAVAILABLE"<EOL>  }<EOL>}<EOL>"). Attempting fallback...
-2025-10-24 01:16:04 INFO  o.s.api.AbstractOpenApiResource - Init duration for springdoc-openapi is: 4262 ms
-2025-10-24 01:36:55 INFO  o.s.w.s.c.WebSocketMessageBrokerStats - WebSocketSession[0 current WS(0)-HttpStream(0)-HttpPoll(0), 0 total, 0 closed abnormally (0 connect failure, 0 send limit, 0 transport error)], stompSubProtocol[processed CONNECT(0)-CONNECTED(0)-DISCONNECT(0)], stompBrokerRelay[null], inboundChannel[pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0], outboundChannel[pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0], sockJsScheduler[pool size = 12, active threads = 1, queued tasks = 0, completed tasks = 13]
-2025-10-24 02:06:56 INFO  o.s.w.s.c.WebSocketMessageBrokerStats - WebSocketSession[0 current WS(0)-HttpStream(0)-HttpPoll(0), 0 total, 0 closed abnormally (0 connect failure, 0 send limit, 0 transport error)], stompSubProtocol[processed CONNECT(0)-CONNECTED(0)-DISCONNECT(0)], stompBrokerRelay[null], inboundChannel[pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0], outboundChannel[pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0], sockJsScheduler[pool size = 12, active threads = 1, queued tasks = 0, completed tasks = 14]
+2025-10-29 00:14:43 INFO  o.s.w.s.m.SubProtocolWebSocketHandler - No messages received after 61565 ms. Closing WebSocketServerSockJsSession[id=igcbrlzt].
+2025-10-29 00:16:46 INFO  o.s.w.s.m.SubProtocolWebSocketHandler - No messages received after 109981 ms. Closing XhrStreamingSockJsSession[id=jnishydh].
+2025-10-29 00:19:45 INFO  o.s.w.s.m.SubProtocolWebSocketHandler - No messages received after 168487 ms. Closing XhrStreamingSockJsSession[id=me4021zg].
+2025-10-29 00:19:45 INFO  o.s.w.s.m.SubProtocolWebSocketHandler - No messages received after 168548 ms. Closing XhrStreamingSockJsSession[id=icvxw0fs].
+2025-10-29 00:22:01 ERROR o.a.c.c.C.[.[.[.[dispatcherServlet] - Servlet.service() for servlet [dispatcherServlet] in context with path [] threw exception [Handler dispatch failed: java.lang.NoClassDefFoundError: com/teamhyungie/WildWatch/service/BadgeService$1] with root cause
+java.lang.ClassNotFoundException: com.teamhyungie.WildWatch.service.BadgeService$1
+	at java.base/jdk.internal.loader.BuiltinClassLoader.loadClass(BuiltinClassLoader.java:641)
+	at java.base/jdk.internal.loader.ClassLoaders$AppClassLoader.loadClass(ClassLoaders.java:188)
+	at java.base/java.lang.ClassLoader.loadClass(ClassLoader.java:525)
+	at com.teamhyungie.WildWatch.service.BadgeService.generateDynamicDescription(BadgeService.java:519)
+	at com.teamhyungie.WildWatch.service.BadgeService.lambda$getUserBadges$11(BadgeService.java:478)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:212)
+	at java.base/java.util.ArrayList$ArrayListSpliterator.forEachRemaining(ArrayList.java:1709)
+	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:556)
+	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:546)
+	at java.base/java.util.stream.ReduceOps$ReduceOp.evaluateSequential(ReduceOps.java:921)
+	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:265)
+	at java.base/java.util.stream.ReferencePipeline.collect(ReferencePipeline.java:702)
+	at com.teamhyungie.WildWatch.service.BadgeService.getUserBadges(BadgeService.java:496)
+	at com.teamhyungie.WildWatch.service.BadgeService.getUserBadgeSummary(BadgeService.java:557)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:359)
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:723)
+	at com.teamhyungie.WildWatch.service.BadgeService$$SpringCGLIB$$0.getUserBadgeSummary(<generated>)
+	at com.teamhyungie.WildWatch.controller.BadgeController.getUserBadgeSummary(BadgeController.java:57)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.web.method.support.InvocableHandlerMethod.doInvoke(InvocableHandlerMethod.java:258)
+	at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:191)
+	at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:118)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:986)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:891)
+	at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:87)
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1089)
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:979)
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014)
+	at org.springframework.web.servlet.FrameworkServlet.doGet(FrameworkServlet.java:903)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:564)
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:195)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at com.teamhyungie.WildWatch.security.MobileRedirectFilter.doFilterInternal(MobileRedirectFilter.java:62)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:110)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:108)
+	at org.springframework.security.web.FilterChainProxy.lambda$doFilterInternal$3(FilterChainProxy.java:231)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:365)
+	at org.springframework.security.web.access.intercept.AuthorizationFilter.doFilter(AuthorizationFilter.java:101)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126)
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.session.SessionManagementFilter.doFilter(SessionManagementFilter.java:131)
+	at org.springframework.security.web.session.SessionManagementFilter.doFilter(SessionManagementFilter.java:85)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.authentication.AnonymousAuthenticationFilter.doFilter(AnonymousAuthenticationFilter.java:100)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter.doFilter(SecurityContextHolderAwareRequestFilter.java:179)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.savedrequest.RequestCacheAwareFilter.doFilter(RequestCacheAwareFilter.java:63)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.session.ConcurrentSessionFilter.doFilter(ConcurrentSessionFilter.java:151)
+	at org.springframework.security.web.session.ConcurrentSessionFilter.doFilter(ConcurrentSessionFilter.java:129)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at com.teamhyungie.WildWatch.security.JwtAuthenticationFilter.doFilterInternal(JwtAuthenticationFilter.java:92)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.authentication.AbstractAuthenticationProcessingFilter.doFilter(AbstractAuthenticationProcessingFilter.java:227)
+	at org.springframework.security.web.authentication.AbstractAuthenticationProcessingFilter.doFilter(AbstractAuthenticationProcessingFilter.java:221)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestRedirectFilter.doFilterInternal(OAuth2AuthorizationRequestRedirectFilter.java:198)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.authentication.logout.LogoutFilter.doFilter(LogoutFilter.java:107)
+	at org.springframework.security.web.authentication.logout.LogoutFilter.doFilter(LogoutFilter.java:93)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.web.filter.CorsFilter.doFilterInternal(CorsFilter.java:91)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.header.HeaderWriterFilter.doHeadersAfter(HeaderWriterFilter.java:90)
+	at org.springframework.security.web.header.HeaderWriterFilter.doFilterInternal(HeaderWriterFilter.java:75)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at com.teamhyungie.WildWatch.security.MobileRedirectFilter.doFilterInternal(MobileRedirectFilter.java:62)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.context.SecurityContextHolderFilter.doFilter(SecurityContextHolderFilter.java:82)
+	at org.springframework.security.web.context.SecurityContextHolderFilter.doFilter(SecurityContextHolderFilter.java:69)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter.doFilterInternal(WebAsyncManagerIntegrationFilter.java:62)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.session.DisableEncodeUrlFilter.doFilterInternal(DisableEncodeUrlFilter.java:42)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.FilterChainProxy.doFilterInternal(FilterChainProxy.java:233)
+	at org.springframework.security.web.FilterChainProxy.doFilter(FilterChainProxy.java:191)
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113)
+	at org.springframework.web.servlet.handler.HandlerMappingIntrospector.lambda$createCacheFilter$3(HandlerMappingIntrospector.java:243)
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113)
+	at org.springframework.web.filter.CompositeFilter.doFilter(CompositeFilter.java:74)
+	at org.springframework.security.config.annotation.web.configuration.WebMvcSecurityConfiguration$CompositeFilterChainProxy.doFilter(WebMvcSecurityConfiguration.java:238)
+	at org.springframework.web.filter.DelegatingFilterProxy.invokeDelegate(DelegatingFilterProxy.java:362)
+	at org.springframework.web.filter.DelegatingFilterProxy.doFilter(DelegatingFilterProxy.java:278)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:167)
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:90)
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:483)
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:115)
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:93)
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:74)
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:344)
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:397)
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63)
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:905)
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1743)
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1190)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:659)
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63)
+	at java.base/java.lang.Thread.run(Thread.java:1570)
+2025-10-29 00:22:02 ERROR o.a.c.c.C.[.[.[.[dispatcherServlet] - Servlet.service() for servlet [dispatcherServlet] in context with path [] threw exception [Handler dispatch failed: java.lang.NoClassDefFoundError: com/teamhyungie/WildWatch/service/BadgeService$1] with root cause
+java.lang.ClassNotFoundException: com.teamhyungie.WildWatch.service.BadgeService$1
+	at com.teamhyungie.WildWatch.service.BadgeService.generateDynamicDescription(BadgeService.java:519)
+	at com.teamhyungie.WildWatch.service.BadgeService.lambda$getUserBadges$11(BadgeService.java:478)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:212)
+	at java.base/java.util.ArrayList$ArrayListSpliterator.forEachRemaining(ArrayList.java:1709)
+	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:556)
+	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:546)
+	at java.base/java.util.stream.ReduceOps$ReduceOp.evaluateSequential(ReduceOps.java:921)
+	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:265)
+	at java.base/java.util.stream.ReferencePipeline.collect(ReferencePipeline.java:702)
+	at com.teamhyungie.WildWatch.service.BadgeService.getUserBadges(BadgeService.java:496)
+	at com.teamhyungie.WildWatch.service.BadgeService.getUserBadgeSummary(BadgeService.java:557)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:359)
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:723)
+	at com.teamhyungie.WildWatch.service.BadgeService$$SpringCGLIB$$0.getUserBadgeSummary(<generated>)
+	at com.teamhyungie.WildWatch.controller.BadgeController.getUserBadgeSummary(BadgeController.java:57)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.web.method.support.InvocableHandlerMethod.doInvoke(InvocableHandlerMethod.java:258)
+	at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:191)
+	at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:118)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:986)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:891)
+	at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:87)
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1089)
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:979)
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014)
+	at org.springframework.web.servlet.FrameworkServlet.doGet(FrameworkServlet.java:903)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:564)
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:195)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at com.teamhyungie.WildWatch.security.MobileRedirectFilter.doFilterInternal(MobileRedirectFilter.java:62)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:110)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:108)
+	at org.springframework.security.web.FilterChainProxy.lambda$doFilterInternal$3(FilterChainProxy.java:231)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:365)
+	at org.springframework.security.web.access.intercept.AuthorizationFilter.doFilter(AuthorizationFilter.java:101)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126)
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.session.SessionManagementFilter.doFilter(SessionManagementFilter.java:131)
+	at org.springframework.security.web.session.SessionManagementFilter.doFilter(SessionManagementFilter.java:85)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.authentication.AnonymousAuthenticationFilter.doFilter(AnonymousAuthenticationFilter.java:100)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter.doFilter(SecurityContextHolderAwareRequestFilter.java:179)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.savedrequest.RequestCacheAwareFilter.doFilter(RequestCacheAwareFilter.java:63)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.session.ConcurrentSessionFilter.doFilter(ConcurrentSessionFilter.java:151)
+	at org.springframework.security.web.session.ConcurrentSessionFilter.doFilter(ConcurrentSessionFilter.java:129)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at com.teamhyungie.WildWatch.security.JwtAuthenticationFilter.doFilterInternal(JwtAuthenticationFilter.java:92)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.authentication.AbstractAuthenticationProcessingFilter.doFilter(AbstractAuthenticationProcessingFilter.java:227)
+	at org.springframework.security.web.authentication.AbstractAuthenticationProcessingFilter.doFilter(AbstractAuthenticationProcessingFilter.java:221)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestRedirectFilter.doFilterInternal(OAuth2AuthorizationRequestRedirectFilter.java:198)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.authentication.logout.LogoutFilter.doFilter(LogoutFilter.java:107)
+	at org.springframework.security.web.authentication.logout.LogoutFilter.doFilter(LogoutFilter.java:93)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.web.filter.CorsFilter.doFilterInternal(CorsFilter.java:91)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.header.HeaderWriterFilter.doHeadersAfter(HeaderWriterFilter.java:90)
+	at org.springframework.security.web.header.HeaderWriterFilter.doFilterInternal(HeaderWriterFilter.java:75)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at com.teamhyungie.WildWatch.security.MobileRedirectFilter.doFilterInternal(MobileRedirectFilter.java:62)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.context.SecurityContextHolderFilter.doFilter(SecurityContextHolderFilter.java:82)
+	at org.springframework.security.web.context.SecurityContextHolderFilter.doFilter(SecurityContextHolderFilter.java:69)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter.doFilterInternal(WebAsyncManagerIntegrationFilter.java:62)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.session.DisableEncodeUrlFilter.doFilterInternal(DisableEncodeUrlFilter.java:42)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.FilterChainProxy.doFilterInternal(FilterChainProxy.java:233)
+	at org.springframework.security.web.FilterChainProxy.doFilter(FilterChainProxy.java:191)
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113)
+	at org.springframework.web.servlet.handler.HandlerMappingIntrospector.lambda$createCacheFilter$3(HandlerMappingIntrospector.java:243)
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113)
+	at org.springframework.web.filter.CompositeFilter.doFilter(CompositeFilter.java:74)
+	at org.springframework.security.config.annotation.web.configuration.WebMvcSecurityConfiguration$CompositeFilterChainProxy.doFilter(WebMvcSecurityConfiguration.java:238)
+	at org.springframework.web.filter.DelegatingFilterProxy.invokeDelegate(DelegatingFilterProxy.java:362)
+	at org.springframework.web.filter.DelegatingFilterProxy.doFilter(DelegatingFilterProxy.java:278)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:167)
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:90)
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:483)
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:115)
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:93)
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:74)
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:344)
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:397)
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63)
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:905)
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1743)
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1190)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:659)
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63)
+	at java.base/java.lang.Thread.run(Thread.java:1570)
+2025-10-29 00:22:02 INFO  o.s.w.s.c.WebSocketMessageBrokerStats - WebSocketSession[11 current WS(8)-HttpStream(3)-HttpPoll(0), 88 total, 4 closed abnormally (4 connect failure, 0 send limit, 0 transport error)], stompSubProtocol[processed CONNECT(77)-CONNECTED(77)-DISCONNECT(13)], stompBrokerRelay[null], inboundChannel[pool size = 24, active threads = 0, queued tasks = 0, completed tasks = 864], outboundChannel[pool size = 12, active threads = 0, queued tasks = 0, completed tasks = 181], sockJsScheduler[pool size = 12, active threads = 1, queued tasks = 1, completed tasks = 104]
+2025-10-29 00:29:02 WARN  o.s.w.s.m.s.DefaultHandlerExceptionResolver - Ignoring exception, response committed already: org.springframework.http.converter.HttpMessageNotWritableException: No converter for [class java.util.LinkedHashMap] with preset Content-Type 'application/javascript;charset=UTF-8'
+2025-10-29 00:29:02 WARN  o.s.w.s.m.s.DefaultHandlerExceptionResolver - Resolved [org.springframework.http.converter.HttpMessageNotWritableException: No converter for [class java.util.LinkedHashMap] with preset Content-Type 'application/javascript;charset=UTF-8']
+2025-10-29 00:52:02 INFO  o.s.w.s.c.WebSocketMessageBrokerStats - WebSocketSession[2 current WS(2)-HttpStream(0)-HttpPoll(0), 105 total, 4 closed abnormally (4 connect failure, 0 send limit, 0 transport error)], stompSubProtocol[processed CONNECT(93)-CONNECTED(93)-DISCONNECT(14)], stompBrokerRelay[null], inboundChannel[pool size = 3, active threads = 0, queued tasks = 0, completed tasks = 1128], outboundChannel[pool size = 1, active threads = 0, queued tasks = 0, completed tasks = 262], sockJsScheduler[pool size = 12, active threads = 1, queued tasks = 2, completed tasks = 467]
+2025-10-29 01:22:02 INFO  o.s.w.s.c.WebSocketMessageBrokerStats - WebSocketSession[3 current WS(3)-HttpStream(0)-HttpPoll(0), 119 total, 4 closed abnormally (4 connect failure, 0 send limit, 0 transport error)], stompSubProtocol[processed CONNECT(106)-CONNECTED(106)-DISCONNECT(16)], stompBrokerRelay[null], inboundChannel[pool size = 6, active threads = 0, queued tasks = 0, completed tasks = 1293], outboundChannel[pool size = 5, active threads = 0, queued tasks = 0, completed tasks = 303], sockJsScheduler[pool size = 12, active threads = 1, queued tasks = 1, completed tasks = 828]
+2025-10-29 01:52:02 INFO  o.s.w.s.c.WebSocketMessageBrokerStats - WebSocketSession[6 current WS(5)-HttpStream(1)-HttpPoll(0), 151 total, 4 closed abnormally (4 connect failure, 0 send limit, 0 transport error)], stompSubProtocol[processed CONNECT(134)-CONNECTED(134)-DISCONNECT(23)], stompBrokerRelay[null], inboundChannel[pool size = 24, active threads = 0, queued tasks = 0, completed tasks = 1656], outboundChannel[pool size = 16, active threads = 0, queued tasks = 0, completed tasks = 385], sockJsScheduler[pool size = 12, active threads = 1, queued tasks = 2, completed tasks = 1190]
+2025-10-29 01:55:11 INFO  o.s.w.s.m.SubProtocolWebSocketHandler - No messages received after 245633 ms. Closing XhrStreamingSockJsSession[id=erzayo2n].
+2025-10-29 01:57:55 INFO  o.s.w.s.m.SubProtocolWebSocketHandler - No messages received after 155474 ms. Closing XhrStreamingSockJsSession[id=kryyvkmz].
+2025-10-29 02:01:02 WARN  o.s.w.s.m.s.DefaultHandlerExceptionResolver - Ignoring exception, response committed already: org.springframework.http.converter.HttpMessageNotWritableException: No converter for [class java.util.LinkedHashMap] with preset Content-Type 'application/javascript;charset=UTF-8'
+2025-10-29 02:01:02 WARN  o.s.w.s.m.s.DefaultHandlerExceptionResolver - Resolved [org.springframework.http.converter.HttpMessageNotWritableException: No converter for [class java.util.LinkedHashMap] with preset Content-Type 'application/javascript;charset=UTF-8']
+2025-10-29 02:22:02 INFO  o.s.w.s.c.WebSocketMessageBrokerStats - WebSocketSession[1 current WS(1)-HttpStream(0)-HttpPoll(0), 169 total, 6 closed abnormally (6 connect failure, 0 send limit, 0 transport error)], stompSubProtocol[processed CONNECT(150)-CONNECTED(150)-DISCONNECT(25)], stompBrokerRelay[null], inboundChannel[pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 1887], outboundChannel[pool size = 1, active threads = 0, queued tasks = 0, completed tasks = 448], sockJsScheduler[pool size = 12, active threads = 1, queued tasks = 1, completed tasks = 1554]
+2025-10-29 02:34:08 INFO  c.t.WildWatch.WildWatchApplication - Starting WildWatchApplication using Java 22.0.2 with PID 25648 (D:\Downloads\WildWatch 3.0\WildWatch\backend\WildWatch\target\classes started by katri in D:\Downloads\WildWatch 3.0\WildWatch\backend\WildWatch)
+2025-10-29 02:34:08 INFO  c.t.WildWatch.WildWatchApplication - No active profile set, falling back to 1 default profile: "default"
+2025-10-29 02:34:11 INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2025-10-29 02:34:12 INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 446 ms. Found 17 JPA repository interfaces.
+2025-10-29 02:34:15 INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8080 (http)
+2025-10-29 02:34:15 INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2025-10-29 02:34:15 INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.39]
+2025-10-29 02:34:15 INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2025-10-29 02:34:15 INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 7264 ms
+2025-10-29 02:34:17 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 10.0MB in chunks
+2025-10-29 02:34:17 INFO  org.ehcache.core.EhcacheManager - Cache 'goldEliteUsers' created in EhcacheManager.
+2025-10-29 02:34:17 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 10.0MB in chunks
+2025-10-29 02:34:17 INFO  org.ehcache.core.EhcacheManager - Cache 'activeCases' created in EhcacheManager.
+2025-10-29 02:34:17 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Evidence' created in EhcacheManager.
+2025-10-29 02:34:17 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 10.0MB in chunks
+2025-10-29 02:34:17 INFO  org.ehcache.core.EhcacheManager - Cache 'userIncidentHistory' created in EhcacheManager.
+2025-10-29 02:34:17 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 10.0MB in chunks
+2025-10-29 02:34:17 INFO  org.ehcache.core.EhcacheManager - Cache 'org.hibernate.cache.spi.TimestampsCache' created in EhcacheManager.
+2025-10-29 02:34:17 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 10.0MB in chunks
+2025-10-29 02:34:17 INFO  org.ehcache.core.EhcacheManager - Cache 'org.hibernate.cache.internal.StandardQueryCache' created in EhcacheManager.
+2025-10-29 02:34:17 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 10.0MB in chunks
+2025-10-29 02:34:17 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.User' created in EhcacheManager.
+2025-10-29 02:34:17 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 10.0MB in chunks
+2025-10-29 02:34:17 INFO  org.ehcache.core.EhcacheManager - Cache 'goldEliteOffices' created in EhcacheManager.
+2025-10-29 02:34:17 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident.witnesses' created in EhcacheManager.
+2025-10-29 02:34:17 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 20.0MB in chunks
+2025-10-29 02:34:17 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident' created in EhcacheManager.
+2025-10-29 02:34:17 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 10.0MB in chunks
+2025-10-29 02:34:17 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Witness' created in EhcacheManager.
+2025-10-29 02:34:17 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 10.0MB in chunks
+2025-10-29 02:34:17 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.OfficeAdmin' created in EhcacheManager.
+2025-10-29 02:34:17 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident.evidence' created in EhcacheManager.
+2025-10-29 02:34:17 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident.tags' created in EhcacheManager.
+2025-10-29 02:34:18 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./D./Downloads/WildWatch%203.0/WildWatch/backend/WildWatch/target/classes/ehcache.xml,Cache=goldEliteUsers
+2025-10-29 02:34:18 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./D./Downloads/WildWatch%203.0/WildWatch/backend/WildWatch/target/classes/ehcache.xml,Cache=activeCases
+2025-10-29 02:34:18 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./D./Downloads/WildWatch%203.0/WildWatch/backend/WildWatch/target/classes/ehcache.xml,Cache=com.teamhyungie.WildWatch.model.Evidence
+2025-10-29 02:34:18 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./D./Downloads/WildWatch%203.0/WildWatch/backend/WildWatch/target/classes/ehcache.xml,Cache=userIncidentHistory
+2025-10-29 02:34:18 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./D./Downloads/WildWatch%203.0/WildWatch/backend/WildWatch/target/classes/ehcache.xml,Cache=org.hibernate.cache.spi.TimestampsCache
+2025-10-29 02:34:18 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./D./Downloads/WildWatch%203.0/WildWatch/backend/WildWatch/target/classes/ehcache.xml,Cache=org.hibernate.cache.internal.StandardQueryCache
+2025-10-29 02:34:18 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./D./Downloads/WildWatch%203.0/WildWatch/backend/WildWatch/target/classes/ehcache.xml,Cache=com.teamhyungie.WildWatch.model.User
+2025-10-29 02:34:18 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./D./Downloads/WildWatch%203.0/WildWatch/backend/WildWatch/target/classes/ehcache.xml,Cache=goldEliteOffices
+2025-10-29 02:34:18 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./D./Downloads/WildWatch%203.0/WildWatch/backend/WildWatch/target/classes/ehcache.xml,Cache=com.teamhyungie.WildWatch.model.Incident.witnesses
+2025-10-29 02:34:18 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./D./Downloads/WildWatch%203.0/WildWatch/backend/WildWatch/target/classes/ehcache.xml,Cache=com.teamhyungie.WildWatch.model.Incident
+2025-10-29 02:34:18 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./D./Downloads/WildWatch%203.0/WildWatch/backend/WildWatch/target/classes/ehcache.xml,Cache=com.teamhyungie.WildWatch.model.Witness
+2025-10-29 02:34:18 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./D./Downloads/WildWatch%203.0/WildWatch/backend/WildWatch/target/classes/ehcache.xml,Cache=com.teamhyungie.WildWatch.model.OfficeAdmin
+2025-10-29 02:34:18 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./D./Downloads/WildWatch%203.0/WildWatch/backend/WildWatch/target/classes/ehcache.xml,Cache=com.teamhyungie.WildWatch.model.Incident.evidence
+2025-10-29 02:34:18 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./D./Downloads/WildWatch%203.0/WildWatch/backend/WildWatch/target/classes/ehcache.xml,Cache=com.teamhyungie.WildWatch.model.Incident.tags
+2025-10-29 02:34:18 INFO  o.h.jpa.internal.util.LogHelper - HHH000204: Processing PersistenceUnitInfo [name: default]
+2025-10-29 02:34:19 INFO  org.hibernate.Version - HHH000412: Hibernate ORM core version 6.6.11.Final
+2025-10-29 02:34:19 INFO  o.h.c.i.RegionFactoryInitiator - HHH000025: Second-level cache region factory [org.hibernate.cache.jcache.internal.JCacheRegionFactory]
+2025-10-29 02:34:20 INFO  o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2025-10-29 02:34:20 INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Starting...
+2025-10-29 02:34:57 INFO  com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@6e349258
+2025-10-29 02:34:57 INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Start completed.
+2025-10-29 02:34:57 WARN  org.hibernate.orm.deprecation - HHH90000025: PostgreSQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2025-10-29 02:34:57 INFO  o.hibernate.orm.connections.pooling - HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 15.8
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2025-10-29 02:34:59 INFO  org.ehcache.core.EhcacheManager - Cache 'default-update-timestamps-region' created in EhcacheManager.
+2025-10-29 02:34:59 INFO  org.ehcache.core.EhcacheManager - Cache 'default-query-results-region' created in EhcacheManager.
+2025-10-29 02:34:59 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident.tags' created in EhcacheManager.
+2025-10-29 02:34:59 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident' created in EhcacheManager.
+2025-10-29 02:34:59 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.User' created in EhcacheManager.
+2025-10-29 02:34:59 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident.evidence' created in EhcacheManager.
+2025-10-29 02:34:59 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident.witnesses' created in EhcacheManager.
+2025-10-29 02:35:02 INFO  o.h.e.t.j.p.i.JtaPlatformInitiator - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2025-10-29 02:35:09 INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2025-10-29 02:35:10 INFO  o.s.d.j.r.query.QueryEnhancerFactory - Hibernate is in classpath; If applicable, HQL parser will be used.
+2025-10-29 02:35:17 INFO  c.t.W.service.SupabaseStorageService - Initializing Supabase Storage Service with URL: https://jcldwuryjuqtrbsqlgoi.supabase.co/
+2025-10-29 02:35:19 WARN  o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2025-10-29 02:35:19 INFO  o.s.s.c.a.a.c.InitializeUserDetailsBeanManagerConfigurer$InitializeUserDetailsManagerConfigurer - Global AuthenticationManager configured with UserDetailsService bean with name userDetailsService
+2025-10-29 02:35:22 INFO  o.s.m.s.b.SimpleBrokerMessageHandler - Starting...
+2025-10-29 02:35:22 INFO  o.s.m.s.b.SimpleBrokerMessageHandler - BrokerAvailabilityEvent[available=true, SimpleBrokerMessageHandler [org.springframework.messaging.simp.broker.DefaultSubscriptionRegistry@3d5841c7]]
+2025-10-29 02:35:22 INFO  o.s.m.s.b.SimpleBrokerMessageHandler - Started.
+2025-10-29 02:35:22 INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat started on port 8080 (http) with context path '/'
+2025-10-29 02:35:24 INFO  c.t.WildWatch.WildWatchApplication - Started WildWatchApplication in 77.836 seconds (process running for 79.019)
+2025-10-29 02:35:27 INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2025-10-29 02:35:27 INFO  o.s.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2025-10-29 02:35:27 INFO  o.s.web.servlet.DispatcherServlet - Completed initialization in 4 ms
+2025-10-29 02:35:28 INFO  org.ehcache.core.EhcacheManager - Cache 'userIncidentHistory' created in EhcacheManager.
+2025-10-29 02:36:22 INFO  o.s.w.s.c.WebSocketMessageBrokerStats - WebSocketSession[2 current WS(1)-HttpStream(1)-HttpPoll(0), 3 total, 0 closed abnormally (0 connect failure, 0 send limit, 0 transport error)], stompSubProtocol[processed CONNECT(2)-CONNECTED(2)-DISCONNECT(0)], stompBrokerRelay[null], inboundChannel[pool size = 15, active threads = 0, queued tasks = 0, completed tasks = 15], outboundChannel[pool size = 3, active threads = 0, queued tasks = 0, completed tasks = 3], sockJsScheduler[pool size = 12, active threads = 1, queued tasks = 2, completed tasks = 11]
+2025-10-29 02:37:33 INFO  o.s.w.s.m.SubProtocolWebSocketHandler - No messages received after 123473 ms. Closing XhrStreamingSockJsSession[id=dikgjlyc].
