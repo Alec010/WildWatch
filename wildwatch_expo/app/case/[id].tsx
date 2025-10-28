@@ -909,66 +909,64 @@ export default function CaseDetailsScreen() {
 
         {/* CASE INFORMATION */}
         <Card title="Case Information">
-          <View style={{ gap: 16 }}>
-            {/* Assigned To */}
-            <Row
-              icon="person"
-              label="Assigned To"
-              value={officeAdmin ? `${officeAdmin.firstName} ${officeAdmin.lastName}` : getOfficeFullName(incident.assignedOffice)}
-              iconColor={PALETTE.maroon}
-            />
-            <Divider />
+          {/* Assigned To */}
+          <Row
+            icon="person"
+            label="Assigned To"
+            value={officeAdmin ? `${officeAdmin.firstName} ${officeAdmin.lastName}` : getOfficeFullName(incident.assignedOffice)}
+            iconColor={PALETTE.maroon}
+          />
+          <Divider />
 
-            {/* Office Email */}
-            <TouchableOpacity
-              onPress={() => {
-                const email = officeAdmin?.email || "vpa@cit.edu";
-                Linking.openURL(`mailto:${email}`);
-              }}
-              style={{ flexDirection: 'row', alignItems: 'flex-start' }}
-            >
-              <View style={styles.rowIcon}>
-                <Ionicons name="mail" size={16} color={PALETTE.maroon} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.rowLabel}>Office Email</Text>
-                <Text
-                  style={[
-                    styles.rowValue,
-                    { color: PALETTE.maroon, textDecorationLine: 'underline' }
-                  ]}
-                >
-                  {officeAdmin?.email || "-"}
-                </Text>
-              </View>
-            </TouchableOpacity>
-            <Divider />
+          {/* Office Email */}
+          <TouchableOpacity
+            onPress={() => {
+              const email = officeAdmin?.email || "vpa@cit.edu";
+              Linking.openURL(`mailto:${email}`);
+            }}
+            style={{ flexDirection: 'row', alignItems: 'flex-start' }}
+          >
+            <View style={styles.rowIcon}>
+              <Ionicons name="mail" size={16} color={PALETTE.maroon} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.rowLabel}>Office Email</Text>
+              <Text
+                style={[
+                  styles.rowValue,
+                  { color: PALETTE.maroon, textDecorationLine: 'underline' }
+                ]}
+              >
+                {officeAdmin?.email || "-"}
+              </Text>
+            </View>
+          </TouchableOpacity>
+          <Divider />
 
-            {/* Contact Number */}
-            <TouchableOpacity
-              onPress={() => {
-                const contactNumber = officeAdmin?.contactNumber || "+639000000003";
-                Linking.openURL(`tel:${contactNumber}`);
-              }}
-              style={{ flexDirection: 'row', alignItems: 'flex-start' }}
-              disabled={!officeAdmin?.contactNumber}
-            >
-              <View style={styles.rowIcon}>
-                <Ionicons name="call" size={16} color={PALETTE.maroon} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.rowLabel}>Contact Number</Text>
-                <Text
-                  style={[
-                    styles.rowValue,
-                    officeAdmin?.contactNumber && { color: PALETTE.maroon, textDecorationLine: 'underline' }
-                  ]}
-                >
-                  {officeAdmin?.contactNumber || "-"}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          </View>
+          {/* Contact Number */}
+          <TouchableOpacity
+            onPress={() => {
+              const contactNumber = officeAdmin?.contactNumber || "+639000000003";
+              Linking.openURL(`tel:${contactNumber}`);
+            }}
+            style={{ flexDirection: 'row', alignItems: 'flex-start' }}
+            disabled={!officeAdmin?.contactNumber}
+          >
+            <View style={styles.rowIcon}>
+              <Ionicons name="call" size={16} color={PALETTE.maroon} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.rowLabel}>Contact Number</Text>
+              <Text
+                style={[
+                  styles.rowValue,
+                  officeAdmin?.contactNumber && { color: PALETTE.maroon, textDecorationLine: 'underline' }
+                ]}
+              >
+                {officeAdmin?.contactNumber || "-"}
+              </Text>
+            </View>
+          </TouchableOpacity>
         </Card>
 
         {/* EVIDENCE */}
@@ -1416,7 +1414,7 @@ export default function CaseDetailsScreen() {
           </Card>
         )}
 
-        <View style={{ height: 80 }} />
+        <View style={{ height: 20 }} />
       </ScrollView>
 
       {/* IMAGE LIGHTBOX */}
