@@ -20,6 +20,7 @@ import {
 import LottieView from "lottie-react-native";
 import confettiTransparent from "../../assets/anim/confetti on transparent background.json";
 import confettiLandscape from "../../assets/anim/Confetti.json";
+import { getOfficeFullName } from "../../src/utils/officeUtils";
 
 /**
  * 🎨 UI-only refresh
@@ -214,11 +215,13 @@ function LeaderboardItem({
   rank,
   isTopThree,
   maxPoints = 1,
+  isOffice = false,
 }: {
   entry: LeaderboardEntry;
   rank: number;
   isTopThree: boolean;
   maxPoints?: number;
+  isOffice?: boolean;
 }) {
   const color =
     rank === 1
@@ -230,6 +233,9 @@ function LeaderboardItem({
       : "#4A5568";
 
   const borderColor = isTopThree ? color : "transparent";
+
+  // Get display name - for offices in ranks 4-10, show full name
+  const displayName = isOffice ? getOfficeFullName(entry.name) : entry.name;
 
   return (
     <View
@@ -271,8 +277,9 @@ function LeaderboardItem({
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
             <Text
               style={{ fontWeight: "700", fontSize: 16, color: palette.ink }}
+              numberOfLines={2}
             >
-              {entry.name}
+              {displayName}
             </Text>
             {entry.rank && entry.rank !== "NONE" ? (
               <RankBadge
@@ -565,6 +572,7 @@ export default function LeaderboardScreen() {
                             rank={START_RANK + idx}
                             isTopThree={false}
                             maxPoints={maxPoints}
+                            isOffice={selectedTab === 1}
                           />
                         ))
                     : null}
