@@ -6,23 +6,24 @@ export function getBackendUrl(): string {
   if (process.env.NEXT_PUBLIC_API_URL) {
     return process.env.NEXT_PUBLIC_API_URL;
   }
-
+  
   // Check if we're in production (Vercel deployment)
   if (process.env.NODE_ENV === 'production') {
     // Use Render backend URL for production
     return 'https://wildwatch-9djc.onrender.com';
   }
-
+  
   // Default to localhost in development
   return 'http://localhost:8080';
 }
 
 // Function to get WebSocket URL safely
-// SockJS expects HTTP/HTTPS URLs, not WebSocket URLs
 export function getWsUrl(): string {
   const backendUrl = getBackendUrl();
-  console.log("getWsUrl() called - backendUrl:", backendUrl);
-  return backendUrl;
+  if (backendUrl.startsWith('https')) {
+    return backendUrl.replace('https', 'wss');
+  }
+  return backendUrl.replace('http', 'ws');
 }
 
 // Google Maps API key (use environment variable)
