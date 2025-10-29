@@ -10,6 +10,12 @@ export default function NotificationsScreen() {
   const { items, isLoading, isRefreshing, error, hasMore, fetchPage, refresh, markAsRead, markAllAsRead } = useNotifications();
   const { spacing, fontSize } = useResponsive();
 
+  const toSentenceCase = (value: string) => {
+    if (!value) return '';
+    const withSpaces = value.replace(/_/g, ' ').toLowerCase();
+    return withSpaces.charAt(0).toUpperCase() + withSpaces.slice(1);
+  };
+
   const formatTimestamp = (dateString: string) => {
     try {
       const date = new Date(dateString);
@@ -34,41 +40,88 @@ export default function NotificationsScreen() {
     }
   };
 
-  const getNotificationIconColor = (activityType: string) => {
+  const getCategoryStyles = (activityType: string) => {
     switch (activityType) {
-      case 'STATUS_CHANGE': return '#1976D2';
-      case 'UPDATE': return '#9C27B0';
-      case 'NEW_REPORT': return '#E53935';
-      case 'CASE_RESOLVED': return '#4CAF50';
-      case 'VERIFICATION': return '#4CAF50';
-      default: return '#757575';
+      case 'NEW_REPORT':
+        return { tint: '#6B7280', tintBg: '#F3F4F6', border: '#E5E7EB' };
+      case 'UPDATE':
+        return { tint: '#1976D2', tintBg: '#E8F1FD', border: '#CFE0FA' };
+      case 'STATUS_CHANGE':
+        return { tint: '#D97706', tintBg: '#FEF3C7', border: '#FDE68A' };
+      case 'CASE_RESOLVED':
+      case 'VERIFICATION':
+        return { tint: '#16A34A', tintBg: '#DCFCE7', border: '#A7F3D0' };
+      default:
+        return { tint: '#6B7280', tintBg: '#F3F4F6', border: '#E5E7EB' };
     }
   };
 
   const handleNotificationClick = (n: any) => {
     markAsRead(n.id);
-    if (n.incident?.trackingNumber) router.push(`/case/${n.incident.trackingNumber}` as never);
+    if (n?.incident?.trackingNumber) {
+      router.push(`/case/${n.incident.trackingNumber}` as never);
+      return;
+    }
+    if (n?.incidentId) {
+      router.push(`/case/${n.incidentId}` as never);
+      return;
+    }
   };
 
-  const renderItem = (n: any) => (
-    <TouchableOpacity key={n.id} style={{ backgroundColor: !n.isRead ? '#EFEFEF' : '#F5F5F5', borderRadius: 12, marginHorizontal: spacing.small, marginVertical: 2, padding: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 }} onPress={() => handleNotificationClick(n)}>
-      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: getNotificationIconColor(n.activityType), alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
-          <Ionicons name={getNotificationIcon(n.activityType) as any} size={16} color="#FFFFFF" />
-        </View>
-        <View style={{ flex: 1 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
-            <Text style={{ fontWeight: !n.isRead ? 'bold' : '500', fontSize: 15, color: '#333333', flex: 1 }}>{n.activityType.replace('_', ' ')}</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Text style={{ fontSize: 12, color: '#666666', marginRight: 8 }}>{formatTimestamp(n.createdAt)}</Text>
-              {!n.isRead && <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#8B0000' }} />}
-            </View>
+  const renderItem = (n: any) => {
+    const styles = getCategoryStyles(n.activityType);
+    return (
+      <TouchableOpacity
+        key={n.id}
+        style={{
+          backgroundColor: !n.isRead ? '#F3F4F6' : '#FFFFFF',
+          borderRadius: 14,
+          marginHorizontal: spacing.small,
+          marginVertical: 6,
+          padding: 14,
+          shadowColor: '#0F172A',
+          shadowOffset: { width: 0, height: 6 },
+          shadowOpacity: !n.isRead ? 0.1 : 0.06,
+          shadowRadius: 12,
+          elevation: !n.isRead ? 4 : 3,
+          borderLeftWidth: !n.isRead ? 6 : 4,
+          borderLeftColor: styles.tint,
+          borderWidth: !n.isRead ? 1 : 0,
+          borderColor: !n.isRead ? '#D1D5DB' : 'transparent',
+        }}
+        onPress={() => handleNotificationClick(n)}
+        activeOpacity={0.85}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+          <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: styles.tintBg, alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+            <Ionicons name={getNotificationIcon(n.activityType) as any} size={16} color={styles.tint} />
           </View>
-          <Text style={{ fontSize: 14, color: '#666666', lineHeight: 18 }} numberOfLines={2}>{n.description}</Text>
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+              <Text style={{ fontWeight: !n.isRead ? '700' : '600', fontSize: 15, color: '#111827', flex: 1 }} numberOfLines={1}>
+                {toSentenceCase(n.activityType || 'Notification')}
+              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ fontSize: 12, color: '#6B7280', marginRight: 8 }}>{formatTimestamp(n.createdAt)}</Text>
+                {!n.isRead && <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#8B0000' }} />}
+              </View>
+            </View>
+            {!!n.description && (
+              <Text style={{ fontSize: 14, color: '#374151', lineHeight: 20 }} numberOfLines={2}>
+                {n.description}
+              </Text>
+            )}
+            {!!(n.incident?.trackingNumber || n.incidentId) && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
+                <Text style={{ fontSize: 12, color: styles.tint, fontWeight: '600', marginRight: 4 }}>View details</Text>
+                <Ionicons name="chevron-forward" size={14} color={styles.tint} />
+              </View>
+            )}
+          </View>
         </View>
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   if (isLoading && !isRefreshing) {
     return (
@@ -82,18 +135,18 @@ export default function NotificationsScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView className="flex-1 bg-white" edges={['top']}>
       <View className="bg-[#F5F5F5] px-4 py-4 border-b border-gray-200">
         <View className="flex-row justify-between items-center">
-          <View className="flex-row items-center">
-            <TouchableOpacity onPress={() => router.back()} style={{ padding: 8, marginRight: 16 }}>
-              <Ionicons name="arrow-back" size={24} color="#8B0000" />
+          <View className="flex-row items-center" style={{ flex: 1 }}>
+            <TouchableOpacity onPress={() => router.back()} style={{ padding: 4, marginRight: 8 }}>
+              <Ionicons name="arrow-back" size={28} color="#8B0000" />
             </TouchableOpacity>
             <Text className="font-bold text-[#8B0000]" style={{ fontSize: 20 }}>Notifications</Text>
           </View>
           {items.some(n => !n.isRead) && (
-            <TouchableOpacity onPress={markAllAsRead}>
-              <Text style={{ color: '#8B0000', fontSize: 14, fontWeight: '500' }}>Mark all as read</Text>
+            <TouchableOpacity onPress={markAllAsRead} style={{ paddingHorizontal: 12, paddingVertical: 8, backgroundColor: '#8B0000', borderRadius: 8 }}>
+              <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '600' }}>Mark all as read</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -117,8 +170,8 @@ export default function NotificationsScreen() {
           <View style={{ paddingVertical: spacing.small }}>
             {items.map(renderItem)}
             {hasMore && (
-              <TouchableOpacity className="bg-gray-100 rounded-lg mx-4 my-4 p-4 items-center" onPress={() => fetchPage()}>
-                <Text className="text-gray-600 font-medium">Load More</Text>
+              <TouchableOpacity className="rounded-lg mx-4 my-4 p-4 items-center" style={{ backgroundColor: '#F3F4F6' }} onPress={() => fetchPage()}>
+                <Text className="text-gray-700 font-semibold">Load more</Text>
               </TouchableOpacity>
             )}
           </View>

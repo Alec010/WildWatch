@@ -1,11 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
-  Animated,
   Dimensions,
   Image,
   Linking,
-  Modal,
   RefreshControl,
   ScrollView,
   Text,
@@ -326,14 +323,7 @@ export default function DashboardScreen() {
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [showNotifications, setShowNotifications] = useState<boolean>(false);
   const [hasUnread, setHasUnread] = useState<boolean>(false);
-  const [notifications, setNotifications] = useState<any[]>([]);
-  const [notificationsLoading, setNotificationsLoading] =
-    useState<boolean>(false);
-  const [notificationsError, setNotificationsError] = useState<string | null>(
-    null
-  );
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const screenWidth = Dimensions.get("window").width;
   const isTablet = screenWidth >= 768;
@@ -354,38 +344,13 @@ export default function DashboardScreen() {
   };
 
   const fetchNotifications = async () => {
-    setNotificationsLoading(true);
-    setNotificationsError(null);
     try {
       const res = await api.get(`${config.API.BASE_URL}/activity-logs`, {
         params: { page: 0, size: 10 },
       });
       const data = res.data;
       const content = Array.isArray(data?.content) ? data.content : [];
-      setNotifications(content);
       setHasUnread(content.some((n: any) => !n.isRead));
-    } catch (err: any) {
-      setNotificationsError(err?.message || "Failed to fetch notifications");
-    } finally {
-      setNotificationsLoading(false);
-    }
-  };
-
-  const markNotificationAsRead = async (id: string) => {
-    try {
-      await api.put(`/activity-logs/${id}/read`);
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
-      );
-      setHasUnread((prev) => notifications.some((n) => !n.isRead));
-    } catch {}
-  };
-
-  const markAllNotificationsAsRead = async () => {
-    try {
-      await api.put(`/activity-logs/read-all`);
-      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-      setHasUnread(false);
     } catch {}
   };
 
@@ -477,7 +442,7 @@ export default function DashboardScreen() {
           <TouchableOpacity
             className="relative"
             style={{ padding: 8, marginLeft: 16 }}
-            onPress={() => setShowNotifications(true)}
+            onPress={() => router.push("/notifications" as never)}
           >
             <Ionicons name="notifications" size={28} color="#FFFFFF" />
             {hasUnread && (
@@ -672,189 +637,6 @@ export default function DashboardScreen() {
           </View>
         )}
       </ScrollView>
-
-      {/* Notifications Modal (visual polish only) */}
-      <Modal
-        visible={showNotifications}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowNotifications(false)}
-      >
-        <TouchableOpacity
-          style={{
-            flex: 1,
-            backgroundColor: "rgba(0,0,0,0.45)",
-            justifyContent: "flex-start",
-            alignItems: "flex-end",
-          }}
-          activeOpacity={1}
-          onPress={() => setShowNotifications(false)}
-        >
-          <View
-            style={{
-              width: 320,
-              backgroundColor: "#FFFFFF",
-              borderRadius: 16,
-              margin: 8,
-              marginTop: 100,
-              shadowColor: "#000",
-              shadowOffset: { width: 0, height: 6 },
-              shadowOpacity: 0.2,
-              shadowRadius: 12,
-              elevation: 10,
-            }}
-          >
-            <View
-              style={{
-                flexDirection: "row",
-                justifyContent: "space-between",
-                alignItems: "center",
-                paddingHorizontal: 16,
-                paddingVertical: 12,
-                borderBottomWidth: 1,
-                borderBottomColor: "#EEEEEE",
-              }}
-            >
-              <Text
-                style={{ fontWeight: "700", fontSize: 16, color: "#111827" }}
-              >
-                Notifications
-              </Text>
-              <View style={{ flexDirection: "row", alignItems: "center" }}>
-                <TouchableOpacity
-                  style={{ padding: 8, marginRight: 8 }}
-                  onPress={fetchNotifications}
-                >
-                  <Ionicons name="refresh" size={18} color="#6B7280" />
-                </TouchableOpacity>
-                <TouchableOpacity onPress={markAllNotificationsAsRead}>
-                  <Text style={{ color: "#6B7280", fontSize: 14 }}>
-                    Mark all as read
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {notificationsLoading ? (
-              <View style={{ padding: 20, alignItems: "center" }}>
-                <ActivityIndicator size="large" color="#8B0000" />
-              </View>
-            ) : notificationsError ? (
-              <View style={{ padding: 16, alignItems: "center" }}>
-                <Text style={{ color: "#8B0000", fontSize: 14 }}>
-                  {notificationsError}
-                </Text>
-              </View>
-            ) : notifications.length === 0 ? (
-              <View style={{ padding: 16, alignItems: "center" }}>
-                <Text style={{ color: "#6B7280", fontSize: 14 }}>
-                  No notifications
-                </Text>
-              </View>
-            ) : (
-              <ScrollView
-                style={{ maxHeight: 420 }}
-                showsVerticalScrollIndicator={false}
-              >
-                {notifications.map((n) => (
-                  <TouchableOpacity
-                    key={n.id}
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      paddingHorizontal: 16,
-                      paddingVertical: 12,
-                      backgroundColor: !n.isRead ? "#F9FAFB" : "transparent",
-                    }}
-                    onPress={() => {
-                      markNotificationAsRead(n.id);
-                      if (n.incident?.trackingNumber) {
-                        setShowNotifications(false);
-                        router.push(
-                          `/case/${n.incident.trackingNumber}` as never
-                        );
-                      }
-                    }}
-                  >
-                    <View
-                      style={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: 18,
-                        backgroundColor: "#8B0000",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        marginRight: 12,
-                      }}
-                    >
-                      <Ionicons
-                        name="notifications"
-                        size={20}
-                        color="#FFFFFF"
-                      />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <View
-                        style={{
-                          flexDirection: "row",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                          marginBottom: 4,
-                        }}
-                      >
-                        <Text
-                          style={{
-                            fontWeight: "600",
-                            fontSize: 14,
-                            color: "#111827",
-                          }}
-                        >
-                          {n.activityType || "Update"}
-                        </Text>
-                        <Text style={{ fontSize: 12, color: "#6B7280" }}>
-                          {n.createdAt}
-                        </Text>
-                      </View>
-                      <Text
-                        style={{
-                          fontSize: 13,
-                          color: "#374151",
-                          lineHeight: 18,
-                        }}
-                        numberOfLines={2}
-                      >
-                        {n.description}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            )}
-
-            <View
-              style={{
-                borderTopWidth: 1,
-                borderTopColor: "#EEEEEE",
-                paddingVertical: 12,
-                alignItems: "center",
-              }}
-            >
-              <TouchableOpacity
-                onPress={() => {
-                  setShowNotifications(false);
-                  router.push("/notifications" as never);
-                }}
-              >
-                <Text
-                  style={{ color: "#8B0000", fontWeight: "600", fontSize: 14 }}
-                >
-                  View All Notifications
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </TouchableOpacity>
-      </Modal>
     </View>
   );
 }
