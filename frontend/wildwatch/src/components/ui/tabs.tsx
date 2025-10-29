@@ -1,9 +1,9 @@
-"use client";
+"use client"
 
-import * as React from "react";
-import * as TabsPrimitive from "@radix-ui/react-tabs";
+import * as React from "react"
+import * as TabsPrimitive from "@radix-ui/react-tabs"
 
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils"
 
 function Tabs({
   className,
@@ -15,90 +15,23 @@ function Tabs({
       className={cn("flex flex-col gap-2", className)}
       {...props}
     />
-  );
+  )
 }
 
 function TabsList({
   className,
   ...props
 }: React.ComponentProps<typeof TabsPrimitive.List>) {
-  const [hasOverflow, setHasOverflow] = React.useState(false);
-  const [isLargeScreen, setIsLargeScreen] = React.useState(false);
-  const tabsListRef = React.useRef<HTMLDivElement>(null);
-
-  React.useEffect(() => {
-    const checkOverflow = () => {
-      if (tabsListRef.current) {
-        const windowWidth = window.innerWidth;
-        const isLarge = windowWidth >= 1280;
-        setIsLargeScreen(isLarge);
-
-        if (isLarge) {
-          setHasOverflow(false);
-          return;
-        }
-
-        const { scrollWidth, clientWidth } = tabsListRef.current;
-        const tolerance = 2;
-        const contentOverflows = scrollWidth > clientWidth + tolerance;
-
-
-        setHasOverflow(contentOverflows);
-      }
-    };
-
-    const initialCheck = () => {
-      const windowWidth = window.innerWidth;
-      const isLarge = windowWidth >= 1280;
-      setIsLargeScreen(isLarge);
-      if (isLarge) {
-        setHasOverflow(false);
-      }
-    };
-
-    const timeoutId = setTimeout(() => {
-      initialCheck();
-      checkOverflow();
-    }, 0);
-
-    const delayedCheck = setTimeout(checkOverflow, 100);
-
-    let resizeObserver: ResizeObserver | null = null;
-    if (tabsListRef.current && typeof ResizeObserver !== "undefined") {
-      resizeObserver = new ResizeObserver(() => {
-        checkOverflow();
-      });
-      resizeObserver.observe(tabsListRef.current);
-    }
-
-    window.addEventListener("resize", checkOverflow);
-
-    return () => {
-      clearTimeout(timeoutId);
-      clearTimeout(delayedCheck);
-      window.removeEventListener("resize", checkOverflow);
-      if (resizeObserver) {
-        resizeObserver.disconnect();
-      }
-    };
-  }, [props.children]); 
-
   return (
     <TabsPrimitive.List
-      ref={tabsListRef}
       data-slot="tabs-list"
       className={cn(
-        "bg-muted text-muted-foreground inline-flex h-9 items-center justify-center rounded-lg p-[3px]",
-        isLargeScreen
-          ? "w-fit"
-          : hasOverflow
-          ? "w-full overflow-x-auto scrollbar-hide"
-          : "w-fit",
+        "bg-muted text-muted-foreground inline-flex h-9 w-fit items-center justify-center rounded-lg p-[3px]",
         className
       )}
       {...props}
     />
-  );
+  )
 }
 
 function TabsTrigger({
@@ -114,7 +47,7 @@ function TabsTrigger({
       )}
       {...props}
     />
-  );
+  )
 }
 
 function TabsContent({
@@ -127,7 +60,7 @@ function TabsContent({
       className={cn("flex-1 outline-none", className)}
       {...props}
     />
-  );
+  )
 }
 
-export { Tabs, TabsList, TabsTrigger, TabsContent };
+export { Tabs, TabsList, TabsTrigger, TabsContent }

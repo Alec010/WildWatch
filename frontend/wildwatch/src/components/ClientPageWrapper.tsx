@@ -1,22 +1,22 @@
-"use client";
+"use client"
 
-import { useState, useEffect } from "react";
+import { useState, useEffect } from "react"
 
 interface ClientPageWrapperProps {
-  children: React.ReactNode;
+  children: React.ReactNode
 }
 
 // This component ensures its children are only rendered on the client side
 export function ClientPageWrapper({ children }: ClientPageWrapperProps) {
-  const [isMounted, setIsMounted] = useState(false);
+  const [isMounted, setIsMounted] = useState(false)
 
   useEffect(() => {
-    setIsMounted(true);
-  }, []);
+    setIsMounted(true)
+  }, [])
 
   if (!isMounted) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9] flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="relative w-20 h-20 mx-auto">
             <div className="absolute inset-0 rounded-full border-t-2 border-b-2 border-[#8B0000] animate-spin"></div>
@@ -26,8 +26,8 @@ export function ClientPageWrapper({ children }: ClientPageWrapperProps) {
           <p className="mt-6 text-gray-600 font-medium">Loading...</p>
         </div>
       </div>
-    );
+    )
   }
 
-  return <>{children}</>;
+  return <>{children}</>
 }

@@ -2,10 +2,9 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { UserProvider } from "@/contexts/UserContext";
-import ClientChatbot from "../components/ClientChatbot";
-import { SidebarProvider } from "@/contexts/SidebarContext";
-import TokenInitializer from "@/components/TokenInitializer";
-import { AppLoader } from "@/components/AppLoader";
+import ClientChatbot from '../components/ClientChatbot';
+import { SidebarProvider } from "@/contexts/SidebarContext"
+import TokenInitializer from '@/components/TokenInitializer';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -34,11 +33,9 @@ export default function RootLayout({
       >
         <SidebarProvider>
           <UserProvider>
-            <AppLoader>
-              <TokenInitializer />
-              {children}
-              <ClientChatbot />
-            </AppLoader>
+            <TokenInitializer />
+            {children}
+            <ClientChatbot />
           </UserProvider>
         </SidebarProvider>
       </body>
