@@ -8,7 +8,6 @@ import com.teamhyungie.WildWatch.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
 
@@ -72,6 +71,8 @@ public class AuthService {
         profile.put("termsAccepted", user.isTermsAccepted());
         profile.put("enabled", user.isEnabled());
         profile.put("points", user.getPoints());
+        profile.put("authProvider", user.getAuthProvider() != null ? user.getAuthProvider() : "local");
+        
         // Add office code and office points for office admins
         if (user.getRole().toString().equals("OFFICE_ADMIN") && user.getOfficeAdmin() != null) {
             profile.put("officeCode", user.getOfficeAdmin().getOfficeCode());

@@ -162,10 +162,29 @@ public class AuthController {
         try {
             User user = userService.getUserByEmail(userDetails.getUsername());
 
-            // Verify this is a Microsoft OAuth user
-            if (!"microsoft".equals(user.getAuthProvider())) {
+            // Verify this is a Microsoft Web OAuth user only
+            String authProvider = user.getAuthProvider();
+            if (authProvider == null || !"microsoft".equals(authProvider)) {
                 return ResponseEntity.badRequest().body(Map.of(
-                        "message", "This endpoint is only for Microsoft OAuth users"));
+                        "message", "This endpoint is only for Microsoft OAuth users. Current provider: " + 
+                        (authProvider != null ? authProvider : "null")));
+            }
+
+            // Validate contact number format
+            if (request.getContactNumber() == null || request.getContactNumber().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "message", "Contact number is required"));
+            }
+            
+            // Validate password
+            if (request.getPassword() == null || request.getPassword().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "message", "Password is required"));
+            }
+            
+            if (request.getPassword().length() < 8) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "message", "Password must be at least 8 characters long"));
             }
 
             // Update user's contact number and password
