@@ -86,7 +86,10 @@ export default function NotificationDropdown({
           : null;
 
       if (!token) {
-        throw new Error("No authentication token found");
+        // User is not authenticated, silently return without error
+        setNotifications([]);
+        setUnreadCount(0);
+        return;
       }
 
       const response = await fetch(
@@ -100,6 +103,11 @@ export default function NotificationDropdown({
       );
 
       if (!response.ok) {
+        if (response.status === 401) {
+          // Token is invalid/expired, redirect to login
+          router.push("/login");
+          return;
+        }
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
@@ -127,6 +135,20 @@ export default function NotificationDropdown({
     let reconnectAttempts = 0;
     const MAX_RECONNECT_ATTEMPTS = 5;
     const RECONNECT_DELAY = 5000;
+
+    // Check if user is authenticated before setting up connections
+    const token =
+      typeof document !== "undefined"
+        ? document.cookie
+            .split("; ")
+            .find((row) => row.startsWith("token="))
+            ?.split("=")[1]
+        : null;
+
+    if (!token) {
+      // User is not authenticated, don't set up WebSocket or fetch notifications
+      return;
+    }
 
     const connectStomp = () => {
       try {
@@ -307,12 +329,6 @@ export default function NotificationDropdown({
 
   const markAllAsRead = async () => {
     try {
-      // Immediately update local state
-      setNotifications((prev) =>
-        prev.map((notification) => ({ ...notification, isRead: true }))
-      );
-      setUnreadCount(0);
-
       const token =
         typeof document !== "undefined"
           ? document.cookie
@@ -322,8 +338,15 @@ export default function NotificationDropdown({
           : null;
 
       if (!token) {
-        throw new Error("No authentication token found");
+        // User is not authenticated, silently return
+        return;
       }
+
+      // Immediately update local state
+      setNotifications((prev) =>
+        prev.map((notification) => ({ ...notification, isRead: true }))
+      );
+      setUnreadCount(0);
 
       const response = await fetch(
         `${API_BASE_URL}/api/activity-logs/read-all`,
@@ -337,6 +360,11 @@ export default function NotificationDropdown({
       );
 
       if (!response.ok) {
+        if (response.status === 401) {
+          // Token is invalid/expired, redirect to login
+          router.push("/login");
+          return;
+        }
         // If the API call fails, revert the local state
         setNotifications((prev) =>
           prev.map((notification) => ({ ...notification, isRead: false }))
@@ -362,7 +390,8 @@ export default function NotificationDropdown({
           : null;
 
       if (!token) {
-        throw new Error("No authentication token found");
+        // User is not authenticated, silently return
+        return;
       }
 
       const response = await fetch(
@@ -377,6 +406,11 @@ export default function NotificationDropdown({
       );
 
       if (!response.ok) {
+        if (response.status === 401) {
+          // Token is invalid/expired, redirect to login
+          router.push("/login");
+          return;
+        }
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 

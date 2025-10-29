@@ -33,33 +33,20 @@ function TabsList({
         const isLarge = windowWidth >= 1280;
         setIsLargeScreen(isLarge);
 
-        // On devices >= 1240px, completely disable scrolling
         if (isLarge) {
           setHasOverflow(false);
           return;
         }
 
-        // Only check for overflow on smaller devices
         const { scrollWidth, clientWidth } = tabsListRef.current;
         const tolerance = 2;
         const contentOverflows = scrollWidth > clientWidth + tolerance;
 
-        // Debug logging (uncomment for debugging)
-        // console.log("TabsList overflow check:", {
-        //   scrollWidth,
-        //   clientWidth,
-        //   windowWidth,
-        //   contentOverflows,
-        //   isLarge,
-        //   currentHasOverflow: hasOverflow,
-        //   element: tabsListRef.current,
-        // });
 
         setHasOverflow(contentOverflows);
       }
     };
 
-    // Initial check for screen size
     const initialCheck = () => {
       const windowWidth = window.innerWidth;
       const isLarge = windowWidth >= 1280;
@@ -69,16 +56,13 @@ function TabsList({
       }
     };
 
-    // Use requestAnimationFrame to ensure DOM is fully rendered
     const timeoutId = setTimeout(() => {
       initialCheck();
       checkOverflow();
     }, 0);
 
-    // Also check after a short delay to catch any async rendering
     const delayedCheck = setTimeout(checkOverflow, 100);
 
-    // Use ResizeObserver to detect when the element size changes
     let resizeObserver: ResizeObserver | null = null;
     if (tabsListRef.current && typeof ResizeObserver !== "undefined") {
       resizeObserver = new ResizeObserver(() => {
@@ -97,7 +81,7 @@ function TabsList({
         resizeObserver.disconnect();
       }
     };
-  }, [props.children]); // Re-run when children change
+  }, [props.children]); 
 
   return (
     <TabsPrimitive.List
@@ -105,7 +89,6 @@ function TabsList({
       data-slot="tabs-list"
       className={cn(
         "bg-muted text-muted-foreground inline-flex h-9 items-center justify-center rounded-lg p-[3px]",
-        // On large screens, always use w-fit and never allow scrolling
         isLargeScreen
           ? "w-fit"
           : hasOverflow

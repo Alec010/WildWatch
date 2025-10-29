@@ -186,12 +186,12 @@ export function Sidebar() {
           onClick={() => setCollapsed(!collapsed)}
           className={`fixed top-6 ${
             collapsed ? "left-16" : "left-60"
-          } z-50 bg-white text-[#800000] p-1 rounded-full shadow-md  hover:bg-[#800000] hover:text-white`}
+          } z-50 bg-white text-[#800000] p-1 rounded-full shadow-md hover:bg-[#800000] hover:text-white`}
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           <ChevronRight
             size={18}
-            className={` ${collapsed ? "rotate-0" : "rotate-180"}`}
+            className={`${collapsed ? "rotate-0" : "rotate-180"}`}
           />
         </button>
       )}
@@ -250,7 +250,7 @@ export function Sidebar() {
                       collapsed && !isMobile
                         ? "justify-center"
                         : "justify-between"
-                    } p-3 rounded-lg  ${
+                    } p-3 rounded-lg ${
                       isActive
                         ? "bg-[#D4AF37]/20 text-[#D4AF37]"
                         : "hover:bg-white/10 text-white/90 hover:text-white"
@@ -296,7 +296,7 @@ export function Sidebar() {
 
                     {/* Tooltip for collapsed state */}
                     {collapsed && !isMobile && (
-                      <div className="absolute left-full ml-2 px-2 py-1 bg-[#800000] text-white text-xs rounded opacity-0 group-hover:opacity-100  whitespace-nowrap z-50 pointer-events-none">
+                      <div className="absolute left-full ml-2 px-2 py-1 bg-[#800000] text-white text-xs rounded opacity-0 group-hover:opacity-100 whitespace-nowrap z-50 pointer-events-none">
                         {item.label}
                       </div>
                     )}
@@ -322,18 +322,18 @@ export function Sidebar() {
                   <div className="w-10 h-10 rounded-full bg-[#D4AF37]/20 text-[#D4AF37] flex items-center justify-center font-medium">
                     {getInitials(user.firstName, user.lastName)}
                   </div>
-                  <div className="absolute left-full ml-2 px-2 py-1 bg-[#800000] text-white text-xs rounded opacity-0 group-hover:opacity-100  whitespace-nowrap z-50 pointer-events-none">
+                  <div className="absolute left-full ml-2 px-2 py-1 bg-[#800000] text-white text-xs rounded opacity-0 group-hover:opacity-100 whitespace-nowrap z-50 pointer-events-none">
                     View Profile
                   </div>
                 </Link>
               ) : null}
               <button
                 onClick={handleSignOut}
-                className="text-white/70 hover:text-white p-2 rounded-full hover:bg-white/10  group relative"
+                className="text-white/70 hover:text-white p-2 rounded-full hover:bg-white/10 group relative"
                 aria-label="Sign out"
               >
                 <LogOut size={20} />
-                <div className="absolute left-full ml-2 px-2 py-1 bg-[#800000] text-white text-xs rounded opacity-0 group-hover:opacity-100  whitespace-nowrap z-50 pointer-events-none">
+                <div className="absolute left-full ml-2 px-2 py-1 bg-[#800000] text-white text-xs rounded opacity-0 group-hover:opacity-100 whitespace-nowrap z-50 pointer-events-none">
                   Sign Out
                 </div>
               </button>
@@ -342,7 +342,7 @@ export function Sidebar() {
             <div className="flex items-center justify-between">
               <Link
                 href="/profile"
-                className="flex items-center space-x-3 hover:opacity-90  group"
+                className="flex items-center space-x-3 hover:opacity-90 group"
               >
                 {loading ? (
                   <div className="w-10 h-10 rounded-full bg-[#6B0000] "></div>
@@ -367,7 +367,7 @@ export function Sidebar() {
               </Link>
               <button
                 onClick={handleSignOut}
-                className="text-white/70 hover:text-white p-2 rounded-full hover:bg-white/10 "
+                className="text-white/70 hover:text-white p-2 rounded-full hover:bg-white/10"
                 aria-label="Sign out"
               >
                 <LogOut size={20} />
