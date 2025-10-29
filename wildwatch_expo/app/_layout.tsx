@@ -70,16 +70,41 @@ function RootLayoutNav() {
           const userProfile = await authAPI.getProfile();
           const termsAccepted = userProfile.termsAccepted;
 
-          if (!termsAccepted && !pathname?.startsWith("/auth/terms")) {
-            router.replace("/(auth)/terms" as any);
-          } else if (pathname?.startsWith("/auth") && termsAccepted) {
-            router.replace("/(tabs)");
+          if (!termsAccepted && !pathname?.startsWith("/auth/terms") && !pathname?.startsWith("/auth/setup")) {
+            router.replace("/auth/terms");
+          } else if (pathname?.startsWith("/auth") && termsAccepted && !pathname?.startsWith("/auth/setup")) {
+            // Check if user needs setup before redirecting to tabs
+            // Only redirect if not already on setup page
+            try {
+              const isMicrosoftOAuth = userProfile.authProvider === 'microsoft' || userProfile.authProvider === 'microsoft_mobile';
+              const needsSetup = isMicrosoftOAuth && 
+                                (userProfile.contactNumber === '+639000000000' || 
+                                 userProfile.contactNumber === 'Not provided' || 
+                                 userProfile.contactNumber === null ||
+                                 !userProfile.password);
+              
+              if (needsSetup) {
+                // Only redirect to setup if not already there
+                if (!pathname?.startsWith("/auth/setup")) {
+                  router.replace("/auth/setup");
+                }
+              } else {
+                // Only redirect to tabs if not on an auth page that requires completion
+                if (!pathname?.startsWith("/auth/terms") && !pathname?.startsWith("/auth/setup")) {
+                  router.replace("/(tabs)");
+                }
+              }
+            } catch (e) {
+              // If check fails and we're on an auth page that might need setup, don't redirect
+              if (!pathname?.startsWith("/auth/terms") && !pathname?.startsWith("/auth/setup")) {
+                router.replace("/(tabs)");
+              }
+            }
           }
         } else if (pathname?.startsWith("/(tabs)")) {
           router.replace("/auth/login");
         }
       } catch (error) {
-        console.error("Auth check error:", error);
         // On error, assume not authenticated
         setIsAuthenticated(false);
         if (pathname?.startsWith("/(tabs)")) {

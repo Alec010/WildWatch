@@ -9,6 +9,8 @@ export interface UserProfile {
   role: string;
   points?: number;
   authProvider?: string;
+  termsAccepted?: boolean;
+  password?: string;
 }
 
 export interface UserUpdateRequest {

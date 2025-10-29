@@ -24,11 +24,18 @@ export const authAPI = {
     return response.data;
   },
   getProfile: async () => {
-    const response = await api.get('/auth/profile');
+    const response = await api.get('/mobile/auth/profile');
     return response.data;
   },
   acceptTerms: async (): Promise<{ message: string }> => {
     const response = await api.post<{ message: string }>('/terms/accept');
+    return response.data;
+  },
+  setupOAuthUser: async (contactNumber: string, password: string): Promise<{ message: string }> => {
+    const response = await api.post<{ message: string }>('/mobile/auth/setup', {
+      contactNumber,
+      password,
+    });
     return response.data;
   },
 };
