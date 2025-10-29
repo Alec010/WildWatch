@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
+import { useState, useEffect } from "react";
 import {
   Trophy,
   Medal,
@@ -14,228 +14,244 @@ import {
   ChevronUp,
   Info,
   Sparkles,
-} from "lucide-react"
-import { API_BASE_URL } from "@/utils/api"
-import { motion, AnimatePresence } from "framer-motion"
-import { RecognitionInfoModal } from "@/components/RecognitionInfoModal"
-import { useUser } from "@/contexts/UserContext"
-import { Sidebar } from "@/components/Sidebar"
-import { OfficeAdminSidebar } from "@/components/OfficeAdminSidebar"
-import { Navbar } from "@/components/Navbar"
-import { OfficeAdminNavbar } from "@/components/OfficeAdminNavbar"
-import { useSidebar } from "@/contexts/SidebarContext"
-import dynamic from "next/dynamic"
-import { RankBadge } from "@/components/RankBadge"
-import type { UserRank } from "@/types/rank"
+} from "lucide-react";
+import { API_BASE_URL } from "@/utils/api";
+import { api } from "@/utils/apiClient";
+import { motion, AnimatePresence } from "framer-motion";
+import { RecognitionInfoModal } from "@/components/RecognitionInfoModal";
+import { useUser } from "@/contexts/UserContext";
+import { Sidebar } from "@/components/Sidebar";
+import { OfficeAdminSidebar } from "@/components/OfficeAdminSidebar";
+import { Navbar } from "@/components/Navbar";
+import { OfficeAdminNavbar } from "@/components/OfficeAdminNavbar";
+import { useSidebar } from "@/contexts/SidebarContext";
+import dynamic from "next/dynamic";
+import { RankBadge } from "@/components/RankBadge";
+import type { UserRank } from "@/types/rank";
 
 interface LeaderboardEntry {
-  id: number
-  name: string
-  totalRatings: number
-  averageRating: number
-  points: number
-  activeIncidents?: number
-  resolvedIncidents?: number
-  rank?: UserRank
-  goldRanking?: number
+  id: number;
+  name: string;
+  totalRatings: number;
+  averageRating: number;
+  points: number;
+  activeIncidents?: number;
+  resolvedIncidents?: number;
+  rank?: UserRank;
+  goldRanking?: number;
 }
 
 export default function LeaderboardPage() {
-  const { isLoading, userRole } = useUser()
-  const { collapsed } = useSidebar()
-  const [activeTab, setActiveTab] = useState<"students" | "offices">("students")
-  const [topStudents, setTopStudents] = useState<LeaderboardEntry[]>([])
-  const [topOffices, setTopOffices] = useState<LeaderboardEntry[]>([])
-  const [loading, setLoading] = useState(true)
-  const [showInfoModal, setShowInfoModal] = useState(false)
-  const [expandedSection, setExpandedSection] = useState<"top3" | "others" | null>(null)
+  const { isLoading, userRole } = useUser();
+  const { collapsed } = useSidebar();
+  const [activeTab, setActiveTab] = useState<"students" | "offices">(
+    "students"
+  );
+  const [topStudents, setTopStudents] = useState<LeaderboardEntry[]>([]);
+  const [topOffices, setTopOffices] = useState<LeaderboardEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showInfoModal, setShowInfoModal] = useState(false);
+  const [expandedSection, setExpandedSection] = useState<
+    "top3" | "others" | null
+  >(null);
 
   useEffect(() => {
     const fetchLeaderboardData = async () => {
-      setLoading(true)
+      setLoading(true);
       try {
-        const token = typeof document !== 'undefined' 
-          ? document.cookie
-              .split('; ')
-              .find((row) => row.startsWith('token='))
-              ?.split('=')[1]
-          : null
-
-        if (!token) {
-          console.error("No authentication token found")
-          return
-        }
-
         const [studentsRes, officesRes] = await Promise.all([
-          fetch(`${API_BASE_URL}/api/ratings/leaderboard/reporters/top`, {
-            headers: {
-              "Authorization": `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          }),
-          fetch(`${API_BASE_URL}/api/ratings/leaderboard/offices/top`, {
-            headers: {
-              "Authorization": `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          }),
-        ])
+          api.get("/api/ratings/leaderboard/reporters/top"),
+          api.get("/api/ratings/leaderboard/offices/top"),
+        ]);
 
-          if (studentsRes.ok && officesRes.ok) {
-          const [studentsData, officesData] = await Promise.all([studentsRes.json(), officesRes.json()])
-          
-          console.log("🔍 Raw students data:", studentsData)
-          console.log("🔍 Raw offices data:", officesData)
-          
+        if (studentsRes.ok && officesRes.ok) {
+          const [studentsData, officesData] = await Promise.all([
+            studentsRes.json(),
+            officesRes.json(),
+          ]);
+
+          console.log("🔍 Raw students data:", studentsData);
+          console.log("🔍 Raw offices data:", officesData);
+
           // Process student data to ensure rank information is available
-          const processedStudents = studentsData.map((student: LeaderboardEntry) => {
-            // Calculate Gold ranking for Gold rank users
-            if (student.rank === 'GOLD') {
-              // Find position among Gold users
-              const goldPosition = studentsData
-                .filter((s: LeaderboardEntry) => s.rank === 'GOLD')
-                .sort((a: LeaderboardEntry, b: LeaderboardEntry) => b.points - a.points)
-                .findIndex((s: LeaderboardEntry) => s.id === student.id) + 1;
-              
-              // Only set goldRanking if in top 10
-              if (goldPosition <= 10) {
-                student.goldRanking = goldPosition;
+          const processedStudents = studentsData.map(
+            (student: LeaderboardEntry) => {
+              // Calculate Gold ranking for Gold rank users
+              if (student.rank === "GOLD") {
+                // Find position among Gold users
+                const goldPosition =
+                  studentsData
+                    .filter((s: LeaderboardEntry) => s.rank === "GOLD")
+                    .sort(
+                      (a: LeaderboardEntry, b: LeaderboardEntry) =>
+                        b.points - a.points
+                    )
+                    .findIndex((s: LeaderboardEntry) => s.id === student.id) +
+                  1;
+
+                // Only set goldRanking if in top 10
+                if (goldPosition <= 10) {
+                  student.goldRanking = goldPosition;
+                }
               }
+              return student;
             }
-            return student;
-          });
-          
+          );
+
           // Process office data to ensure rank information is available
-          const processedOffices = officesData.map((office: LeaderboardEntry) => {
-            // Calculate Gold ranking for Gold rank offices
-            if (office.rank === 'GOLD') {
-              // Find position among Gold offices
-              const goldPosition = officesData
-                .filter((o: LeaderboardEntry) => o.rank === 'GOLD')
-                .sort((a: LeaderboardEntry, b: LeaderboardEntry) => b.points - a.points)
-                .findIndex((o: LeaderboardEntry) => o.id === office.id) + 1;
-              
-              // Only set goldRanking if in top 10
-              if (goldPosition <= 10) {
-                office.goldRanking = goldPosition;
+          const processedOffices = officesData.map(
+            (office: LeaderboardEntry) => {
+              // Calculate Gold ranking for Gold rank offices
+              if (office.rank === "GOLD") {
+                // Find position among Gold offices
+                const goldPosition =
+                  officesData
+                    .filter((o: LeaderboardEntry) => o.rank === "GOLD")
+                    .sort(
+                      (a: LeaderboardEntry, b: LeaderboardEntry) =>
+                        b.points - a.points
+                    )
+                    .findIndex((o: LeaderboardEntry) => o.id === office.id) + 1;
+
+                // Only set goldRanking if in top 10
+                if (goldPosition <= 10) {
+                  office.goldRanking = goldPosition;
+                }
               }
+              return office;
             }
-            return office;
-          });
-          
-          setTopStudents(processedStudents)
-          setTopOffices(processedOffices)
+          );
+
+          setTopStudents(processedStudents);
+          setTopOffices(processedOffices);
 
           // Trigger confetti when data loads - only on client side
-          if (typeof window !== 'undefined') {
+          if (typeof window !== "undefined") {
             setTimeout(() => {
-              triggerConfetti()
-            }, 500)
+              triggerConfetti();
+            }, 500);
           }
+        } else {
+          console.error("Failed to fetch leaderboard data");
+          // Set empty arrays to show placeholder content instead of error
+          setTopStudents([]);
+          setTopOffices([]);
         }
       } catch (error) {
-        console.error("Error fetching leaderboard data:", error)
+        console.error("Error fetching leaderboard data:", error);
+        // Set empty arrays to show placeholder content instead of error
+        setTopStudents([]);
+        setTopOffices([]);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    fetchLeaderboardData()
-  }, [])
+    fetchLeaderboardData();
+  }, []);
 
   // Create a separate component for confetti to avoid SSR issues
-const ConfettiTrigger = dynamic(() => import('@/components/ConfettiTrigger'), { ssr: false })
+  const ConfettiTrigger = dynamic(
+    () => import("@/components/ConfettiTrigger"),
+    { ssr: false }
+  );
 
-const triggerConfetti = () => {
+  const triggerConfetti = () => {
     // We'll use a custom event to trigger confetti
-    if (typeof window !== 'undefined') {
-      const event = new CustomEvent('trigger-confetti')
-      window.dispatchEvent(event)
+    if (typeof window !== "undefined") {
+      const event = new CustomEvent("trigger-confetti");
+      window.dispatchEvent(event);
     }
-  }
+  };
 
   const getMedalColor = (index: number) => {
     switch (index) {
       case 0:
-        return "text-yellow-500"
+        return "text-yellow-500";
       case 1:
-        return "text-gray-400"
+        return "text-gray-400";
       case 2:
-        return "text-amber-600"
+        return "text-amber-600";
       default:
-        return "text-gray-300"
+        return "text-gray-300";
     }
-  }
+  };
 
   const getMedalIcon = (index: number) => {
     switch (index) {
       case 0:
-        return <Crown className="w-6 h-6" />
+        return <Crown className="w-6 h-6" />;
       case 1:
-        return <Trophy className="w-6 h-6" />
+        return <Trophy className="w-6 h-6" />;
       case 2:
-        return <Medal className="w-6 h-6" />
+        return <Medal className="w-6 h-6" />;
       default:
-        return <Star className="w-6 h-6" />
+        return <Star className="w-6 h-6" />;
     }
-  }
+  };
 
   const getStageHeight = (index: number) => {
     switch (index) {
       case 0:
-        return "h-32"
+        return "h-32";
       case 1:
-        return "h-24"
+        return "h-24";
       case 2:
-        return "h-16"
+        return "h-16";
       default:
-        return "h-0"
+        return "h-0";
     }
-  }
+  };
 
   const getStageColor = (index: number) => {
     switch (index) {
       case 0:
-        return "from-yellow-400 to-yellow-500"
+        return "from-yellow-400 to-yellow-500";
       case 1:
-        return "from-gray-300 to-gray-400"
+        return "from-gray-300 to-gray-400";
       case 2:
-        return "from-amber-500 to-amber-600"
+        return "from-amber-500 to-amber-600";
       default:
-        return "from-gray-200 to-gray-300"
+        return "from-gray-200 to-gray-300";
     }
-  }
+  };
 
   const getStagePosition = (index: number) => {
     switch (index) {
       case 0:
-        return "left-1/2 -translate-x-1/2"
+        return "left-1/2 -translate-x-1/2";
       case 1:
-        return "left-1/4 -translate-x-1/2"
+        return "left-1/4 -translate-x-1/2";
       case 2:
-        return "left-3/4 -translate-x-1/2"
+        return "left-3/4 -translate-x-1/2";
       default:
-        return ""
+        return "";
     }
-  }
+  };
 
   const getStageWidth = (index: number) => {
     switch (index) {
       case 0:
-        return "w-40"
+        return "w-40";
       case 1:
-        return "w-36"
+        return "w-36";
       case 2:
-        return "w-36"
+        return "w-36";
       default:
-        return "w-0"
+        return "w-0";
     }
-  }
+  };
 
-  const LeaderboardCard = ({ entry, index }: { entry: LeaderboardEntry; index: number }) => {
+  const LeaderboardCard = ({
+    entry,
+    index,
+  }: {
+    entry: LeaderboardEntry;
+    index: number;
+  }) => {
     // Clamp averageRating to 5.0 max, 0.0 min
-    const safeAvg = Math.max(0, Math.min(5, entry.averageRating))
-    const isTop3 = index < 3
+    const safeAvg = Math.max(0, Math.min(5, entry.averageRating));
+    const isTop3 = index < 3;
 
     if (isTop3) {
       return (
@@ -243,13 +259,23 @@ const triggerConfetti = () => {
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: index * 0.2, type: "spring", stiffness: 100 }}
-          className={`absolute ${getStagePosition(index)} bottom-0 flex flex-col items-center`}
+          className={`absolute ${getStagePosition(
+            index
+          )} bottom-0 flex flex-col items-center`}
         >
-          <div className={`relative ${index === 0 ? "z-30" : index === 1 ? "z-20" : "z-10"}`}>
+          <div
+            className={`relative ${
+              index === 0 ? "z-30" : index === 1 ? "z-20" : "z-10"
+            }`}
+          >
             <div className="absolute -top-16 left-1/2 transform -translate-x-1/2 flex flex-col items-center">
               <div
                 className={`w-20 h-20 rounded-full bg-gradient-to-br from-white to-gray-100 border-4 ${
-                  index === 0 ? "border-yellow-400" : index === 1 ? "border-gray-300" : "border-amber-500"
+                  index === 0
+                    ? "border-yellow-400"
+                    : index === 1
+                    ? "border-gray-300"
+                    : "border-amber-500"
                 } shadow-lg flex items-center justify-center overflow-hidden`}
               >
                 {entry.name.includes("http") ? (
@@ -269,20 +295,28 @@ const triggerConfetti = () => {
               </div>
               <div className="mt-2 flex flex-col items-center">
                 <div className="flex items-center gap-1">
-                  <div className={`${getMedalColor(index)}`}>{getMedalIcon(index)}</div>
+                  <div className={`${getMedalColor(index)}`}>
+                    {getMedalIcon(index)}
+                  </div>
                   <span
                     className={`text-lg font-bold ${
-                      index === 0 ? "text-yellow-500" : index === 1 ? "text-gray-500" : "text-amber-600"
+                      index === 0
+                        ? "text-yellow-500"
+                        : index === 1
+                        ? "text-gray-500"
+                        : "text-amber-600"
                     }`}
                   >
                     #{index + 1}
                   </span>
                 </div>
                 <div className="flex items-center gap-1 justify-center">
-                  <h3 className="font-bold text-gray-800 text-center max-w-[120px] truncate">{entry.name}</h3>
+                  <h3 className="font-bold text-gray-800 text-center max-w-[120px] truncate">
+                    {entry.name}
+                  </h3>
                   {entry.rank && (
-                    <RankBadge 
-                      rank={entry.rank} 
+                    <RankBadge
+                      rank={entry.rank}
                       goldRanking={entry.goldRanking}
                       size="xs"
                       showLabel={false}
@@ -295,7 +329,9 @@ const triggerConfetti = () => {
                     <Star
                       key={star}
                       className={`w-3 h-3 ${
-                        star <= Math.round(safeAvg) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
+                        star <= Math.round(safeAvg)
+                          ? "fill-yellow-400 text-yellow-400"
+                          : "text-gray-300"
                       }`}
                     />
                   ))}
@@ -303,7 +339,11 @@ const triggerConfetti = () => {
               </div>
             </div>
             <div
-              className={`${getStageWidth(index)} ${getStageHeight(index)} rounded-t-lg bg-gradient-to-b ${getStageColor(index)} shadow-lg flex items-center justify-center relative overflow-hidden`}
+              className={`${getStageWidth(index)} ${getStageHeight(
+                index
+              )} rounded-t-lg bg-gradient-to-b ${getStageColor(
+                index
+              )} shadow-lg flex items-center justify-center relative overflow-hidden`}
             >
               {/* Add overlay text for name and points */}
               <div className="absolute inset-0 flex flex-col items-center justify-center text-white font-bold text-center px-2">
@@ -318,7 +358,7 @@ const triggerConfetti = () => {
             </div>
           </div>
         </motion.div>
-      )
+      );
     }
 
     return (
@@ -331,14 +371,18 @@ const triggerConfetti = () => {
         <div className="flex items-center gap-4 p-4 relative">
           <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-[#8B0000] to-[#DAA520]"></div>
           <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center shadow-inner">
-            <span className="text-lg font-bold text-gray-700">#{index + 1}</span>
+            <span className="text-lg font-bold text-gray-700">
+              #{index + 1}
+            </span>
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-gray-800 truncate">{entry.name}</h3>
+              <h3 className="font-semibold text-gray-800 truncate">
+                {entry.name}
+              </h3>
               {entry.rank && (
-                <RankBadge 
-                  rank={entry.rank} 
+                <RankBadge
+                  rank={entry.rank}
                   goldRanking={entry.goldRanking}
                   size="xs"
                   showLabel={false}
@@ -346,42 +390,45 @@ const triggerConfetti = () => {
                 />
               )}
             </div>
-          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <div className="flex items-center gap-2 text-sm text-gray-600">
               <span>
-                {entry.totalRatings} {activeTab === "students" ? "reports" : "ratings"}
+                {entry.totalRatings}{" "}
+                {activeTab === "students" ? "reports" : "ratings"}
               </span>
-            <span>•</span>
+              <span>•</span>
               <div className="flex items-center">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <Star
                     key={star}
                     className={`w-3 h-3 ${
-                      star <= Math.round(safeAvg) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
+                      star <= Math.round(safeAvg)
+                        ? "fill-yellow-400 text-yellow-400"
+                        : "text-gray-300"
                     }`}
                   />
                 ))}
                 <span className="ml-1 font-medium">{safeAvg.toFixed(1)}</span>
+              </div>
             </div>
           </div>
-        </div>
-        <div className="flex-shrink-0">
+          <div className="flex-shrink-0">
             <div className="bg-gradient-to-r from-[#8B0000] to-[#6B0000] text-white px-3 py-1 rounded-full text-sm font-medium shadow">
-            {entry.points} pts
+              {entry.points} pts
             </div>
           </div>
         </div>
       </motion.div>
-    )
-  }
+    );
+  };
 
   // Helper to fill up to 10 slots with placeholders
   const getLeaderboardDisplay = (entries: LeaderboardEntry[]) => {
-    const filled = [...entries] as (LeaderboardEntry | null)[]
+    const filled = [...entries] as (LeaderboardEntry | null)[];
     while (filled.length < 10) {
-      filled.push(null)
+      filled.push(null);
     }
-    return filled
-  }
+    return filled;
+  };
 
   const PlaceholderCard = ({ index }: { index: number }) => (
     <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg shadow p-4 flex items-center gap-4 relative overflow-hidden">
@@ -391,17 +438,21 @@ const triggerConfetti = () => {
       </div>
       <div className="flex-1">
         <h3 className="font-semibold text-gray-400">
-          {activeTab === "students" ? "Your name could be here!" : "Your office could be here!"}
+          {activeTab === "students"
+            ? "Your name could be here!"
+            : "Your office could be here!"}
         </h3>
         <div className="flex items-center gap-2 text-sm text-gray-300">
           <span>Compete to claim this spot</span>
         </div>
       </div>
       <div className="flex-shrink-0">
-        <div className="bg-gray-200 text-gray-500 px-3 py-1 rounded-full text-sm font-medium">? pts</div>
+        <div className="bg-gray-200 text-gray-500 px-3 py-1 rounded-full text-sm font-medium">
+          ? pts
+        </div>
       </div>
     </div>
-  )
+  );
 
   if (isLoading) {
     return (
@@ -414,43 +465,44 @@ const triggerConfetti = () => {
               <div className="absolute inset-2 rounded-full border-r-2 border-l-2 border-[#DAA520] animate-spin animation-delay-150"></div>
               <div className="absolute inset-4 rounded-full border-t-2 border-b-2 border-[#8B0000] animate-spin animation-delay-300"></div>
             </div>
-            <p className="mt-6 text-gray-600 font-medium">Loading leaderboard...</p>
+            <p className="mt-6 text-gray-600 font-medium">
+              Loading leaderboard...
+            </p>
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   const getContentMargin = () => {
-    if (userRole === 'OFFICE_ADMIN') {
-      return collapsed ? 'ml-20' : 'ml-72'
+    if (userRole === "OFFICE_ADMIN") {
+      return collapsed ? "ml-20" : "ml-72";
     }
-    return collapsed ? 'ml-18' : 'ml-64'
-  }
-  
+    return collapsed ? "ml-18" : "ml-64";
+  };
 
   return (
     <div className="min-h-screen bg-[#f5f5f5]">
       {/* Include the confetti component */}
       <ConfettiTrigger />
-      {userRole === 'OFFICE_ADMIN' ? <OfficeAdminSidebar /> : <Sidebar />}
+      {userRole === "OFFICE_ADMIN" ? <OfficeAdminSidebar /> : <Sidebar />}
       <div className={`transition-all duration-300 ${getContentMargin()}`}>
-        {userRole === 'OFFICE_ADMIN' ? (
-          <OfficeAdminNavbar 
-            title="Office Leaderboard" 
+        {userRole === "OFFICE_ADMIN" ? (
+          <OfficeAdminNavbar
+            title="Office Leaderboard"
             subtitle="Celebrating our top contributors and offices"
             showSearch={false}
           />
         ) : (
-          <Navbar 
-            title="Leaderboard" 
+          <Navbar
+            title="Leaderboard"
             subtitle="Celebrating our top contributors and offices"
             showSearch={false}
             showNewIncident={false}
           />
         )}
-      <div className="pt-24 px-6 pb-10 ">
-        <div className="mb-8  rounded-xl shadow-lg overflow-hidden">
+        <div className="pt-24 px-6 pb-10 ">
+          <div className="mb-8  rounded-xl shadow-lg overflow-hidden">
             {/* Header with animated gradient */}
             <div className="relative mb-12 overflow-hidden rounded-xl bg-gradient-to-r from-[#8B0000] to-[#6B0000] p-8 shadow-lg">
               <div className="absolute -top-24 -right-24 w-64 h-64 bg-gradient-to-br from-[#DAA520]/30 to-transparent rounded-full blur-2xl"></div>
@@ -463,42 +515,42 @@ const triggerConfetti = () => {
                     Recognition Leaderboard
                   </h1>
                   <p className="mt-2 text-white/80 max-w-xl">
-                    Celebrating excellence in our community. Points are awarded based on quality reports and exceptional
-                    service.
+                    Celebrating excellence in our community. Points are awarded
+                    based on quality reports and exceptional service.
                   </p>
-          </div>
-          <button
-            onClick={() => setShowInfoModal(true)}
+                </div>
+                <button
+                  onClick={() => setShowInfoModal(true)}
                   className="bg-white/10 hover:bg-white/20 transition-colors p-3 rounded-full"
-            aria-label="Show recognition info"
-          >
+                  aria-label="Show recognition info"
+                >
                   <Info className="w-6 h-6 text-white" />
-          </button>
+                </button>
               </div>
-        </div>
+            </div>
 
-        {/* Tabs */}
+            {/* Tabs */}
             <div className="flex gap-4 mb-8">
-          <button
-            onClick={() => setActiveTab("students")}
+              <button
+                onClick={() => setActiveTab("students")}
                 className={`flex items-center gap-2 px-6 py-3 rounded-lg transition-all duration-300 ${
-              activeTab === "students"
+                  activeTab === "students"
                     ? "bg-gradient-to-r from-[#8B0000] to-[#6B0000] text-white shadow-md transform scale-105"
-                : "bg-white text-gray-600 hover:bg-gray-50"
-            }`}
-          >
-            <Users className="w-5 h-5" />
+                    : "bg-white text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                <Users className="w-5 h-5" />
                 <span className="font-medium">Top Students</span>
-          </button>
-          <button
-            onClick={() => setActiveTab("offices")}
+              </button>
+              <button
+                onClick={() => setActiveTab("offices")}
                 className={`flex items-center gap-2 px-6 py-3 rounded-lg transition-all duration-300 ${
-              activeTab === "offices"
+                  activeTab === "offices"
                     ? "bg-gradient-to-r from-[#8B0000] to-[#6B0000] text-white shadow-md transform scale-105"
-                : "bg-white text-gray-600 hover:bg-gray-50"
-            }`}
-          >
-            <Building2 className="w-5 h-5" />
+                    : "bg-white text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                <Building2 className="w-5 h-5" />
                 <span className="font-medium">Top Offices</span>
               </button>
             </div>
@@ -530,11 +582,21 @@ const triggerConfetti = () => {
                         ? topStudents
                             .slice(0, 3)
                             .map((student, index) => (
-                              <LeaderboardCard key={student.id} entry={student} index={index} />
+                              <LeaderboardCard
+                                key={student.id}
+                                entry={student}
+                                index={index}
+                              />
                             ))
                         : topOffices
                             .slice(0, 3)
-                            .map((office, index) => <LeaderboardCard key={office.id} entry={office} index={index} />)}
+                            .map((office, index) => (
+                              <LeaderboardCard
+                                key={office.id}
+                                entry={office}
+                                index={index}
+                              />
+                            ))}
                     </>
                   )}
                 </div>
@@ -563,19 +625,33 @@ const triggerConfetti = () => {
                             .slice(3)
                             .map((student, index) =>
                               student ? (
-                                <LeaderboardCard key={student.id} entry={student} index={index + 3} />
+                                <LeaderboardCard
+                                  key={student.id}
+                                  entry={student}
+                                  index={index + 3}
+                                />
                               ) : (
-                                <PlaceholderCard key={`placeholder-student-${index}`} index={index + 3} />
-                              ),
+                                <PlaceholderCard
+                                  key={`placeholder-student-${index}`}
+                                  index={index + 3}
+                                />
+                              )
                             )
                         : getLeaderboardDisplay(topOffices)
                             .slice(3)
                             .map((office, index) =>
                               office ? (
-                                <LeaderboardCard key={office.id} entry={office} index={index + 3} />
+                                <LeaderboardCard
+                                  key={office.id}
+                                  entry={office}
+                                  index={index + 3}
+                                />
                               ) : (
-                                <PlaceholderCard key={`placeholder-office-${index}`} index={index + 3} />
-                              ),
+                                <PlaceholderCard
+                                  key={`placeholder-office-${index}`}
+                                  index={index + 3}
+                                />
+                              )
                             )}
                     </>
                   )}
@@ -590,10 +666,14 @@ const triggerConfetti = () => {
                   <Sparkles className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-[#8B0000] mb-2">How to Earn Recognition</h3>
+                  <h3 className="text-lg font-semibold text-[#8B0000] mb-2">
+                    How to Earn Recognition
+                  </h3>
                   <p className="text-gray-700">
-                    Points are awarded based on the quality and quantity of your contributions. Submit detailed reports,
-                    provide helpful information, and maintain high ratings to climb the leaderboard!
+                    Points are awarded based on the quality and quantity of your
+                    contributions. Submit detailed reports, provide helpful
+                    information, and maintain high ratings to climb the
+                    leaderboard!
                   </p>
                   <button
                     onClick={() => setShowInfoModal(true)}
@@ -605,11 +685,14 @@ const triggerConfetti = () => {
                 </div>
               </div>
             </div>
+          </div>
         </div>
       </div>
-    </div>
 
-      <RecognitionInfoModal isOpen={showInfoModal} onClose={() => setShowInfoModal(false)} />
+      <RecognitionInfoModal
+        isOpen={showInfoModal}
+        onClose={() => setShowInfoModal(false)}
+      />
 
       {/* Add custom styles for animation delays */}
       <style jsx global>{`
@@ -621,5 +704,5 @@ const triggerConfetti = () => {
         }
       `}</style>
     </div>
-  )
-} 
+  );
+}

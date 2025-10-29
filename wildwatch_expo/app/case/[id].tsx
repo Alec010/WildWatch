@@ -27,6 +27,7 @@ import { useRating } from "../../src/features/ratings/hooks/useRating";
 import { useUserProfile } from "../../src/features/users/hooks/useUserProfile";
 import { CircularLoader } from "../../components/CircularLoader";
 import { getReporterDisplayName, getReporterDisplayEmail, getReporterDisplayPhone } from "../../src/utils/anonymousUtils";
+import { FollowUpDialog } from "../../src/features/incidents/components/FollowUpDialog";
 
 interface ProgressStep {
   title: string;
@@ -86,11 +87,21 @@ export default function CaseDetailsScreen() {
     incident?.id?.toString()
   );
   const { userProfile } = useUserProfile();
+  
+  const [officeAdmin, setOfficeAdmin] = React.useState<{
+    firstName: string;
+    lastName: string;
+    email: string;
+    contactNumber: string;
+  } | null>(null);
 
   const [refreshing, setRefreshing] = React.useState(false);
   const [selectedImage, setSelectedImage] = React.useState<string | null>(null);
   const [showImageModal, setShowImageModal] = React.useState(false);
   const [showRatingModal, setShowRatingModal] = React.useState(false);
+  const [showFollowUpDialog, setShowFollowUpDialog] = React.useState(false);
+  const [followUpLoading, setFollowUpLoading] = React.useState(false);
+  const [followUpCooldown, setFollowUpCooldown] = React.useState<Date | null>(null);
   const [ratingType, setRatingType] = React.useState<"reporter" | "office">(
     "reporter"
   );
@@ -102,9 +113,45 @@ export default function CaseDetailsScreen() {
   const base = isSmall ? 13 : 14;
   const chipFontSize = isNarrow ? 11 : 12;
 
+  // Fetch office admin info
+  const fetchOfficeAdmin = React.useCallback(async () => {
+    if (!incident?.assignedOffice || !token) return;
+    
+    try {
+      const response = await fetch(
+        `${config.API.BASE_URL}/setup/by-office/${incident.assignedOffice}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      
+      if (response.ok) {
+        const adminData = await response.json();
+        setOfficeAdmin(adminData);
+      } else {
+        setOfficeAdmin(null);
+      }
+    } catch (error) {
+      console.error('Error fetching office admin:', error);
+      setOfficeAdmin(null);
+    }
+  }, [incident?.assignedOffice, token]);
+
+  // Fetch office admin when incident loads
+  React.useEffect(() => {
+    if (incident?.assignedOffice) {
+      fetchOfficeAdmin();
+    }
+  }, [incident?.assignedOffice, fetchOfficeAdmin]);
+
   const onRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([refetch(), fetchRatingStatus(), refetchUpvoteStatus()]);
+    await Promise.all([
+      refetch(),
+      fetchRatingStatus(),
+      refetchUpvoteStatus(),
+      fetchOfficeAdmin()
+    ]);
     setRefreshing(false);
   };
 
@@ -115,10 +162,65 @@ export default function CaseDetailsScreen() {
 
   const handleRatingSuccess = () => fetchRatingStatus();
 
+  // Handle follow-up request
+  const handleFollowUpRequest = async () => {
+    if (!token || !incident) return;
+    setFollowUpLoading(true);
+    try {
+      const response = await fetch(
+        `${config.API.BASE_URL}/incidents/${incident.id}/follow-up`,
+        {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to send follow-up request');
+      }
+
+      // Set cooldown if provided
+      if (data.nextAvailableTime) {
+        setFollowUpCooldown(new Date(data.nextAvailableTime));
+      }
+
+      Toast.show({
+        type: 'success',
+        text1: 'Follow-up request sent successfully',
+        position: 'bottom',
+        visibilityTime: 2000,
+      });
+      setShowFollowUpDialog(false);
+    } catch (error) {
+      Toast.show({
+        type: 'error',
+        text1: 'Failed to send follow-up request',
+        text2: error instanceof Error ? error.message : 'Please try again',
+        position: 'bottom',
+        visibilityTime: 3000,
+      });
+    } finally {
+      setFollowUpLoading(false);
+    }
+  };
+
   // Check if current user is the reporter to prevent self-rating
   const isCurrentUserReporter = React.useMemo(() => {
-    if (!userProfile?.email || !incident?.submittedByEmail) return false;
-    return userProfile.email.toLowerCase() === incident.submittedByEmail.toLowerCase();
+    if (!userProfile?.email || !incident?.submittedByEmail) {
+      console.log('Debug - Missing email info:', { 
+        userEmail: userProfile?.email, 
+        submitterEmail: incident?.submittedByEmail 
+      });
+      return false;
+    }
+    const isReporter = userProfile.email.toLowerCase() === incident.submittedByEmail.toLowerCase();
+    console.log('Debug - Reporter check:', { 
+      userEmail: userProfile.email, 
+      submitterEmail: incident.submittedByEmail,
+      isReporter 
+    });
+    return isReporter;
   }, [userProfile?.email, incident?.submittedByEmail]);
 
   const handleUpvote = async () => {
@@ -278,6 +380,25 @@ export default function CaseDetailsScreen() {
     } catch {
       return "N/A";
     }
+  };
+
+  const getOfficeFullName = (officeCode?: string) => {
+    const officeMap: { [key: string]: string } = {
+      'OP': 'Office of the President',
+      'VPAA': 'Office of the Vice President for Academic Affairs',
+      'VPA': 'Office of the Vice President for Administration',
+      'VPF': 'Office of the Vice President for Finance and Treasurer',
+      'HR': 'Human Resources Office',
+      'FO': 'Finance Office',
+      'MIS': 'Management Information Systems Office',
+      'MPO': 'Marketing and Promotions Office',
+      'OAS': 'Office of Admissions and Scholarships',
+      'SSO': 'Student Success Office',
+      'TSG': 'Technical Service Group'
+    };
+
+    if (!officeCode) return "Office of the Vice President for Administration";
+    return officeMap[officeCode] || officeCode;
   };
 
   if (isLoading && !incident) {
@@ -484,9 +605,9 @@ export default function CaseDetailsScreen() {
               />
             </View>
           </View>
-        </Card>
+          </Card>
 
-        {/* CASE STATUS TIMELINE */}
+          {/* CASE STATUS TIMELINE */}
         <Card title="Case Status">
           <View style={{ position: "relative" }}>
             {/* Icons row with connecting line */}
@@ -786,6 +907,68 @@ export default function CaseDetailsScreen() {
           />
         </Card>
 
+        {/* CASE INFORMATION */}
+        <Card title="Case Information">
+          {/* Assigned To */}
+          <Row
+            icon="person"
+            label="Assigned To"
+            value={officeAdmin ? `${officeAdmin.firstName} ${officeAdmin.lastName}` : getOfficeFullName(incident.assignedOffice)}
+            iconColor={PALETTE.maroon}
+          />
+          <Divider />
+
+          {/* Office Email */}
+          <TouchableOpacity
+            onPress={() => {
+              const email = officeAdmin?.email || "vpa@cit.edu";
+              Linking.openURL(`mailto:${email}`);
+            }}
+            style={{ flexDirection: 'row', alignItems: 'flex-start' }}
+          >
+            <View style={styles.rowIcon}>
+              <Ionicons name="mail" size={16} color={PALETTE.maroon} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.rowLabel}>Office Email</Text>
+              <Text
+                style={[
+                  styles.rowValue,
+                  { color: PALETTE.maroon, textDecorationLine: 'underline' }
+                ]}
+              >
+                {officeAdmin?.email || "-"}
+              </Text>
+            </View>
+          </TouchableOpacity>
+          <Divider />
+
+          {/* Contact Number */}
+          <TouchableOpacity
+            onPress={() => {
+              const contactNumber = officeAdmin?.contactNumber || "+639000000003";
+              Linking.openURL(`tel:${contactNumber}`);
+            }}
+            style={{ flexDirection: 'row', alignItems: 'flex-start' }}
+            disabled={!officeAdmin?.contactNumber}
+          >
+            <View style={styles.rowIcon}>
+              <Ionicons name="call" size={16} color={PALETTE.maroon} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.rowLabel}>Contact Number</Text>
+              <Text
+                style={[
+                  styles.rowValue,
+                  officeAdmin?.contactNumber && { color: PALETTE.maroon, textDecorationLine: 'underline' }
+                ]}
+              >
+                {officeAdmin?.contactNumber || "-"}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        </Card>
+
         {/* EVIDENCE */}
         {incident.evidence && incident.evidence.length > 0 && (
           <Card title="Submitted Evidence">
@@ -973,6 +1156,64 @@ export default function CaseDetailsScreen() {
             </View>
           ) : (
             <View>
+              {/* Follow-up Button - Only show to the submitter for pending/in-progress cases */}
+              {(() => {
+                const normalizedStatus = incident.status?.toUpperCase().replace(/\s+/g, "_");
+                console.log('Debug - Follow-up button conditions:', {
+                  isCurrentUserReporter,
+                  status: incident.status,
+                  normalizedStatus,
+                  isPending: normalizedStatus === "PENDING",
+                  isInProgress: normalizedStatus === "IN_PROGRESS"
+                });
+                return isCurrentUserReporter && 
+                  (normalizedStatus === "PENDING" || normalizedStatus === "IN_PROGRESS") ? (
+                <View style={{ marginBottom: 16 }}>
+                  <TouchableOpacity
+                    style={[
+                      styles.btn,
+                      {
+                        backgroundColor: followUpCooldown && new Date() < followUpCooldown
+                          ? PALETTE.border
+                          : PALETTE.maroon,
+                      },
+                    ]}
+                    onPress={() => setShowFollowUpDialog(true)}
+                    disabled={followUpCooldown && new Date() < followUpCooldown}
+                  >
+                    <Ionicons
+                      name="notifications"
+                      size={16}
+                      color={
+                        followUpCooldown && new Date() < followUpCooldown
+                          ? PALETTE.text
+                          : "#FFFFFF"
+                      }
+                    />
+                    <Text
+                      style={[
+                        styles.btnText,
+                        followUpCooldown &&
+                          new Date() < followUpCooldown && { color: PALETTE.text },
+                      ]}
+                    >
+                      {followUpCooldown && new Date() < followUpCooldown
+                        ? `Follow-up Available ${followUpCooldown.toLocaleDateString()}`
+                        : "Send Follow-up Request"}
+                    </Text>
+                  </TouchableOpacity>
+                  <Text
+                    style={{
+                      textAlign: "center",
+                      color: PALETTE.subtext,
+                      fontSize: 12,
+                      marginTop: 8,
+                    }}
+                  >
+                    Send a notification to the office handling your case
+                  </Text>
+                </View>
+              ) : null})()}
               {[
                 {
                   label: "Initial Review",
@@ -1173,7 +1414,7 @@ export default function CaseDetailsScreen() {
           </Card>
         )}
 
-        <View style={{ height: 80 }} />
+        <View style={{ height: 20 }} />
       </ScrollView>
 
       {/* IMAGE LIGHTBOX */}
@@ -1190,6 +1431,15 @@ export default function CaseDetailsScreen() {
         incidentId={id || ""}
         type={ratingType}
         onSuccess={handleRatingSuccess}
+      />
+
+      {/* Follow-up Dialog */}
+      <FollowUpDialog
+        isVisible={showFollowUpDialog}
+        onClose={() => setShowFollowUpDialog(false)}
+        onConfirm={handleFollowUpRequest}
+        isLoading={followUpLoading}
+        trackingNumber={incident?.trackingNumber || ""}
       />
     </SafeAreaView>
   );

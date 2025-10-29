@@ -4,7 +4,7 @@
  * Features gradient backgrounds and static positioning
  */
 
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -12,10 +12,15 @@ import {
   Dimensions,
   Image,
   Platform,
+  TouchableOpacity,
+  Modal,
+  Animated,
+  Vibration,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import type { LeaderboardEntry } from "../models/RatingModels";
+import { getOfficeFullName } from "../../../utils/officeUtils";
 
 interface LeaderboardPodiumProps {
   entries: LeaderboardEntry[]; // First 3 entries
@@ -531,6 +536,51 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     textAlign: "center",
   },
+  tooltipOverlay: {
+    flex: 1,
+    backgroundColor: 'transparent',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+  },
+  tooltipContainer: {
+    position: 'absolute',
+    alignItems: 'center',
+    zIndex: 9999,
+  },
+  tooltipBubble: {
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    alignSelf: 'center',
+  },
+  tooltipText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700',
+    textAlign: 'center',
+    lineHeight: 14,
+  },
+  tooltipArrow: {
+    position: 'absolute',
+    bottom: -6,
+    left: '50%',
+    marginLeft: -6,
+    width: 0,
+    height: 0,
+    borderLeftWidth: 6,
+    borderRightWidth: 6,
+    borderTopWidth: 6,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderTopColor: 'rgba(0, 0, 0, 0.75)',
+  },
+  tooltipArrowLeft: {
+    left: '25%',
+  },
+  tooltipArrowRight: {
+    left: '75%',
+  },
 });
 
 // Office Podium Component with stage-like design
@@ -541,6 +591,19 @@ const OfficePodium: React.FC<{ entries: LeaderboardEntry[] }> = ({
   const screenHeight = Dimensions.get("window").height;
   const isTablet = screenWidth > 768;
   const isLargeDevice = screenWidth > 670;
+  const [tooltipVisible, setTooltipVisible] = useState(false);
+  const [tooltipText, setTooltipText] = useState("");
+  const [tooltipAcronym, setTooltipAcronym] = useState("");
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0, arrowAlign: 'center' as 'left' | 'center' | 'right' });
+  const [tooltipRank, setTooltipRank] = useState(1);
+  
+  // Animation values
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.8)).current;
+  const slideAnim = useRef(new Animated.Value(-10)).current;
+
+  // Auto-dismiss timer
+  const dismissTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Responsive scaling factors
   const getScaleFactor = () => {
@@ -552,6 +615,99 @@ const OfficePodium: React.FC<{ entries: LeaderboardEntry[] }> = ({
   };
 
   const scaleFactor = getScaleFactor();
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (dismissTimerRef.current) {
+        clearTimeout(dismissTimerRef.current);
+      }
+    };
+  }, []);
+
+  const showTooltip = (officeName: string, index: number, pressY: number, pressX: number) => {
+    const fullName = getOfficeFullName(officeName);
+    setTooltipText(fullName);
+    setTooltipAcronym(officeName);
+    setTooltipRank(index + 1);
+    
+    // Calculate arrow alignment based on horizontal position
+    let arrowAlign: 'left' | 'center' | 'right' = 'center';
+    
+    if (index === 1) {
+      arrowAlign = 'left';
+    } else if (index === 0) {
+      arrowAlign = 'center';
+    } else if (index === 2) {
+      arrowAlign = 'right';
+    }
+    
+    // Position tooltip at exact press location (slightly above to avoid finger covering it)
+    const yPos = pressY - 40; // 40px above the press point
+    
+    setTooltipPosition({ x: pressX, y: yPos, arrowAlign });
+    setTooltipVisible(true);
+    
+    // Haptic feedback (light vibration)
+    if (Platform.OS === 'ios' || Platform.OS === 'android') {
+      Vibration.vibrate(10);
+    }
+    
+    // Start animations
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        tension: 100,
+        friction: 8,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start();
+    
+    // Auto-dismiss after 4 seconds
+    if (dismissTimerRef.current) {
+      clearTimeout(dismissTimerRef.current);
+    }
+    dismissTimerRef.current = setTimeout(() => {
+      hideTooltip();
+    }, 4000);
+  };
+
+  const hideTooltip = () => {
+    if (dismissTimerRef.current) {
+      clearTimeout(dismissTimerRef.current);
+      dismissTimerRef.current = null;
+    }
+    
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 0.8,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: -10,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setTooltipVisible(false);
+    });
+  };
   const getOfficePodiumData = (index: number) => {
     switch (index) {
       case 0: // 1st Place - Center
@@ -614,7 +770,15 @@ const OfficePodium: React.FC<{ entries: LeaderboardEntry[] }> = ({
     const isEmpty = !entry.name;
 
     return (
-      <View
+      <TouchableOpacity
+        activeOpacity={isEmpty ? 1 : 0.7}
+        onPress={(event) => {
+          if (!isEmpty) {
+            const { pageY, pageX } = event.nativeEvent;
+            showTooltip(entry.name, index, pageY, pageX);
+          }
+        }}
+        disabled={isEmpty}
         style={[
           styles.officeStageWrapper,
           index === 1 && styles.officeStageWrapper2nd,
@@ -761,7 +925,7 @@ const OfficePodium: React.FC<{ entries: LeaderboardEntry[] }> = ({
             </Text>
           </View>
         </LinearGradient>
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -785,6 +949,47 @@ const OfficePodium: React.FC<{ entries: LeaderboardEntry[] }> = ({
         {/* 3rd Place - Right */}
         <OfficeStage entry={entries[2]} index={2} />
       </View>
+
+      {/* Simple Tooltip Modal */}
+      <Modal
+        visible={tooltipVisible}
+        transparent={true}
+        animationType="none"
+        onRequestClose={hideTooltip}
+        statusBarTranslucent
+      >
+        <TouchableOpacity
+          style={styles.tooltipOverlay}
+          activeOpacity={1}
+          onPress={hideTooltip}
+        >
+          <Animated.View 
+            style={[
+              styles.tooltipContainer, 
+              { 
+                top: tooltipPosition.y,
+                opacity: fadeAnim,
+                transform: [
+                  { scale: scaleAnim },
+                  { translateY: slideAnim }
+                ]
+              }
+            ]}
+          >
+            <View style={styles.tooltipBubble}>
+              {/* Full Office Name */}
+              <Text style={styles.tooltipText}>{tooltipText}</Text>
+              
+              {/* Arrow */}
+              <View style={[
+                styles.tooltipArrow,
+                tooltipPosition.arrowAlign === 'left' && styles.tooltipArrowLeft,
+                tooltipPosition.arrowAlign === 'right' && styles.tooltipArrowRight,
+              ]} />
+            </View>
+          </Animated.View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 };

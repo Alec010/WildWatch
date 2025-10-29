@@ -1,6 +1,12 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
 import { API_BASE_URL } from "@/utils/api";
 import { api } from "@/utils/apiClient";
 
@@ -21,13 +27,19 @@ export function UserProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const fetchUserProfile = async () => {
       try {
-        const response = await api.get('/api/auth/profile');
+        const response = await api.get("/api/auth/profile");
         if (response.ok) {
           const data = await response.json();
           setUserRole(data.role);
+        } else {
+          // If profile fetch fails, set role to null but don't redirect
+          // Let individual pages handle their own authentication logic
+          setUserRole(null);
         }
       } catch (e) {
-        // ignore
+        // If there's an error, set role to null but don't redirect
+        // The apiClient will handle token refresh and redirects if needed
+        setUserRole(null);
       } finally {
         setIsLoading(false);
       }
@@ -42,4 +54,4 @@ export function UserProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export const useUser = () => useContext(UserContext); 
+export const useUser = () => useContext(UserContext);

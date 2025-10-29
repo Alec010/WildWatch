@@ -568,8 +568,18 @@ export default function CameraScreen() {
 
   if (capturedImages.length > 0) {
     const showClearAll = capturedImages.length > 1;
+    
+    // Calculate actual tab bar height to match the tab layout
+    // Tab bar height WITHOUT the safe area insets (those are handled separately)
+    const baseTabBarHeight = Platform.OS === "ios" ? 85 : 80;
+    const tabBarTopPadding = 12;
+    const tabBarVisibleHeight = baseTabBarHeight; // Just the visible tab bar
+    
+    // Bottom dock should sit just above the tab bar with minimal gap
     const bottomDockHeight = Platform.OS === "ios" ? 72 : 68;
-    const bottomPad = bottomDockHeight + Math.max(insets.bottom, 8) + 16;
+    
+    // ScrollView padding should account for both bottom dock and tab bar
+    const bottomPad = bottomDockHeight + tabBarVisibleHeight + 16; // Small gap for breathing room
 
     // Responsive icon and text sizes
     const actionIconSize = isSmallDevice ? 24 : 32;
@@ -774,15 +784,16 @@ export default function CameraScreen() {
             style={[
               styles.bottomDock,
               {
-                paddingBottom: Math.max(
-                  insets.bottom,
-                  Platform.OS === "ios" ? 8 : 12
-                ),
-                minHeight: bottomDockHeight,
+                backgroundColor: "transparent", // Remove white/gray background
+                borderTopWidth: 0, // Remove top border
+                elevation: 0, // Remove Android shadow
+                shadowOpacity: 0, // Remove iOS shadow
+                paddingBottom: 0, // Remove bottom padding
+                paddingTop: 0, // Remove top padding
               },
             ]}
           >
-            <View style={styles.actionRow}>
+            <View style={[styles.actionRow, { marginBottom: 0, marginTop: 0 }]}>
               <TouchableOpacity
                 onPress={async () => {
                   console.log("Saving images to storage:", capturedImages);
