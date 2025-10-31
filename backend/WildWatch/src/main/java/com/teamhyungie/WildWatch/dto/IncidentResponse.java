@@ -4,6 +4,7 @@ import com.teamhyungie.WildWatch.model.Incident;
 import com.teamhyungie.WildWatch.model.Office;
 import com.teamhyungie.WildWatch.model.Building;
 import com.teamhyungie.WildWatch.model.PriorityLevel;
+import com.teamhyungie.WildWatch.model.IncidentGeneralTag;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
@@ -17,6 +18,7 @@ import java.util.stream.Collectors;
 @Data
 @NoArgsConstructor
 public class IncidentResponse {
+
     private String id;
     private String trackingNumber;
     private String incidentType;
@@ -41,6 +43,7 @@ public class IncidentResponse {
     private LocalDateTime submittedAt;
     private List<EvidenceDTO> evidence;
     private List<WitnessDTO> witnesses;
+    private List<String> tags; // Top 5 weighted tags for display
 
     // New fields for frontend display
     private String officeAdminName;
@@ -56,15 +59,15 @@ public class IncidentResponse {
     private LocalDateTime resolutionExtendedAt;
     private Boolean preferAnonymous;
     private Boolean isPrivate;
-    
+
     /**
-     * Constructor for optimized dashboard queries
-     * This constructor is used by the repository to create lightweight DTO objects
-     * directly from the query without loading the entire entity graph
+     * Constructor for optimized dashboard queries This constructor is used by
+     * the repository to create lightweight DTO objects directly from the query
+     * without loading the entire entity graph
      */
-    public IncidentResponse(String id, String trackingNumber, String incidentType, String location, 
-                           String status, String description, LocalDateTime submittedAt, 
-                           Integer upvoteCount, String firstName, String lastName, String email) {
+    public IncidentResponse(String id, String trackingNumber, String incidentType, String location,
+            String status, String description, LocalDateTime submittedAt,
+            Integer upvoteCount, String firstName, String lastName, String email) {
         this.id = id;
         this.trackingNumber = trackingNumber;
         this.incidentType = incidentType;
@@ -77,17 +80,17 @@ public class IncidentResponse {
         this.submittedByEmail = email;
         this.submittedBy = email;
     }
-    
+
     /**
-     * Constructor for office admin incident management queries
-     * Includes transfer information and date/time details
+     * Constructor for office admin incident management queries Includes
+     * transfer information and date/time details
      */
-    public IncidentResponse(String id, String trackingNumber, String incidentType, String location, 
-                           String status, String description, LocalDateTime submittedAt,
-                           LocalDate dateOfIncident, LocalTime timeOfIncident,
-                           String firstName, String lastName, String email, 
-                           String transferredFrom, String lastTransferredTo, String lastTransferNotes,
-                           PriorityLevel priorityLevel) {
+    public IncidentResponse(String id, String trackingNumber, String incidentType, String location,
+            String status, String description, LocalDateTime submittedAt,
+            LocalDate dateOfIncident, LocalTime timeOfIncident,
+            String firstName, String lastName, String email,
+            String transferredFrom, String lastTransferredTo, String lastTransferNotes,
+            PriorityLevel priorityLevel) {
         this.id = id;
         this.trackingNumber = trackingNumber;
         this.incidentType = incidentType;
@@ -105,15 +108,15 @@ public class IncidentResponse {
         this.lastTransferNotes = lastTransferNotes;
         this.priorityLevel = priorityLevel;
     }
-    
+
     /**
      * Constructor for verified cases tracker
      */
-    public IncidentResponse(String id, String trackingNumber, String incidentType, String location, 
-                           String status, String description, LocalDateTime submittedAt,
-                           LocalDate dateOfIncident, LocalTime timeOfIncident,
-                           String firstName, String lastName, String email, 
-                           Boolean verified, PriorityLevel priorityLevel) {
+    public IncidentResponse(String id, String trackingNumber, String incidentType, String location,
+            String status, String description, LocalDateTime submittedAt,
+            LocalDate dateOfIncident, LocalTime timeOfIncident,
+            String firstName, String lastName, String email,
+            Boolean verified, PriorityLevel priorityLevel) {
         this.id = id;
         this.trackingNumber = trackingNumber;
         this.incidentType = incidentType;
@@ -129,14 +132,14 @@ public class IncidentResponse {
         this.verified = verified;
         this.priorityLevel = priorityLevel;
     }
-    
+
     /**
      * Constructor for case tracking page - active cases
      */
-    public IncidentResponse(String id, String trackingNumber, String incidentType, String location, 
-                           String status, String description, LocalDateTime submittedAt,
-                           LocalDate dateOfIncident, LocalTime timeOfIncident,
-                           PriorityLevel priorityLevel) {
+    public IncidentResponse(String id, String trackingNumber, String incidentType, String location,
+            String status, String description, LocalDateTime submittedAt,
+            LocalDate dateOfIncident, LocalTime timeOfIncident,
+            PriorityLevel priorityLevel) {
         this.id = id;
         this.trackingNumber = trackingNumber;
         this.incidentType = incidentType;
@@ -148,14 +151,14 @@ public class IncidentResponse {
         this.timeOfIncident = timeOfIncident;
         this.priorityLevel = priorityLevel;
     }
-    
+
     /**
      * Constructor for incident history page
      */
-    public IncidentResponse(String id, String trackingNumber, String incidentType, String location, 
-                           String status, String description, LocalDateTime submittedAt,
-                           LocalDate dateOfIncident, LocalTime timeOfIncident,
-                           PriorityLevel priorityLevel, String resolutionNotes) {
+    public IncidentResponse(String id, String trackingNumber, String incidentType, String location,
+            String status, String description, LocalDateTime submittedAt,
+            LocalDate dateOfIncident, LocalTime timeOfIncident,
+            PriorityLevel priorityLevel, String resolutionNotes) {
         this.id = id;
         this.trackingNumber = trackingNumber;
         this.incidentType = incidentType;
@@ -175,6 +178,7 @@ public class IncidentResponse {
 
     @Data
     public static class EvidenceDTO {
+
         private String id;
         private String fileUrl;
         private String fileName;
@@ -185,6 +189,7 @@ public class IncidentResponse {
 
     @Data
     public static class WitnessDTO {
+
         private String id;
         private Long userId;
         private String name;
@@ -225,53 +230,68 @@ public class IncidentResponse {
         response.setLastTransferNotes(incident.getLastTransferNotes());
         response.setUpvoteCount(incident.getUpvoteCount());
         response.setEstimatedResolutionDate(incident.getEstimatedResolutionDate());
-        response.setResolutionExtendedBy(incident.getResolutionExtendedBy() != null ? 
-            incident.getResolutionExtendedBy().getFirstName() + " " + incident.getResolutionExtendedBy().getLastName() : null);
+        response.setResolutionExtendedBy(incident.getResolutionExtendedBy() != null
+                ? incident.getResolutionExtendedBy().getFirstName() + " " + incident.getResolutionExtendedBy().getLastName() : null);
         response.setResolutionExtendedAt(incident.getResolutionExtendedAt());
         response.setPreferAnonymous(incident.getPreferAnonymous());
         response.setIsPrivate(incident.getIsPrivate());
 
+        // Map tags - convert generalTags to tag names
+        // Note: For display, we'll use the transient tags field if available (contains top 5),
+        // otherwise convert all generalTags to names (all 20 tags are stored but we typically only need top 5)
+        if (incident.getTags() != null && !incident.getTags().isEmpty()) {
+            // Use transient tags field if set (usually contains top 5 selected tags)
+            response.setTags(incident.getTags());
+        } else if (incident.getGeneralTags() != null && !incident.getGeneralTags().isEmpty()) {
+            // Convert generalTags to tag names
+            response.setTags(
+                    incident.getGeneralTags().stream()
+                            .map(IncidentGeneralTag::getName)
+                            .collect(Collectors.toList())
+            );
+        }
+
         // Map evidence
         if (incident.getEvidence() != null) {
             response.setEvidence(
-                incident.getEvidence().stream().map(e -> {
-                    EvidenceDTO dto = new EvidenceDTO();
-                    dto.setId(e.getId());
-                    dto.setFileUrl(e.getFileUrl());
-                    dto.setFileName(e.getFileName());
-                    dto.setFileType(e.getFileType());
-                    dto.setFileSize(e.getFileSize());
-                    dto.setUploadedAt(e.getUploadedAt());
-                    return dto;
-                }).collect(Collectors.toList())
+                    incident.getEvidence().stream().map(e -> {
+                        EvidenceDTO dto = new EvidenceDTO();
+                        dto.setId(e.getId());
+                        dto.setFileUrl(e.getFileUrl());
+                        dto.setFileName(e.getFileName());
+                        dto.setFileType(e.getFileType());
+                        dto.setFileSize(e.getFileSize());
+                        dto.setUploadedAt(e.getUploadedAt());
+                        return dto;
+                    }).collect(Collectors.toList())
             );
         }
 
         // Map witnesses
         if (incident.getWitnesses() != null) {
             response.setWitnesses(
-                incident.getWitnesses().stream().map(w -> {
-                    WitnessDTO dto = new WitnessDTO();
-                    dto.setId(w.getId());
-                    
-                    // Check if this witness is a registered user
-                    if (w.getUser() != null) {
-                        dto.setUserId(w.getUser().getId());
-                        dto.setName(w.getUser().getFullName());
-                        dto.setContactInformation(w.getUser().getEmail());
-                        dto.setRegisteredUser(true);
-                    } else {
-                        dto.setName(w.getName());
-                        dto.setContactInformation(w.getContactInformation());
-                        dto.setRegisteredUser(false);
-                    }
-                    
-                    dto.setAdditionalNotes(w.getAdditionalNotes());
-                    return dto;
-                }).collect(Collectors.toList())
+                    incident.getWitnesses().stream().map(w -> {
+                        WitnessDTO dto = new WitnessDTO();
+                        dto.setId(w.getId());
+
+                        // Check if this witness is a registered user
+                        if (w.getUser() != null) {
+                            dto.setUserId(w.getUser().getId());
+                            dto.setName(w.getUser().getFullName());
+                            dto.setContactInformation(w.getUser().getEmail());
+                            dto.setRegisteredUser(true);
+                        } else {
+                            dto.setName(w.getName());
+                            dto.setContactInformation(w.getContactInformation());
+                            dto.setRegisteredUser(false);
+                        }
+
+                        dto.setAdditionalNotes(w.getAdditionalNotes());
+                        return dto;
+                    }).collect(Collectors.toList())
             );
         }
 
         return response;
     }
-} 
+}
