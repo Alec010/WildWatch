@@ -10,12 +10,15 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Set;
+import java.util.HashSet;
 
 @Entity
 @Table(name = "incidents")
 @Data
 @org.hibernate.annotations.Cache(usage = org.hibernate.annotations.CacheConcurrencyStrategy.READ_WRITE)
 public class Incident {
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
@@ -82,11 +85,18 @@ public class Incident {
     @Column(name = "dismissal_notes", length = 2000)
     private String dismissalNotes;
 
-    @ElementCollection
-    @CollectionTable(name = "incident_tags", joinColumns = @JoinColumn(name = "incident_id"))
-    @Column(name = "tag")
+    @ManyToMany(fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    @JoinTable(
+            name = "incident_tags",
+            joinColumns = @JoinColumn(name = "incident_id"),
+            inverseJoinColumns = @JoinColumn(name = "tag_id")
+    )
     @org.hibernate.annotations.Cache(usage = org.hibernate.annotations.CacheConcurrencyStrategy.READ_WRITE)
     @org.hibernate.annotations.BatchSize(size = 20)
+    private Set<IncidentGeneralTag> generalTags = new HashSet<>();
+
+    // Transient field to maintain backward compatibility with existing code
+    @Transient
     private List<String> tags = new ArrayList<>();
 
     @OneToMany(mappedBy = "incident", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
@@ -152,4 +162,4 @@ public class Incident {
             upvoteCount = 0;
         }
     }
-} 
+}

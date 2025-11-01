@@ -1,12 +1,12 @@
-"use client"
+"use client";
 
-import { useState, useEffect, use, type JSX } from "react"
-import { useRouter, useParams } from "next/navigation"
-import { OfficeAdminSidebar } from "@/components/OfficeAdminSidebar"
-import { OfficeAdminNavbar } from "@/components/OfficeAdminNavbar"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
+import { useState, useEffect, useRef, type JSX } from "react";
+import { useRouter, useParams } from "next/navigation";
+import { OfficeAdminSidebar } from "@/components/OfficeAdminSidebar";
+import { OfficeAdminNavbar } from "@/components/OfficeAdminNavbar";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft,
   Calendar,
@@ -25,169 +25,223 @@ import {
   XCircleIcon,
   ArrowRightLeft,
   Info,
-} from "lucide-react"
-import Image from "next/image"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { API_BASE_URL } from "@/utils/api"
-import { formatLocationDisplay } from "@/utils/locationFormatter"
-import { api } from "@/utils/apiClient"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
-import { Switch } from "@/components/ui/switch"
-import { useSidebar } from "@/contexts/SidebarContext"
-import { motion } from "framer-motion"
-import { toast } from "sonner"
-import { Toaster } from "sonner"
+} from "lucide-react";
+import Image from "next/image";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { API_BASE_URL } from "@/utils/api";
+import { formatLocationDisplay } from "@/utils/locationFormatter";
+import { api } from "@/utils/apiClient";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Tooltip,
+  TooltipProvider,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
+import { Switch } from "@/components/ui/switch";
+import { useSidebar } from "@/contexts/SidebarContext";
+import { motion } from "framer-motion";
+import { toast } from "sonner";
+import { Toaster } from "sonner";
 
 interface Witness {
-  id: string
-  name: string
-  contactInformation: string
-  additionalNotes: string
+  id: string;
+  name: string;
+  contactInformation: string;
+  additionalNotes: string;
 }
 
 interface Evidence {
-  id: string
-  fileUrl: string
-  fileName: string
-  fileType: string
-  fileSize: number
-  uploadedAt: string
+  id: string;
+  fileUrl: string;
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+  uploadedAt: string;
 }
 
 interface Incident {
-  id: string
-  trackingNumber: string
-  incidentType: string
-  dateOfIncident: string
-  timeOfIncident: string
-  location: string
-  description: string
-  assignedOffice: string
-  status: string
-  priorityLevel: string | null
-  submittedBy: string
-  submittedAt: string
-  witnesses: Witness[]
-  evidence: Evidence[]
-  administrativeNotes: string
-  verified: boolean
-  verificationNotes: string
-  verifiedAt: string | null
-  verifiedBy: string | null
-  submittedByFullName: string
-  submittedByIdNumber: string
-  submittedByEmail: string
-  submittedByPhone: string
+  id: string;
+  trackingNumber: string;
+  incidentType: string;
+  dateOfIncident: string;
+  timeOfIncident: string;
+  location: string;
+  description: string;
+  assignedOffice: string;
+  status: string;
+  priorityLevel: string | null;
+  submittedBy: string;
+  submittedAt: string;
+  witnesses: Witness[];
+  evidence: Evidence[];
+  administrativeNotes: string;
+  verified: boolean;
+  verificationNotes: string;
+  verifiedAt: string | null;
+  verifiedBy: string | null;
+  submittedByFullName: string;
+  submittedByIdNumber: string;
+  submittedByEmail: string;
+  submittedByPhone: string;
   // Backend may return either camelCase or snake_case
-  preferAnonymous?: boolean
-  isPrivate?: boolean
+  preferAnonymous?: boolean;
+  isPrivate?: boolean;
 }
 
 export default function IncidentDetailsPage() {
-  const router = useRouter()
+  const router = useRouter();
   const params = useParams();
   const id = params.id as string;
-  const { collapsed } = useSidebar()
-  const [incident, setIncident] = useState<Incident | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [administrativeNotes, setAdministrativeNotes] = useState("")
-  const [verificationNotes, setVerificationNotes] = useState("")
-  const [isVerified, setIsVerified] = useState(false)
-  const [status, setStatus] = useState("")
-  const [priorityLevel, setPriorityLevel] = useState<string | null>(null)
-  const [isProcessing, setIsProcessing] = useState(false)
-  const [showModal, setShowModal] = useState(false)
+  const { collapsed } = useSidebar();
+  const [incident, setIncident] = useState<Incident | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [administrativeNotes, setAdministrativeNotes] = useState("");
+  const [verificationNotes, setVerificationNotes] = useState("");
+  const [isVerified, setIsVerified] = useState(false);
+  const [status, setStatus] = useState("");
+  const [priorityLevel, setPriorityLevel] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [showModal, setShowModal] = useState(false);
   const [modalContent, setModalContent] = useState<{
-    title: string
-    message: string
-    icon: JSX.Element
-    color: string
-  } | null>(null)
-  const [countdown, setCountdown] = useState(3)
-  const [showTransferModal, setShowTransferModal] = useState(false)
-  const [transferNotes, setTransferNotes] = useState("")
-  const [selectedOffice, setSelectedOffice] = useState("")
-  const [isTransferring, setIsTransferring] = useState(false)
-  const [offices, setOffices] = useState<{ code: string; fullName: string; description: string }[]>([])
-  const [officesLoading, setOfficesLoading] = useState(false)
-  const [officesError, setOfficesError] = useState<string | null>(null)
-  const [priorityError, setPriorityError] = useState("")
-  const [isAnonymous, setIsAnonymous] = useState<boolean>(false)
-  const [isPrivate, setIsPrivate] = useState<boolean>(false)
-  const [verifyError, setVerifyError] = useState("")
-  const [statusError, setStatusError] = useState("")
+    title: string;
+    message: string;
+    icon: JSX.Element;
+    color: string;
+  } | null>(null);
+  const [countdown, setCountdown] = useState(3);
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [transferNotes, setTransferNotes] = useState("");
+  const [selectedOffice, setSelectedOffice] = useState("");
+  const [isTransferring, setIsTransferring] = useState(false);
+  const [offices, setOffices] = useState<
+    { code: string; fullName: string; description: string }[]
+  >([]);
+  const [officesLoading, setOfficesLoading] = useState(false);
+  const [officesError, setOfficesError] = useState<string | null>(null);
+  const [priorityError, setPriorityError] = useState("");
+  const [isAnonymous, setIsAnonymous] = useState<boolean>(false);
+  const [isPrivate, setIsPrivate] = useState<boolean>(false);
+  const [verifyError, setVerifyError] = useState("");
+  const [statusError, setStatusError] = useState("");
+  const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Handle countdown and navigation
+  useEffect(() => {
+    if (countdown === 0 && showModal) {
+      router.push("/office-admin/dashboard");
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current);
+        countdownIntervalRef.current = null;
+      }
+    }
+  }, [countdown, showModal, router]);
+
+  // Cleanup interval on unmount
+  useEffect(() => {
+    return () => {
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const fetchIncident = async () => {
       try {
-        const response = await api.get(`/api/incidents/${id}`)
+        // Try fetching by ID first
+        let response = await api.get(`/api/incidents/${id}`);
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
+        // If 404, try fetching by tracking number
+        if (!response.ok && response.status === 404) {
+          response = await api.get(`/api/incidents/track/${id}`);
         }
 
-        const data: Incident & { prefer_anonymous?: boolean; is_private?: boolean } = await response.json()
-        
-        setIncident(data)
-        setAdministrativeNotes(data.administrativeNotes || "")
-        setVerificationNotes(data.verificationNotes || "")
-        setIsVerified(data.verified)
-        setStatus(data.status)
-        setPriorityLevel(data.priorityLevel)
-        // Initialize anonymity toggle to OFF by default (admin controls this, not reporter preference)
-        setIsAnonymous(false)
-        // Initialize privacy from backend payload (supports snake_case and camelCase)
-        const initialPrivate = (data as any).isPrivate ?? (data as any).is_private ?? false
-        setIsPrivate(!!initialPrivate)
-      } catch (err) {
-        console.error("Error fetching incident:", err)
-        setError(err instanceof Error ? err.message : "Failed to load incident")
-      } finally {
-        setLoading(false)
-      }
-    }
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
 
-    fetchIncident()
-  }, [id])
+        const data: Incident & {
+          prefer_anonymous?: boolean;
+          is_private?: boolean;
+        } = await response.json();
+
+        setIncident(data);
+        setAdministrativeNotes(data.administrativeNotes || "");
+        setVerificationNotes(data.verificationNotes || "");
+        setIsVerified(data.verified);
+        setStatus(data.status);
+        setPriorityLevel(data.priorityLevel);
+        // Initialize anonymity toggle to OFF by default (admin controls this, not reporter preference)
+        setIsAnonymous(false);
+        // Initialize privacy from backend payload (supports snake_case and camelCase)
+        const initialPrivate =
+          (data as any).isPrivate ?? (data as any).is_private ?? false;
+        setIsPrivate(!!initialPrivate);
+      } catch (err) {
+        console.error("Error fetching incident:", err);
+        setError(
+          err instanceof Error ? err.message : "Failed to load incident"
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchIncident();
+  }, [id]);
 
   useEffect(() => {
     if (showTransferModal) {
-      setOfficesLoading(true)
+      setOfficesLoading(true);
       fetch(`${API_BASE_URL}/api/offices`)
         .then((res) => res.json())
-        .then((data: { code: string; fullName: string; description: string }[]) => {
-          setOffices(data)
-          setOfficesLoading(false)
-        })
+        .then(
+          (data: { code: string; fullName: string; description: string }[]) => {
+            setOffices(data);
+            setOfficesLoading(false);
+          }
+        )
         .catch((err: Error) => {
-          setOfficesError("Failed to load offices")
-          setOfficesLoading(false)
-        })
+          setOfficesError("Failed to load offices");
+          setOfficesLoading(false);
+        });
     }
-  }, [showTransferModal])
+  }, [showTransferModal]);
 
   const handleApproveIncident = async () => {
     if (!isVerified) {
-      setVerifyError("You must confirm this incident has been verified.")
-      return
+      setVerifyError("You must confirm this incident has been verified.");
+      return;
     }
-    setVerifyError("")
+    setVerifyError("");
     if (!status) {
-      setStatusError("Please select a status before approving.")
-      return
+      setStatusError("Please select a status before approving.");
+      return;
     }
-    setStatusError("")
+    setStatusError("");
     if (!priorityLevel) {
-      setPriorityError("Please select a priority before approving.")
-      return
+      setPriorityError("Please select a priority before approving.");
+      return;
     }
-    setPriorityError("")
-    setIsProcessing(true)
+    setPriorityError("");
+    setIsProcessing(true);
     try {
       const response = await api.put(`/api/incidents/${id}`, {
         administrativeNotes,
@@ -197,55 +251,56 @@ export default function IncidentDetailsPage() {
         priorityLevel,
         preferAnonymous: isAnonymous,
         isPrivate: isPrivate,
-      })
+      });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const updatedIncident = await response.json()
-      setIncident(updatedIncident)
+      const updatedIncident = await response.json();
+      setIncident(updatedIncident);
 
       // Show success modal
       setModalContent({
         title: "Incident Verified",
-        message: "The incident has been successfully verified and is now being processed.",
+        message:
+          "The incident has been successfully verified and is now being processed.",
         icon: <CheckCircle className="h-12 w-12 text-green-500" />,
         color: "bg-green-50 border-green-200",
-      })
-      setShowModal(true)
-      setCountdown(3)
+      });
+      setShowModal(true);
+      setCountdown(3);
 
       // Start countdown
       const countdownInterval = setInterval(() => {
         setCountdown((prev) => {
           if (prev <= 1) {
-            clearInterval(countdownInterval)
-            router.push("/office-admin/dashboard")
-            return 0
+            clearInterval(countdownInterval);
+            router.push("/office-admin/dashboard");
+            return 0;
           }
-          return prev - 1
-        })
-      }, 1000)
+          return prev - 1;
+        });
+      }, 1000);
 
       // Cleanup interval on unmount
-      return () => clearInterval(countdownInterval)
+      return () => clearInterval(countdownInterval);
     } catch (error) {
-      console.error("Error approving incident:", error)
+      console.error("Error approving incident:", error);
       setModalContent({
         title: "Error",
         message: "Failed to verify incident. Please try again.",
         icon: <AlertTriangle className="h-12 w-12 text-red-500" />,
         color: "bg-red-50 border-red-200",
-      })
-      setShowModal(true)
+      });
+      setShowModal(true);
     } finally {
-      setIsProcessing(false)
+      setIsProcessing(false);
     }
-  }
+  };
 
   const handleDismissIncident = async () => {
-    setIsProcessing(true)
+    setIsProcessing(true);
     try {
       const response = await api.put(`/api/incidents/${id}`, {
         administrativeNotes,
@@ -255,14 +310,14 @@ export default function IncidentDetailsPage() {
         priorityLevel: null,
         preferAnonymous: isAnonymous,
         isPrivate: isPrivate,
-      })
+      });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const updatedIncident = await response.json()
-      setIncident(updatedIncident)
+      const updatedIncident = await response.json();
+      setIncident(updatedIncident);
 
       // Show success modal
       setModalContent({
@@ -270,30 +325,29 @@ export default function IncidentDetailsPage() {
         message: "The incident has been successfully dismissed.",
         icon: <XCircleIcon className="h-12 w-12 text-gray-500" />,
         color: "bg-gray-50 border-gray-200",
-      })
-      setShowModal(true)
+      });
+      setShowModal(true);
 
       // Redirect after 3 seconds
       setTimeout(() => {
-        router.push("/office-admin/dashboard")
-      }, 3000)
+        router.push("/office-admin/dashboard");
+      }, 3000);
     } catch (error) {
-      console.error("Error dismissing incident:", error)
+      console.error("Error dismissing incident:", error);
       setModalContent({
         title: "Error",
         message: "Failed to dismiss incident. Please try again.",
         icon: <AlertTriangle className="h-12 w-12 text-red-500" />,
         color: "bg-red-50 border-red-200",
-      })
-      setShowModal(true)
+      });
+      setShowModal(true);
     } finally {
-      setIsProcessing(false)
+      setIsProcessing(false);
     }
-  }
-
+  };
 
   const handleStatusUpdate = async () => {
-    setIsProcessing(true)
+    setIsProcessing(true);
     try {
       const response = await api.put(`/api/incidents/${id}`, {
         administrativeNotes,
@@ -303,14 +357,14 @@ export default function IncidentDetailsPage() {
         priorityLevel,
         preferAnonymous: isAnonymous,
         isPrivate: isPrivate,
-      })
+      });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const updatedIncident = await response.json()
-      setIncident(updatedIncident)
+      const updatedIncident = await response.json();
+      setIncident(updatedIncident);
 
       // Show success modal
       setModalContent({
@@ -318,26 +372,26 @@ export default function IncidentDetailsPage() {
         message: `The incident status has been successfully updated to ${status}.`,
         icon: <CheckCircle className="h-12 w-12 text-green-500" />,
         color: "bg-green-50 border-green-200",
-      })
-      setShowModal(true)
+      });
+      setShowModal(true);
 
       // Redirect after 3 seconds
       setTimeout(() => {
-        router.push("/office-admin/dashboard")
-      }, 3000)
+        router.push("/office-admin/dashboard");
+      }, 3000);
     } catch (error) {
-      console.error("Error updating incident status:", error)
+      console.error("Error updating incident status:", error);
       setModalContent({
         title: "Error",
         message: "Failed to update incident status. Please try again.",
         icon: <AlertTriangle className="h-12 w-12 text-red-500" />,
         color: "bg-red-50 border-red-200",
-      })
-      setShowModal(true)
+      });
+      setShowModal(true);
     } finally {
-      setIsProcessing(false)
+      setIsProcessing(false);
     }
-  }
+  };
 
   const handleTransfer = async () => {
     if (!selectedOffice) {
@@ -346,126 +400,146 @@ export default function IncidentDetailsPage() {
         message: "Please select an office to transfer to.",
         icon: <AlertTriangle className="h-12 w-12 text-red-500" />,
         color: "bg-red-50 border-red-200",
-      })
-      setShowModal(true)
-      return
+      });
+      setShowModal(true);
+      return;
     }
 
-    setIsTransferring(true)
+    setIsTransferring(true);
     try {
       const response = await api.post(`/api/incidents/${id}/transfer`, {
         newOffice: selectedOffice,
         transferNotes: transferNotes,
         preferAnonymous: isAnonymous,
         isPrivate: isPrivate,
-      })
+      });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json()
-      setIncident(data)
-      setShowTransferModal(false)
-      setTransferNotes("")
-      setSelectedOffice("")
+      const data = await response.json();
+      setIncident(data);
+      setShowTransferModal(false);
+      setTransferNotes("");
+      setSelectedOffice("");
 
       setModalContent({
         title: "Success",
         message: "Incident has been transferred successfully.",
         icon: <CheckCircle className="h-12 w-12 text-green-500" />,
         color: "bg-green-50 border-green-200",
-      })
-      setShowModal(true)
-      setCountdown(3)
+      });
+      setShowModal(true);
+      setCountdown(3);
 
       // Start countdown
       const countdownInterval = setInterval(() => {
         setCountdown((prev) => {
           if (prev <= 1) {
-            clearInterval(countdownInterval)
-            router.push("/office-admin/dashboard")
-            return 0
+            clearInterval(countdownInterval);
+            router.push("/office-admin/dashboard");
+            return 0;
           }
-          return prev - 1
-        })
-      }, 1000)
+          return prev - 1;
+        });
+      }, 1000);
 
       // Cleanup interval on unmount
-      return () => clearInterval(countdownInterval)
+      return () => clearInterval(countdownInterval);
     } catch (error) {
-      console.error("Error transferring incident:", error)
+      console.error("Error transferring incident:", error);
       setModalContent({
         title: "Error",
         message: "Failed to transfer incident. Please try again.",
         icon: <AlertTriangle className="h-12 w-12 text-red-500" />,
         color: "bg-red-50 border-red-200",
-      })
-      setShowModal(true)
+      });
+      setShowModal(true);
     } finally {
-      setIsTransferring(false)
+      setIsTransferring(false);
     }
-  }
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "In Progress":
         return (
-          <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-200">
+          <Badge
+            variant="outline"
+            className="bg-blue-100 text-blue-700 border-blue-200"
+          >
             In Progress
           </Badge>
-        )
+        );
       case "Resolved":
         return (
-          <Badge variant="outline" className="bg-green-100 text-green-700 border-green-200">
+          <Badge
+            variant="outline"
+            className="bg-green-100 text-green-700 border-green-200"
+          >
             Resolved
           </Badge>
-        )
+        );
       case "Dismissed":
         return (
-          <Badge variant="outline" className="bg-red-100 text-red-700 border-red-200">
+          <Badge
+            variant="outline"
+            className="bg-red-100 text-red-700 border-red-200"
+          >
             Dismissed
           </Badge>
-        )
+        );
       // 'Closed' is deprecated; treat as Resolved in UI
       case "Closed":
         return (
-          <Badge variant="outline" className="bg-gray-100 text-gray-700 border-gray-200">
+          <Badge
+            variant="outline"
+            className="bg-gray-100 text-gray-700 border-gray-200"
+          >
             Dismissed
           </Badge>
-        )
+        );
       default:
-        return <Badge variant="outline">{status}</Badge>
+        return <Badge variant="outline">{status}</Badge>;
     }
-  }
+  };
 
   const getPriorityBadge = (priority: string | null) => {
-    if (!priority) return null
+    if (!priority) return null;
 
     switch (priority) {
       case "LOW":
         return (
-          <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-200">
+          <Badge
+            variant="outline"
+            className="bg-blue-100 text-blue-700 border-blue-200"
+          >
             Low Priority
           </Badge>
-        )
+        );
       case "MEDIUM":
         return (
-          <Badge variant="outline" className="bg-orange-100 text-orange-700 border-orange-200">
+          <Badge
+            variant="outline"
+            className="bg-orange-100 text-orange-700 border-orange-200"
+          >
             Medium Priority
           </Badge>
-        )
+        );
       case "HIGH":
         return (
-          <Badge variant="outline" className="bg-red-100 text-red-700 border-red-200">
+          <Badge
+            variant="outline"
+            className="bg-red-100 text-red-700 border-red-200"
+          >
             High Priority
           </Badge>
-        )
+        );
       default:
-        return null
+        return null;
     }
-  }
-
+  };
 
   if (loading) {
     return (
@@ -473,7 +547,9 @@ export default function IncidentDetailsPage() {
         <Toaster richColors position="top-right" />
         <OfficeAdminSidebar />
         <div
-          className={`flex-1 flex items-center justify-center transition-all duration-300 ${collapsed ? "ml-[5rem]" : "ml-64"}`}
+          className={`flex-1 flex items-center justify-center transition-all duration-300 ${
+            collapsed ? "ml-[5rem]" : "ml-64"
+          }`}
         >
           <div className="text-center">
             <div className="relative w-20 h-20 mx-auto">
@@ -481,11 +557,13 @@ export default function IncidentDetailsPage() {
               <div className="absolute inset-2 rounded-full border-r-2 border-l-2 border-[#DAA520] animate-spin animation-delay-150"></div>
               <div className="absolute inset-4 rounded-full border-t-2 border-b-2 border-[#8B0000] animate-spin animation-delay-300"></div>
             </div>
-            <p className="mt-6 text-gray-600 font-medium">Loading incident details...</p>
+            <p className="mt-6 text-gray-600 font-medium">
+              Loading incident details...
+            </p>
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   if (error) {
@@ -493,7 +571,11 @@ export default function IncidentDetailsPage() {
       <div className="min-h-screen flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9]">
         <Toaster richColors position="top-right" />
         <OfficeAdminSidebar />
-        <div className={`flex-1 p-8 transition-all duration-300 ${collapsed ? "ml-[5rem]" : "ml-64"}`}>
+        <div
+          className={`flex-1 p-8 transition-all duration-300 ${
+            collapsed ? "ml-[5rem]" : "ml-64"
+          }`}
+        >
           <div className="max-w-7xl mx-auto">
             <div className="bg-red-50 border border-red-200 rounded-lg p-6 shadow-sm">
               <div className="flex items-start gap-4">
@@ -501,11 +583,15 @@ export default function IncidentDetailsPage() {
                   <AlertTriangle className="h-6 w-6 text-red-600" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-red-800 mb-2">Error Loading Incident</h3>
+                  <h3 className="text-lg font-semibold text-red-800 mb-2">
+                    Error Loading Incident
+                  </h3>
                   <p className="text-red-700">{error}</p>
                   <Button
                     className="mt-4 bg-[#8B0000] hover:bg-[#6B0000] text-white"
-                    onClick={() => typeof window !== 'undefined' && window.location.reload()}
+                    onClick={() =>
+                      typeof window !== "undefined" && window.location.reload()
+                    }
                   >
                     <AlertTriangle className="mr-2 h-4 w-4" /> Try Again
                   </Button>
@@ -515,11 +601,11 @@ export default function IncidentDetailsPage() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   if (!incident) {
-    return null
+    return null;
   }
 
   return (
@@ -530,22 +616,43 @@ export default function IncidentDetailsPage() {
         subtitle="Review and manage incident information"
         showSearch={false}
       />
-      <Toaster richColors position="top-right" className="z-50" style={{ top: '80px' }} />
-      <div className={`flex-1 overflow-auto transition-all duration-300 ${collapsed ? "ml-[5rem]" : "ml-64"} pt-24`}>
-        <div className={`p-6 -mt-3 mx-8 ${collapsed ? "max-w-[95vw]" : "max-w-[calc(100vw-8rem)]"}`}>
+      <Toaster
+        richColors
+        position="top-right"
+        className="z-50"
+        style={{ top: "80px" }}
+      />
+      <div
+        className={`flex-1 overflow-auto transition-all duration-300 ${
+          collapsed ? "ml-[5rem]" : "ml-64"
+        } pt-24`}
+      >
+        <div
+          className={`p-6 -mt-3 mx-8 ${
+            collapsed ? "max-w-[95vw]" : "max-w-[calc(100vw-8rem)]"
+          }`}
+        >
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold text-[#8B0000]">Review Incident</h1>
+                <h1 className="text-2xl font-bold text-[#8B0000]">
+                  Review Incident
+                </h1>
                 {getStatusBadge(incident.status)}
                 {getPriorityBadge(incident.priorityLevel)}
                 {isAnonymous && (
-                  <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-200">
+                  <Badge
+                    variant="outline"
+                    className="bg-amber-100 text-amber-800 border-amber-200"
+                  >
                     Anonymous
                   </Badge>
                 )}
                 {isPrivate && (
-                  <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-200">
+                  <Badge
+                    variant="outline"
+                    className="bg-purple-100 text-purple-800 border-purple-200"
+                  >
                     Private
                   </Badge>
                 )}
@@ -593,12 +700,18 @@ export default function IncidentDetailsPage() {
                   <div className="relative">
                     <div className="flex justify-between items-start">
                       <div>
-                        <p className="text-white/80 text-sm mb-1">Incident Report</p>
-                        <h2 className="text-xl font-semibold">{incident.incidentType}</h2>
+                        <p className="text-white/80 text-sm mb-1">
+                          Incident Report
+                        </p>
+                        <h2 className="text-xl font-semibold">
+                          {incident.incidentType}
+                        </h2>
                       </div>
                       <div className="flex flex-col items-end">
                         <p className="text-white/80 text-sm">Reported</p>
-                        <p className="font-medium">{new Date(incident.submittedAt).toLocaleDateString()}</p>
+                        <p className="font-medium">
+                          {new Date(incident.submittedAt).toLocaleDateString()}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -610,8 +723,14 @@ export default function IncidentDetailsPage() {
                         <Calendar className="h-5 w-5 text-[#8B0000]" />
                       </div>
                       <div>
-                        <p className="text-sm text-gray-500">Date of Incident</p>
-                        <p className="font-medium">{new Date(incident.dateOfIncident).toLocaleDateString()}</p>
+                        <p className="text-sm text-gray-500">
+                          Date of Incident
+                        </p>
+                        <p className="font-medium">
+                          {new Date(
+                            incident.dateOfIncident
+                          ).toLocaleDateString()}
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
@@ -619,7 +738,9 @@ export default function IncidentDetailsPage() {
                         <Clock className="h-5 w-5 text-[#8B0000]" />
                       </div>
                       <div>
-                        <p className="text-sm text-gray-500">Time of Incident</p>
+                        <p className="text-sm text-gray-500">
+                          Time of Incident
+                        </p>
                         <p className="font-medium">{incident.timeOfIncident}</p>
                       </div>
                     </div>
@@ -629,7 +750,9 @@ export default function IncidentDetailsPage() {
                       </div>
                       <div>
                         <p className="text-sm text-gray-500">Location</p>
-                        <p className="font-medium">{formatLocationDisplay(incident)}</p>
+                        <p className="font-medium">
+                          {formatLocationDisplay(incident)}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -637,8 +760,12 @@ export default function IncidentDetailsPage() {
                   <Separator className="my-6" />
 
                   <div>
-                    <h3 className="text-lg font-medium text-[#8B0000] mb-3">Description</h3>
-                    <p className="text-gray-700 whitespace-pre-line">{incident.description}</p>
+                    <h3 className="text-lg font-medium text-[#8B0000] mb-3">
+                      Description
+                    </h3>
+                    <p className="text-gray-700 whitespace-pre-line">
+                      {incident.description}
+                    </p>
                   </div>
                 </div>
               </motion.div>
@@ -646,11 +773,17 @@ export default function IncidentDetailsPage() {
               {/* Evidence & Witnesses */}
               <Tabs defaultValue="evidence" className="w-full">
                 <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="evidence" className="flex items-center gap-2">
+                  <TabsTrigger
+                    value="evidence"
+                    className="flex items-center gap-2"
+                  >
                     <FileText className="h-4 w-4" />
                     Evidence
                   </TabsTrigger>
-                  <TabsTrigger value="witnesses" className="flex items-center gap-2">
+                  <TabsTrigger
+                    value="witnesses"
+                    className="flex items-center gap-2"
+                  >
                     <User className="h-4 w-4" />
                     Witnesses
                   </TabsTrigger>
@@ -671,7 +804,10 @@ export default function IncidentDetailsPage() {
                               className="group relative"
                               initial={{ opacity: 0, y: 10 }}
                               animate={{ opacity: 1, y: 0 }}
-                              transition={{ duration: 0.2, delay: index * 0.05 }}
+                              transition={{
+                                duration: 0.2,
+                                delay: index * 0.05,
+                              }}
                             >
                               {file.fileType.startsWith("image/") ? (
                                 <div className="relative aspect-square rounded-lg overflow-hidden border border-[#DAA520]/20 shadow-sm group-hover:shadow-md transition-shadow">
@@ -686,7 +822,11 @@ export default function IncidentDetailsPage() {
                                 </div>
                               ) : file.fileType.startsWith("video/") ? (
                                 <div className="relative aspect-video rounded-lg overflow-hidden border border-[#DAA520]/20 shadow-sm group-hover:shadow-md transition-shadow">
-                                  <video src={file.fileUrl} controls className="w-full h-full" />
+                                  <video
+                                    src={file.fileUrl}
+                                    controls
+                                    className="w-full h-full"
+                                  />
                                 </div>
                               ) : (
                                 <div className="relative aspect-square rounded-lg overflow-hidden border border-[#DAA520]/20 shadow-sm group-hover:shadow-md transition-shadow bg-[#8B0000]/5 flex items-center justify-center">
@@ -694,10 +834,15 @@ export default function IncidentDetailsPage() {
                                 </div>
                               )}
                               <div className="mt-2">
-                                <p className="text-sm font-medium text-[#8B0000] truncate">{file.fileName}</p>
+                                <p className="text-sm font-medium text-[#8B0000] truncate">
+                                  {file.fileName}
+                                </p>
                                 <p className="text-xs text-gray-500">
-                                  {(file.fileSize / 1024 / 1024).toFixed(2)} MB •{" "}
-                                  {new Date(file.uploadedAt).toLocaleDateString()}
+                                  {(file.fileSize / 1024 / 1024).toFixed(2)} MB
+                                  •{" "}
+                                  {new Date(
+                                    file.uploadedAt
+                                  ).toLocaleDateString()}
                                 </p>
                               </div>
                             </motion.div>
@@ -706,7 +851,9 @@ export default function IncidentDetailsPage() {
                       ) : (
                         <div className="text-center py-8">
                           <FileText className="h-12 w-12 text-[#8B0000]/30 mx-auto mb-3" />
-                          <p className="text-gray-500">No evidence files have been uploaded</p>
+                          <p className="text-gray-500">
+                            No evidence files have been uploaded
+                          </p>
                         </div>
                       )}
                     </div>
@@ -727,7 +874,10 @@ export default function IncidentDetailsPage() {
                               key={witness.id}
                               initial={{ opacity: 0, y: 10 }}
                               animate={{ opacity: 1, y: 0 }}
-                              transition={{ duration: 0.2, delay: index * 0.05 }}
+                              transition={{
+                                duration: 0.2,
+                                delay: index * 0.05,
+                              }}
                               className="bg-white rounded-lg border border-[#DAA520]/20 overflow-hidden hover:border-[#DAA520]/40 transition-colors"
                             >
                               <div className="bg-[#8B0000]/5 p-4 border-b border-[#DAA520]/20">
@@ -736,13 +886,19 @@ export default function IncidentDetailsPage() {
                                     <User className="h-5 w-5 text-[#8B0000]" />
                                   </div>
                                   <div>
-                                    <p className="font-medium text-[#8B0000]">{witness.name}</p>
-                                    <p className="text-sm text-gray-500">{witness.contactInformation}</p>
+                                    <p className="font-medium text-[#8B0000]">
+                                      {witness.name}
+                                    </p>
+                                    <p className="text-sm text-gray-500">
+                                      {witness.contactInformation}
+                                    </p>
                                   </div>
                                 </div>
                               </div>
                               <div className="p-4">
-                                <p className="text-gray-700 whitespace-pre-line">{witness.additionalNotes}</p>
+                                <p className="text-gray-700 whitespace-pre-line">
+                                  {witness.additionalNotes}
+                                </p>
                               </div>
                             </motion.div>
                           ))}
@@ -750,7 +906,9 @@ export default function IncidentDetailsPage() {
                       ) : (
                         <div className="text-center py-8">
                           <User className="h-12 w-12 text-[#8B0000]/30 mx-auto mb-3" />
-                          <p className="text-gray-500">No witness information available</p>
+                          <p className="text-gray-500">
+                            No witness information available
+                          </p>
                         </div>
                       )}
                     </div>
@@ -773,7 +931,9 @@ export default function IncidentDetailsPage() {
                     <div className="bg-[#8B0000]/10 p-2 rounded-lg">
                       <Shield className="h-5 w-5 text-[#8B0000]" />
                     </div>
-                    <h2 className="text-lg font-semibold text-[#8B0000]">Administrative Actions</h2>
+                    <h2 className="text-lg font-semibold text-[#8B0000]">
+                      Administrative Actions
+                    </h2>
                   </div>
                 </div>
                 <div className="p-4">
@@ -785,8 +945,8 @@ export default function IncidentDetailsPage() {
                     <select
                       value={status}
                       onChange={(e) => {
-                        setStatus(e.target.value)
-                        setStatusError("")
+                        setStatus(e.target.value);
+                        setStatusError("");
                       }}
                       className={`w-full mt-1 px-3 py-2 border border-[#DAA520]/20 rounded-md bg-white focus:ring-2 focus:ring-[#8B0000]/20 focus:border-[#8B0000] transition-all ${
                         statusError ? "border-red-500" : ""
@@ -798,7 +958,11 @@ export default function IncidentDetailsPage() {
                       <option value="Resolved">Resolved</option>
                       <option value="Dismissed">Dismissed</option>
                     </select>
-                    {statusError && <div className="text-red-600 text-xs mt-1">{statusError}</div>}
+                    {statusError && (
+                      <div className="text-red-600 text-xs mt-1">
+                        {statusError}
+                      </div>
+                    )}
                   </div>
 
                   {/* Priority Level */}
@@ -809,8 +973,8 @@ export default function IncidentDetailsPage() {
                     <select
                       value={priorityLevel || ""}
                       onChange={(e) => {
-                        setPriorityLevel(e.target.value || null)
-                        setPriorityError("")
+                        setPriorityLevel(e.target.value || null);
+                        setPriorityError("");
                       }}
                       className={`w-full mt-1 px-3 py-2 border border-[#DAA520]/20 rounded-md bg-white focus:ring-2 focus:ring-[#8B0000]/20 focus:border-[#8B0000] transition-all ${
                         priorityError ? "border-red-500" : ""
@@ -822,12 +986,18 @@ export default function IncidentDetailsPage() {
                       <option value="MEDIUM">Medium</option>
                       <option value="LOW">Low</option>
                     </select>
-                    {priorityError && <div className="text-red-600 text-xs mt-1">{priorityError}</div>}
+                    {priorityError && (
+                      <div className="text-red-600 text-xs mt-1">
+                        {priorityError}
+                      </div>
+                    )}
                   </div>
 
                   {/* Administrative Notes */}
                   <div className="mb-4">
-                    <Label className="text-sm font-medium text-[#8B0000]">Administrative Notes</Label>
+                    <Label className="text-sm font-medium text-[#8B0000]">
+                      Administrative Notes
+                    </Label>
                     <Textarea
                       value={administrativeNotes}
                       onChange={(e) => setAdministrativeNotes(e.target.value)}
@@ -838,31 +1008,43 @@ export default function IncidentDetailsPage() {
 
                   {/* Anonymous */}
                   <div className="mb-4">
-                    <label htmlFor="is-anonymous" className="flex items-center gap-3 cursor-pointer">
+                    <label
+                      htmlFor="is-anonymous"
+                      className="flex items-center gap-3 cursor-pointer"
+                    >
                       <Switch
                         id="is-anonymous"
                         checked={isAnonymous}
                         onCheckedChange={(checked) => setIsAnonymous(checked)}
                       />
-                      <span className="text-sm font-medium text-[#8B0000]">Mark this report as anonymous</span>
+                      <span className="text-sm font-medium text-[#8B0000]">
+                        Mark this report as anonymous
+                      </span>
                     </label>
                     <p className="text-xs text-gray-500 ml-9">
-                      If enabled, this report will not be displayed in public listings.
+                      If enabled, this report will not be displayed in public
+                      listings.
                     </p>
                   </div>
 
                   {/* Private */}
                   <div className="mb-4">
-                    <label htmlFor="is-private" className="flex items-center gap-3 cursor-pointer">
+                    <label
+                      htmlFor="is-private"
+                      className="flex items-center gap-3 cursor-pointer"
+                    >
                       <Switch
                         id="is-private"
                         checked={isPrivate}
                         onCheckedChange={(checked) => setIsPrivate(checked)}
                       />
-                      <span className="text-sm font-medium text-[#8B0000]">Mark this incident as private</span>
+                      <span className="text-sm font-medium text-[#8B0000]">
+                        Mark this incident as private
+                      </span>
                     </label>
                     <p className="text-xs text-gray-500 ml-9">
-                      If enabled, this incident will be restricted to authorized personnel only.
+                      If enabled, this incident will be restricted to authorized
+                      personnel only.
                     </p>
                   </div>
                 </div>
@@ -880,7 +1062,9 @@ export default function IncidentDetailsPage() {
                     <div className="bg-[#8B0000]/10 p-2 rounded-lg">
                       <User className="h-5 w-5 text-[#8B0000]" />
                     </div>
-                    <h2 className="text-lg font-semibold text-[#8B0000]">Reporter Information</h2>
+                    <h2 className="text-lg font-semibold text-[#8B0000]">
+                      Reporter Information
+                    </h2>
                   </div>
                 </div>
                 <div className="p-4">
@@ -888,8 +1072,13 @@ export default function IncidentDetailsPage() {
                     <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-md text-amber-800 flex items-start gap-2">
                       <AlertTriangle className="h-4 w-4 mt-0.5" />
                       <div>
-                        <p className="font-medium">Reporter requested anonymity</p>
-                        <p className="text-sm">Treat this reporter's identity as private. Do not disclose or share personally identifiable details.</p>
+                        <p className="font-medium">
+                          Reporter requested anonymity
+                        </p>
+                        <p className="text-sm">
+                          Treat this reporter's identity as private. Do not
+                          disclose or share personally identifiable details.
+                        </p>
                       </div>
                     </div>
                   )}
@@ -898,7 +1087,10 @@ export default function IncidentDetailsPage() {
                       <AlertTriangle className="h-4 w-4 mt-0.5" />
                       <div>
                         <p className="font-medium">Private Incident</p>
-                        <p className="text-sm">This incident has been marked as private and is restricted to authorized personnel only.</p>
+                        <p className="text-sm">
+                          This incident has been marked as private and is
+                          restricted to authorized personnel only.
+                        </p>
                       </div>
                     </div>
                   )}
@@ -909,7 +1101,9 @@ export default function IncidentDetailsPage() {
                       </div>
                       <div>
                         <p className="text-sm text-gray-500">Name</p>
-                        <p className="font-medium text-[#8B0000]">{incident.submittedByFullName}</p>
+                        <p className="font-medium text-[#8B0000]">
+                          {incident.submittedByFullName}
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
@@ -918,7 +1112,9 @@ export default function IncidentDetailsPage() {
                       </div>
                       <div>
                         <p className="text-sm text-gray-500">ID Number</p>
-                        <p className="font-medium text-[#8B0000]">{incident.submittedByIdNumber}</p>
+                        <p className="font-medium text-[#8B0000]">
+                          {incident.submittedByIdNumber}
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
@@ -927,7 +1123,9 @@ export default function IncidentDetailsPage() {
                       </div>
                       <div>
                         <p className="text-sm text-gray-500">Email</p>
-                        <p className="font-medium text-[#8B0000]">{incident.submittedByEmail}</p>
+                        <p className="font-medium text-[#8B0000]">
+                          {incident.submittedByEmail}
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
@@ -936,7 +1134,9 @@ export default function IncidentDetailsPage() {
                       </div>
                       <div>
                         <p className="text-sm text-gray-500">Phone</p>
-                        <p className="font-medium text-[#8B0000]">{incident.submittedByPhone}</p>
+                        <p className="font-medium text-[#8B0000]">
+                          {incident.submittedByPhone}
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
@@ -945,7 +1145,9 @@ export default function IncidentDetailsPage() {
                       </div>
                       <div>
                         <p className="text-sm text-gray-500">Submission Date</p>
-                        <p className="font-medium text-[#8B0000]">{new Date(incident.submittedAt).toLocaleString()}</p>
+                        <p className="font-medium text-[#8B0000]">
+                          {new Date(incident.submittedAt).toLocaleString()}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -964,7 +1166,9 @@ export default function IncidentDetailsPage() {
                     <div className="bg-[#8B0000]/10 p-2 rounded-lg">
                       <CheckCircle2 className="h-5 w-5 text-[#8B0000]" />
                     </div>
-                    <h2 className="text-lg font-semibold text-[#8B0000]">Verification</h2>
+                    <h2 className="text-lg font-semibold text-[#8B0000]">
+                      Verification
+                    </h2>
                   </div>
                 </div>
                 <div className="p-4">
@@ -974,19 +1178,29 @@ export default function IncidentDetailsPage() {
                       id="verified"
                       checked={isVerified}
                       onChange={(e) => {
-                        setIsVerified(e.target.checked)
-                        setVerifyError("")
+                        setIsVerified(e.target.checked);
+                        setVerifyError("");
                       }}
                       className="h-4 w-4 rounded border-[#DAA520]/20 text-[#8B0000] focus:ring-[#8B0000]"
                     />
-                    <Label htmlFor="verified" className="text-sm font-medium text-[#8B0000] cursor-pointer">
-                      I confirm this incident has been verified <span className="text-red-600">*</span>
+                    <Label
+                      htmlFor="verified"
+                      className="text-sm font-medium text-[#8B0000] cursor-pointer"
+                    >
+                      I confirm this incident has been verified{" "}
+                      <span className="text-red-600">*</span>
                     </Label>
                   </div>
-                  {verifyError && <div className="text-red-600 text-xs mb-2 ml-1">{verifyError}</div>}
+                  {verifyError && (
+                    <div className="text-red-600 text-xs mb-2 ml-1">
+                      {verifyError}
+                    </div>
+                  )}
 
                   <div className="mb-4">
-                    <Label className="text-sm font-medium text-[#8B0000]">Verification Notes</Label>
+                    <Label className="text-sm font-medium text-[#8B0000]">
+                      Verification Notes
+                    </Label>
                     <Textarea
                       value={verificationNotes}
                       onChange={(e) => setVerificationNotes(e.target.value)}
@@ -999,7 +1213,8 @@ export default function IncidentDetailsPage() {
                     <div className="text-sm bg-[#8B0000]/5 text-[#8B0000] p-3 rounded-md border border-[#DAA520]/20 flex items-start gap-2">
                       <CheckCircle2 className="h-4 w-4 mt-0.5" />
                       <span>
-                        Verified by {incident.verifiedBy} on {new Date(incident.verifiedAt!).toLocaleString()}
+                        Verified by {incident.verifiedBy} on{" "}
+                        {new Date(incident.verifiedAt!).toLocaleString()}
                       </span>
                     </div>
                   )}
@@ -1011,7 +1226,9 @@ export default function IncidentDetailsPage() {
                 <Button
                   className="bg-[#8B0000] hover:bg-[#6B0000] text-white flex items-center gap-2"
                   onClick={handleApproveIncident}
-                  disabled={isProcessing || !priorityLevel || !isVerified || !status}
+                  disabled={
+                    isProcessing || !priorityLevel || !isVerified || !status
+                  }
                 >
                   <CheckCircle2 className="h-4 w-4" />
                   {isProcessing ? "Processing..." : "Verify"}
@@ -1037,16 +1254,31 @@ export default function IncidentDetailsPage() {
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Transfer to Office</label>
-                  <Select value={selectedOffice} onValueChange={setSelectedOffice}>
+                  <label className="text-sm font-medium">
+                    Transfer to Office
+                  </label>
+                  <Select
+                    value={selectedOffice}
+                    onValueChange={setSelectedOffice}
+                  >
                     <SelectTrigger>
-                      <SelectValue placeholder={officesLoading ? "Loading offices..." : "Select an office"} />
+                      <SelectValue
+                        placeholder={
+                          officesLoading
+                            ? "Loading offices..."
+                            : "Select an office"
+                        }
+                      />
                     </SelectTrigger>
                     <SelectContent>
                       {officesLoading ? (
-                        <div className="px-4 py-2 text-gray-500">Loading...</div>
+                        <div className="px-4 py-2 text-gray-500">
+                          Loading...
+                        </div>
                       ) : officesError ? (
-                        <div className="px-4 py-2 text-red-500">{officesError}</div>
+                        <div className="px-4 py-2 text-red-500">
+                          {officesError}
+                        </div>
                       ) : (
                         offices.map((office) => (
                           <SelectItem
@@ -1063,7 +1295,9 @@ export default function IncidentDetailsPage() {
                                   </span>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <div className="font-semibold">{office.fullName}</div>
+                                  <div className="font-semibold">
+                                    {office.fullName}
+                                  </div>
                                   <div className="text-xs text-gray-500 max-w-xs whitespace-pre-line">
                                     {office.description}
                                   </div>
@@ -1088,7 +1322,10 @@ export default function IncidentDetailsPage() {
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setShowTransferModal(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowTransferModal(false)}
+                >
                   Cancel
                 </Button>
                 <Button
@@ -1112,10 +1349,16 @@ export default function IncidentDetailsPage() {
               <div className="p-6">
                 <div className="flex flex-col items-center text-center">
                   {modalContent.icon}
-                  <h3 className="mt-4 text-xl font-semibold text-gray-900">{modalContent.title}</h3>
+                  <h3 className="mt-4 text-xl font-semibold text-gray-900">
+                    {modalContent.title}
+                  </h3>
                   <p className="mt-2 text-gray-600">{modalContent.message}</p>
                   <div className="mt-4 text-sm text-gray-500">
-                    Redirecting to dashboard in <span className="font-bold text-[#8B0000]">{countdown}</span> seconds...
+                    Redirecting to dashboard in{" "}
+                    <span className="font-bold text-[#8B0000]">
+                      {countdown}
+                    </span>{" "}
+                    seconds...
                   </div>
                 </div>
               </div>
@@ -1133,7 +1376,6 @@ export default function IncidentDetailsPage() {
           animation-delay: 300ms;
         }
       `}</style>
-
     </div>
-  )
+  );
 }

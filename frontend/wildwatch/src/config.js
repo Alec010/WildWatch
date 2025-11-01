@@ -23,12 +23,10 @@ const LOCAL_WS = "http://localhost:8080";
 const DEPLOYED_WS = "https://wildwatch-9djc.onrender.com";
 
 // Get the active WebSocket URL based on environment
+// Note: SockJS requires HTTP/HTTPS URLs, not WS/WSS URLs
+// SockJS handles the protocol upgrade internally
 const getWsUrl = () => {
-  const backendUrl = getBackendUrl();
-  if (backendUrl.startsWith('https')) {
-    return backendUrl.replace('https', 'wss');
-  }
-  return backendUrl.replace('http', 'ws');
+  return getBackendUrl();
 };
 
 // Google Maps Configuration

@@ -1,24 +1,24 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useRouter } from "next/navigation"
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Search, Plus } from "lucide-react"
-import NotificationDropdown from "@/components/ui/notificationdropdown"
-import { useSidebar } from "@/contexts/SidebarContext"
-import { motion, AnimatePresence } from "framer-motion"
-import { useUser } from "@/contexts/UserContext"
+import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Search, Plus } from "lucide-react";
+import NotificationDropdown from "@/components/ui/notificationdropdown";
+import { useSidebar } from "@/contexts/SidebarContext";
+import { motion, AnimatePresence } from "framer-motion";
+import { useUser } from "@/contexts/UserContext";
 
-interface NavbarProps { 
-  title: string
-  subtitle?: string
-  showSearch?: boolean
-  showNewIncident?: boolean
-  showQuickActions?: boolean
-  searchPlaceholder?: string
-  onSearch?: (query: string) => void
+interface NavbarProps {
+  title: string;
+  subtitle?: string;
+  showSearch?: boolean;
+  showNewIncident?: boolean;
+  showQuickActions?: boolean;
+  searchPlaceholder?: string;
+  onSearch?: (query: string) => void;
 }
 
 export function OfficeAdminNavbar({
@@ -28,45 +28,51 @@ export function OfficeAdminNavbar({
   searchPlaceholder = "Search incidents...",
   onSearch,
 }: NavbarProps) {
-  const router = useRouter()
-  const [searchQuery, setSearchQuery] = useState("")
-  const [scrolled, setScrolled] = useState(false)
-  const [showSearchMobile, setShowSearchMobile] = useState(false)
-  const { collapsed } = useSidebar()
-  const { userRole } = useUser()
+  const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [scrolled, setScrolled] = useState(false);
+  const [showSearchMobile, setShowSearchMobile] = useState(false);
+  const { collapsed } = useSidebar();
+  const { userRole } = useUser();
 
   useEffect(() => {
     const handleScroll = () => {
-      setScrolled(window.scrollY > 10)
+      setScrolled(window.scrollY > 10);
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("scroll", handleScroll);
+      return () => window.removeEventListener("scroll", handleScroll);
     }
-    
-    if (typeof window !== 'undefined') {
-      window.addEventListener("scroll", handleScroll)
-      return () => window.removeEventListener("scroll", handleScroll)
-    }
-  }, [])
+  }, []);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
-    setSearchQuery(value)
-    onSearch?.(value)
-  }
+    const value = e.target.value;
+    setSearchQuery(value);
+    onSearch?.(value);
+  };
 
   // Determine sidebar position based on user role
   const getSidebarPosition = () => {
-    if (userRole === 'OFFICE_ADMIN') {
-      return collapsed ? 'left-20' : 'left-72'
+    if (userRole === "OFFICE_ADMIN") {
+      return collapsed ? "left-20" : "left-64";
     }
-    return collapsed ? 'left-18' : 'left-64'
-  }
+    return collapsed ? "left-20" : "left-64";
+  };
 
   return (
-    <div className={`fixed top-0 transition-all duration-300 ${getSidebarPosition()} right-0 z-30`}>
+    <div
+      className={`fixed top-0 transition-[left] duration-200 ${getSidebarPosition()} right-0 z-30`}
+    >
       {/* Gradient border at the top */}
       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#800000] via-[#D4AF37] to-[#800000]"></div>
 
       {/* Main navbar container */}
-      <div className={`w-full bg-white transition-all duration-300 ${scrolled ? "shadow-md" : "shadow-sm"}`}>
+      <div
+        className={`w-full bg-white transition-all duration-300 ${
+          scrolled ? "shadow-md" : "shadow-sm"
+        }`}
+      >
         <div className="px-6 py-4 relative">
           {/* Decorative elements */}
           <div className="absolute top-0 right-0 w-32 h-32 bg-[#D4AF37]/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-xl"></div>
@@ -81,7 +87,9 @@ export function OfficeAdminNavbar({
                   style={{ minHeight: subtitle ? "42px" : "28px" }}
                 ></div>
                 <div>
-                  <h1 className="text-2xl font-bold text-[#800000] truncate">{title}</h1>
+                  <h1 className="text-2xl font-bold text-[#800000] truncate">
+                    {title}
+                  </h1>
                   {subtitle && (
                     <motion.p
                       initial={{ opacity: 0, y: -5 }}
@@ -114,7 +122,10 @@ export function OfficeAdminNavbar({
               {/* Desktop search */}
               {showSearch && (
                 <AnimatePresence>
-                  {(!showSearchMobile && typeof window !== 'undefined' && window.innerWidth >= 640) || showSearchMobile ? (
+                  {(!showSearchMobile &&
+                    typeof window !== "undefined" &&
+                    window.innerWidth >= 640) ||
+                  showSearchMobile ? (
                     <motion.div
                       initial={{ opacity: 0, width: 0 }}
                       animate={{ opacity: 1, width: "auto" }}
@@ -135,8 +146,8 @@ export function OfficeAdminNavbar({
                         <button
                           className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#800000] transition-colors"
                           onClick={() => {
-                            setSearchQuery("")
-                            onSearch?.("")
+                            setSearchQuery("");
+                            onSearch?.("");
                           }}
                         >
                           <svg
@@ -175,5 +186,5 @@ export function OfficeAdminNavbar({
         }`}
       ></div>
     </div>
-  )
+  );
 }

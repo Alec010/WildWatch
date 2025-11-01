@@ -40,6 +40,7 @@ import java.util.ArrayList;
 @RequiredArgsConstructor
 @Slf4j
 public class IncidentService {
+
     private final IncidentRepository incidentRepository;
     private final WitnessRepository witnessRepository;
     private final EvidenceRepository evidenceRepository;
@@ -56,11 +57,12 @@ public class IncidentService {
     private final TagGenerationService tagGenerationService;
     private final OfficeAssignmentService officeAssignmentService;
     private final GeolocationService geolocationService;
+    private final TagService tagService;
 
     @Transactional
     public IncidentResponse createIncident(IncidentRequest request, String userEmail, List<MultipartFile> files) {
         User user = userService.getUserByEmail(userEmail);
-        
+
         // Prepare enhanced location info for AI services
         String enhancedLocationInfo = request.getLocation();
         if (request.getBuilding() != null) {
@@ -68,66 +70,81 @@ public class IncidentService {
         } else if (request.getFormattedAddress() != null) {
             enhancedLocationInfo = request.getFormattedAddress() + " - " + request.getLocation();
         }
-        
-        // Use tags from request if provided, otherwise generate tags using AI with enhanced location
-        List<String> tags = (request.getTags() != null && !request.getTags().isEmpty())
-            ? request.getTags()
-            : tagGenerationService.generateTags(request.getDescription(), enhancedLocationInfo, request.getIncidentType());
-        
+
+        // Generate all 20 tags using AI with enhanced location (always generate for consistency)
+        List<String> allGeneratedTags = tagGenerationService.generateTags(
+                request.getDescription(),
+                enhancedLocationInfo,
+                request.getIncidentType()
+        );
+
+        // Get top 5 selected tags from request (these are the weighted top 5 tags)
+        // If not provided, get them by scoring all generated tags
+        List<String> top5Tags = (request.getTags() != null && !request.getTags().isEmpty())
+                ? request.getTags()
+                : tagGenerationService.generateScoredTags(request.getDescription(), enhancedLocationInfo, request.getIncidentType())
+                        .stream()
+                        .map(ts -> ts.getTag())
+                        .collect(java.util.stream.Collectors.toList());
+
+        // Use tags for office assignment
+        List<String> tagsForAssignment = top5Tags;
+
         // If no office is assigned in the request, use AI to assign one
         Office assignedOffice = request.getAssignedOffice();
         if (assignedOffice == null) {
             // Use the same enhanced location info for office assignment
-            assignedOffice = officeAssignmentService.assignOffice(request.getDescription(), enhancedLocationInfo, tags);
+            assignedOffice = officeAssignmentService.assignOffice(request.getDescription(), enhancedLocationInfo, tagsForAssignment);
         }
-        
-        // Create and save the incident first
-        final Incident savedIncident = createAndSaveIncident(request, user, tags);
+
+        // Create and save the incident first with all 20 generated tags
+        // Store top5Tags in transient field for response display
+        final Incident savedIncident = createAndSaveIncident(request, user, allGeneratedTags, top5Tags);
         savedIncident.setAssignedOffice(assignedOffice);
         incidentRepository.save(savedIncident);
 
         // Handle witnesses if provided
         if (request.getWitnesses() != null && !request.getWitnesses().isEmpty()) {
             List<Witness> witnesses = request.getWitnesses().stream()
-                .map(witnessDTO -> createWitness(witnessDTO, savedIncident))
-                .collect(Collectors.toList());
+                    .map(witnessDTO -> createWitness(witnessDTO, savedIncident))
+                    .collect(Collectors.toList());
             witnessRepository.saveAll(witnesses);
         }
 
         // Handle file uploads if provided
         if (files != null && !files.isEmpty()) {
             List<Evidence> evidenceList = files.stream()
-                .map(file -> createEvidence(file, savedIncident))
-                .collect(Collectors.toList());
+                    .map(file -> createEvidence(file, savedIncident))
+                    .collect(Collectors.toList());
             evidenceRepository.saveAll(evidenceList);
         }
 
         // Log activity
         activityLogService.logActivity(
-            "NEW_REPORT",
-            "You submitted a new incident report for " + request.getIncidentType(),
-            savedIncident,
-            user
+                "NEW_REPORT",
+                "You submitted a new incident report for " + request.getIncidentType(),
+                savedIncident,
+                user
         );
 
         // Fix for 'effectively final' error
         final Office finalAssignedOffice = assignedOffice;
         // Notify the office admin of the assigned office
         officeAdminService.findByOfficeCode(finalAssignedOffice.name())
-            .ifPresent(admin -> {
-                User adminUser = admin.getUser();
-                activityLogService.logActivity(
-                    "NEW_REPORT_RECEIVED",
-                    "New incident report #" + savedIncident.getTrackingNumber() + " has been assigned to your office (" + finalAssignedOffice.name() + ")",
-                    savedIncident,
-                    adminUser
-                );
-            });
+                .ifPresent(admin -> {
+                    User adminUser = admin.getUser();
+                    activityLogService.logActivity(
+                            "NEW_REPORT_RECEIVED",
+                            "New incident report #" + savedIncident.getTrackingNumber() + " has been assigned to your office (" + finalAssignedOffice.name() + ")",
+                            savedIncident,
+                            adminUser
+                    );
+                });
 
         return IncidentResponse.fromIncident(savedIncident);
     }
 
-    private Incident createAndSaveIncident(IncidentRequest request, User user, List<String> tags) {
+    private Incident createAndSaveIncident(IncidentRequest request, User user, List<String> allTags, List<String> top5Tags) {
         Incident incident = new Incident();
         incident.setIncidentType(request.getIncidentType());
         incident.setDateOfIncident(request.getDateOfIncident());
@@ -138,20 +155,33 @@ public class IncidentService {
         incident.setSubmittedBy(user);
         incident.setPreferAnonymous(request.getPreferAnonymous());
         incident.setIsPrivate(request.getIsPrivate());
-        incident.setTags(tags);
-        
+
         // Handle geolocation data
         handleGeolocationData(incident, request);
-        
+
+        // Save incident first to get the ID
         Incident savedIncident = incidentRepository.save(incident);
-        
+
+        // Use tagChecker to check/insert all 20 tags in incident_general_tags
+        // and associate them with this incident
+        if (allTags != null && !allTags.isEmpty()) {
+            var generalTags = tagService.checkAndSaveTags(allTags);
+            savedIncident.setGeneralTags(generalTags);
+            savedIncident = incidentRepository.save(savedIncident);
+            log.info("Saved {} tags (all generated) for incident {}", generalTags.size(), savedIncident.getId());
+        }
+
+        // Set transient tags field with top 5 selected tags for response display
+        // This ensures IncidentResponse.fromIncident() returns only top 5 tags
+        savedIncident.setTags(top5Tags != null ? top5Tags : allTags);
+
         // Check and update First Responder badge
         try {
             badgeService.checkFirstResponderBadge(user);
         } catch (Exception e) {
             log.error("Error checking First Responder badge: {}", e.getMessage());
         }
-        
+
         return savedIncident;
     }
 
@@ -160,7 +190,7 @@ public class IncidentService {
         if (request.getLatitude() != null && request.getLongitude() != null) {
             incident.setLatitude(request.getLatitude());
             incident.setLongitude(request.getLongitude());
-            
+
             // If building is provided in request, use it, otherwise detect from coordinates
             if (request.getBuilding() != null) {
                 incident.setBuilding(request.getBuilding());
@@ -168,12 +198,12 @@ public class IncidentService {
                 // Auto-detect building from coordinates using the old system for now
                 // TODO: Update building detection to use accurate building polygons
                 Building detectedBuilding = Building.findBuildingByCoordinates(
-                    request.getLatitude(), 
-                    request.getLongitude()
+                        request.getLatitude(),
+                        request.getLongitude()
                 );
                 incident.setBuilding(detectedBuilding);
             }
-            
+
             // If formatted address is provided, use it, otherwise get from Google Maps
             if (request.getFormattedAddress() != null && !request.getFormattedAddress().trim().isEmpty()) {
                 incident.setFormattedAddress(request.getFormattedAddress());
@@ -181,8 +211,8 @@ public class IncidentService {
                 try {
                     // Use GeolocationService to get formatted address
                     GeolocationResponse geoResponse = geolocationService.reverseGeocode(
-                        request.getLatitude(), 
-                        request.getLongitude()
+                            request.getLatitude(),
+                            request.getLongitude()
                     );
                     if ("SUCCESS".equals(geoResponse.getStatus())) {
                         incident.setFormattedAddress(geoResponse.getFormattedAddress());
@@ -192,11 +222,11 @@ public class IncidentService {
                         }
                     }
                 } catch (Exception e) {
-                    log.error("Error getting formatted address for coordinates: {}, {}", 
-                        request.getLatitude(), request.getLongitude(), e);
+                    log.error("Error getting formatted address for coordinates: {}, {}",
+                            request.getLatitude(), request.getLongitude(), e);
                     // Fallback to coordinates as formatted address
-                    incident.setFormattedAddress(String.format("%.6f, %.6f", 
-                        request.getLatitude(), request.getLongitude()));
+                    incident.setFormattedAddress(String.format("%.6f, %.6f",
+                            request.getLatitude(), request.getLongitude()));
                 }
             }
         } else {
@@ -205,9 +235,9 @@ public class IncidentService {
     }
 
     /**
-     * Creates a Witness entity from a WitnessDTO
-     * Handles both registered users (via @mention) and manually entered witnesses
-     * 
+     * Creates a Witness entity from a WitnessDTO Handles both registered users
+     * (via @mention) and manually entered witnesses
+     *
      * @param witnessDTO The DTO containing witness information
      * @param incident The incident this witness is associated with
      * @return A new Witness entity
@@ -215,14 +245,14 @@ public class IncidentService {
     private Witness createWitness(IncidentRequest.WitnessDTO witnessDTO, Incident incident) {
         Witness witness = new Witness();
         witness.setIncident(incident);
-        
+
         // Check if this is a reference to a registered user
         if (witnessDTO.getUserId() != null) {
             try {
                 // Try to find the user by ID
                 User user = userRepository.findById(witnessDTO.getUserId())
-                    .orElse(null);
-                
+                        .orElse(null);
+
                 if (user != null) {
                     // This is a registered user, set the user reference
                     witness.setUser(user);
@@ -243,7 +273,7 @@ public class IncidentService {
             witness.setName(witnessDTO.getName());
             witness.setContactInformation(witnessDTO.getContactInformation());
         }
-        
+
         // Additional notes apply to both types of witnesses
         witness.setAdditionalNotes(witnessDTO.getAdditionalNotes());
         return witness;
@@ -251,14 +281,14 @@ public class IncidentService {
 
     private Evidence createEvidence(MultipartFile file, Incident incident) {
         String fileUrl = storageService.storeFile(file);
-        
+
         Evidence evidence = new Evidence();
         evidence.setIncident(incident);
         evidence.setFileName(file.getOriginalFilename());
         evidence.setFileType(file.getContentType());
         evidence.setFileSize(file.getSize());
         evidence.setFileUrl(fileUrl);
-        
+
         return evidence;
     }
 
@@ -268,14 +298,14 @@ public class IncidentService {
         String officeAdminName = null;
         if (incident.getAssignedOffice() != null) {
             officeAdminService.findByOfficeCode(incident.getAssignedOffice().name())
-                .ifPresent(admin -> {
-                    User adminUser = admin.getUser();
-                    response.setOfficeAdminName(adminUser.getFirstName() + " " + adminUser.getLastName());
-                });
+                    .ifPresent(admin -> {
+                        User adminUser = admin.getUser();
+                        response.setOfficeAdminName(adminUser.getFirstName() + " " + adminUser.getLastName());
+                    });
         }
         // Set finished date (latest update with status Resolved or Closed)
         IncidentUpdate finishedUpdate = incidentUpdateRepository.findFirstByIncidentAndStatusInOrderByUpdatedAtDesc(
-            incident, Arrays.asList("Resolved", "resolved", "Closed", "closed")
+                incident, Arrays.asList("Resolved", "resolved", "Closed", "closed")
         );
         if (finishedUpdate != null) {
             response.setFinishedDate(finishedUpdate.getUpdatedAt());
@@ -301,7 +331,7 @@ public class IncidentService {
      */
     private IncidentResponse mapToPublicIncidentResponse(Incident incident) {
         IncidentResponse response = mapToIncidentResponseWithExtras(incident);
-        
+
         // If incident is anonymous, hide reporter details
         if (incident.getIsAnonymous() != null && incident.getIsAnonymous()) {
             response.setSubmittedBy("Anonymous Reporter");
@@ -310,22 +340,23 @@ public class IncidentService {
             response.setSubmittedByEmail("***");
             response.setSubmittedByPhone("***");
         }
-        
+
         return response;
     }
 
     /**
-     * Get user incidents for dashboard view - optimized version
-     * Uses a specialized query that fetches only necessary data in a single query
+     * Get user incidents for dashboard view - optimized version Uses a
+     * specialized query that fetches only necessary data in a single query
      */
     public List<IncidentResponse> getUserIncidents(String userEmail) {
         User user = userService.getUserByEmail(userEmail);
         // Users can see their own reports even if private
         return incidentRepository.findUserIncidentHistory(user);
     }
-    
+
     /**
-     * Get active cases (pending/in progress) for case tracking page - optimized version
+     * Get active cases (pending/in progress) for case tracking page - optimized
+     * version
      */
     public List<IncidentResponse> getActiveCases(String userEmail) {
         User user = userService.getUserByEmail(userEmail);
@@ -335,43 +366,43 @@ public class IncidentService {
 
     public List<IncidentResponse> getPublicIncidents() {
         return incidentRepository.findAll()
-            .stream()
-            .filter(incident -> {
-                // Filter out private incidents from public view
-                if (incident.getIsPrivate() != null && incident.getIsPrivate()) {
-                    return false;
-                }
-                // Keep all non-private incidents (including anonymous ones)
-                return true;
-            })
-            .map(this::mapToPublicIncidentResponse)
-            .collect(Collectors.toList());
+                .stream()
+                .filter(incident -> {
+                    // Filter out private incidents from public view
+                    if (incident.getIsPrivate() != null && incident.getIsPrivate()) {
+                        return false;
+                    }
+                    // Keep all non-private incidents (including anonymous ones)
+                    return true;
+                })
+                .map(this::mapToPublicIncidentResponse)
+                .collect(Collectors.toList());
     }
 
     public IncidentResponse getIncidentByTrackingNumber(String trackingNumber) {
         Incident incident = incidentRepository.findByTrackingNumber(trackingNumber)
-            .orElseThrow(() -> new RuntimeException("Incident not found"));
+                .orElseThrow(() -> new RuntimeException("Incident not found"));
         return mapToIncidentResponseWithExtras(incident);
     }
 
     /**
-     * Get office incidents for dashboard view - optimized version
-     * Uses a specialized query that fetches only necessary data in a single query
+     * Get office incidents for dashboard view - optimized version Uses a
+     * specialized query that fetches only necessary data in a single query
      */
     public List<IncidentResponse> getOfficeIncidents(String userEmail) {
         User user = userService.getUserByEmail(userEmail);
         OfficeAdmin officeAdmin = officeAdminService.findByUserEmail(userEmail)
-            .orElseThrow(() -> new RuntimeException("User is not an office admin"));
+                .orElseThrow(() -> new RuntimeException("User is not an office admin"));
         Office office = Office.valueOf(officeAdmin.getOfficeCode());
         return incidentRepository.findOfficeAdminIncidents(office);
     }
-    
+
     /**
      * Get verified cases for office admin - optimized version
      */
     public List<IncidentResponse> getVerifiedCases(String userEmail) {
         OfficeAdmin officeAdmin = officeAdminService.findByUserEmail(userEmail)
-            .orElseThrow(() -> new RuntimeException("User is not an office admin"));
+                .orElseThrow(() -> new RuntimeException("User is not an office admin"));
         Office office = Office.valueOf(officeAdmin.getOfficeCode());
         return incidentRepository.findVerifiedCases(office);
     }
@@ -379,14 +410,14 @@ public class IncidentService {
     public IncidentResponse getIncidentById(String id, String userEmail) {
         User user = userService.getUserByEmail(userEmail);
         Incident incident = incidentRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Incident not found"));
+                .orElseThrow(() -> new RuntimeException("Incident not found"));
         boolean isOfficeAdmin = officeAdminService.findByUserEmail(userEmail).isPresent();
         boolean isSubmitter = incident.getSubmittedBy().getEmail().equals(userEmail);
-        
+
         // Check if user is a witness for this incident
         boolean isWitness = witnessRepository.findByIncident(incident).stream()
-            .anyMatch(witness -> witness.getUser() != null && witness.getUser().getEmail().equals(userEmail));
-        
+                .anyMatch(witness -> witness.getUser() != null && witness.getUser().getEmail().equals(userEmail));
+
         // Check privacy settings
         if (!isOfficeAdmin && !isSubmitter && !isWitness) {
             // If incident is private, only submitter, office admins, and witnesses can view
@@ -397,10 +428,10 @@ public class IncidentService {
         }
         // Get witnesses for this incident
         List<Witness> witnesses = witnessRepository.findByIncident(incident);
-        
+
         // Get evidence for this incident
         List<Evidence> evidence = evidenceRepository.findByIncident(incident);
-        
+
         // Create the response - handle anonymity based on viewer
         IncidentResponse response;
         if (isOfficeAdmin || isSubmitter || isWitness) {
@@ -410,42 +441,42 @@ public class IncidentService {
             // Public viewers see anonymized version if incident is anonymous
             response = mapToPublicIncidentResponse(incident);
         }
-        
+
         // Add witnesses and evidence to response
         response.setWitnesses(witnesses.stream()
-            .map(w -> {
-                IncidentResponse.WitnessDTO dto = new IncidentResponse.WitnessDTO();
-                dto.setId(w.getId());
-                dto.setName(w.getName());
-                dto.setContactInformation(w.getContactInformation());
-                dto.setAdditionalNotes(w.getAdditionalNotes());
-                return dto;
-            })
-            .collect(Collectors.toList()));
-            
+                .map(w -> {
+                    IncidentResponse.WitnessDTO dto = new IncidentResponse.WitnessDTO();
+                    dto.setId(w.getId());
+                    dto.setName(w.getName());
+                    dto.setContactInformation(w.getContactInformation());
+                    dto.setAdditionalNotes(w.getAdditionalNotes());
+                    return dto;
+                })
+                .collect(Collectors.toList()));
+
         response.setEvidence(evidence.stream()
-            .map(e -> {
-                IncidentResponse.EvidenceDTO dto = new IncidentResponse.EvidenceDTO();
-                dto.setId(e.getId());
-                dto.setFileUrl(e.getFileUrl());
-                dto.setFileName(e.getFileName());
-                dto.setFileType(e.getFileType());
-                dto.setFileSize(e.getFileSize());
-                dto.setUploadedAt(e.getUploadedAt());
-                return dto;
-            })
-            .collect(Collectors.toList()));
-            
+                .map(e -> {
+                    IncidentResponse.EvidenceDTO dto = new IncidentResponse.EvidenceDTO();
+                    dto.setId(e.getId());
+                    dto.setFileUrl(e.getFileUrl());
+                    dto.setFileName(e.getFileName());
+                    dto.setFileType(e.getFileType());
+                    dto.setFileSize(e.getFileSize());
+                    dto.setUploadedAt(e.getUploadedAt());
+                    return dto;
+                })
+                .collect(Collectors.toList()));
+
         return response;
     }
 
     @Transactional
     public IncidentResponse updateIncident(String id, String userEmail, IncidentUpdateRequest request) {
         User user = userService.getUserByEmail(userEmail);
-        
+
         // Get the incident
         Incident incident = incidentRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Incident not found"));
+                .orElseThrow(() -> new RuntimeException("Incident not found"));
 
         // Check if user is authorized to update this incident
         boolean isOfficeAdmin = officeAdminService.findByUserEmail(userEmail).isPresent();
@@ -465,7 +496,7 @@ public class IncidentService {
             incident.setPriorityLevel(request.getPriorityLevel());
         }
         incident.setVerified(request.isVerified());
-        
+
         // Update privacy and anonymity fields
         if (request.getPreferAnonymous() != null) {
             incident.setPreferAnonymous(request.getPreferAnonymous());
@@ -473,25 +504,25 @@ public class IncidentService {
         if (request.getIsPrivate() != null) {
             incident.setIsPrivate(request.getIsPrivate());
         }
-        
+
         // If resolution notes provided and status is resolved/closed, store them on the incident
-        if (request.getResolutionNotes() != null && request.getStatus() != null &&
-            ("resolved".equalsIgnoreCase(request.getStatus()) || "closed".equalsIgnoreCase(request.getStatus()))) {
+        if (request.getResolutionNotes() != null && request.getStatus() != null
+                && ("resolved".equalsIgnoreCase(request.getStatus()) || "closed".equalsIgnoreCase(request.getStatus()))) {
             incident.setResolutionNotes(request.getResolutionNotes());
         }
-        
+
         // Save the updated incident
         Incident updatedIncident = incidentRepository.save(incident);
 
         // Check if incident was resolved and trigger badge checking
-        if (request.getStatus() != null && 
-            ("resolved".equalsIgnoreCase(request.getStatus()) || "closed".equalsIgnoreCase(request.getStatus())) &&
-            !("resolved".equalsIgnoreCase(oldStatus) || "closed".equalsIgnoreCase(oldStatus))) {
-            
+        if (request.getStatus() != null
+                && ("resolved".equalsIgnoreCase(request.getStatus()) || "closed".equalsIgnoreCase(request.getStatus()))
+                && !("resolved".equalsIgnoreCase(oldStatus) || "closed".equalsIgnoreCase(oldStatus))) {
+
             // Set the resolvedBy field for badge tracking
             updatedIncident.setResolvedBy(user);
             incidentRepository.save(updatedIncident);
-            
+
             // Check and update First Response badge for office admin
             try {
                 badgeService.checkFirstResponseBadge(user);
@@ -502,26 +533,26 @@ public class IncidentService {
 
         // Log verification activity if verification status changed
         if (request.isVerified() && !wasVerified) {
-            String updateInfo = request.getUpdatedBy() != null ? 
-                " by " + request.getUpdatedBy() : "";
-            
+            String updateInfo = request.getUpdatedBy() != null
+                    ? " by " + request.getUpdatedBy() : "";
+
             // Get the office name
             String officeName = incident.getAssignedOffice().name();
 
             // Log verification activity for admin
             activityLogService.logActivity(
-                "VERIFICATION",
-                "Case #" + incident.getTrackingNumber() + " has been verified" + updateInfo,
-                updatedIncident,
-                user
+                    "VERIFICATION",
+                    "Case #" + incident.getTrackingNumber() + " has been verified" + updateInfo,
+                    updatedIncident,
+                    user
             );
 
             // Log verification activity for the submitter
             activityLogService.logActivity(
-                "VERIFICATION",
-                "Your case #" + incident.getTrackingNumber() + " has been verified by " + officeName + " and is back to pending",
-                updatedIncident,
-                incident.getSubmittedBy()
+                    "VERIFICATION",
+                    "Your case #" + incident.getTrackingNumber() + " has been verified by " + officeName + " and is back to pending",
+                    updatedIncident,
+                    incident.getSubmittedBy()
             );
 
             // If this was a transferred case, notify the transferring office
@@ -532,16 +563,16 @@ public class IncidentService {
                 String toOfficeFull = Office.valueOf(toOffice).getFullName();
 
                 List<OfficeAdmin> transferringAdmins = officeAdminService.findAllActive().stream()
-                    .filter(admin -> admin.getOfficeCode().equals(fromOffice))
-                    .collect(Collectors.toList());
+                        .filter(admin -> admin.getOfficeCode().equals(fromOffice))
+                        .collect(Collectors.toList());
 
                 for (OfficeAdmin admin : transferringAdmins) {
                     User adminUser = admin.getUser();
                     activityLogService.logActivity(
-                        "TRANSFER_APPROVED",
-                        "Case #" + incident.getTrackingNumber() + " which was transferred from " + fromOfficeFull + " to " + toOfficeFull + " has been approved and verified by " + toOfficeFull + ".",
-                        updatedIncident,
-                        adminUser
+                            "TRANSFER_APPROVED",
+                            "Case #" + incident.getTrackingNumber() + " which was transferred from " + fromOfficeFull + " to " + toOfficeFull + " has been approved and verified by " + toOfficeFull + ".",
+                            updatedIncident,
+                            adminUser
                     );
                 }
                 // Clear transferredFrom so the previous office is not notified again
@@ -557,7 +588,7 @@ public class IncidentService {
             verificationUpdate.setUpdatedBy(user);
             verificationUpdate.setVisibleToReporter(true);
             verificationUpdate.setUpdatedByName(request.getUpdatedBy());
-            
+
             incidentUpdateRepository.save(verificationUpdate);
 
             // Notify tagged witnesses (registered users) if the incident is not private
@@ -570,10 +601,10 @@ public class IncidentService {
                             // Avoid notifying the original reporter twice if they were also tagged as witness
                             if (!w.getUser().getId().equals(incident.getSubmittedBy().getId())) {
                                 activityLogService.logActivity(
-                                    "WITNESS_TAGGED",
-                                    "Incident #" + incident.getTrackingNumber() + " you were tagged as a witness on has been verified by " + officeName,
-                                    updatedIncident,
-                                    w.getUser()
+                                        "WITNESS_TAGGED",
+                                        "Incident #" + incident.getTrackingNumber() + " you were tagged as a witness on has been verified by " + officeName,
+                                        updatedIncident,
+                                        w.getUser()
                                 );
                             }
                         }
@@ -593,55 +624,55 @@ public class IncidentService {
             update.setUpdatedBy(user);
             update.setVisibleToReporter(request.isVisibleToReporter());
             update.setUpdatedByName(request.getUpdatedBy());
-            
+
             // Add the updatedBy information to the activity log for admin
-            String updateInfo = request.getUpdatedBy() != null ? 
-                " (Updated by: " + request.getUpdatedBy() + ")" : "";
-            
+            String updateInfo = request.getUpdatedBy() != null
+                    ? " (Updated by: " + request.getUpdatedBy() + ")" : "";
+
             activityLogService.logActivity(
-                "UPDATE",
-                "Update provided" + updateInfo + ": " + request.getUpdateMessage(),
-                updatedIncident,
-                user
+                    "UPDATE",
+                    "Update provided" + updateInfo + ": " + request.getUpdateMessage(),
+                    updatedIncident,
+                    user
             );
 
             // Log update activity for the submitter if visible to reporter
             if (request.isVisibleToReporter()) {
                 activityLogService.logActivity(
-                    "UPDATE",
-                    "New update for case #" + incident.getTrackingNumber() + updateInfo + ": " + request.getUpdateMessage(),
-                    updatedIncident,
-                    incident.getSubmittedBy()
+                        "UPDATE",
+                        "New update for case #" + incident.getTrackingNumber() + updateInfo + ": " + request.getUpdateMessage(),
+                        updatedIncident,
+                        incident.getSubmittedBy()
                 );
             }
-            
+
             incidentUpdateRepository.save(update);
         }
 
         // Log activity for status change
         if (!oldStatus.equals(request.getStatus())) {
-            String updateInfo = request.getUpdatedBy() != null ? 
-                " by " + request.getUpdatedBy() : "";
-            
+            String updateInfo = request.getUpdatedBy() != null
+                    ? " by " + request.getUpdatedBy() : "";
+
             // Log status change for admin
             activityLogService.logActivity(
-                "STATUS_CHANGE",
-                "Case #" + incident.getTrackingNumber() + " status changed from '" + oldStatus + "' to '" + request.getStatus() + "'" + updateInfo,
-                updatedIncident,
-                user
+                    "STATUS_CHANGE",
+                    "Case #" + incident.getTrackingNumber() + " status changed from '" + oldStatus + "' to '" + request.getStatus() + "'" + updateInfo,
+                    updatedIncident,
+                    user
             );
 
             // Log status change for the submitter
             activityLogService.logActivity(
-                "STATUS_CHANGE",
-                "Your case #" + incident.getTrackingNumber() + " status has been updated to '" + request.getStatus() + "'" + updateInfo,
-                updatedIncident,
-                incident.getSubmittedBy()
+                    "STATUS_CHANGE",
+                    "Your case #" + incident.getTrackingNumber() + " status has been updated to '" + request.getStatus() + "'" + updateInfo,
+                    updatedIncident,
+                    incident.getSubmittedBy()
             );
 
             // Clear lastTransferredTo if resolved or closed
-            if (request.getStatus() != null && 
-                (request.getStatus().equalsIgnoreCase("resolved") || request.getStatus().equalsIgnoreCase("closed"))) {
+            if (request.getStatus() != null
+                    && (request.getStatus().equalsIgnoreCase("resolved") || request.getStatus().equalsIgnoreCase("closed"))) {
                 incident.setLastTransferredTo(null);
                 incidentRepository.save(incident);
 
@@ -664,64 +695,64 @@ public class IncidentService {
 
     public List<IncidentUpdateResponse> getIncidentUpdates(String id, String userEmail) {
         User user = userService.getUserByEmail(userEmail);
-        
+
         // Get the incident
         Incident incident = incidentRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Incident not found"));
+                .orElseThrow(() -> new RuntimeException("Incident not found"));
 
         // Check if user is authorized to view this incident
         boolean isOfficeAdmin = officeAdminService.findByUserEmail(userEmail).isPresent();
         boolean isSubmitter = incident.getSubmittedBy().getEmail().equals(userEmail);
-        
+
         // Check if user is a witness for this incident
         boolean isWitness = witnessRepository.findByIncident(incident).stream()
-            .anyMatch(witness -> witness.getUser() != null && witness.getUser().getEmail().equals(userEmail));
-        
+                .anyMatch(witness -> witness.getUser() != null && witness.getUser().getEmail().equals(userEmail));
+
         if (!isOfficeAdmin && !isSubmitter && !isWitness) {
             throw new RuntimeException("Not authorized to view this incident");
         }
 
         return incidentUpdateRepository.findByIncidentOrderByUpdatedAtDesc(incident)
-            .stream()
-            .map(update -> {
-                IncidentUpdateResponse response = new IncidentUpdateResponse();
-                response.setId(update.getId());
-                response.setMessage(update.getMessage());
-                response.setStatus(update.getStatus());
-                response.setUpdatedByFullName(update.getUpdatedBy().getFullName());
-                response.setUpdatedByName(update.getUpdatedByName());
-                response.setUpdatedAt(update.getUpdatedAt());
-                response.setVisibleToReporter(update.isVisibleToReporter());
-                return response;
-            })
-            .collect(Collectors.toList());
+                .stream()
+                .map(update -> {
+                    IncidentUpdateResponse response = new IncidentUpdateResponse();
+                    response.setId(update.getId());
+                    response.setMessage(update.getMessage());
+                    response.setStatus(update.getStatus());
+                    response.setUpdatedByFullName(update.getUpdatedBy().getFullName());
+                    response.setUpdatedByName(update.getUpdatedByName());
+                    response.setUpdatedAt(update.getUpdatedAt());
+                    response.setVisibleToReporter(update.isVisibleToReporter());
+                    return response;
+                })
+                .collect(Collectors.toList());
     }
 
     public List<IncidentResponse> getInProgressIncidents(String userEmail) {
         User user = userService.getUserByEmail(userEmail);
-        
+
         // Get the office admin details
         OfficeAdmin officeAdmin = officeAdminService.findByUserEmail(userEmail)
-            .orElseThrow(() -> new RuntimeException("User is not an office admin"));
+                .orElseThrow(() -> new RuntimeException("User is not an office admin"));
 
         // Get the office from the office admin's office name
         Office office = Office.valueOf(officeAdmin.getOfficeCode());
 
         return incidentRepository.findByAssignedOfficeAndStatusOrderBySubmittedAtDesc(office, "In Progress")
-            .stream()
-            .map(IncidentResponse::fromIncident)
-            .collect(Collectors.toList());
+                .stream()
+                .map(IncidentResponse::fromIncident)
+                .collect(Collectors.toList());
     }
 
     public void createIncidentUpdate(String incidentId, String userEmail, String message, String status) {
         User user = userService.getUserByEmail(userEmail);
 
         Incident incident = incidentRepository.findById(incidentId)
-            .orElseThrow(() -> new RuntimeException("Incident not found"));
+                .orElseThrow(() -> new RuntimeException("Incident not found"));
 
         // Check if user has permission to create updates
         OfficeAdmin officeAdmin = officeAdminService.findByUserEmail(userEmail)
-            .orElseThrow(() -> new RuntimeException("User is not an office admin"));
+                .orElseThrow(() -> new RuntimeException("User is not an office admin"));
 
         if (!incident.getAssignedOffice().equals(Office.valueOf(officeAdmin.getOfficeCode()))) {
             throw new RuntimeException("User does not have permission to update this incident");
@@ -743,10 +774,10 @@ public class IncidentService {
     @Transactional
     public IncidentResponse transferIncident(String id, String userEmail, IncidentTransferRequest request) {
         User user = userService.getUserByEmail(userEmail);
-        
+
         // Get the incident
         Incident incident = incidentRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Incident not found"));
+                .orElseThrow(() -> new RuntimeException("Incident not found"));
 
         // Check if user is authorized to transfer this incident
         boolean isOfficeAdmin = officeAdminService.findByUserEmail(userEmail).isPresent();
@@ -771,8 +802,8 @@ public class IncidentService {
         IncidentUpdate transferUpdate = new IncidentUpdate();
         transferUpdate.setIncident(updatedIncident);
         transferUpdate.setMessage(
-            "Case #" + incident.getTrackingNumber() + " transferred from " + oldOffice + " to " + request.getNewOffice() +
-            (request.getTransferNotes() != null && !request.getTransferNotes().trim().isEmpty()
+                "Case #" + incident.getTrackingNumber() + " transferred from " + oldOffice + " to " + request.getNewOffice()
+                + (request.getTransferNotes() != null && !request.getTransferNotes().trim().isEmpty()
                 ? ". Notes: " + request.getTransferNotes()
                 : "")
         );
@@ -780,40 +811,40 @@ public class IncidentService {
         transferUpdate.setUpdatedBy(user);
         transferUpdate.setVisibleToReporter(true);
         transferUpdate.setUpdatedByName(user.getFirstName() + " " + user.getLastName());
-        
+
         IncidentUpdate savedUpdate = incidentUpdateRepository.save(transferUpdate);
         System.out.println("Saved transfer update: " + savedUpdate.getMessage() + " for incident " + updatedIncident.getId());
 
         // Log transfer activity for admin
         activityLogService.logActivity(
-            "TRANSFER",
-            "Case #" + incident.getTrackingNumber() + " transferred from " + oldOffice + " to " + request.getNewOffice(),
-            updatedIncident,
-            user
+                "TRANSFER",
+                "Case #" + incident.getTrackingNumber() + " transferred from " + oldOffice + " to " + request.getNewOffice(),
+                updatedIncident,
+                user
         );
 
         // Log transfer activity for the submitter
         activityLogService.logActivity(
-            "TRANSFER",
-            "Your case #" + incident.getTrackingNumber() + " has been transferred to " + request.getNewOffice(),
-            updatedIncident,
-            incident.getSubmittedBy()
+                "TRANSFER",
+                "Your case #" + incident.getTrackingNumber() + " has been transferred to " + request.getNewOffice(),
+                updatedIncident,
+                incident.getSubmittedBy()
         );
 
         // Log transfer activity for all admins of the receiving office
         List<OfficeAdmin> receivingAdmins = officeAdminService.findAllActive().stream()
-            .filter(admin -> admin.getOfficeCode().equals(request.getNewOffice().name()))
-            .collect(Collectors.toList());
+                .filter(admin -> admin.getOfficeCode().equals(request.getNewOffice().name()))
+                .collect(Collectors.toList());
         for (OfficeAdmin admin : receivingAdmins) {
             User adminUser = admin.getUser();
             activityLogService.logActivity(
-                "TRANSFER_RECEIVED",
-                "A case #" + incident.getTrackingNumber() + " has been transferred to your office (" + request.getNewOffice() + ")" +
-                (request.getTransferNotes() != null && !request.getTransferNotes().trim().isEmpty()
+                    "TRANSFER_RECEIVED",
+                    "A case #" + incident.getTrackingNumber() + " has been transferred to your office (" + request.getNewOffice() + ")"
+                    + (request.getTransferNotes() != null && !request.getTransferNotes().trim().isEmpty()
                     ? ". Notes: " + request.getTransferNotes()
                     : ""),
-                updatedIncident,
-                adminUser
+                    updatedIncident,
+                    adminUser
             );
         }
 
@@ -823,7 +854,7 @@ public class IncidentService {
     public boolean toggleUpvote(String incidentId, String userEmail) {
         User user = userService.getUserByEmail(userEmail);
         Incident incident = incidentRepository.findById(incidentId)
-            .orElseThrow(() -> new RuntimeException("Incident not found"));
+                .orElseThrow(() -> new RuntimeException("Incident not found"));
 
         // Defensive: always default upvoteCount to 0 if null
         if (incident.getUpvoteCount() == null) {
@@ -837,7 +868,7 @@ public class IncidentService {
             incidentUpvoteRepository.delete(existingUpvote.get());
             incident.setUpvoteCount(incident.getUpvoteCount() - 1);
             incidentRepository.save(incident);
-            
+
             // Remove 1 point from the incident reporter (if not self-upvote)
             if (!user.getId().equals(incident.getSubmittedBy().getId())) {
                 try {
@@ -845,27 +876,27 @@ public class IncidentService {
                     float currentPoints = reporter.getPoints() != null ? reporter.getPoints() : 0.0f;
                     reporter.setPoints(Math.max(0.0f, currentPoints - 1.0f)); // Ensure points don't go below 0
                     userService.save(reporter);
-                    
+
                     // Update rank based on new points
                     rankService.updateUserRank(reporter);
-                    
+
                     // Log activity for reporter
                     activityLogService.logActivity(
-                        "UPVOTE_POINTS_REMOVED",
-                        "1 point was removed due to upvote removal on incident #" + incident.getTrackingNumber(),
-                        incident,
-                        reporter
+                            "UPVOTE_POINTS_REMOVED",
+                            "1 point was removed due to upvote removal on incident #" + incident.getTrackingNumber(),
+                            incident,
+                            reporter
                     );
                 } catch (Exception e) {
                     // Log error but do not fail the transaction
                     System.err.println("Failed to remove upvote points from reporter: " + e.getMessage());
                 }
             }
-            
+
             // Broadcast new count
             messagingTemplate.convertAndSend(
-                "/topic/upvotes/" + incident.getId(),
-                incident.getUpvoteCount()
+                    "/topic/upvotes/" + incident.getId(),
+                    incident.getUpvoteCount()
             );
             return false;
         } else {
@@ -878,8 +909,8 @@ public class IncidentService {
             incidentRepository.save(incident);
             // Broadcast new count
             messagingTemplate.convertAndSend(
-                "/topic/upvotes/" + incident.getId(),
-                incident.getUpvoteCount()
+                    "/topic/upvotes/" + incident.getId(),
+                    incident.getUpvoteCount()
             );
 
             // Create notification for the incident creator and award points
@@ -889,35 +920,35 @@ public class IncidentService {
                     User reporter = incident.getSubmittedBy();
                     reporter.setPoints((reporter.getPoints() != null ? reporter.getPoints() : 0.0f) + 1.0f);
                     userService.save(reporter);
-                    
+
                     // Update rank based on new points
                     rankService.updateUserRank(reporter);
-                    
+
                     // Check and update Community Helper badge
                     try {
                         badgeService.checkCommunityHelperBadge(reporter);
                     } catch (Exception e) {
                         log.error("Error checking Community Helper badge: {}", e.getMessage());
                     }
-                    
+
                     // Log activity for reporter
                     activityLogService.logActivity(
-                        "UPVOTE_POINTS",
-                        "You received 1 point for an upvote on incident #" + incident.getTrackingNumber(),
-                        incident,
-                        reporter
+                            "UPVOTE_POINTS",
+                            "You received 1 point for an upvote on incident #" + incident.getTrackingNumber(),
+                            incident,
+                            reporter
                     );
                 } catch (Exception e) {
                     // Log error but do not fail the transaction
                     System.err.println("Failed to award upvote points to reporter: " + e.getMessage());
                 }
-                
+
                 // Create upvote notification
                 activityLogService.logActivity(
-                    "UPVOTE",
-                    "Your incident #" + incident.getTrackingNumber() + " received an upvote",
-                    incident,
-                    incident.getSubmittedBy()
+                        "UPVOTE",
+                        "Your incident #" + incident.getTrackingNumber() + " received an upvote",
+                        incident,
+                        incident.getSubmittedBy()
                 );
             }
             return true;
@@ -927,14 +958,14 @@ public class IncidentService {
     public boolean hasUserUpvoted(String incidentId, String userEmail) {
         User user = userService.getUserByEmail(userEmail);
         Incident incident = incidentRepository.findById(incidentId)
-            .orElseThrow(() -> new RuntimeException("Incident not found"));
+                .orElseThrow(() -> new RuntimeException("Incident not found"));
         return incidentUpvoteRepository.existsByIncidentAndUser(incident, user);
     }
 
     public IncidentResponse extendResolutionDate(String incidentId, LocalDateTime newEstimatedDate, String userEmail) {
         User user = userService.getUserByEmail(userEmail);
         Incident incident = incidentRepository.findById(incidentId)
-            .orElseThrow(() -> new RuntimeException("Incident not found"));
+                .orElseThrow(() -> new RuntimeException("Incident not found"));
 
         // Validate that the new date is in the future
         if (newEstimatedDate.isBefore(LocalDateTime.now())) {
@@ -943,7 +974,7 @@ public class IncidentService {
 
         // Store the previous estimated date for audit trail
         LocalDateTime previousDate = incident.getEstimatedResolutionDate();
-        
+
         // Update the incident
         incident.setEstimatedResolutionDate(newEstimatedDate);
         incident.setResolutionExtendedBy(user);
@@ -957,7 +988,7 @@ public class IncidentService {
         update.setUpdatedByName(user.getFirstName() + " " + user.getLastName());
         update.setUpdatedAt(LocalDateTime.now());
         update.setVisibleToReporter(true);
-        
+
         String message = "Resolution date extended";
         if (previousDate != null) {
             message += " from " + previousDate.toLocalDate() + " to " + newEstimatedDate.toLocalDate();
@@ -965,17 +996,17 @@ public class IncidentService {
             message += " to " + newEstimatedDate.toLocalDate();
         }
         message += " by " + user.getFirstName() + " " + user.getLastName();
-        
+
         update.setMessage(message);
         update.setStatus(incident.getStatus());
         incidentUpdateRepository.save(update);
 
         // Create notification for the incident reporter
         activityLogService.logActivity(
-            "RESOLUTION_EXTENDED",
-            "The estimated resolution date for your incident #" + incident.getTrackingNumber() + " has been extended to " + newEstimatedDate.toLocalDate(),
-            incident,
-            incident.getSubmittedBy()
+                "RESOLUTION_EXTENDED",
+                "The estimated resolution date for your incident #" + incident.getTrackingNumber() + " has been extended to " + newEstimatedDate.toLocalDate(),
+                incident,
+                incident.getSubmittedBy()
         );
 
         return mapToIncidentResponseWithExtras(incident);
@@ -992,19 +1023,29 @@ public class IncidentService {
     }
 
     public static class BulkResult {
+
         public List<String> updatedIds = new ArrayList<>();
         public List<BulkItem> updated = new ArrayList<>();
         public List<Failure> failed = new ArrayList<>();
     }
+
     public static class Failure {
+
         public String id;
         public String reason;
-        public Failure(String id, String reason) { this.id = id; this.reason = reason; }
+
+        public Failure(String id, String reason) {
+            this.id = id;
+            this.reason = reason;
+        }
     }
+
     public static class BulkItem {
+
         public String id;
         public String trackingNumber;
         public String status;
+
         public BulkItem(String id, String trackingNumber, String status) {
             this.id = id;
             this.trackingNumber = trackingNumber;
@@ -1014,11 +1055,13 @@ public class IncidentService {
 
     private BulkResult bulkUpdateStatus(String userEmail, BulkIncidentUpdateRequest req, String targetStatus) {
         BulkResult result = new BulkResult();
-        if (req == null || req.getIncidentIds() == null || req.getIncidentIds().isEmpty()) return result;
+        if (req == null || req.getIncidentIds() == null || req.getIncidentIds().isEmpty()) {
+            return result;
+        }
 
         // Auth: must be office admin
         OfficeAdmin officeAdmin = officeAdminService.findByUserEmail(userEmail)
-            .orElseThrow(() -> new RuntimeException("User is not an office admin"));
+                .orElseThrow(() -> new RuntimeException("User is not an office admin"));
         Office office = Office.valueOf(officeAdmin.getOfficeCode());
 
         // Fetch all incidents in one go
@@ -1057,12 +1100,12 @@ public class IncidentService {
                         incident.setDismissalNotes(req.getUpdateMessage().trim());
                     }
                 }
-                
+
                 // Set resolvedBy for badge tracking if resolving
                 if ("Resolved".equals(targetStatus)) {
                     incident.setResolvedBy(userService.getUserByEmail(userEmail));
                 }
-                
+
                 incidentRepository.save(incident);
 
                 // Create update entry
@@ -1074,23 +1117,23 @@ public class IncidentService {
                 update.setUpdatedByName(userService.getUserByEmail(userEmail).getFullName());
                 String baseMsg = "Resolved".equals(targetStatus) ? "Case marked as resolved." : "Case has been dismissed.";
                 String msg = (req.getUpdateMessage() != null && !req.getUpdateMessage().trim().isEmpty())
-                    ? baseMsg + " " + req.getUpdateMessage().trim()
-                    : baseMsg;
+                        ? baseMsg + " " + req.getUpdateMessage().trim()
+                        : baseMsg;
                 update.setMessage(msg);
                 incidentUpdateRepository.save(update);
 
                 // Activity logs (admin + reporter)
                 activityLogService.logActivity(
-                    "STATUS_CHANGE",
-                    "Case #" + incident.getTrackingNumber() + " status updated to '" + targetStatus + "'",
-                    incident,
-                    userService.getUserByEmail(userEmail)
+                        "STATUS_CHANGE",
+                        "Case #" + incident.getTrackingNumber() + " status updated to '" + targetStatus + "'",
+                        incident,
+                        userService.getUserByEmail(userEmail)
                 );
                 activityLogService.logActivity(
-                    "STATUS_CHANGE",
-                    "Your case #" + incident.getTrackingNumber() + " status updated to '" + targetStatus + "'",
-                    incident,
-                    incident.getSubmittedBy()
+                        "STATUS_CHANGE",
+                        "Your case #" + incident.getTrackingNumber() + " status updated to '" + targetStatus + "'",
+                        incident,
+                        incident.getSubmittedBy()
                 );
 
                 result.updatedIds.add(incident.getId());
@@ -1099,7 +1142,7 @@ public class IncidentService {
                 result.failed.add(new Failure(incident.getId(), e.getMessage()));
             }
         }
-        
+
         // Check badges after bulk operation if any incidents were resolved
         if ("Resolved".equals(targetStatus) && !result.updatedIds.isEmpty()) {
             try {
@@ -1109,7 +1152,7 @@ public class IncidentService {
                 log.error("Error checking First Response badge after bulk update: {}", e.getMessage());
             }
         }
-        
+
         return result;
     }
-} 
+}

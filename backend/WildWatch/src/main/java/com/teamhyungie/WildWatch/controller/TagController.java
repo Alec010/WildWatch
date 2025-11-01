@@ -1,5 +1,6 @@
 package com.teamhyungie.WildWatch.controller;
 
+import com.teamhyungie.WildWatch.dto.TagScore;
 import com.teamhyungie.WildWatch.service.TagGenerationService;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -8,11 +9,13 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/tags")
 @RequiredArgsConstructor
 public class TagController {
+
     private final TagGenerationService tagGenerationService;
 
     @PostMapping("/generate")
@@ -42,9 +45,24 @@ public class TagController {
 
             String enhancedLocation = enhanced.toString();
 
-            List<String> tags = tagGenerationService.generateTags(request.getDescription(), enhancedLocation, request.getIncidentType());
-            if (tags.size() > 10) tags = tags.subList(0, 10);
-            return ResponseEntity.ok(Map.of("tags", tags));
+            // Generate all 20 tags
+            List<String> allTags = tagGenerationService.generateTags(request.getDescription(), enhancedLocation, request.getIncidentType());
+
+            // Get top 5 scored tags
+            List<TagScore> topScoredTags = tagGenerationService.generateScoredTags(request.getDescription(), enhancedLocation, request.getIncidentType());
+
+            // Extract tag strings from top 5
+            List<String> top5Tags = topScoredTags.stream()
+                    .map(TagScore::getTag)
+                    .collect(Collectors.toList());
+
+            // Return all 20 tags, top 5 scored tags with details, and top 5 tag strings
+            return ResponseEntity.ok(Map.of(
+                    "allTags", allTags,
+                    "top5ScoredTags", topScoredTags,
+                    "top5Tags", top5Tags,
+                    "totalGenerated", allTags.size()
+            ));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
@@ -52,6 +70,7 @@ public class TagController {
 
     @Data
     public static class TagRequest {
+
         private String description;
         private String incidentType;
         private String location;
@@ -61,4 +80,4 @@ public class TagController {
         private Double latitude;
         private Double longitude;
     }
-} 
+}
