@@ -18,7 +18,6 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { getApiBaseUrl } from "@/utils/api"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { toast } from "sonner"
-import { Toaster } from "sonner"
 import { handleAuthRedirect } from "@/utils/auth"
 import { CustomLoader } from "@/components/ui/custom-loader"
 
@@ -75,6 +74,7 @@ export function LoginForm() {
         icon: <CheckCircle2 className="h-5 w-5 text-green-500" />,
         className: "bg-white border-green-100 text-green-800",
         duration: 3000,
+        id: `login-success-${Date.now()}`,
       })
 
       // Show loader after toast
@@ -112,6 +112,7 @@ export function LoginForm() {
         icon: <AlertCircle className="h-5 w-5 text-red-500" />,
         className: "bg-white border-red-100 text-red-800",
         duration: 5000,
+        id: "login-error",
       })
       setShowLoader(false)
     } finally {
@@ -153,6 +154,7 @@ export function LoginForm() {
       const errorMessage = error instanceof Error ? error.message : "Failed to send reset link"
       setResetMessage(errorMessage)
       toast.error("Reset failed", {
+        id: "reset-failed-error",
         description: errorMessage,
         icon: <AlertCircle className="h-5 w-5 text-red-500" />,
         className: "bg-white border-red-100 text-red-800",
@@ -179,7 +181,6 @@ export function LoginForm() {
         />
       ) : (
         <div className="relative w-full max-w-md p-8 space-y-6 bg-card rounded-lg shadow-xl border border-[#D4AF37]/20">
-          <Toaster position="top-right" richColors />
           {/* Decorative elements */}
           <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#800000] via-[#D4AF37] to-[#800000] rounded-t-lg animate-gradient-x"></div>
           <div className="absolute -z-10 top-20 right-0 w-64 h-64 bg-[#D4AF37]/10 rounded-full opacity-20 blur-3xl"></div>

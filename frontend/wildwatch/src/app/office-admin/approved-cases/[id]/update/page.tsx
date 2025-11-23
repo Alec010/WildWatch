@@ -341,6 +341,7 @@ export default function UpdateVerifiedCasePage() {
       }
 
       toast.success("Update sent successfully", {
+        id: `update-sent-success-${Date.now()}`,
         description: "The incident has been updated and the reporter will be notified.",
         duration: 5000,
       })
@@ -354,6 +355,7 @@ export default function UpdateVerifiedCasePage() {
     } catch (error) {
       console.error("Error sending update:", error)
       toast.error("Failed to send update", {
+        id: "update-send-error",
         description: "There was an error sending your update. Please try again.",
         duration: 5000,
       })
@@ -369,6 +371,7 @@ export default function UpdateVerifiedCasePage() {
           ? "Add resolution notes before submitting."
           : "Please check both confirmation boxes before submitting.",
         duration: 5000,
+        id: "resolution-form-incomplete-error",
       })
       return
     }
@@ -409,6 +412,7 @@ export default function UpdateVerifiedCasePage() {
       toast.success("Case resolved successfully", {
         description: "The incident has been marked as resolved.",
         duration: 5000,
+        id: `case-resolved-success-${Date.now()}`,
       })
 
       setIncident((prev) => (prev ? { ...prev, status: "Resolved" } : prev))
@@ -419,6 +423,7 @@ export default function UpdateVerifiedCasePage() {
       toast.error("Failed to resolve case", {
         description: "There was an error resolving the case. Please try again.",
         duration: 5000,
+        id: "case-resolve-error",
       })
     } finally {
       setIsSending(false)
@@ -462,18 +467,20 @@ export default function UpdateVerifiedCasePage() {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
 
-      toast.success("Case resolved successfully", {
+      toast.success("Case dismissed successfully", {
         description: "The incident has been dismissed.",
         duration: 5000,
+        id: `case-dismissed-success-${Date.now()}`,
       })
 
       setIncident((prev) => (prev ? { ...prev, status: "Dismissed" } : prev))
       await fetchUpdates()
     } catch (error) {
       console.error("Error closing case:", error)
-      toast.error("Failed to resolve case", {
+      toast.error("Failed to dismiss case", {
         description: "Please try again.",
         duration: 5000,
+        id: "case-dismiss-error",
       })
     } finally {
       setIsSending(false)
@@ -485,7 +492,9 @@ export default function UpdateVerifiedCasePage() {
 
   const handleTransfer = async () => {
     if (!selectedOffice) {
-      toast.error("Please select an office to transfer to")
+      toast.error("Please select an office to transfer to", {
+        id: "transfer-office-required-error",
+      })
       return
     }
 
@@ -519,6 +528,7 @@ export default function UpdateVerifiedCasePage() {
       }
 
       toast.success("Case transferred successfully", {
+        id: `case-transferred-success-${Date.now()}`,
         description: "The incident has been transferred to the selected office.",
         duration: 5000,
       })
@@ -529,6 +539,7 @@ export default function UpdateVerifiedCasePage() {
     } catch (error) {
       console.error("Error transferring case:", error)
       toast.error("Failed to transfer case", {
+        id: "case-transfer-error",
         description: "There was an error transferring the case. Please try again.",
         duration: 5000,
       })
@@ -543,6 +554,7 @@ export default function UpdateVerifiedCasePage() {
       // Update the incident data with the response
       setIncident(response)
       toast.success("Resolution date extended successfully", {
+        id: `resolution-extended-success-${Date.now()}`,
         description: `New estimated resolution date: ${new Date(newDate).toLocaleDateString()}`,
         duration: 4000,
       })
@@ -666,7 +678,6 @@ export default function UpdateVerifiedCasePage() {
 
   return (
     <>
-      <Toaster richColors position="top-center" />
       <div className={`min-h-screen flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9] ${inter.className}`}>
         <OfficeAdminSidebar />
         <OfficeAdminNavbar

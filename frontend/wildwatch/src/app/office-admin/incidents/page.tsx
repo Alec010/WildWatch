@@ -29,7 +29,6 @@ import { motion } from "framer-motion";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Toaster } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -158,6 +157,7 @@ export default function IncidentManagementPage() {
         description:
           e.message ||
           "There was an error loading the incidents. Please try again.",
+        id: "incidents-load-error",
       });
     } finally {
       setLoading(false);
@@ -194,6 +194,7 @@ export default function IncidentManagementPage() {
   const performBulk = async (action: "resolve" | "dismiss") => {
     if (selectedIds.size === 0) {
       toast.info("Select incidents first", {
+        id: "select-incidents-first-info",
         description: "Please choose at least one incident.",
       });
       return;
@@ -235,12 +236,14 @@ export default function IncidentManagementPage() {
           label: "View details",
           onClick: () => setResultOpen(true),
         },
+        id: `bulk-${confirmAction}-success-${Date.now()}`,
       });
       exitBulkMode();
       fetchIncidents(currentOffice);
     } catch (e: any) {
       toast.error(`Bulk ${confirmAction} failed`, {
         description: e?.message || "Please try again.",
+        id: `bulk-${confirmAction}-error`,
       });
     } finally {
       setIsBulkLoading(false);
@@ -328,12 +331,6 @@ export default function IncidentManagementPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9]">
-        <Toaster
-          richColors
-          position="top-right"
-          className="z-50"
-          style={{ top: "80px" }}
-        />
         <OfficeAdminSidebar />
         <div
           className={`flex-1 flex items-center justify-center transition-all duration-300 ${
@@ -358,12 +355,6 @@ export default function IncidentManagementPage() {
   if (error) {
     return (
       <div className="min-h-screen flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9]">
-        <Toaster
-          richColors
-          position="top-right"
-          className="z-50"
-          style={{ top: "80px" }}
-        />
         <OfficeAdminSidebar />
         <div
           className={`flex-1 p-8 transition-all duration-300 ${
@@ -401,12 +392,6 @@ export default function IncidentManagementPage() {
   if (!currentOffice) {
     return (
       <div className="min-h-screen flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9]">
-        <Toaster
-          richColors
-          position="top-right"
-          className="z-50"
-          style={{ top: "80px" }}
-        />
         <OfficeAdminSidebar />
         <div
           className={`flex-1 flex items-center justify-center transition-all duration-300 ${
@@ -450,12 +435,6 @@ export default function IncidentManagementPage() {
         searchPlaceholder="Search incidents..."
         onSearch={setSearchQuery}
         showQuickActions={true}
-      />
-      <Toaster
-        richColors
-        position="top-right"
-        className="z-50"
-        style={{ top: "80px" }}
       />
       <div
         className={`flex-1 overflow-auto transition-all duration-300 ${

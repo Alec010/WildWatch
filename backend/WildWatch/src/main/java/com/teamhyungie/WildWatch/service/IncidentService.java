@@ -365,16 +365,10 @@ public class IncidentService {
     }
 
     public List<IncidentResponse> getPublicIncidents() {
-        return incidentRepository.findAll()
+        // Optimized query: Only fetch In Progress and Resolved incidents that are not private
+        // Sorted by upvote count (descending) and submission date (descending)
+        return incidentRepository.findPublicIncidents()
                 .stream()
-                .filter(incident -> {
-                    // Filter out private incidents from public view
-                    if (incident.getIsPrivate() != null && incident.getIsPrivate()) {
-                        return false;
-                    }
-                    // Keep all non-private incidents (including anonymous ones)
-                    return true;
-                })
                 .map(this::mapToPublicIncidentResponse)
                 .collect(Collectors.toList());
     }

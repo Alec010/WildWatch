@@ -14,7 +14,6 @@ import Image from "next/image"
 import { Sidebar } from "@/components/Sidebar"
 import { useSidebar } from "@/contexts/SidebarContext"
 import { Navbar } from "@/components/Navbar"
-import { Toaster } from "sonner"
 import { toast } from "sonner"
 import {
   AlertTriangle,
@@ -87,6 +86,7 @@ export default function EvidenceSubmissionPage() {
   const [witnessToDelete, setWitnessToDelete] = useState<number | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [expandedWitness, setExpandedWitness] = useState<number | null>(null)
+  const [isProcessingFiles, setIsProcessingFiles] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -139,12 +139,21 @@ export default function EvidenceSubmissionPage() {
   }
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
+    if (e.target.files && e.target.files.length > 0 && !isProcessingFiles) {
       await processFiles(Array.from(e.target.files))
+      // Reset file input to prevent duplicate onChange events
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
     }
   }
 
   const processFiles = async (files: File[]) => {
+    // Prevent duplicate processing
+    if (isProcessingFiles) return
+    
+    setIsProcessingFiles(true)
+    
     // Check file size limit (10MB)
     const validFiles = files.filter((file) => file.size <= 10 * 1024 * 1024)
     const invalidFiles = files.filter((file) => file.size > 10 * 1024 * 1024)
@@ -153,10 +162,14 @@ export default function EvidenceSubmissionPage() {
       toast.error(`${invalidFiles.length} file(s) exceeded the 10MB limit`, {
         description: "Please upload smaller files.",
         icon: <AlertCircle className="h-5 w-5 text-red-500" />,
+        id: "file-size-error",
       })
     }
 
-    if (validFiles.length === 0) return
+    if (validFiles.length === 0) {
+      setIsProcessingFiles(false)
+      return
+    }
 
     // Show loading toast
     const loadingToast = toast.loading(`Processing ${validFiles.length} file(s)...`, {
@@ -184,18 +197,22 @@ export default function EvidenceSubmissionPage() {
         fileInfos: [...prev.fileInfos, ...newFileInfos],
       }))
 
-      // Success toast
+      // Success toast with unique ID to prevent duplicates
       toast.success(`${validFiles.length} file(s) uploaded successfully`, {
         description: "Your evidence has been added to the report.",
         icon: <CheckCircle2 className="h-5 w-5 text-green-500" />,
+        id: `file-upload-success-${Date.now()}`, // Unique ID to prevent duplicates
+        duration: 3000,
       })
     } catch (error) {
       toast.error("Error processing files", {
         description: "Please try again or use different files.",
         icon: <AlertCircle className="h-5 w-5 text-red-500" />,
+        id: "file-processing-error",
       })
     } finally {
       toast.dismiss(loadingToast)
+      setIsProcessingFiles(false)
     }
   }
 
@@ -215,6 +232,7 @@ export default function EvidenceSubmissionPage() {
 
       toast.success("File removed", {
         description: "The file has been removed from your evidence.",
+        id: "file-removed-success",
       })
     }
   }
@@ -235,6 +253,7 @@ export default function EvidenceSubmissionPage() {
 
       toast.success("Witness removed", {
         description: "The witness information has been removed from your report.",
+        id: "witness-removed-success",
       })
     }
   }
@@ -253,8 +272,10 @@ export default function EvidenceSubmissionPage() {
     e.preventDefault()
     setIsDragging(false)
 
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0 && !isProcessingFiles) {
       await processFiles(Array.from(e.dataTransfer.files))
+      // Clear dataTransfer to prevent duplicate events
+      e.dataTransfer.clearData()
     }
   }
 
@@ -267,6 +288,7 @@ export default function EvidenceSubmissionPage() {
         description: "Please provide at least one piece of evidence (files or witness information) before proceeding.",
         icon: <AlertTriangle className="h-5 w-5 text-amber-500" />,
         duration: 5000,
+        id: "evidence-required-error",
       })
       return
     }
@@ -312,21 +334,6 @@ export default function EvidenceSubmissionPage() {
   return (
     <div className="min-h-screen flex bg-[#f8f8f8]">
       <Sidebar />
-      <Toaster
-        position="top-right"
-        richColors
-        className="!top-24"
-        toastOptions={{
-          classNames: {
-            toast: "bg-white",
-            success: "bg-[#dcfce7] border-[#86efac] text-[#166534]",
-            error: "bg-[#fee2e2] border-[#fca5a5] text-[#991b1b]",
-            warning: "bg-[#fee2e2] border-[#fca5a5] text-[#991b1b]",
-            info: "bg-[#fee2e2] border-[#fca5a5] text-[#991b1b]",
-          },
-        }}
-        theme="light"
-      />
 
       {/* Main Content */}
       <div className={`flex-1 transition-all duration-300 ${collapsed ? "ml-20" : "ml-64"}`}>

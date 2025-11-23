@@ -41,7 +41,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { Navbar } from "@/components/Navbar";
 import { toast } from "sonner";
-import { Toaster } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -285,6 +284,7 @@ export default function IncidentSubmissionPage() {
         icon: <AlertCircle className="h-5 w-5 text-red-500" />,
         className: "bg-white border-red-100 text-red-800",
         duration: 5000,
+        id: "form-validation-error",
       });
       return;
     }
@@ -325,6 +325,7 @@ export default function IncidentSubmissionPage() {
       icon: <CheckCircle2 className="h-5 w-5 text-green-500" />,
       className: "bg-white border-green-100 text-green-800",
       duration: 3000,
+      id: "form-reset-success",
     });
   };
 
@@ -373,10 +374,12 @@ export default function IncidentSubmissionPage() {
         icon: <Sparkles className="h-5 w-5 text-green-500" />,
         className: "bg-white border-green-100 text-green-800",
         duration: 3000,
+        id: "tags-generated-success",
       });
     } catch (err: any) {
       setTagsError(err.message || "Failed to generate tags");
       toast.error("Failed to generate tags", {
+        id: "tags-generation-error",
         description:
           err.message ||
           "There was an error generating tags. Please try again.",
@@ -448,21 +451,6 @@ export default function IncidentSubmissionPage() {
   return (
     <div className="min-h-screen flex bg-[#f8f8f8]">
       <Sidebar />
-      <Toaster
-        position="top-right"
-        richColors
-        className="!top-24"
-        toastOptions={{
-          classNames: {
-            toast: "bg-white",
-            success: "bg-[#dcfce7] border-[#86efac] text-[#166534]",
-            error: "bg-[#fee2e2] border-[#fca5a5] text-[#991b1b]",
-            warning: "bg-[#fee2e2] border-[#fca5a5] text-[#991b1b]",
-            info: "bg-[#fee2e2] border-[#fca5a5] text-[#991b1b]",
-          },
-        }}
-        theme="light"
-      />
 
       {/* Main Content */}
       <div

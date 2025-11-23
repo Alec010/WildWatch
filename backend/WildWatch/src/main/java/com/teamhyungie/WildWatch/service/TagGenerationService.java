@@ -50,14 +50,16 @@ public class TagGenerationService {
                     + "- Description: '%s'\n"
                     + "- Location: '%s'\n"
                     + "Task:\n"
-                    + "- Generate EXACTLY 20 highly relevant tags that capture: (a) incident context, (b) parties involved, (c) severity/urgency if clear, (d) location identifiers. (e) impact or effect\n"
-                    + "- MANDATORY: If the location contains building identifiers or acronyms (e.g., 'GLE', 'MIS'), include each such exact token as its own tag.\n"
-                    + "- DO NOT include date or time tags (e.g., '2025-09-23', '10:30', dates, times). Focus only on contextual, location, and incident-related tags.\n"
-                    + "- DO NOT add external campuses, cities, or countries that are not explicitly present in the input. Prefer on-campus identifiers over broad geography.\n"
-                    + "- Return ONLY the tags as a comma-separated list, no numbering or extra text.\n"
-                    + "- Each tag should be a single word or a short hyphenated phrase in sentence case (first letter capitalized, rest lowercase).\n"
-                    + "- Avoid duplicates and avoid generic single-word tags like 'Issue' or 'Problem' on their own; they are acceptable only in specific phrases.\n"
-                    + "- Output format: tag1, tag2, tag3, ..., tag20";
+                    + "- Generate EXACTLY 20 single-word tags (NO phrases, NO hyphens, ONLY one word per tag).\n"
+                    + "- First 3 tags MUST be location-related (building names, room identifiers, area names from the location).\n"
+                    + "- Next 17 tags MUST be about the incident description and incident type (context, severity, parties involved, impact).\n"
+                    + "- MANDATORY: If the location contains building identifiers or acronyms (e.g., 'GLE', 'MIS'), include them as location tags.\n"
+                    + "- DO NOT include date or time tags (e.g., '2025-09-23', '10:30', dates, times).\n"
+                    + "- DO NOT add external campuses, cities, or countries that are not explicitly present in the input.\n"
+                    + "- Each tag MUST be a SINGLE WORD ONLY in sentence case (first letter capitalized, rest lowercase).\n"
+                    + "- Avoid duplicates and avoid generic single-word tags like 'Issue' or 'Problem'.\n"
+                    + "- Output format: LocationTag1, LocationTag2, LocationTag3, DescTag1, DescTag2, ..., DescTag17\n"
+                    + "- Example: Gle, Classroom, Building, Vandalism, Property, Damage, Window, Broken, Safety, Urgent, Student, Witness, Report, Security, Glass, Shattered, Morning, Incident, Investigation, Evidence";
             String prompt = String.format(formatString,
                     incidentType == null ? "" : incidentType,
                     description == null ? "" : description,
@@ -140,6 +142,11 @@ public class TagGenerationService {
                                 && !timePattern.matcher(tag).matches()
                                 && !dateWordPattern.matcher(tagLower).find()
                                 && !dayPattern.matcher(tagLower).find();
+                    })
+                    .filter(tag -> {
+                        // ONLY allow single words (no spaces, hyphens, or special characters except building codes like GLE-202)
+                        // Allow alphanumeric and single hyphen for building codes
+                        return tag.matches("^[A-Za-z0-9]+(-[A-Za-z0-9]+)?$");
                     })
                     .collect(Collectors.toList());
 
@@ -272,6 +279,7 @@ public class TagGenerationService {
 
     /**
      * Generate tags with scoring and return top 5 based on weighted relevance
+     * Returns: 2 location tags + 3 description/incident tags
      */
     public List<TagScore> generateScoredTags(String description, String location, String incidentType) {
         List<String> allTags = generateTags(description, location, incidentType);
@@ -280,104 +288,47 @@ public class TagGenerationService {
 
     /**
      * Score tags based on relevance factors and return top 5
+     * Structure: First 3 tags from allTags are location tags, next 17 are description tags
+     * Returns: Top 2 location tags + Top 3 description tags
      */
     private List<TagScore> scoreAndRankTags(List<String> tags, String description, String location, String incidentType) {
-        List<TagScore> scoredTags = new ArrayList<>();
-
-        String safeDescription = (description == null ? "" : description).toLowerCase();
-        String safeLocation = (location == null ? "" : location).toLowerCase();
-        String safeIncidentType = (incidentType == null ? "" : incidentType).toLowerCase();
-        String combinedInput = safeDescription + " " + safeLocation + " " + safeIncidentType;
-
-        // Patterns for building codes
-        Pattern buildingCodePattern = Pattern.compile("\\b[A-Z]{2,}\\b");
-        Pattern buildingRoomPattern = Pattern.compile("\\b([A-Z]{2,})[- ]?(\\d{1,4})\\b");
-        Set<String> acronymStoplist = new HashSet<>(Arrays.asList("CR", "AM", "PM", "API", "URL"));
-
-        for (int i = 0; i < tags.size(); i++) {
-            String tag = tags.get(i);
-            double score = 0.0;
-            StringBuilder reasonBuilder = new StringBuilder();
-
-            String tagLower = tag.toLowerCase();
-
-            // Score based on position in AI-generated list (earlier = better)
-            double positionScore = (tags.size() - i) * 0.5;
-            score += positionScore;
-
-            // High priority: Mandatory location tokens (building codes)
-            if (buildingCodePattern.matcher(tag).matches() && !acronymStoplist.contains(tag)) {
-                score += 50.0;
-                reasonBuilder.append("Building code; ");
+        List<TagScore> result = new ArrayList<>();
+        
+        // Expecting: First 3 tags are location tags, next 17 are description/incident tags
+        // Return: First 2 location tags + First 3 description tags
+        
+        if (tags.size() < 6) {
+            // Fallback: if not enough tags, return what we have
+            for (int i = 0; i < Math.min(5, tags.size()); i++) {
+                TagScore ts = new TagScore();
+                ts.setTag(tags.get(i));
+                ts.setScore(100.0 - (i * 10.0));
+                ts.setReason(i < 3 ? "Location tag" : "Description tag");
+                result.add(ts);
             }
-
-            // High priority: Building-room combinations
-            if (buildingRoomPattern.matcher(tag).matches()) {
-                score += 45.0;
-                reasonBuilder.append("Location identifier; ");
-            }
-
-            // High priority: Appears in incident type
-            if (safeIncidentType.contains(tagLower) || tagLower.contains(safeIncidentType)) {
-                score += 40.0;
-                reasonBuilder.append("Matches incident type; ");
-            }
-
-            // High priority: Appears in description
-            if (safeDescription.contains(tagLower)) {
-                score += 35.0;
-                reasonBuilder.append("Found in description; ");
-            }
-
-            // High priority: Appears in location
-            if (safeLocation.contains(tagLower) || tagLower.contains(safeLocation)) {
-                score += 30.0;
-                reasonBuilder.append("Found in location; ");
-            }
-
-            // Medium priority: Partial match in combined input
-            if (combinedInput.contains(tagLower)) {
-                score += 15.0;
-                reasonBuilder.append("Contextual match; ");
-            }
-
-            // Additional safety check: Skip date/time patterns if any slip through (already filtered earlier, but double-check)
-            Pattern datePattern = Pattern.compile("\\d{4}-\\d{2}-\\d{2}"); // YYYY-MM-DD
-            Pattern timePattern = Pattern.compile("\\d{1,2}:\\d{2}(\\s?(AM|PM|am|pm))?"); // HH:MM or H:MM with optional AM/PM
-            Pattern dateWordPattern = Pattern.compile("\\b(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)\\b", Pattern.CASE_INSENSITIVE);
-            Pattern dayPattern = Pattern.compile("\\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|wed|thu|fri|sat|sun)\\b", Pattern.CASE_INSENSITIVE);
-
-            if (datePattern.matcher(tag).matches()
-                    || timePattern.matcher(tag).matches()
-                    || dateWordPattern.matcher(tagLower).find()
-                    || dayPattern.matcher(tagLower).find()) {
-                // Skip date/time tags completely - don't add to scoredTags
-                continue;
-            }
-
-            // Lower priority: Short tags (likely important keywords)
-            if (tag.length() <= 4 && !tag.contains("-")) {
-                score += 5.0;
-                reasonBuilder.append("Keyword; ");
-            }
-
-            String reason = reasonBuilder.length() > 0
-                    ? reasonBuilder.toString().substring(0, reasonBuilder.length() - 2)
-                    : "AI-generated relevance";
-
-            TagScore tagScore = new TagScore();
-            tagScore.setTag(tag);
-            tagScore.setScore(score);
-            tagScore.setReason(reason);
-            scoredTags.add(tagScore);
+            return result;
         }
-
-        // Sort by score descending and return top 5
-        return scoredTags.stream()
-                .sorted((a, b) -> Double.compare(b.getScore() != null ? b.getScore() : 0.0,
-                a.getScore() != null ? a.getScore() : 0.0))
-                .limit(5)
-                .collect(Collectors.toList());
+        
+        // Take first 2 location tags (indices 0, 1)
+        for (int i = 0; i < Math.min(2, tags.size()); i++) {
+            TagScore ts = new TagScore();
+            ts.setTag(tags.get(i));
+            ts.setScore(100.0 - (i * 5.0)); // High score for location tags
+            ts.setReason("Location tag");
+            result.add(ts);
+        }
+        
+        // Take first 3 description tags (indices 3, 4, 5)
+        // Skip index 2 (3rd location tag) and start from index 3
+        for (int i = 3; i < Math.min(6, tags.size()); i++) {
+            TagScore ts = new TagScore();
+            ts.setTag(tags.get(i));
+            ts.setScore(90.0 - ((i - 3) * 5.0)); // Slightly lower score for description tags
+            ts.setReason("Description tag");
+            result.add(ts);
+        }
+        
+        return result;
     }
 
     /**

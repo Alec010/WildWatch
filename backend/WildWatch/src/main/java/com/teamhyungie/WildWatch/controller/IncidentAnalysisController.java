@@ -50,11 +50,9 @@ public class IncidentAnalysisController {
         payload.put("normalizedLocation", enhancedLocation);
 
         if ("ALLOW".equalsIgnoreCase(mod.decision.name())) {
-            // Use AI-powered similarity when available, fallback to lightweight
-            var similars = similarityService.findSimilarAi(req.incidentType, req.description, enhancedLocation, tags, 3);
-            if (similars == null || similars.isEmpty()) {
-                similars = similarityService.findSimilar(req.incidentType, req.description, enhancedLocation, tags, 3);
-            }
+            // Use tag-based similarity (Jaccard similarity on all 20 tags)
+            // Tags are already generated above (line 36)
+            var similars = similarityService.findSimilarByTags(tags, 3);
             payload.put("similarIncidents", similars);
         }
 

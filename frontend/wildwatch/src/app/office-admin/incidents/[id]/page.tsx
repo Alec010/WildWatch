@@ -57,7 +57,6 @@ import { Switch } from "@/components/ui/switch";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { Toaster } from "sonner";
 
 interface Witness {
   id: string;
@@ -544,7 +543,6 @@ export default function IncidentDetailsPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9]">
-        <Toaster richColors position="top-right" />
         <OfficeAdminSidebar />
         <div
           className={`flex-1 flex items-center justify-center transition-all duration-300 ${
@@ -569,7 +567,6 @@ export default function IncidentDetailsPage() {
   if (error) {
     return (
       <div className="min-h-screen flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9]">
-        <Toaster richColors position="top-right" />
         <OfficeAdminSidebar />
         <div
           className={`flex-1 p-8 transition-all duration-300 ${
@@ -615,12 +612,6 @@ export default function IncidentDetailsPage() {
         title="Incident Details"
         subtitle="Review and manage incident information"
         showSearch={false}
-      />
-      <Toaster
-        richColors
-        position="top-right"
-        className="z-50"
-        style={{ top: "80px" }}
       />
       <div
         className={`flex-1 overflow-auto transition-all duration-300 ${
@@ -955,7 +946,6 @@ export default function IncidentDetailsPage() {
                     >
                       <option value="">Select Status</option>
                       <option value="In Progress">In Progress</option>
-                      <option value="Resolved">Resolved</option>
                       <option value="Dismissed">Dismissed</option>
                     </select>
                     {statusError && (

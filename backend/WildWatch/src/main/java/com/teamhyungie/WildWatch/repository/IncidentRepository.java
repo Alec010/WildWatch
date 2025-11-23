@@ -38,7 +38,30 @@ public interface IncidentRepository extends JpaRepository<Incident, String> {
     @Query("SELECT i FROM Incident i WHERE (LOWER(i.status) = 'resolved' OR LOWER(i.status) = 'closed') AND i.resolutionNotes IS NOT NULL AND TRIM(i.resolutionNotes) <> '' ORDER BY i.submittedAt DESC")
     List<Incident> findResolvedWithResolutionNotesOrderBySubmittedAtDesc();
     
+    /**
+     * Find in-progress and resolved incidents with eagerly fetched tags for similarity comparison
+     * Includes: In Progress, Resolved (excludes Pending, Verified, Closed, Dismissed)
+     * Uses JOIN FETCH to load all generalTags in a single query for tag-based similarity comparison
+     */
+    @Query("SELECT DISTINCT i FROM Incident i " +
+           "LEFT JOIN FETCH i.generalTags " +
+           "WHERE LOWER(i.status) IN ('in progress', 'resolved') " +
+           "ORDER BY i.submittedAt DESC")
+    List<Incident> findResolvedWithResolutionNotesAndTagsOrderBySubmittedAtDesc();
+    
     List<Incident> findByStatus(String status);
+    
+    /**
+     * Optimized query for public incidents (Community Reports)
+     * Fetches only In Progress and Resolved incidents that are not private
+     * Joins submitter information to avoid N+1 queries
+     */
+    @Query("SELECT i FROM Incident i " +
+           "LEFT JOIN FETCH i.submittedBy " +
+           "WHERE LOWER(i.status) IN ('in progress', 'resolved') " +
+           "AND (i.isPrivate = false OR i.isPrivate IS NULL) " +
+           "ORDER BY i.upvoteCount DESC, i.submittedAt DESC")
+    List<Incident> findPublicIncidents();
     
     /**
      * Optimized query for dashboard that fetches only the necessary fields for display

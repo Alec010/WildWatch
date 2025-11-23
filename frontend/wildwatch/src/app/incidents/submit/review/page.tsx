@@ -41,7 +41,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { Switch } from "@/components/ui/switch"
-import { Toaster, toast } from "sonner"
+import { toast } from "sonner"
 import { motion, AnimatePresence } from "framer-motion"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { api } from "@/utils/apiClient"
@@ -104,6 +104,7 @@ export default function ReviewSubmissionPage() {
     if (!confirmations.accurateInfo || !confirmations.contactConsent) {
       toast.error("Please confirm all required checkboxes", {
         description: "You must agree to both statements before submitting your report.",
+        id: "confirm-checkboxes-error",
       })
       return
     }
@@ -112,8 +113,12 @@ export default function ReviewSubmissionPage() {
   };
 
   const processSubmission = async () => {
+    // Prevent duplicate submissions
+    if (isSubmitting) {
+      return
+    }
+
     setShowConfirmDialog(false)
-    setIsSubmitting(true)
     setIsAssigningOffice(true)
     setShowLoadingDialog(true)
 
@@ -135,7 +140,6 @@ export default function ReviewSubmissionPage() {
       }
       const analysis = await analyzeRes.json()
       if (analysis.decision === "BLOCK") {
-        setIsSubmitting(false)
         setIsAssigningOffice(false)
         setShowLoadingDialog(false)
         setBlockedReasons(Array.isArray(analysis.reasons) ? analysis.reasons : [])
@@ -155,7 +159,6 @@ export default function ReviewSubmissionPage() {
       if (Array.isArray(analysis.similarIncidents) && analysis.similarIncidents.length > 0) {
         setSimilarIncidents(analysis.similarIncidents)
         setAnalysisSuggestion({ suggestedOffice: analysis.suggestedOffice })
-        setIsSubmitting(false)
         setIsAssigningOffice(false)
         setShowLoadingDialog(false)
         setShowSimilarDialog(true)
@@ -163,87 +166,104 @@ export default function ReviewSubmissionPage() {
       }
 
       // If no similar suggestions, proceed to submit
+      // doSubmit will manage isSubmitting state itself
       await doSubmit()
     } catch (error) {
       console.error("Analysis or submission error:", error);
       toast.error("Submission failed", {
         description: "Please try again or contact support if the problem persists.",
+        id: "submission-failed-analysis-error",
       });
     } finally {
-      setIsSubmitting(false)
       setIsAssigningOffice(false)
       setShowLoadingDialog(false)
     }
   }
 
   const doSubmit = async () => {
-    // Token will be handled by the API client automatically
-    const formData = new FormData()
-    // Process witnesses to match the backend DTO format
-    let processedWitnesses: ProcessedWitness[] = []
-
-    evidenceData.witnesses.forEach((witness: EvidenceWitnessInput) => {
-      if (witness.users && witness.users.length > 0) {
-        witness.users.forEach((user: TaggedUser) => {
-          processedWitnesses.push({
-            userId: user.id,
-            additionalNotes: witness.additionalNotes,
-          })
-        })
-      } else {
-        processedWitnesses.push({
-          name: witness.name,
-          contactInformation: witness.contactInformation,
-          additionalNotes: witness.additionalNotes,
-        })
-      }
-    })
-
-    formData.append(
-      "incidentData",
-      JSON.stringify({
-        ...incidentData,
-        witnesses: processedWitnesses,
-        preferAnonymous: !!preferAnonymous,
-        tags: incidentData.tags || [],
-      }),
-    )
-
-    const loadingToast = toast.loading("Processing files...", {
-      description: "Uploading evidence files to secure storage.",
-    })
-
-    for (const fileInfo of evidenceData.fileInfos) {
-      const response = await fetch(fileInfo.data)
-      const blob = await response.blob()
-      formData.append("files", blob, fileInfo.name)
+    // Prevent duplicate submissions
+    if (isSubmitting) {
+      return
     }
 
-    toast.dismiss(loadingToast)
+    setIsSubmitting(true)
 
-    const submissionToast = toast.loading("Submitting report...", {
-      description: "Your report is being securely transmitted.",
-    })
+    try {
+      // Token will be handled by the API client automatically
+      const formData = new FormData()
+      // Process witnesses to match the backend DTO format
+      let processedWitnesses: ProcessedWitness[] = []
 
-    const response = await api.post("/api/incidents", formData, {
-      headers: {},
-    })
+      evidenceData.witnesses.forEach((witness: EvidenceWitnessInput) => {
+        if (witness.users && witness.users.length > 0) {
+          witness.users.forEach((user: TaggedUser) => {
+            processedWitnesses.push({
+              userId: user.id,
+              additionalNotes: witness.additionalNotes,
+            })
+          })
+        } else {
+          processedWitnesses.push({
+            name: witness.name,
+            contactInformation: witness.contactInformation,
+            additionalNotes: witness.additionalNotes,
+          })
+        }
+      })
 
-    toast.dismiss(submissionToast)
+      formData.append(
+        "incidentData",
+        JSON.stringify({
+          ...incidentData,
+          witnesses: processedWitnesses,
+          preferAnonymous: !!preferAnonymous,
+          tags: incidentData.tags || [],
+        }),
+      )
 
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+      const loadingToast = toast.loading("Processing files...", {
+        description: "Uploading evidence files to secure storage.",
+        id: "processing-files-toast", // Unique ID to prevent duplicates
+      })
 
-    const responseData = await response.json()
-    setTrackingNumber(responseData.trackingNumber)
-    setAssignedOffice(responseData.assignedOffice)
-    setShowSuccessDialog(true)
+      for (const fileInfo of evidenceData.fileInfos) {
+        const response = await fetch(fileInfo.data)
+        const blob = await response.blob()
+        formData.append("files", blob, fileInfo.name)
+      }
 
-    sessionStorage.removeItem("incidentSubmissionData")
-    sessionStorage.removeItem("evidenceSubmissionData")
+      toast.dismiss(loadingToast)
 
-    toast.success("Report submitted successfully!", {
-      description: `Your tracking number is ${responseData.trackingNumber}`,
-    })
+      const submissionToast = toast.loading("Submitting report...", {
+        description: "Your report is being securely transmitted.",
+        id: "submitting-report-toast", // Unique ID to prevent duplicates
+      })
+
+      const response = await api.post("/api/incidents", formData, {
+        headers: {},
+      })
+
+      toast.dismiss(submissionToast)
+
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+
+      const responseData = await response.json()
+      setTrackingNumber(responseData.trackingNumber)
+      setAssignedOffice(responseData.assignedOffice)
+      setShowSuccessDialog(true)
+
+      sessionStorage.removeItem("incidentSubmissionData")
+      sessionStorage.removeItem("evidenceSubmissionData")
+
+      toast.success("Report submitted successfully!", {
+        description: `Your tracking number is ${responseData.trackingNumber}`,
+        id: `report-submitted-success-${Date.now()}`, // Unique timestamp-based ID to prevent duplicates
+      })
+    } catch (error) {
+      throw error
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleCloseDialog = () => {
@@ -292,21 +312,6 @@ export default function ReviewSubmissionPage() {
   return (
     <div className="min-h-screen flex bg-[#f8f8f8]">
       <Sidebar />
-      <Toaster
-        position="top-right"
-        richColors
-        className="!top-24"
-        toastOptions={{
-          classNames: {
-            toast: "bg-white",
-            success: "bg-[#dcfce7] border-[#86efac] text-[#166534]",
-            error: "bg-[#fee2e2] border-[#fca5a5] text-[#991b1b]",
-            warning: "bg-[#fee2e2] border-[#fca5a5] text-[#991b1b]",
-            info: "bg-[#fee2e2] border-[#fca5a5] text-[#991b1b]",
-          },
-        }}
-        theme="light"
-      />
 
       {/* Main Content */}
       <div className={`flex-1 transition-all duration-300 ${collapsed ? "ml-20" : "ml-64"}`}>
@@ -1044,7 +1049,10 @@ export default function ReviewSubmissionPage() {
               variant="outline"
               onClick={() => {
                 setShowSimilarDialog(false)
-                toast.success("Report canceled", { description: "You chose to cancel based on similar resolutions." })
+                toast.success("Report canceled", { 
+                  description: "You chose to cancel based on similar resolutions.",
+                  id: "report-canceled-success",
+                })
               }}
               className="border-gray-300 text-gray-700 hover:bg-gray-50"
             >
@@ -1052,22 +1060,30 @@ export default function ReviewSubmissionPage() {
             </Button>
             <Button
               onClick={async () => {
+                // Prevent duplicate submissions
+                if (isSubmitting) {
+                  return
+                }
+
                 setShowSimilarDialog(false)
-                setIsSubmitting(true)
                 setIsAssigningOffice(true)
                 setShowLoadingDialog(true)
                 try {
+                  // doSubmit will manage isSubmitting state itself
                   await doSubmit()
                 } catch (e) {
                   console.error(e)
-                  toast.error("Submission failed", { description: "Please try again." })
+                  toast.error("Submission failed", { 
+                    description: "Please try again.",
+                    id: "submission-failed-error", // Unique ID to prevent duplicates
+                  })
                 } finally {
-                  setIsSubmitting(false)
                   setIsAssigningOffice(false)
                   setShowLoadingDialog(false)
                 }
               }}
-              className="bg-[#800000] hover:bg-[#600000] text-white"
+              disabled={isSubmitting}
+              className="bg-[#800000] hover:bg-[#600000] text-white disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Proceed with Report
             </Button>
@@ -1180,7 +1196,9 @@ export default function ReviewSubmissionPage() {
                   type="button"
                   onClick={() => {
                     navigator.clipboard.writeText(trackingNumber);
-                    toast.success("Tracking number copied to clipboard");
+                    toast.success("Tracking number copied to clipboard", {
+                      id: "tracking-copied-success",
+                    });
                   }}
                   className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 py-1 px-2 rounded"
                 >

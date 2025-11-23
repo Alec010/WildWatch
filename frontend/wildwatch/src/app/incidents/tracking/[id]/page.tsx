@@ -45,7 +45,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { RatingModal } from "@/components/RatingModal"
-import { Toaster, toast } from "sonner"
+import { toast } from "sonner"
 import { motion } from "framer-motion"
 import { Inter } from "next/font/google"
 import { FollowUpDialog } from "@/components/ui/follow-up-dialog"
@@ -227,6 +227,7 @@ export default function CaseDetailsPage() {
       
       // Show success message
       toast.success("Follow-up sent successfully", {
+        id: `followup-sent-success-${Date.now()}`,
         description: "The office admin has been notified about your request.",
       });
       
@@ -234,6 +235,7 @@ export default function CaseDetailsPage() {
     } catch (error) {
       console.error("Error sending follow-up:", error);
       toast.error("Failed to send follow-up", {
+        id: "followup-send-error",
         description: error instanceof Error ? error.message : "Please try again later",
       });
     } finally {
@@ -470,7 +472,9 @@ export default function CaseDetailsPage() {
       }
     } catch (error) {
       console.error("Error updating rating:", error)
-      toast.error("Failed to update rating")
+      toast.error("Failed to update rating", {
+        id: "rating-update-error",
+      })
     }
   }
 
@@ -1442,8 +1446,6 @@ export default function CaseDetailsPage() {
         trackingNumber={incident?.trackingNumber || ""}
       />
 
-      {/* Add Toaster for notifications */}
-      <Toaster position="top-right" />
 
       {/* Add custom styles for animation delays */}
       <style jsx global>{`

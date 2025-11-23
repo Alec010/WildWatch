@@ -41,7 +41,20 @@ export default function RootLayout({
               {children}
               <ClientChatbot />
               <MobileAppDownload />
-              <Toaster position="top-right" />
+              <Toaster 
+                position="top-right" 
+                richColors
+                toastOptions={{
+                  classNames: {
+                    toast: "bg-white",
+                    success: "bg-[#dcfce7] border-[#86efac] text-[#166534]",
+                    error: "bg-[#fee2e2] border-[#fca5a5] text-[#991b1b]",
+                    warning: "bg-[#fee2e2] border-[#fca5a5] text-[#991b1b]",
+                    info: "bg-[#fee2e2] border-[#fca5a5] text-[#991b1b]",
+                  },
+                }}
+                theme="light"
+              />
             </AppLoader>
           </UserProvider>
         </SidebarProvider>

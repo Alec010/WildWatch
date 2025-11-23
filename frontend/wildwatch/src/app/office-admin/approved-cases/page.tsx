@@ -26,7 +26,6 @@ import { motion } from "framer-motion"
 import { useSidebar } from "@/contexts/SidebarContext"
 import { Inter } from "next/font/google"
 import { toast } from "sonner"
-import { Toaster } from "sonner"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
@@ -84,6 +83,7 @@ export default function VerifiedCaseTracker() {
       if (!token) {
         toast.error("Authentication Error", {
           description: "No authentication token found. Please log in again.",
+          id: "auth-error",
         })
         return
       }
@@ -114,6 +114,7 @@ export default function VerifiedCaseTracker() {
       setError(e.message || "Failed to load verified cases")
       toast.error("Failed to Load Cases", {
         description: e.message || "There was an error loading the verified cases. Please try again.",
+        id: "cases-load-error",
       })
     } finally {
       setLoading(false)
@@ -172,12 +173,16 @@ export default function VerifiedCaseTracker() {
         action: {
           label: "View details",
           onClick: () => setResultOpen(true)
-        }
+        },
+        id: `bulk-${confirmAction}-completed-${Date.now()}`,
       })
       exitBulkMode()
       fetchVerifiedCases()
     } catch (e: any) {
-      toast.error(`Bulk ${confirmAction} failed`, { description: e?.message || "Please try again." })
+      toast.error(`Bulk ${confirmAction} failed`, { 
+        description: e?.message || "Please try again.",
+        id: `bulk-${confirmAction}-failed-error`,
+      })
     } finally {
       setIsBulkLoading(false)
       setConfirmOpen(false)
@@ -214,7 +219,6 @@ export default function VerifiedCaseTracker() {
   if (loading) {
     return (
       <div className="min-h-screen flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9]">
-        <Toaster richColors position="top-right" />
         <OfficeAdminSidebar />
         <div
           className={`flex-1 flex items-center justify-center transition-all duration-300 ${collapsed ? "ml-[5rem]" : "ml-64"}`}
@@ -235,7 +239,6 @@ export default function VerifiedCaseTracker() {
   if (error) {
     return (
       <div className="min-h-screen flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9]">
-        <Toaster richColors position="top-right" />
         <OfficeAdminSidebar />
         <div className={`flex-1 p-8 transition-all duration-300 ${collapsed ? "ml-[5rem]" : "ml-64"}`}>
           <div className="max-w-7xl mx-auto">
@@ -273,7 +276,6 @@ export default function VerifiedCaseTracker() {
         onSearch={setSearchQuery}
         showQuickActions={true}
       />
-      <Toaster richColors position="top-right" className="z-50" style={{ top: '80px' }} />
       <div className={`flex-1 overflow-auto transition-all duration-300 ${collapsed ? "ml-[5rem]" : "ml-64"} pt-24`}>
         <div className={`p-6 -mt-3 mx-8 ${collapsed ? "max-w-[95vw]" : "max-w-[calc(100vw-8rem)]"}`}>
           {/* Action Bar */}

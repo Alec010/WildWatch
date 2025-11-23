@@ -29,7 +29,6 @@ import { motion } from "framer-motion"
 import { useSidebar } from "@/contexts/SidebarContext"
 import { Inter } from "next/font/google"
 import { toast } from "sonner"
-import { Toaster } from "sonner"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -560,10 +559,12 @@ export default function OfficeAdminIncidentHistoryPage() {
       toast.success("PDF Downloaded Successfully", {
         description: `Incident report for ${incident.trackingNumber} has been downloaded.`,
         duration: 3000,
+        id: `pdf-download-success-${Date.now()}`,
       })
     } catch (error) {
       console.error("Error generating PDF:", error)
       toast.error("Failed to Download PDF", {
+        id: "pdf-download-error",
         description: "There was an error generating the PDF. Please try again.",
         duration: 3000,
       })
@@ -602,21 +603,6 @@ export default function OfficeAdminIncidentHistoryPage() {
   return (
     <div className={`min-h-screen flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9] ${inter.className}`}>
       <OfficeAdminSidebar />
-      <Toaster 
-        position="top-right" 
-        richColors 
-        className="!top-24" 
-        toastOptions={{
-          classNames: {
-            toast: 'bg-white',
-            success: 'bg-[#dcfce7] border-[#86efac] text-[#166534]',
-            error: 'bg-[#fee2e2] border-[#fca5a5] text-[#991b1b]',
-            warning: 'bg-[#fee2e2] border-[#fca5a5] text-[#991b1b]',
-            info: 'bg-[#fee2e2] border-[#fca5a5] text-[#991b1b]',
-          },
-        }}
-        theme="light"
-      />
       <OfficeAdminNavbar
         title="Office  Incident History"
         subtitle="View and access past incident reports"

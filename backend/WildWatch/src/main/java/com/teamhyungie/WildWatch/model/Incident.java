@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.LocalDateTime;
@@ -16,6 +17,7 @@ import java.util.HashSet;
 @Entity
 @Table(name = "incidents")
 @Data
+@EqualsAndHashCode(exclude = {"generalTags", "evidence", "witnesses", "submittedBy", "resolvedBy", "resolutionExtendedBy"})
 @org.hibernate.annotations.Cache(usage = org.hibernate.annotations.CacheConcurrencyStrategy.READ_WRITE)
 public class Incident {
 
