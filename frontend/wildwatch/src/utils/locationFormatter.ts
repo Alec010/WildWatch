@@ -23,7 +23,7 @@ export function formatLocationDisplay(locationData: LocationData): string {
   }
 
   let displayText = '';
-  
+
   // Use formattedAddress if available, otherwise fall back to location
   if (locationData.formattedAddress) {
     displayText = locationData.formattedAddress;
@@ -35,7 +35,7 @@ export function formatLocationDisplay(locationData: LocationData): string {
 
   // Add building information if available
   let buildingInfo = '';
-  
+
   // Try to get building name from multiple possible sources
   if (locationData.buildingName) {
     buildingInfo = locationData.buildingName;
@@ -53,7 +53,8 @@ export function formatLocationDisplay(locationData: LocationData): string {
 
 /**
  * Formats location for compact display (shorter version)
- * Example output: "Natalio B. Bacalso Ave (NGE BUILDING)"
+ * Excludes plus codes, province, and country. Includes building names.
+ * Example output: "Natalio B. Bacalso Ave, Cebu City (NGE BUILDING)"
  */
 export function formatLocationCompact(locationData: LocationData): string {
   if (!locationData) {
@@ -61,26 +62,53 @@ export function formatLocationCompact(locationData: LocationData): string {
   }
 
   let displayText = '';
-  
-  // For compact display, try to extract a shorter address
-  if (locationData.formattedAddress) {
-    // Try to extract the street name from the full address
-    const addressParts = locationData.formattedAddress.split(',');
-    if (addressParts.length >= 2) {
-      // Use the second part which is usually the street name
-      displayText = addressParts[1].trim();
-    } else {
-      displayText = locationData.formattedAddress;
+
+  // Use formattedAddress if available, otherwise fall back to location
+  const addressToProcess = locationData.formattedAddress || locationData.location;
+
+  if (addressToProcess) {
+    // Split address by comma
+    const addressParts = addressToProcess.split(',').map(part => part.trim());
+
+    // Filter out parts that look like plus codes (pattern: alphanumeric with + symbol)
+    // and exclude province/country (typically last 2 parts after postal code)
+    const filteredParts: string[] = [];
+
+    for (let i = 0; i < addressParts.length; i++) {
+      let part = addressParts[i];
+
+      // Remove plus code from the beginning of the part if it exists
+      // Plus code pattern: 4+ characters + "+" + 2-4 characters
+      // Example: "7VWJ+38W", "8X64+7J2", "7vwh+gwv", "7VVJ+QFR"
+      part = part.replace(/^[A-Z0-9]{4,8}\+[A-Z0-9]{2,4}\s*/i, '').trim();
+
+      // Skip if the part is now empty (it was just a plus code)
+      if (!part) {
+        continue;
+      }
+
+      // Skip if it looks like a postal code + province (e.g., "6000 Cebu")
+      if (/^\d{4,}\s+[A-Za-z]/.test(part)) {
+        break; // Stop processing, rest is province/country
+      }
+
+      // Skip if it's just a country name (typically last part, single word or common country names)
+      if (i === addressParts.length - 1 && (part.toLowerCase() === 'philippines' || part.toLowerCase() === 'ph')) {
+        continue;
+      }
+
+      filteredParts.push(part);
     }
-  } else if (locationData.location) {
-    displayText = locationData.location;
+
+    // Join the remaining parts (street and city)
+    displayText = filteredParts.slice(0, 2).join(', ') || addressToProcess;
   } else {
     displayText = 'Location not specified';
   }
 
   // Add building information if available
   let buildingInfo = '';
-  
+
   if (locationData.buildingName) {
     buildingInfo = locationData.buildingName;
   } else if (locationData.building?.fullName) {

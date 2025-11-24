@@ -17,6 +17,7 @@ import {
   CheckCircle,
   Shield,
   RefreshCw,
+  ExternalLink,
 } from "lucide-react";
 import { API_BASE_URL } from "@/utils/api";
 import { formatLocationCompact } from "@/utils/locationFormatter";
@@ -173,6 +174,13 @@ export default function IncidentManagementPage() {
     });
   }, []);
 
+  // Reset bulk mode when switching tabs
+  useEffect(() => {
+    if (activeTab === "transferred") {
+      exitBulkMode();
+    }
+  }, [activeTab]);
+
   const handleRefresh = () => {
     fetchIncidents(currentOffice);
   };
@@ -294,6 +302,11 @@ export default function IncidentManagementPage() {
       day: "numeric",
       year: "numeric",
     })}${timeString ? ` ${timeString}` : ""}`;
+  };
+
+  const getGoogleMapsUrl = (location: string) => {
+    const encodedLocation = encodeURIComponent(location);
+    return `https://www.google.com/maps/search/?api=1&query=${encodedLocation}`;
   };
 
   // Filter incidents based on search query
@@ -526,66 +539,68 @@ export default function IncidentManagementPage() {
                 />
                 {isRefreshing ? "Refreshing..." : "Refresh"}
               </Button>
-              {/* Bulk controls */}
-              <div className="ml-2 flex items-center gap-2">
-                {bulkMode === "dismiss" ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={exitBulkMode}
-                    disabled={isBulkLoading}
-                  >
-                    Cancel
-                  </Button>
-                ) : (
-                  <Button
-                    size="sm"
-                    disabled={isBulkLoading}
-                    className={`${
-                      bulkMode === "resolve"
-                        ? "bg-green-600 hover:bg-green-700"
-                        : "bg-[#8B0000] hover:bg-[#6B0000]"
-                    } text-white`}
-                    onClick={() => {
-                      if (bulkMode === "resolve") performBulk("resolve");
-                      else setBulkMode("resolve");
-                    }}
-                  >
-                    {bulkMode === "resolve"
-                      ? `Confirm Resolve (${selectedIds.size})`
-                      : "Bulk Resolve"}
-                  </Button>
-                )}
-                {bulkMode === "resolve" ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={exitBulkMode}
-                    disabled={isBulkLoading}
-                  >
-                    Cancel
-                  </Button>
-                ) : (
-                  <Button
-                    size="sm"
-                    disabled={isBulkLoading}
-                    className={`${
-                      bulkMode === "dismiss"
-                        ? "bg-gray-700 hover:bg-gray-800"
-                        : "bg-gray-600 hover:bg-gray-700"
-                    } text-white`}
-                    onClick={() => {
-                      if (bulkMode === "dismiss") performBulk("dismiss");
-                      else setBulkMode("dismiss");
-                    }}
-                  >
-                    {bulkMode === "dismiss"
-                      ? `Confirm Dismiss (${selectedIds.size})`
-                      : "Bulk Dismiss"}
-                  </Button>
-                )}
-              </div>
-              {bulkMode !== "none" && (
+              {/* Bulk controls - only show for pending tab */}
+              {activeTab === "pending" && (
+                <div className="ml-2 flex items-center gap-2">
+                  {bulkMode === "dismiss" ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={exitBulkMode}
+                      disabled={isBulkLoading}
+                    >
+                      Cancel
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      disabled={isBulkLoading}
+                      className={`${
+                        bulkMode === "resolve"
+                          ? "bg-green-600 hover:bg-green-700"
+                          : "bg-[#8B0000] hover:bg-[#6B0000]"
+                      } text-white`}
+                      onClick={() => {
+                        if (bulkMode === "resolve") performBulk("resolve");
+                        else setBulkMode("resolve");
+                      }}
+                    >
+                      {bulkMode === "resolve"
+                        ? `Confirm Resolve (${selectedIds.size})`
+                        : "Bulk Resolve"}
+                    </Button>
+                  )}
+                  {bulkMode === "resolve" ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={exitBulkMode}
+                      disabled={isBulkLoading}
+                    >
+                      Cancel
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      disabled={isBulkLoading}
+                      className={`${
+                        bulkMode === "dismiss"
+                          ? "bg-gray-700 hover:bg-gray-800"
+                          : "bg-gray-600 hover:bg-gray-700"
+                      } text-white`}
+                      onClick={() => {
+                        if (bulkMode === "dismiss") performBulk("dismiss");
+                        else setBulkMode("dismiss");
+                      }}
+                    >
+                      {bulkMode === "dismiss"
+                        ? `Confirm Dismiss (${selectedIds.size})`
+                        : "Bulk Dismiss"}
+                    </Button>
+                  )}
+                </div>
+              )}
+              {bulkMode !== "none" && activeTab === "pending" && (
                 <div className="text-xs text-gray-600 ml-2">
                   Bulk mode: {bulkMode} • Selected: {selectedIds.size}
                 </div>
@@ -638,10 +653,10 @@ export default function IncidentManagementPage() {
                           Date & Time
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Location
+                          Title
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Type
+                          Location
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Reporter
@@ -694,15 +709,21 @@ export default function IncidentManagementPage() {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center text-sm text-gray-700">
-                              <MapPin className="h-4 w-4 text-gray-400 mr-2" />
-                              {formatLocationCompact(incident)}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center text-sm text-gray-700">
                               <FileText className="h-4 w-4 text-gray-400 mr-2" />
                               {incident.incidentType}
                             </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <a
+                              href={getGoogleMapsUrl(incident.location)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center text-sm text-blue-600 hover:text-[#8B0000] transition-colors group underline decoration-blue-600/30 hover:decoration-[#8B0000]"
+                            >
+                              <MapPin className="h-4 w-4 text-blue-500 mr-2 group-hover:text-[#8B0000]" />
+                              <span>{formatLocationCompact(incident)}</span>
+                              <ExternalLink className="h-3 w-3 ml-1 opacity-60 group-hover:opacity-100" />
+                            </a>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center text-sm text-gray-700">
@@ -783,10 +804,10 @@ export default function IncidentManagementPage() {
                           Date & Time
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Location
+                          Title
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Type
+                          Location
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Reporter
@@ -846,15 +867,21 @@ export default function IncidentManagementPage() {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center text-sm text-gray-700">
-                              <MapPin className="h-4 w-4 text-gray-400 mr-2" />
-                              {formatLocationCompact(incident)}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center text-sm text-gray-700">
                               <FileText className="h-4 w-4 text-gray-400 mr-2" />
                               {incident.incidentType}
                             </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <a
+                              href={getGoogleMapsUrl(incident.location)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center text-sm text-blue-600 hover:text-[#8B0000] transition-colors group underline decoration-blue-600/30 hover:decoration-[#8B0000]"
+                            >
+                              <MapPin className="h-4 w-4 text-blue-500 mr-2 group-hover:text-[#8B0000]" />
+                              <span>{formatLocationCompact(incident)}</span>
+                              <ExternalLink className="h-3 w-3 ml-1 opacity-60 group-hover:opacity-100" />
+                            </a>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center text-sm text-gray-700">
