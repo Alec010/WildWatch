@@ -24,10 +24,6 @@ import { formatLocationCompact } from "@/utils/locationFormatter";
 import { api } from "@/utils/apiClient";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { motion } from "framer-motion";
-import { badgeService } from "@/utils/badgeService";
-import { BadgeDisplay } from "@/components/badges/BadgeDisplay";
-import { Trophy } from "lucide-react";
-import type { BadgeProgress, UserBadgeSummary } from "@/types/badge";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -92,13 +88,6 @@ export default function OfficeAdminDashboard() {
   const [filteredIncidents, setFilteredIncidents] = useState<Incident[]>([]);
   const [activeTab, setActiveTab] = useState("overview");
 
-  // Badge state
-  const [badgeSummary, setBadgeSummary] = useState<UserBadgeSummary | null>(
-    null
-  );
-  const [loadingBadges, setLoadingBadges] = useState(true);
-  const [recentBadges, setRecentBadges] = useState<BadgeProgress[]>([]);
-
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
@@ -150,30 +139,6 @@ export default function OfficeAdminDashboard() {
             return dateB.getTime() - dateA.getTime();
           });
         setRecentIncidents(sortedIncidents);
-
-        // Fetch badge data
-        try {
-          const badgeSummaryData = await badgeService.getUserBadgeSummary();
-          setBadgeSummary(badgeSummaryData);
-
-          // Get recent/earned badges for display
-          const earnedBadges = badgeSummaryData.badges.filter(
-            (badge) => badge.currentLevel > 0
-          );
-          // Sort by highest level first, then by badge type
-          earnedBadges.sort((a, b) => {
-            if (b.currentLevel !== a.currentLevel)
-              return b.currentLevel - a.currentLevel;
-            return a.badgeType.localeCompare(b.badgeType);
-          });
-
-          // Take up to 3 badges for the preview
-          setRecentBadges(earnedBadges.slice(0, 3));
-        } catch (badgeError) {
-          console.error("Error fetching badge data:", badgeError);
-        } finally {
-          setLoadingBadges(false);
-        }
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
         setError(
@@ -470,81 +435,6 @@ export default function OfficeAdminDashboard() {
                   </div>
                 </motion.div>
               </div>
-
-              {/* Badge Preview Section */}
-              {!loadingBadges && recentBadges.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: 0.4 }}
-                  className="bg-white rounded-xl shadow-md border border-gray-100 p-6 mb-8"
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="bg-gradient-to-br from-amber-500 to-amber-600 p-2 rounded-lg">
-                        <Trophy className="h-5 w-5 text-white" />
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-800">
-                          Your Badges
-                        </h3>
-                        <p className="text-sm text-gray-600">
-                          Track your achievements and progress
-                        </p>
-                      </div>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => router.push("/profile")}
-                      className="border-amber-200 text-amber-700 hover:bg-amber-50"
-                    >
-                      View All
-                    </Button>
-                  </div>
-
-                  <div className="flex gap-4">
-                    {recentBadges.map((badge) => (
-                      <BadgeDisplay
-                        key={badge.badgeId}
-                        badge={badge}
-                        size="md"
-                        showName={true}
-                      />
-                    ))}
-                    {recentBadges.length <
-                      (badgeSummary?.totalBadgesEarned || 0) && (
-                      <div className="flex items-center justify-center min-w-[120px]">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => router.push("/profile")}
-                          className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
-                        >
-                          +
-                          {(badgeSummary?.totalBadgesEarned || 0) -
-                            recentBadges.length}{" "}
-                          more
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-
-                  {badgeSummary && (
-                    <div className="mt-4 pt-4 border-t border-gray-100">
-                      <div className="flex items-center justify-between text-sm text-gray-600">
-                        <span>
-                          Total Badges Earned: {badgeSummary.totalBadgesEarned}/
-                          {badgeSummary.totalBadgesAvailable}
-                        </span>
-                        <span>
-                          Points Earned: +{badgeSummary.totalPointsEarned}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </motion.div>
-              )}
 
               {/* Recent Incidents Preview Section */}
               <motion.div

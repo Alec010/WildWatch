@@ -347,7 +347,7 @@ export default function UpdateVerifiedCasePage() {
       })
 
       setUpdateMessage("")
-      setUpdatedBy("")
+      // Keep updatedBy field populated with office name
       setIsVisibleToReporter(true)
 
       // Refresh the updates list
@@ -933,11 +933,17 @@ export default function UpdateVerifiedCasePage() {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-[#8B0000]">Update Message</label>
+                      <label className="text-sm font-medium text-[#8B0000] flex items-center justify-between">
+                        <span>Update Message</span>
+                        <span className={`text-xs ${updateMessage.length > 255 ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>
+                          {updateMessage.length}/255
+                        </span>
+                      </label>
                       <Textarea
                         value={updateMessage}
                         onChange={(e) => setUpdateMessage(e.target.value)}
                         placeholder="Provide an update on the incident investigation..."
+                        maxLength={255}
                         className="min-h-[120px] resize-none border-[#DAA520]/20 focus:ring-[#8B0000]/20 focus:border-[#8B0000]"
                       />
                     </div>
@@ -958,7 +964,7 @@ export default function UpdateVerifiedCasePage() {
                           variant="outline"
                           onClick={() => {
                             setUpdateMessage("")
-                            setUpdatedBy("")
+                            // Keep updatedBy populated with office name
                             setIsVisibleToReporter(true)
                             if (incident) {
                               setPriorityLevel(incident.priorityLevel)
@@ -1153,11 +1159,17 @@ export default function UpdateVerifiedCasePage() {
           </AlertDialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-[#8B0000]">Resolution Notes</label>
+              <label className="text-sm font-medium text-[#8B0000] flex items-center justify-between">
+                <span>Resolution Notes</span>
+                <span className={`text-xs ${resolutionNotes.length > 255 ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>
+                  {resolutionNotes.length}/255
+                </span>
+              </label>
               <Textarea
                 value={resolutionNotes}
                 onChange={(e) => setResolutionNotes(e.target.value)}
                 placeholder="Describe what was done to resolve the incident..."
+                maxLength={255}
                 className="min-h-[120px] resize-none border-[#DAA520]/20 focus:ring-[#8B0000]/20 focus:border-[#8B0000]"
               />
             </div>
