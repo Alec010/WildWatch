@@ -26,6 +26,7 @@ import { useBulletinUpvoteStatus } from "../../src/features/bulletins/hooks/useB
 import { storage } from "../../lib/storage";
 import { config } from "../../lib/config";
 import { useOffices } from "../../src/features/offices/hooks/useOffices";
+import { sanitizeLocation } from "../../src/utils/locationUtils";
 
 // Media Viewer Component
 interface MediaViewerProps {
@@ -1142,30 +1143,31 @@ export default function CasesScreen() {
                       <TouchableOpacity
                         className="flex-row items-center"
                         onPress={() => {
-                          if (incident.location) {
+                          const sanitizedLocation = sanitizeLocation(incident.location);
+                          if (sanitizedLocation) {
                             const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                              incident.location
+                              sanitizedLocation
                             )}`;
                             Linking.openURL(url);
                           }
                         }}
-                        disabled={!incident.location}
+                        disabled={!sanitizeLocation(incident.location)}
                       >
                         <Ionicons
                           name="location"
                           size={14}
-                          color={incident.location ? "#8B0000" : "#6B7280"}
+                          color={sanitizeLocation(incident.location) ? "#8B0000" : "#6B7280"}
                         />
                         <Text
                           className="text-xs ml-1 flex-1"
                           numberOfLines={1}
                           style={{
-                            color: incident.location ? "#8B0000" : "#6B7280",
+                            color: sanitizeLocation(incident.location) ? "#8B0000" : "#6B7280",
                           }}
                         >
-                          {incident.location || "Location not specified"}
+                          {sanitizeLocation(incident.location) || "Location not specified"}
                         </Text>
-                        {incident.location && (
+                        {sanitizeLocation(incident.location) && (
                           <Ionicons
                             name="open-outline"
                             size={12}

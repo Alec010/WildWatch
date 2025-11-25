@@ -19,6 +19,7 @@ import { incidentAPI } from "../../src/features/incidents/api/incident_api";
 import type { IncidentResponseDto } from "../../src/features/incidents/models/IncidentModels";
 import { CircularLoader } from "../../components/CircularLoader";
 import { getReporterDisplayName, getReporterDisplayEmail, getReporterDisplayPhone } from "../../src/utils/anonymousUtils";
+import { sanitizeLocation } from "../../src/utils/locationUtils";
 
 export default function ReportDocumentScreen() {
   const { trackingNumber } = useLocalSearchParams<{ trackingNumber: string }>();
@@ -130,6 +131,9 @@ export default function ReportDocumentScreen() {
       return "N/A";
     }
   };
+
+  const getDisplayLocation = (value?: string | null) =>
+    sanitizeLocation(value) || value || "Not specified";
 
   const generateHTMLContent = () => {
     if (!incident) return "";
@@ -684,7 +688,7 @@ export default function ReportDocumentScreen() {
             <div class="info-item">
               <div class="info-label">Incident Location</div>
               <div class="info-value">${
-                incident.location || "Not specified"
+                getDisplayLocation(incident.location)
               }</div>
             </div>
           </div>
@@ -1333,7 +1337,7 @@ export default function ReportDocumentScreen() {
                     lineHeight: isCompact ? 20 : 22,
                   }}
                 >
-                  {incident.location || "Location not specified"}
+                  {getDisplayLocation(incident.location)}
                 </Text>
               </View>
             </View>

@@ -9,6 +9,7 @@ import {
   Pressable,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { sanitizeLocation } from "../src/utils/locationUtils";
 
 interface SimilarIncident {
   id: string;
@@ -50,6 +51,10 @@ export default function SimilarIncidentsModal({
     if (score >= 0.5) return "#F59E0B"; // 50-70%: Yellow-Orange (medium similarity)
     return "#3B82F6"; // Below 50%: Blue (low similarity)
   };
+
+  const analysisLocation = sanitizeLocation(analysisWhy?.location);
+  const analysisTags = analysisWhy?.tags ?? [];
+  const hasAnalysisTags = analysisTags.length > 0;
 
   return (
     <Modal
@@ -148,24 +153,24 @@ export default function SimilarIncidentsModal({
             ))}
 
             {/* Why This Suggestion */}
-            {analysisWhy && (
+            {(analysisLocation || hasAnalysisTags) && (
               <View style={styles.analysisSection}>
                 <Text style={styles.analysisTitle}>Why this suggestion?</Text>
 
-                {analysisWhy.location && (
+                {analysisLocation && (
                   <View style={styles.analysisItem}>
                     <Text style={styles.analysisLabel}>Location context:</Text>
                     <Text style={styles.analysisValue}>
-                      {analysisWhy.location}
+                      {analysisLocation}
                     </Text>
                   </View>
                 )}
 
-                {analysisWhy.tags && analysisWhy.tags.length > 0 && (
+                {hasAnalysisTags && (
                   <View style={styles.analysisItem}>
                     <Text style={styles.analysisLabel}>Matching tags:</Text>
                     <View style={styles.tagsContainer}>
-                      {analysisWhy.tags.map((tag, index) => (
+                      {analysisTags.map((tag, index) => (
                         <View key={index} style={styles.tag}>
                           <Text style={styles.tagText}>{tag}</Text>
                         </View>
