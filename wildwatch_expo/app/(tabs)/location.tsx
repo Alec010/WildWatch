@@ -27,6 +27,7 @@ import {
   CAMPUS_CONFIG,
 } from "../../src/features/location/models/LocationModels";
 import { storage } from "../../lib/storage";
+import { sanitizeLocation } from "../../src/utils/locationUtils";
 
 const MAP_BUTTON_GAP = 12;
 
@@ -333,6 +334,7 @@ export default function LocationScreen() {
   const renderLocationOverlay = () => {
     if (!selectedLocation) return null;
     const isOutsideCampus = selectedLocation.withinCampus === false;
+    const sanitizedAddress = sanitizeLocation(selectedLocation.formattedAddress);
 
     return (
       <View style={styles.floatingLocationContent} pointerEvents="box-none">
@@ -390,7 +392,7 @@ export default function LocationScreen() {
             )
           )}
 
-          {selectedLocation.formattedAddress && (
+          {sanitizedAddress && (
             <Text
               style={[
                 styles.floatingAddressText,
@@ -400,7 +402,7 @@ export default function LocationScreen() {
               ]}
               numberOfLines={2}
             >
-              {selectedLocation.formattedAddress}
+              {sanitizedAddress}
             </Text>
           )}
 

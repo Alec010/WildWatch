@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -11,21 +11,19 @@ import {
   Modal,
   StyleSheet,
   Platform,
-  useWindowDimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Stack, router, useFocusEffect } from "expo-router";
+import { Stack, router } from "expo-router";
 import Toast from "react-native-toast-message";
-import type { IncidentResponseDto } from "../../src/features/incidents/models/IncidentModels";
-import { usePublicIncidents } from "../../src/features/incidents/hooks/usePublicIncidents";
 import { CircularLoader } from "../../components/CircularLoader";
-import { useBulletins } from "../../src/features/bulletins/hooks/useBulletins";
-import type { OfficeBulletinDto } from "../../src/features/bulletins/models/BulletinModels";
 import { bulletinAPI } from "../../src/features/bulletins/api/bulletin_api";
 import { useBulletinUpvoteStatus } from "../../src/features/bulletins/hooks/useBulletinUpvoteStatus";
 import { storage } from "../../lib/storage";
 import { config } from "../../lib/config";
-import { useOffices } from "../../src/features/offices/hooks/useOffices";
+import { sanitizeLocation } from "../../src/utils/locationUtils";
+import { useCommunityCases } from "../../src/features/incidents/hooks/useCommunityCases";
+import { getStatusColor, getStatusIcon, formatDate } from "../../src/features/incidents/utils/caseUtils";
+import type { OfficeBulletinDto } from "../../src/features/bulletins/models/BulletinModels";
 
 // Media Viewer Component
 interface MediaViewerProps {
@@ -365,7 +363,6 @@ const BulletinCard: React.FC<BulletinCardProps> = ({
 
   return (
     <View
-      key={bulletin.id}
       className="bg-white rounded-2xl border border-gray-100"
       style={{
         shadowColor: "#000",
@@ -373,41 +370,44 @@ const BulletinCard: React.FC<BulletinCardProps> = ({
         shadowOpacity: 0.06,
         shadowRadius: 6,
         elevation: 2,
-        width: isTwoColumnLayout ? "48%" : "100%",
-        marginBottom: isTwoColumnLayout ? 0 : 12,
+        width: "100%",
         display: "flex",
         flexDirection: "column",
       }}
     >
       {/* Content Area */}
-      <View className="p-4 flex-1">
+      <View className="p-4 flex-1" style={{ minWidth: 0 }}>
         {/* Header */}
-        <View className="flex-row items-start mb-2">
-          <View className="bg-[#8B0000]/10 p-2 rounded-xl mr-3">
+        <View className="flex-row items-start mb-2" style={{ minWidth: 0 }}>
+          <View className="bg-[#8B0000]/10 p-2 rounded-xl mr-3" style={{ flexShrink: 0 }}>
             <Ionicons name="megaphone" size={20} color="#8B0000" />
           </View>
-          <View className="flex-1">
+          <View className="flex-1" style={{ minWidth: 0, flexShrink: 1 }}>
             <Text
               className="font-extrabold text-gray-900 text-[17px]"
               numberOfLines={2}
               ellipsizeMode="tail"
+              style={{ flexShrink: 1 }}
             >
               {bulletin.title}
             </Text>
-            <View className="flex-row items-center mt-1">
+            <View className="flex-row items-center mt-1" style={{ flexWrap: 'wrap' }}>
               <Ionicons
                 name="person-circle-outline"
                 size={14}
                 color="#6B7280"
+                style={{ flexShrink: 0 }}
               />
               <Text
                 className="text-gray-500 text-xs ml-1 mr-1"
                 numberOfLines={1}
+                ellipsizeMode="tail"
+                style={{ flexShrink: 1, minWidth: 0 }}
               >
                 {bulletin.createdBy.replace(/ Admin$/i, "")}
               </Text>
-              <Text className="text-gray-300 mx-1">•</Text>
-              <Text className="text-gray-500 text-xs">
+              <Text className="text-gray-300 mx-1" style={{ flexShrink: 0 }}>•</Text>
+              <Text className="text-gray-500 text-xs" style={{ flexShrink: 0 }}>
                 {formatDate(bulletin.createdAt)}
               </Text>
             </View>
@@ -419,13 +419,14 @@ const BulletinCard: React.FC<BulletinCardProps> = ({
           className="text-gray-700 text-[13px] leading-5 mb-3"
           numberOfLines={4}
           ellipsizeMode="tail"
+          style={{ flexShrink: 1, minWidth: 0 }}
         >
           {bulletin.description}
         </Text>
 
         {/* Related Reports */}
         {bulletin.relatedIncidents && bulletin.relatedIncidents.length > 0 && (
-          <View className="mb-3">
+          <View className="mb-3" style={{ minWidth: 0 }}>
             <Text className="text-[11px] font-semibold text-gray-600 mb-2">
               Related Reports ({bulletin.relatedIncidents.length}):
             </Text>
@@ -434,12 +435,18 @@ const BulletinCard: React.FC<BulletinCardProps> = ({
                 <TouchableOpacity
                   key={incident.id}
                   className="bg-green-50 border border-green-200 rounded-full px-3 py-1 mr-2 mb-2 flex-row items-center"
+                  style={{ maxWidth: "100%" }}
                   onPress={() =>
                     onRelatedIncidentClick(incident.trackingNumber)
                   }
                 >
-                  <Ionicons name="link" size={10} color="#15803D" />
-                  <Text className="text-green-700 text-[11px] font-semibold ml-1">
+                  <Ionicons name="link" size={10} color="#15803D" style={{ flexShrink: 0 }} />
+                  <Text 
+                    className="text-green-700 text-[11px] font-semibold ml-1"
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                    style={{ flexShrink: 1, minWidth: 0 }}
+                  >
                     #{incident.trackingNumber}
                   </Text>
                 </TouchableOpacity>
@@ -450,7 +457,7 @@ const BulletinCard: React.FC<BulletinCardProps> = ({
 
         {/* Media */}
         {bulletin.mediaAttachments && bulletin.mediaAttachments.length > 0 && (
-          <View className="mb-1">
+          <View className="mb-1" style={{ minWidth: 0 }}>
             <Text className="text-[11px] font-semibold text-gray-600 mb-2">
               Attachments ({bulletin.mediaAttachments.length}):
             </Text>
@@ -471,6 +478,7 @@ const BulletinCard: React.FC<BulletinCardProps> = ({
                       }
                       style={{
                         width: "100%",
+                        minWidth: 0,
                       }}
                     >
                       <Image
@@ -487,6 +495,7 @@ const BulletinCard: React.FC<BulletinCardProps> = ({
                         className="text-gray-500 text-[11px] mt-1"
                         numberOfLines={1}
                         ellipsizeMode="middle"
+                        style={{ minWidth: 0 }}
                       >
                         {media.fileName}
                       </Text>
@@ -499,6 +508,8 @@ const BulletinCard: React.FC<BulletinCardProps> = ({
                     className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 mr-2 mb-2 flex-row items-center"
                     style={{
                       maxWidth: "100%",
+                      minWidth: 0,
+                      flex: 1,
                     }}
                     onPress={() =>
                       setSelectedMedia({
@@ -512,11 +523,13 @@ const BulletinCard: React.FC<BulletinCardProps> = ({
                       name="document-attach"
                       size={16}
                       color="#3B82F6"
+                      style={{ flexShrink: 0 }}
                     />
                     <Text
                       className="text-blue-700 text-[12px] ml-1 font-semibold flex-1"
                       numberOfLines={1}
                       ellipsizeMode="middle"
+                      style={{ minWidth: 0, flexShrink: 1 }}
                     >
                       {media.fileName}
                     </Text>
@@ -561,197 +574,66 @@ const BulletinCard: React.FC<BulletinCardProps> = ({
 };
 
 export default function CasesScreen() {
-  // ====== DATA HOOKS ======
+  // ====== MAIN HOOK ======
   const {
+    // Data
     incidents,
-    isLoading: incidentsLoading,
-    error: incidentsError,
-    refresh: refreshIncidents,
-  } = usePublicIncidents();
-  const {
     bulletins,
-    isLoading: bulletinsLoading,
-    error: bulletinsError,
-    refresh: refreshBulletins,
-  } = useBulletins();
-  const {
     offices,
-    isLoading: officesLoading,
-    error: officesError,
-  } = useOffices();
-
-  // ====== LOCAL UI STATE (unchanged) ======
-  const [filteredIncidents, setFilteredIncidents] = useState<
-    IncidentResponseDto[]
-  >([]);
-  const [filteredBulletins, setFilteredBulletins] = useState<
-    OfficeBulletinDto[]
-  >([]);
-  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
-  const [searchQuery, setSearchQuery] = useState<string>("");
-  const [selectedTab, setSelectedTab] = useState<number>(0);
-
-  // Filter and Sort states
-  const [statusFilter, setStatusFilter] = useState<string>("All");
-  const [officeFilter, setOfficeFilter] = useState<string>("All");
-  const [incidentSortOrder, setIncidentSortOrder] = useState<"asc" | "desc">(
-    "desc"
-  );
-  const [bulletinSortOrder, setBulletinSortOrder] = useState<"asc" | "desc">(
-    "desc"
-  );
-
-  // ====== RESPONSIVE DIMENSIONS ======
-  // useWindowDimensions automatically updates on orientation change
-  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
-  const isLandscape = screenWidth > screenHeight;
-  const isTwoColumnLayout = screenWidth > 670;
-
-  // ====== FILTER FUNCTIONS ======
-  const filterIncidents = useCallback(() => {
-    let filtered = [...incidents]; // Create a copy to avoid mutation
-
-    // Search filter
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (i) =>
-          (i.trackingNumber || "").toLowerCase().includes(q) ||
-          (i.description || "").toLowerCase().includes(q)
-      );
-    }
-
-    // Status filter
-    if (statusFilter !== "All") {
-      filtered = filtered.filter(
-        (i) => (i.status || "").toLowerCase() === statusFilter.toLowerCase()
-      );
-    }
-
-    // Sort by date (on the copied array)
-    filtered.sort((a, b) => {
-      const dateA = new Date(a.dateOfIncident).getTime();
-      const dateB = new Date(b.dateOfIncident).getTime();
-      return incidentSortOrder === "desc" ? dateB - dateA : dateA - dateB;
-    });
-
-    setFilteredIncidents(filtered);
-  }, [incidents, searchQuery, statusFilter, incidentSortOrder]);
-
-  const filterBulletins = useCallback(() => {
-    let filtered = [...bulletins]; // Create a copy to avoid mutation
-
-    // Search filter
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (b) =>
-          b.title.toLowerCase().includes(q) ||
-          b.description.toLowerCase().includes(q)
-      );
-    }
-
-    // Office filter - match by adding " Admin" to the selected office name
-    if (officeFilter !== "All") {
-      filtered = filtered.filter((b) => {
-        // Append " Admin" to the selected office filter and compare with createdBy
-        const filterWithAdmin = `${officeFilter} Admin`;
-        return b.createdBy.toLowerCase() === filterWithAdmin.toLowerCase();
-      });
-    }
-
-    // Sort by date (on the copied array)
-    filtered.sort((a, b) => {
-      const dateA = new Date(a.createdAt).getTime();
-      const dateB = new Date(b.createdAt).getTime();
-      return bulletinSortOrder === "desc" ? dateB - dateA : dateA - dateB;
-    });
-
-    setFilteredBulletins(filtered);
-  }, [bulletins, searchQuery, officeFilter, bulletinSortOrder]);
+    
+    // Loading states
+    incidentsLoading,
+    bulletinsLoading,
+    officesLoading,
+    isRefreshing,
+    
+    // Errors
+    incidentsError,
+    bulletinsError,
+    
+    // Device layout
+    screenWidth,
+    isTwoColumnLayout,
+    isMobile,
+    isSmallTablet,
+    isBigTablet,
+    
+    // Filters
+    searchQuery,
+    statusFilter,
+    officeFilter,
+    incidentSortOrder,
+    bulletinSortOrder,
+    setSearchQuery,
+    setStatusFilter,
+    setOfficeFilter,
+    toggleIncidentSort,
+    toggleBulletinSort,
+    filteredIncidents,
+    filteredBulletins,
+    uniqueStatuses,
+    uniqueOffices,
+    
+    // Pagination
+    incidentsPagination,
+    bulletinsPagination,
+    currentPagination,
+    
+    // UI state
+    selectedTab,
+    setSelectedTab,
+    
+    // Actions
+    onRefresh,
+    refreshIncidents,
+    refreshBulletins,
+  } = useCommunityCases();
 
   // ====== HELPER FUNCTIONS ======
-  // Get unique statuses from incidents
-  const getUniqueStatuses = () => {
-    const statuses = new Set(
-      incidents.map((i) => i.status || "Unknown").filter(Boolean)
-    );
-    return ["All", ...Array.from(statuses)];
-  };
-
-  // Get unique offices from API
-  const getUniqueOffices = () => {
-    if (!offices || offices.length === 0) {
-      return ["All"];
-    }
-    const officeNames = offices
-      .map((office) => office.fullName)
-      .filter(Boolean)
-      .sort();
-    return ["All", ...officeNames];
-  };
-
-  const onRefresh = async () => {
-    setIsRefreshing(true);
-    if (selectedTab === 0) {
-      await refreshIncidents();
-    } else {
-      await refreshBulletins();
-    }
-    setIsRefreshing(false);
-  };
-
   const handleCaseClick = (trackingNumber?: string) => {
     if (!trackingNumber) return;
     router.push(`/case/${trackingNumber}` as never);
   };
-
-  const getStatusColor = (status?: string | null): string => {
-    const s = (status || "").toLowerCase();
-    if (s === "in progress") return "#2196F3";
-    if (s === "resolved") return "#4CAF50";
-    if (s === "urgent") return "#F44336";
-    return "#FFA000"; // default: pending / unknown
-  };
-
-  const getStatusIcon = (
-    status?: string | null
-  ): keyof typeof Ionicons.glyphMap => {
-    const s = (status || "").toLowerCase();
-    if (s === "resolved") return "checkmark-circle";
-    return "time";
-  };
-
-  const formatDate = (dateString?: string | null) => {
-    if (!dateString) return "N/A";
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString("en-US", {
-        month: "short",
-        day: "2-digit",
-        year: "numeric",
-      });
-    } catch {
-      return "N/A";
-    }
-  };
-
-  // ====== EFFECTS ======
-  useEffect(() => {
-    filterIncidents();
-  }, [filterIncidents]);
-
-  useEffect(() => {
-    filterBulletins();
-  }, [filterBulletins]);
-
-  // Refresh data when screen comes into focus (e.g., returning from case details)
-  useFocusEffect(
-    React.useCallback(() => {
-      refreshIncidents();
-      refreshBulletins();
-    }, [refreshIncidents, refreshBulletins])
-  );
 
   // ====== LOADING STATE ======
   if (incidentsLoading && bulletinsLoading && officesLoading) {
@@ -895,7 +777,7 @@ export default function CasesScreen() {
       >
         {/* SECTION TITLE */}
         <View className="mb-3 flex-row items-center justify-between">
-          <View className="flex-row items-center">
+          <View className="flex-row items-center flex-1">
             <View
               className="w-1.5 h-5 rounded-full mr-2"
               style={{ backgroundColor: "#8B0000" }}
@@ -903,16 +785,20 @@ export default function CasesScreen() {
             <Text className="text-base font-semibold text-gray-800">
               {selectedTab === 0 ? "Reports" : "Latest Advisories"}
             </Text>
+            {(() => {
+              const range = currentPagination.getDisplayRange();
+              return range.total > 0 ? (
+                <Text className="text-gray-500 text-xs ml-2">
+                  ({range.start}-{range.end} of {range.total})
+                </Text>
+              ) : null;
+            })()}
           </View>
 
           {/* Sort Order */}
           {selectedTab === 0 ? (
             <TouchableOpacity
-              onPress={() =>
-                setIncidentSortOrder(
-                  incidentSortOrder === "desc" ? "asc" : "desc"
-                )
-              }
+              onPress={toggleIncidentSort}
               className="flex-row items-center bg-white rounded-lg px-3 py-2 border border-gray-200"
             >
               <Ionicons
@@ -926,11 +812,7 @@ export default function CasesScreen() {
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
-              onPress={() =>
-                setBulletinSortOrder(
-                  bulletinSortOrder === "desc" ? "asc" : "desc"
-                )
-              }
+              onPress={toggleBulletinSort}
               className="flex-row items-center bg-white rounded-lg px-3 py-2 border border-gray-200"
             >
               <Ionicons
@@ -958,7 +840,7 @@ export default function CasesScreen() {
                   </Text>
                 </View>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  {getUniqueStatuses().map((status) => (
+                  {uniqueStatuses.map((status) => (
                     <TouchableOpacity
                       key={status}
                       onPress={() => setStatusFilter(status)}
@@ -1001,7 +883,7 @@ export default function CasesScreen() {
                   }}
                   style={{ flexGrow: 0 }}
                 >
-                  {getUniqueOffices().map((office) => (
+                  {uniqueOffices.map((office) => (
                     <TouchableOpacity
                       key={office}
                       onPress={() => setOfficeFilter(office)}
@@ -1060,19 +942,22 @@ export default function CasesScreen() {
                 </Text>
               </View>
             ) : (
-              <View
-                className="mb-6"
-                style={{
-                  flexDirection: isTwoColumnLayout ? "row" : "column",
-                  flexWrap: isTwoColumnLayout ? "wrap" : "nowrap",
-                  justifyContent: isTwoColumnLayout
-                    ? "space-between"
-                    : "flex-start",
-                  rowGap: 12,
-                  columnGap: 12,
-                }}
-              >
-                {filteredIncidents.map((incident) => (
+              <>
+                <View
+                  className="mb-6"
+                  style={{
+                    flexDirection: isMobile ? "column" : "row",
+                    flexWrap: isMobile ? "nowrap" : "wrap",
+                    justifyContent: isMobile
+                      ? "flex-start"
+                      : isSmallTablet
+                      ? "space-between"
+                      : "space-between",
+                    rowGap: 12,
+                    columnGap: 12,
+                  }}
+                >
+                  {incidentsPagination.paginatedData.map((incident) => (
                   <TouchableOpacity
                     key={incident.id}
                     onPress={() => handleCaseClick(incident.trackingNumber)}
@@ -1083,8 +968,12 @@ export default function CasesScreen() {
                       shadowOpacity: 0.06,
                       shadowRadius: 6,
                       elevation: 2,
-                      width: isTwoColumnLayout ? "48%" : "100%",
-                      marginBottom: isTwoColumnLayout ? 0 : 12,
+                      width: isMobile
+                        ? "100%"
+                        : isSmallTablet
+                        ? "31.5%"
+                        : "23.5%",
+                      marginBottom: isMobile ? 12 : 0,
                     }}
                   >
                     {/* Card Header Ribbon */}
@@ -1142,30 +1031,31 @@ export default function CasesScreen() {
                       <TouchableOpacity
                         className="flex-row items-center"
                         onPress={() => {
-                          if (incident.location) {
+                          const sanitizedLocation = sanitizeLocation(incident.location);
+                          if (sanitizedLocation) {
                             const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                              incident.location
+                              sanitizedLocation
                             )}`;
                             Linking.openURL(url);
                           }
                         }}
-                        disabled={!incident.location}
+                        disabled={!sanitizeLocation(incident.location)}
                       >
                         <Ionicons
                           name="location"
                           size={14}
-                          color={incident.location ? "#8B0000" : "#6B7280"}
+                          color={sanitizeLocation(incident.location) ? "#8B0000" : "#6B7280"}
                         />
                         <Text
                           className="text-xs ml-1 flex-1"
                           numberOfLines={1}
                           style={{
-                            color: incident.location ? "#8B0000" : "#6B7280",
+                            color: sanitizeLocation(incident.location) ? "#8B0000" : "#6B7280",
                           }}
                         >
-                          {incident.location || "Location not specified"}
+                          {sanitizeLocation(incident.location) || "Location not specified"}
                         </Text>
-                        {incident.location && (
+                        {sanitizeLocation(incident.location) && (
                           <Ionicons
                             name="open-outline"
                             size={12}
@@ -1240,7 +1130,149 @@ export default function CasesScreen() {
                     </View>
                   </TouchableOpacity>
                 ))}
-              </View>
+                </View>
+
+                {/* Load More Button - Bottom of List */}
+                {incidentsPagination.hasMore && (
+                  <View className="mb-4">
+                    <TouchableOpacity
+                      onPress={() => incidentsPagination.handlePageChange(incidentsPagination.currentPage + 1)}
+                      className="bg-[#8B0000] rounded-xl py-4 px-6 flex-row items-center justify-center"
+                      style={{
+                        shadowColor: "#8B0000",
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.2,
+                        shadowRadius: 4,
+                        elevation: 3,
+                      }}
+                    >
+                      <Text className="text-white font-bold text-base mr-2">
+                        Load More
+                      </Text>
+                      <Ionicons name="chevron-down" size={20} color="#FFFFFF" />
+                      <Text className="text-white/80 text-sm ml-2">
+                        ({incidentsPagination.totalPages - incidentsPagination.currentPage} {incidentsPagination.totalPages - incidentsPagination.currentPage === 1 ? 'page' : 'pages'} remaining)
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                {/* Pagination Controls */}
+                {incidentsPagination.totalPages > 1 && (
+                  <View className="mb-6 bg-white rounded-xl p-4 border border-gray-200">
+                    <View className="flex-row items-center justify-between">
+                      <TouchableOpacity
+                        onPress={() => incidentsPagination.handlePageChange(incidentsPagination.currentPage - 1)}
+                        disabled={incidentsPagination.currentPage === 1}
+                        className={`flex-row items-center px-4 py-2 rounded-lg ${
+                          incidentsPagination.currentPage === 1
+                            ? "bg-gray-100 opacity-50"
+                            : "bg-[#8B0000]"
+                        }`}
+                      >
+                        <Ionicons
+                          name="chevron-back"
+                          size={18}
+                          color={incidentsPagination.currentPage === 1 ? "#9CA3AF" : "#FFFFFF"}
+                        />
+                        <Text
+                          className={`ml-1 font-semibold ${
+                            incidentsPagination.currentPage === 1
+                              ? "text-gray-400"
+                              : "text-white"
+                          }`}
+                          style={{ fontSize: 14 }}
+                        >
+                          Previous
+                        </Text>
+                      </TouchableOpacity>
+
+                      <View className="flex-row items-center">
+                        <Text className="text-gray-700 font-medium text-sm mr-2">
+                          Page
+                        </Text>
+                        <Text className="text-[#8B0000] font-bold text-base">
+                          {incidentsPagination.currentPage}
+                        </Text>
+                        <Text className="text-gray-500 font-medium text-sm mx-1">
+                          of
+                        </Text>
+                        <Text className="text-gray-700 font-semibold text-base">
+                          {incidentsPagination.totalPages}
+                        </Text>
+                      </View>
+
+                      <TouchableOpacity
+                        onPress={() => incidentsPagination.handlePageChange(incidentsPagination.currentPage + 1)}
+                        disabled={incidentsPagination.currentPage === incidentsPagination.totalPages}
+                        className={`flex-row items-center px-4 py-2 rounded-lg ${
+                          incidentsPagination.currentPage === incidentsPagination.totalPages
+                            ? "bg-gray-100 opacity-50"
+                            : "bg-[#8B0000]"
+                        }`}
+                      >
+                        <Text
+                          className={`mr-1 font-semibold ${
+                            incidentsPagination.currentPage === incidentsPagination.totalPages
+                              ? "text-gray-400"
+                              : "text-white"
+                          }`}
+                          style={{ fontSize: 14 }}
+                        >
+                          Next
+                        </Text>
+                        <Ionicons
+                          name="chevron-forward"
+                          size={18}
+                          color={
+                            incidentsPagination.currentPage === incidentsPagination.totalPages ? "#9CA3AF" : "#FFFFFF"
+                          }
+                        />
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* Page Numbers (for tablets) */}
+                    {(isSmallTablet || isBigTablet) && incidentsPagination.totalPages > 1 && (
+                      <View className="flex-row items-center justify-center mt-3 flex-wrap">
+                        {Array.from({ length: Math.min(incidentsPagination.totalPages, 7) }, (_, i) => {
+                          let pageNum: number;
+                          if (incidentsPagination.totalPages <= 7) {
+                            pageNum = i + 1;
+                          } else if (incidentsPagination.currentPage <= 4) {
+                            pageNum = i + 1;
+                          } else if (incidentsPagination.currentPage >= incidentsPagination.totalPages - 3) {
+                            pageNum = incidentsPagination.totalPages - 6 + i;
+                          } else {
+                            pageNum = incidentsPagination.currentPage - 3 + i;
+                          }
+
+                          return (
+                            <TouchableOpacity
+                              key={pageNum}
+                              onPress={() => incidentsPagination.handlePageChange(pageNum)}
+                              className={`px-3 py-1.5 mx-1 rounded-lg ${
+                                incidentsPagination.currentPage === pageNum
+                                  ? "bg-[#8B0000]"
+                                  : "bg-gray-100"
+                              }`}
+                            >
+                              <Text
+                                className={`font-semibold text-sm ${
+                                  incidentsPagination.currentPage === pageNum
+                                    ? "text-white"
+                                    : "text-gray-700"
+                                }`}
+                              >
+                                {pageNum}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    )}
+                  </View>
+                )}
+              </>
             )}
           </>
         ) : (
@@ -1275,30 +1307,186 @@ export default function CasesScreen() {
                 </Text>
               </View>
             ) : (
-              <View
-                className="mb-6"
-                style={{
-                  flexDirection: isTwoColumnLayout ? "row" : "column",
-                  flexWrap: isTwoColumnLayout ? "wrap" : "nowrap",
-                  justifyContent: isTwoColumnLayout
-                    ? "space-between"
-                    : "flex-start",
-                  rowGap: 12,
-                  columnGap: 12,
-                }}
-              >
-                {filteredBulletins.map((bulletin) => (
-                  <BulletinCard
-                    key={bulletin.id}
-                    bulletin={bulletin}
-                    isTwoColumnLayout={isTwoColumnLayout}
-                    screenWidth={screenWidth}
-                    onRelatedIncidentClick={handleCaseClick}
-                    formatDate={formatDate}
-                    onUpvoteSuccess={refreshBulletins}
-                  />
-                ))}
-              </View>
+              <>
+                <View
+                  className="mb-6"
+                  style={{
+                    flexDirection: isMobile ? "column" : "row",
+                    flexWrap: isMobile ? "nowrap" : "wrap",
+                    justifyContent: isMobile
+                      ? "flex-start"
+                      : isSmallTablet
+                      ? "space-between"
+                      : "space-between",
+                    rowGap: 12,
+                    columnGap: 12,
+                  }}
+                >
+                  {bulletinsPagination.paginatedData.map((bulletin) => (
+                    <View
+                      key={bulletin.id}
+                      style={{
+                        width: isMobile
+                          ? "100%"
+                          : isSmallTablet
+                          ? "31.5%"
+                          : "23.5%",
+                        marginBottom: isMobile ? 12 : 0,
+                      }}
+                    >
+                      <BulletinCard
+                        bulletin={bulletin}
+                        isTwoColumnLayout={!isMobile}
+                        screenWidth={screenWidth}
+                        onRelatedIncidentClick={handleCaseClick}
+                        formatDate={formatDate}
+                        onUpvoteSuccess={refreshBulletins}
+                      />
+                    </View>
+                  ))}
+                </View>
+
+                {/* Load More Button - Bottom of List for Bulletins */}
+                {bulletinsPagination.hasMore && (
+                  <View className="mb-4">
+                    <TouchableOpacity
+                      onPress={() => bulletinsPagination.handlePageChange(bulletinsPagination.currentPage + 1)}
+                      className="bg-[#8B0000] rounded-xl py-4 px-6 flex-row items-center justify-center"
+                      style={{
+                        shadowColor: "#8B0000",
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.2,
+                        shadowRadius: 4,
+                        elevation: 3,
+                      }}
+                    >
+                      <Text className="text-white font-bold text-base mr-2">
+                        Load More
+                      </Text>
+                      <Ionicons name="chevron-down" size={20} color="#FFFFFF" />
+                      <Text className="text-white/80 text-sm ml-2">
+                        ({bulletinsPagination.totalPages - bulletinsPagination.currentPage} {bulletinsPagination.totalPages - bulletinsPagination.currentPage === 1 ? 'page' : 'pages'} remaining)
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                {/* Pagination Controls for Bulletins */}
+                {bulletinsPagination.totalPages > 1 && (
+                  <View className="mb-6 bg-white rounded-xl p-4 border border-gray-200">
+                    <View className="flex-row items-center justify-between">
+                      <TouchableOpacity
+                        onPress={() => bulletinsPagination.handlePageChange(bulletinsPagination.currentPage - 1)}
+                        disabled={bulletinsPagination.currentPage === 1}
+                        className={`flex-row items-center px-4 py-2 rounded-lg ${
+                          bulletinsPagination.currentPage === 1
+                            ? "bg-gray-100 opacity-50"
+                            : "bg-[#8B0000]"
+                        }`}
+                      >
+                        <Ionicons
+                          name="chevron-back"
+                          size={18}
+                          color={bulletinsPagination.currentPage === 1 ? "#9CA3AF" : "#FFFFFF"}
+                        />
+                        <Text
+                          className={`ml-1 font-semibold ${
+                            bulletinsPagination.currentPage === 1
+                              ? "text-gray-400"
+                              : "text-white"
+                          }`}
+                          style={{ fontSize: 14 }}
+                        >
+                          Previous
+                        </Text>
+                      </TouchableOpacity>
+
+                      <View className="flex-row items-center">
+                        <Text className="text-gray-700 font-medium text-sm mr-2">
+                          Page
+                        </Text>
+                        <Text className="text-[#8B0000] font-bold text-base">
+                          {bulletinsPagination.currentPage}
+                        </Text>
+                        <Text className="text-gray-500 font-medium text-sm mx-1">
+                          of
+                        </Text>
+                        <Text className="text-gray-700 font-semibold text-base">
+                          {bulletinsPagination.totalPages}
+                        </Text>
+                      </View>
+
+                      <TouchableOpacity
+                        onPress={() => bulletinsPagination.handlePageChange(bulletinsPagination.currentPage + 1)}
+                        disabled={bulletinsPagination.currentPage === bulletinsPagination.totalPages}
+                        className={`flex-row items-center px-4 py-2 rounded-lg ${
+                          bulletinsPagination.currentPage === bulletinsPagination.totalPages
+                            ? "bg-gray-100 opacity-50"
+                            : "bg-[#8B0000]"
+                        }`}
+                      >
+                        <Text
+                          className={`mr-1 font-semibold ${
+                            bulletinsPagination.currentPage === bulletinsPagination.totalPages
+                              ? "text-gray-400"
+                              : "text-white"
+                          }`}
+                          style={{ fontSize: 14 }}
+                        >
+                          Next
+                        </Text>
+                        <Ionicons
+                          name="chevron-forward"
+                          size={18}
+                          color={
+                            bulletinsPagination.currentPage === bulletinsPagination.totalPages ? "#9CA3AF" : "#FFFFFF"
+                          }
+                        />
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* Page Numbers (for tablets) */}
+                    {(isSmallTablet || isBigTablet) && bulletinsPagination.totalPages > 1 && (
+                      <View className="flex-row items-center justify-center mt-3 flex-wrap">
+                        {Array.from({ length: Math.min(bulletinsPagination.totalPages, 7) }, (_, i) => {
+                          let pageNum: number;
+                          if (bulletinsPagination.totalPages <= 7) {
+                            pageNum = i + 1;
+                          } else if (bulletinsPagination.currentPage <= 4) {
+                            pageNum = i + 1;
+                          } else if (bulletinsPagination.currentPage >= bulletinsPagination.totalPages - 3) {
+                            pageNum = bulletinsPagination.totalPages - 6 + i;
+                          } else {
+                            pageNum = bulletinsPagination.currentPage - 3 + i;
+                          }
+
+                          return (
+                            <TouchableOpacity
+                              key={pageNum}
+                              onPress={() => bulletinsPagination.handlePageChange(pageNum)}
+                              className={`px-3 py-1.5 mx-1 rounded-lg ${
+                                bulletinsPagination.currentPage === pageNum
+                                  ? "bg-[#8B0000]"
+                                  : "bg-gray-100"
+                              }`}
+                            >
+                              <Text
+                                className={`font-semibold text-sm ${
+                                  bulletinsPagination.currentPage === pageNum
+                                    ? "text-white"
+                                    : "text-gray-700"
+                                }`}
+                              >
+                                {pageNum}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    )}
+                  </View>
+                )}
+              </>
             )}
           </>
         )}

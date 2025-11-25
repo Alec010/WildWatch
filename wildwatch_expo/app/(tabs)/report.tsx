@@ -40,6 +40,7 @@ import SimilarIncidentsModal from "../../components/SimilarIncidentsModal";
 import ReportSuccessModal from "../../components/ReportSuccessModal";
 import EmergencyNoteBanner from "../../components/EmergencyNoteBanner";
 import EvidenceGuidelinesBanner from "../../components/EvidenceGuidelinesBanner";
+import { sanitizeLocation } from "../../src/utils/locationUtils";
 
 // Uses centralized API base URL from config
 
@@ -341,6 +342,16 @@ export default function ReportScreen() {
   };
 
   const { padding, margin, fontSize } = getSpacing();
+
+  const sanitizedFormLocation = sanitizeLocation(
+    form.formattedAddress || form.location
+  );
+  const resolvedLocationDisplay =
+    sanitizedFormLocation ||
+    form.buildingName ||
+    (form.latitude && form.longitude
+      ? `${form.latitude}, ${form.longitude}`
+      : null);
 
   // Fetch token and offices on component mount
   useEffect(() => {
@@ -848,14 +859,16 @@ export default function ReportScreen() {
       }
 
       // Store context for "Why this suggestion?"
+      const locationContext = sanitizeLocation(
+        analysis.normalizedLocation ||
+          incidentData.formattedAddress ||
+          incidentData.location
+      );
       setAnalysisWhy({
         tags: Array.isArray(analysis.suggestedTags)
           ? analysis.suggestedTags.slice(0, 8)
           : (incidentData.tags || []).slice(0, 8),
-        location:
-          analysis.normalizedLocation ||
-          incidentData.formattedAddress ||
-          incidentData.location,
+        location: locationContext || undefined,
       });
 
       // If similar incidents exist, show modal and pause submission
@@ -1583,9 +1596,7 @@ export default function ReportScreen() {
                           }}
                           numberOfLines={2}
                         >
-                          {form.formattedAddress ||
-                            form.buildingName ||
-                            `${form.latitude}, ${form.longitude}`}
+                          {resolvedLocationDisplay || "Location not specified"}
                         </Text>
                         {form.buildingName && (
                           <Text
@@ -2722,9 +2733,10 @@ export default function ReportScreen() {
                             form.withinCampus === false ? "#7F1D1D" : "#374151",
                         }}
                       >
-                        {form.formattedAddress ||
-                          form.location ||
-                          `${form.latitude}, ${form.longitude}`}
+                        {resolvedLocationDisplay ||
+                          (form.latitude && form.longitude
+                            ? `${form.latitude}, ${form.longitude}`
+                            : "Location not specified")}
                       </Text>
                       {form.buildingName && (
                         <Text
