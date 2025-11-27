@@ -33,6 +33,7 @@ import SockJS from "sockjs-client"
 import { Navbar } from "@/components/Navbar"
 import { useSidebar } from "@/contexts/SidebarContext"
 import { useUser } from "@/contexts/UserContext"
+import { formatDate, formatDateWithYear, parseUTCDate } from "@/utils/dateUtils"
 
 interface Incident {
   id: string
@@ -199,15 +200,7 @@ export default function PublicIncidentsPage() {
   }
 
   const formatEstimatedDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "numeric",
-      minute: "numeric",
-      hour12: true,
-    })
+    return formatDateWithYear(dateString)
   }
 
   const getStatusIcon = (status: string) => {

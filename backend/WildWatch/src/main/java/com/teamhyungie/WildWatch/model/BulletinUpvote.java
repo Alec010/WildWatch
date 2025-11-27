@@ -7,6 +7,7 @@ import lombok.AllArgsConstructor;
 import org.hibernate.annotations.GenericGenerator;
 
 import java.time.LocalDateTime;
+import static com.teamhyungie.WildWatch.config.TimezoneConfig.APP_TIMEZONE;
 
 /**
  * Entity to track upvotes on office bulletins
@@ -33,12 +34,12 @@ public class BulletinUpvote {
     private User user;
     
     @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime createdAt = LocalDateTime.now(APP_TIMEZONE);
     
     // Constructor with required fields
     public BulletinUpvote(OfficeBulletin bulletin, User user) {
         this.bulletin = bulletin;
         this.user = user;
-        this.createdAt = LocalDateTime.now();
+        this.createdAt = LocalDateTime.now(APP_TIMEZONE);
     }
 }

@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import java.time.LocalDateTime;
+import static com.teamhyungie.WildWatch.config.TimezoneConfig.APP_TIMEZONE;
 
 /**
  * Entity to track follow-up requests from users
@@ -29,12 +30,12 @@ public class FollowUpRecord {
     private User user;
     
     @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime createdAt = LocalDateTime.now(APP_TIMEZONE);
     
     // Constructor with required fields
     public FollowUpRecord(Incident incident, User user) {
         this.incident = incident;
         this.user = user;
-        this.createdAt = LocalDateTime.now();
+        this.createdAt = LocalDateTime.now(APP_TIMEZONE);
     }
 }

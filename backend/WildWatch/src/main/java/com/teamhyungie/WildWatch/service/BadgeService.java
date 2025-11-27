@@ -359,7 +359,7 @@ public class BadgeService {
     private void awardBadgeLevel(User user, UserBadge userBadge, Integer level) {
         // Update user badge
         userBadge.setCurrentLevel(level);
-        userBadge.setAwardedDateForLevel(level, LocalDateTime.now());
+        userBadge.setAwardedDateForLevel(level, LocalDateTime.now(com.teamhyungie.WildWatch.config.TimezoneConfig.APP_TIMEZONE));
         userBadge.setIsNotified(false);
         userBadgeRepository.save(userBadge);
         

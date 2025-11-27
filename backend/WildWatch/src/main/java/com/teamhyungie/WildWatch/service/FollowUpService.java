@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
+import static com.teamhyungie.WildWatch.config.TimezoneConfig.APP_TIMEZONE;
 
 @Service
 public class FollowUpService {
@@ -51,7 +52,7 @@ public class FollowUpService {
         }
         
         // Check if user has already sent a follow-up in the last 24 hours
-        LocalDateTime oneDayAgo = LocalDateTime.now().minusHours(24);
+        LocalDateTime oneDayAgo = LocalDateTime.now(APP_TIMEZONE).minusHours(24);
         boolean hasRecentFollowUp = followUpRecordRepository.existsByUserAndIncidentAndCreatedAtAfter(user, incident, oneDayAgo);
         
         if (hasRecentFollowUp) {
@@ -85,7 +86,7 @@ public class FollowUpService {
         }
         
         // Calculate next available time
-        LocalDateTime nextAvailableTime = LocalDateTime.now().plusHours(24);
+        LocalDateTime nextAvailableTime = LocalDateTime.now(APP_TIMEZONE).plusHours(24);
         
         return FollowUpResponse.success(nextAvailableTime);
     }

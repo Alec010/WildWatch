@@ -3,6 +3,7 @@ package com.teamhyungie.WildWatch.model;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
+import static com.teamhyungie.WildWatch.config.TimezoneConfig.APP_TIMEZONE;
 
 @Entity
 @Table(name = "evidence")
@@ -33,6 +34,6 @@ public class Evidence {
 
     @PrePersist
     protected void onCreate() {
-        uploadedAt = LocalDateTime.now();
+        uploadedAt = LocalDateTime.now(APP_TIMEZONE);
     }
 } 

@@ -2,6 +2,7 @@ package com.teamhyungie.WildWatch.model;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import static com.teamhyungie.WildWatch.config.TimezoneConfig.APP_TIMEZONE;
 
 @Entity
 @Table(name = "incident_updates")
@@ -35,7 +36,7 @@ public class IncidentUpdate {
 
     @PrePersist
     protected void onCreate() {
-        updatedAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now(APP_TIMEZONE);
     }
 
     public Long getId() {

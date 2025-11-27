@@ -176,7 +176,7 @@ public class User {
     public void setTermsAccepted(boolean termsAccepted) {
         this.termsAccepted = termsAccepted;
         if (termsAccepted) {
-            this.termsAcceptedDate = LocalDateTime.now();
+            this.termsAcceptedDate = LocalDateTime.now(com.teamhyungie.WildWatch.config.TimezoneConfig.APP_TIMEZONE);
         }
     }
     

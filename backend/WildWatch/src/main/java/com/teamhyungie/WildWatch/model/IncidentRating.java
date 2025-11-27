@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDateTime;
+import static com.teamhyungie.WildWatch.config.TimezoneConfig.APP_TIMEZONE;
 
 @Entity
 @Table(name = "incident_ratings")
@@ -73,7 +74,7 @@ public class IncidentRating {
     private Boolean pointsAwarded = false;
 
     public IncidentRating() {
-        this.ratingTimestamp = LocalDateTime.now();
+        this.ratingTimestamp = LocalDateTime.now(APP_TIMEZONE);
         this.pointsAwarded = false;
     }
 

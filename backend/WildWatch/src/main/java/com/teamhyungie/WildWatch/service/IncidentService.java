@@ -35,6 +35,7 @@ import java.util.stream.Collectors;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.ArrayList;
+import static com.teamhyungie.WildWatch.config.TimezoneConfig.APP_TIMEZONE;
 
 @Service
 @RequiredArgsConstructor
@@ -962,7 +963,7 @@ public class IncidentService {
                 .orElseThrow(() -> new RuntimeException("Incident not found"));
 
         // Validate that the new date is in the future
-        if (newEstimatedDate.isBefore(LocalDateTime.now())) {
+        if (newEstimatedDate.isBefore(LocalDateTime.now(APP_TIMEZONE))) {
             throw new RuntimeException("Estimated resolution date must be in the future");
         }
 
@@ -972,7 +973,7 @@ public class IncidentService {
         // Update the incident
         incident.setEstimatedResolutionDate(newEstimatedDate);
         incident.setResolutionExtendedBy(user);
-        incident.setResolutionExtendedAt(LocalDateTime.now());
+        incident.setResolutionExtendedAt(LocalDateTime.now(APP_TIMEZONE));
         incidentRepository.save(incident);
 
         // Create an audit entry
@@ -980,7 +981,7 @@ public class IncidentService {
         update.setIncident(incident);
         update.setUpdatedBy(user);
         update.setUpdatedByName(user.getFirstName() + " " + user.getLastName());
-        update.setUpdatedAt(LocalDateTime.now());
+        update.setUpdatedAt(LocalDateTime.now(APP_TIMEZONE));
         update.setVisibleToReporter(true);
 
         String message = "Resolution date extended";

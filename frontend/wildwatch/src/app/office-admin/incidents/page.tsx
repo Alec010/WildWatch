@@ -39,6 +39,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { formatDateOnly, parseUTCDate } from "@/utils/dateUtils";
 
 interface Incident {
   id: string;
@@ -299,12 +300,8 @@ export default function IncidentManagementPage() {
   };
 
   const formatDate = (dateString: string, timeString?: string) => {
-    const date = new Date(dateString);
-    return `${date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    })}${timeString ? ` ${timeString}` : ""}`;
+    const date = parseUTCDate(dateString);
+    return `${formatDateOnly(dateString)}${timeString ? ` at ${timeString}` : ''}`;
   };
 
   const getGoogleMapsUrl = (location: string) => {

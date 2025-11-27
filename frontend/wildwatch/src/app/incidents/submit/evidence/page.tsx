@@ -1,24 +1,24 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useEffect, useRef } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card } from "@/components/ui/card"
-import { Textarea } from "@/components/ui/textarea"
-import ClientMultiUserMentionInput from "@/components/ClientMultiUserMentionInput"
-import Image from "next/image"
-import { Sidebar } from "@/components/Sidebar"
-import { useSidebar } from "@/contexts/SidebarContext"
-import { Navbar } from "@/components/Navbar"
-import { toast } from "sonner"
+import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
+import ClientMultiUserMentionInput from "@/components/ClientMultiUserMentionInput";
+import Image from "next/image";
+import { Sidebar } from "@/components/Sidebar";
+import { useSidebar } from "@/contexts/SidebarContext";
+import { Navbar } from "@/components/Navbar";
+import { toast } from "sonner";
 import {
   AlertTriangle,
   Upload,
-  ArrowLeft, 
+  ArrowLeft,
   Camera,
   X,
   HelpCircle,
@@ -37,8 +37,8 @@ import {
   AlertCircle,
   ChevronDown,
   ChevronUp,
-} from "lucide-react"
-import { motion, AnimatePresence } from "framer-motion"
+} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Dialog,
   DialogContent,
@@ -46,156 +46,256 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
+import {
+  storeFiles,
+  getFiles,
+  generateFileId,
+  deleteFileData,
+  clearAllFiles,
+} from "@/utils/fileStorage";
 
 interface UserInfo {
-  id: number
-  firstName: string
-  lastName: string
-  fullName: string
-  email: string
-  schoolIdNumber: string
+  id: number;
+  firstName: string;
+  lastName: string;
+  fullName: string;
+  email: string;
+  schoolIdNumber: string;
 }
 
 interface WitnessInfo {
-  name: string
-  contactInformation: string
-  additionalNotes: string
-  users: UserInfo[]  // Multiple users selected via @mention
+  name: string;
+  contactInformation: string;
+  additionalNotes: string;
+  users: UserInfo[]; // Multiple users selected via @mention
 }
 
 interface FileInfo {
-  name: string
-  size: number
-  type: string
-  data: string
+  name: string;
+  size: number;
+  type: string;
+  data: string; // Keep for display, but don't store in sessionStorage
+  file?: File; // Add original file reference
+  id?: string; // ID for IndexedDB storage
 }
 
 export default function EvidenceSubmissionPage() {
-  const router = useRouter()
-  const { collapsed } = useSidebar()
+  const router = useRouter();
+  const { collapsed } = useSidebar();
   const [formData, setFormData] = useState({
     witnesses: [] as WitnessInfo[],
     fileInfos: [] as FileInfo[],
-  })
-  const [incidentData, setIncidentData] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-  const [showTips, setShowTips] = useState(true)
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-  const [fileToDelete, setFileToDelete] = useState<number | null>(null)
-  const [witnessToDelete, setWitnessToDelete] = useState<number | null>(null)
-  const [isDragging, setIsDragging] = useState(false)
-  const [expandedWitness, setExpandedWitness] = useState<number | null>(null)
-  const [isProcessingFiles, setIsProcessingFiles] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  });
+  const [incidentData, setIncidentData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [showTips, setShowTips] = useState(true);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [fileToDelete, setFileToDelete] = useState<number | null>(null);
+  const [witnessToDelete, setWitnessToDelete] = useState<number | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [expandedWitness, setExpandedWitness] = useState<number | null>(null);
+  const [isProcessingFiles, setIsProcessingFiles] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const storedData = sessionStorage.getItem("incidentSubmissionData")
-    if (!storedData) {
-      router.push("/incidents/submit")
-      return
-    }
-    setIncidentData(JSON.parse(storedData))
+    const loadData = async () => {
+      const storedData = sessionStorage.getItem("incidentSubmissionData");
+      if (!storedData) {
+        router.push("/incidents/submit");
+        return;
+      }
+      setIncidentData(JSON.parse(storedData));
 
-    const storedEvidenceData = sessionStorage.getItem("evidenceSubmissionData")
-    if (storedEvidenceData) {
-      setFormData(JSON.parse(storedEvidenceData))
-    }
-    setLoading(false)
-  }, [router])
+      // Load metadata from sessionStorage
+      const storedEvidenceData = sessionStorage.getItem(
+        "evidenceSubmissionData"
+      );
+      if (storedEvidenceData) {
+        const parsed = JSON.parse(storedEvidenceData);
 
+        // Load file data from IndexedDB if files have IDs
+        if (parsed.fileInfos && parsed.fileInfos.length > 0) {
+          const fileIds = parsed.fileInfos
+            .filter((f: any) => f.id)
+            .map((f: any) => f.id);
+
+          if (fileIds.length > 0) {
+            try {
+              const fileDataMap = await getFiles(fileIds);
+              // Merge file data back into fileInfos for display
+              parsed.fileInfos = parsed.fileInfos.map((f: any) => {
+                if (f.id && fileDataMap.has(f.id)) {
+                  return { ...f, data: fileDataMap.get(f.id) };
+                }
+                return { ...f, data: "" }; // No data available
+              });
+            } catch (error) {
+              console.error("Error loading file data from IndexedDB:", error);
+              // Continue without file data - user can re-upload if needed
+            }
+          }
+        }
+
+        setFormData({
+          witnesses: parsed.witnesses || [],
+          fileInfos: parsed.fileInfos || [],
+        });
+      }
+      setLoading(false);
+    };
+
+    loadData();
+  }, [router]);
+
+  // Update the useEffect to NOT save base64 data
   useEffect(() => {
     if (formData.witnesses.length > 0 || formData.fileInfos.length > 0) {
-      sessionStorage.setItem("evidenceSubmissionData", JSON.stringify(formData))
+      // Only save metadata, not base64 data
+      const dataToSave = {
+        witnesses: formData.witnesses,
+        fileInfos: formData.fileInfos.map((f) => ({
+          name: f.name,
+          size: f.size,
+          type: f.type,
+          id: f.id, // Store ID to retrieve from IndexedDB later
+          // Don't save 'data' field - it's stored in IndexedDB
+        })),
+      };
+      try {
+        sessionStorage.setItem(
+          "evidenceSubmissionData",
+          JSON.stringify(dataToSave)
+        );
+      } catch (error) {
+        // If storage fails, clear old data and try again
+        console.warn("Storage quota exceeded, clearing old data...");
+        sessionStorage.removeItem("evidenceSubmissionData");
+        try {
+          sessionStorage.setItem(
+            "evidenceSubmissionData",
+            JSON.stringify(dataToSave)
+          );
+        } catch (e) {
+          toast.error("Unable to save evidence data", {
+            description: "Please try uploading fewer or smaller files.",
+          });
+        }
+      }
     }
-  }, [formData])
+  }, [formData.witnesses, formData.fileInfos.map((f) => f.name).join(",")]); // Only depend on metadata
 
   const handleAddWitness = () => {
     setFormData((prev) => ({
       ...prev,
-      witnesses: [...prev.witnesses, { 
-        name: "", 
-        contactInformation: "", 
-        additionalNotes: "",
-        users: []
-      }],
-    }))
+      witnesses: [
+        ...prev.witnesses,
+        {
+          name: "",
+          contactInformation: "",
+          additionalNotes: "",
+          users: [],
+        },
+      ],
+    }));
 
     // Expand the newly added witness
     setTimeout(() => {
-      setExpandedWitness(formData.witnesses.length)
+      setExpandedWitness(formData.witnesses.length);
       // Scroll to the new witness
-      const element = document.getElementById(`witness-${formData.witnesses.length}`)
+      const element = document.getElementById(
+        `witness-${formData.witnesses.length}`
+      );
       if (element) {
-        element.scrollIntoView({ behavior: "smooth", block: "center" })
+        element.scrollIntoView({ behavior: "smooth", block: "center" });
       }
-    }, 100)
-  }
+    }, 100);
+  };
 
-  const handleWitnessChange = (index: number, field: keyof WitnessInfo, value: string) => {
-    const updatedWitnesses = [...formData.witnesses]
-    updatedWitnesses[index] = { ...updatedWitnesses[index], [field]: value }
-    setFormData((prev) => ({ ...prev, witnesses: updatedWitnesses }))
-  }
+  const handleWitnessChange = (
+    index: number,
+    field: keyof WitnessInfo,
+    value: string
+  ) => {
+    const updatedWitnesses = [...formData.witnesses];
+    updatedWitnesses[index] = { ...updatedWitnesses[index], [field]: value };
+    setFormData((prev) => ({ ...prev, witnesses: updatedWitnesses }));
+  };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0 && !isProcessingFiles) {
-      await processFiles(Array.from(e.target.files))
+      await processFiles(Array.from(e.target.files));
       // Reset file input to prevent duplicate onChange events
       if (fileInputRef.current) {
-        fileInputRef.current.value = ''
+        fileInputRef.current.value = "";
       }
     }
-  }
+  };
 
   const processFiles = async (files: File[]) => {
     // Prevent duplicate processing
-    if (isProcessingFiles) return
-    
-    setIsProcessingFiles(true)
-    
+    if (isProcessingFiles) return;
+
+    setIsProcessingFiles(true);
+
     // Check file size limit (10MB)
-    const validFiles = files.filter((file) => file.size <= 10 * 1024 * 1024)
-    const invalidFiles = files.filter((file) => file.size > 10 * 1024 * 1024)
+    const validFiles = files.filter((file) => file.size <= 10 * 1024 * 1024);
+    const invalidFiles = files.filter((file) => file.size > 10 * 1024 * 1024);
 
     if (invalidFiles.length > 0) {
       toast.error(`${invalidFiles.length} file(s) exceeded the 10MB limit`, {
         description: "Please upload smaller files.",
         icon: <AlertCircle className="h-5 w-5 text-red-500" />,
         id: "file-size-error",
-      })
+      });
     }
 
     if (validFiles.length === 0) {
-      setIsProcessingFiles(false)
-      return
+      setIsProcessingFiles(false);
+      return;
     }
 
     // Show loading toast
-    const loadingToast = toast.loading(`Processing ${validFiles.length} file(s)...`, {
-      description: "Please wait while we process your files.",
-    })
+    const loadingToast = toast.loading(
+      `Processing ${validFiles.length} file(s)...`,
+      {
+        description: "Please wait while we process your files.",
+      }
+    );
 
     try {
       const fileInfoPromises = validFiles.map(async (file) => {
+        // Generate base64 for display only, don't store it
         const base64 = await new Promise<string>((resolve) => {
-          const reader = new FileReader()
-          reader.onloadend = () => resolve(reader.result as string)
-          reader.readAsDataURL(file)
-        })
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(file);
+        });
+        const fileId = generateFileId(file.name, file.size);
         return {
           name: file.name,
           size: file.size,
           type: file.type,
-          data: base64,
-        }
-      })
+          data: base64, // For display in UI
+          file: file, // Keep original file reference
+          id: fileId, // ID for IndexedDB storage
+        };
+      });
 
-      const newFileInfos = await Promise.all(fileInfoPromises)
+      const newFileInfos = await Promise.all(fileInfoPromises);
+
+      // Store file data in IndexedDB
+      await storeFiles(
+        newFileInfos.map((f) => ({
+          id: f.id!,
+          data: f.data,
+        }))
+      );
+
       setFormData((prev) => ({
         ...prev,
         fileInfos: [...prev.fileInfos, ...newFileInfos],
-      }))
+      }));
 
       // Success toast with unique ID to prevent duplicates
       toast.success(`${validFiles.length} file(s) uploaded successfully`, {
@@ -203,116 +303,173 @@ export default function EvidenceSubmissionPage() {
         icon: <CheckCircle2 className="h-5 w-5 text-green-500" />,
         id: `file-upload-success-${Date.now()}`, // Unique ID to prevent duplicates
         duration: 3000,
-      })
+      });
     } catch (error) {
       toast.error("Error processing files", {
         description: "Please try again or use different files.",
         icon: <AlertCircle className="h-5 w-5 text-red-500" />,
         id: "file-processing-error",
-      })
+      });
     } finally {
-      toast.dismiss(loadingToast)
-      setIsProcessingFiles(false)
+      toast.dismiss(loadingToast);
+      setIsProcessingFiles(false);
     }
-  }
+  };
 
   const handleRemoveFile = (indexToRemove: number) => {
-    setFileToDelete(indexToRemove)
-    setShowDeleteDialog(true)
-  }
+    setFileToDelete(indexToRemove);
+    setShowDeleteDialog(true);
+  };
 
-  const confirmDeleteFile = () => {
+  const confirmDeleteFile = async () => {
     if (fileToDelete !== null) {
+      const fileToRemove = formData.fileInfos[fileToDelete];
+
+      // Delete from IndexedDB if it has an ID
+      if (fileToRemove?.id) {
+        try {
+          await deleteFileData(fileToRemove.id);
+        } catch (error) {
+          console.error("Error deleting file from IndexedDB:", error);
+          // Continue with removal even if IndexedDB deletion fails
+        }
+      }
+
       setFormData((prev) => ({
         ...prev,
         fileInfos: prev.fileInfos.filter((_, index) => index !== fileToDelete),
-      }))
-      setFileToDelete(null)
-      setShowDeleteDialog(false)
+      }));
+      setFileToDelete(null);
+      setShowDeleteDialog(false);
 
       toast.success("File removed", {
         description: "The file has been removed from your evidence.",
         id: "file-removed-success",
-      })
+      });
     }
-  }
+  };
 
   const handleRemoveWitness = (indexToRemove: number) => {
-    setWitnessToDelete(indexToRemove)
-    setShowDeleteDialog(true)
-  }
+    setWitnessToDelete(indexToRemove);
+    setShowDeleteDialog(true);
+  };
 
   const confirmDeleteWitness = () => {
     if (witnessToDelete !== null) {
       setFormData((prev) => ({
         ...prev,
-        witnesses: prev.witnesses.filter((_, index) => index !== witnessToDelete),
-      }))
-      setWitnessToDelete(null)
-      setShowDeleteDialog(false)
+        witnesses: prev.witnesses.filter(
+          (_, index) => index !== witnessToDelete
+        ),
+      }));
+      setWitnessToDelete(null);
+      setShowDeleteDialog(false);
 
       toast.success("Witness removed", {
-        description: "The witness information has been removed from your report.",
+        description:
+          "The witness information has been removed from your report.",
         id: "witness-removed-success",
-      })
+      });
     }
-  }
+  };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    setIsDragging(true)
-  }
+    e.preventDefault();
+    setIsDragging(true);
+  };
 
   const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    setIsDragging(false)
-  }
+    e.preventDefault();
+    setIsDragging(false);
+  };
 
   const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    setIsDragging(false)
+    e.preventDefault();
+    setIsDragging(false);
 
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0 && !isProcessingFiles) {
-      await processFiles(Array.from(e.dataTransfer.files))
+    if (
+      e.dataTransfer.files &&
+      e.dataTransfer.files.length > 0 &&
+      !isProcessingFiles
+    ) {
+      await processFiles(Array.from(e.dataTransfer.files));
       // Clear dataTransfer to prevent duplicate events
-      e.dataTransfer.clearData()
+      e.dataTransfer.clearData();
     }
-  }
+  };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
     // Check if there is any evidence (files or witnesses)
     if (formData.fileInfos.length === 0 && formData.witnesses.length === 0) {
       toast.error("Evidence required", {
-        description: "Please provide at least one piece of evidence (files or witness information) before proceeding.",
+        description:
+          "Please provide at least one piece of evidence (files or witness information) before proceeding.",
         icon: <AlertTriangle className="h-5 w-5 text-amber-500" />,
         duration: 5000,
         id: "evidence-required-error",
-      })
-      return
+      });
+      return;
     }
 
-    // Save the current evidence data before navigating
-    sessionStorage.setItem("evidenceSubmissionData", JSON.stringify(formData))
-    router.push("/incidents/submit/review")
-  }
+    try {
+      // Ensure all files are stored in IndexedDB
+      const filesToStore = formData.fileInfos
+        .filter((f) => f.id && f.data)
+        .map((f) => ({
+          id: f.id!,
+          data: f.data,
+        }));
+
+      if (filesToStore.length > 0) {
+        await storeFiles(filesToStore);
+      }
+
+      // Save only metadata to sessionStorage (without base64 data)
+      const dataToSave = {
+        witnesses: formData.witnesses,
+        fileInfos: formData.fileInfos.map((f) => ({
+          name: f.name,
+          size: f.size,
+          type: f.type,
+          id: f.id, // Store ID to retrieve from IndexedDB later
+          // Don't save 'data' field - it's stored in IndexedDB
+        })),
+      };
+
+      sessionStorage.setItem(
+        "evidenceSubmissionData",
+        JSON.stringify(dataToSave)
+      );
+      router.push("/incidents/submit/review");
+    } catch (error) {
+      console.error("Error saving evidence data:", error);
+      toast.error("Failed to save evidence", {
+        description:
+          "There was an error saving your evidence. Please try again.",
+        icon: <AlertCircle className="h-5 w-5 text-red-500" />,
+        duration: 5000,
+        id: "evidence-save-error",
+      });
+    }
+  };
 
   const getFileIcon = (fileType: string) => {
     if (fileType.startsWith("image/")) {
-      return <ImageIcon className="h-6 w-6 text-blue-500" />
+      return <ImageIcon className="h-6 w-6 text-blue-500" />;
     } else if (fileType.startsWith("video/")) {
-      return <Video className="h-6 w-6 text-purple-500" />
+      return <Video className="h-6 w-6 text-purple-500" />;
     } else {
-      return <File className="h-6 w-6 text-gray-500" />
+      return <File className="h-6 w-6 text-gray-500" />;
     }
-  }
+  };
 
   const formatFileSize = (bytes: number) => {
-    if (bytes < 1024) return bytes + " B"
-    else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB"
-    else return (bytes / 1048576).toFixed(2) + " MB"
-  }
+    if (bytes < 1024) return bytes + " B";
+    else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB";
+    else return (bytes / 1048576).toFixed(2) + " MB";
+  };
 
   if (loading) {
     return (
@@ -328,7 +485,7 @@ export default function EvidenceSubmissionPage() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -336,9 +493,17 @@ export default function EvidenceSubmissionPage() {
       <Sidebar />
 
       {/* Main Content */}
-      <div className={`flex-1 transition-all duration-300 ${collapsed ? "ml-20" : "ml-64"}`}>
+      <div
+        className={`flex-1 transition-all duration-300 ${
+          collapsed ? "ml-20" : "ml-64"
+        }`}
+      >
         {/* Navbar */}
-        <Navbar title="Report an Incident" subtitle="Submit evidence and witness information" showSearch={false} />
+        <Navbar
+          title="Report an Incident"
+          subtitle="Submit evidence and witness information"
+          showSearch={false}
+        />
 
         {/* Content */}
         <div className="pt-24 px-6 pb-10">
@@ -351,13 +516,18 @@ export default function EvidenceSubmissionPage() {
                 </div>
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-[#800000] mb-1">Evidence & Witnesses</h1>
+                <h1 className="text-2xl font-bold text-[#800000] mb-1">
+                  Evidence & Witnesses
+                </h1>
                 <p className="text-gray-600">
-                  Upload photos, videos, or documents and provide information about any witnesses.
+                  Upload photos, videos, or documents and provide information
+                  about any witnesses.
                 </p>
               </div>
               <div className="md:ml-auto flex-shrink-0 bg-[#800000]/5 rounded-full px-4 py-2 flex items-center">
-                <div className="mr-2 text-sm font-medium text-[#800000]">Step 2 of 3</div>
+                <div className="mr-2 text-sm font-medium text-[#800000]">
+                  Step 2 of 3
+                </div>
               </div>
             </div>
 
@@ -371,14 +541,18 @@ export default function EvidenceSubmissionPage() {
                   <div className="bg-green-500 text-white rounded-full w-10 h-10 flex items-center justify-center text-sm font-medium mb-2">
                     <CheckCircle2 className="h-5 w-5" />
                   </div>
-                  <span className="text-sm font-medium text-green-600">Incident Details</span>
+                  <span className="text-sm font-medium text-green-600">
+                    Incident Details
+                  </span>
                 </div>
 
                 <div className="flex flex-col items-center">
                   <div className="bg-[#800000] text-white rounded-full w-10 h-10 flex items-center justify-center text-sm font-medium mb-2">
                     2
                   </div>
-                  <span className="text-sm font-medium text-[#800000]">Evidence & Witnesses</span>
+                  <span className="text-sm font-medium text-[#800000]">
+                    Evidence & Witnesses
+                  </span>
                 </div>
 
                 <div className="flex flex-col items-center opacity-50">
@@ -400,11 +574,15 @@ export default function EvidenceSubmissionPage() {
                     <Info className="h-5 w-5 text-[#D4AF37]" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-medium text-gray-800 mb-1">Evidence Guidelines</h3>
+                    <h3 className="text-sm font-medium text-gray-800 mb-1">
+                      Evidence Guidelines
+                    </h3>
                     <p className="text-xs text-gray-600">
-                      Please provide any evidence that can help in the investigation. This can include photos, videos,
-                      or documents. You can also add information about witnesses who saw the incident. At least one
-                      piece of evidence (files or witness information) is required.
+                      Please provide any evidence that can help in the
+                      investigation. This can include photos, videos, or
+                      documents. You can also add information about witnesses
+                      who saw the incident. At least one piece of evidence
+                      (files or witness information) is required.
                     </p>
                   </div>
                 </div>
@@ -421,13 +599,21 @@ export default function EvidenceSubmissionPage() {
                 <div className="border-b border-gray-100">
                   <div className="flex items-center gap-2 p-6">
                     <Camera className="text-[#800000] h-5 w-5" />
-                    <h2 className="text-lg font-semibold text-gray-800">Evidence Upload</h2>
+                    <h2 className="text-lg font-semibold text-gray-800">
+                      Evidence Upload
+                    </h2>
                   </div>
                 </div>
 
                 <div className="p-6">
                   <div
-                    className={`border-2 ${isDragging ? "border-[#800000]" : "border-dashed border-gray-300"} rounded-xl p-8 text-center transition-all duration-200 ${isDragging ? "bg-[#800000]/5" : "bg-gray-50"}`}
+                    className={`border-2 ${
+                      isDragging
+                        ? "border-[#800000]"
+                        : "border-dashed border-gray-300"
+                    } rounded-xl p-8 text-center transition-all duration-200 ${
+                      isDragging ? "bg-[#800000]/5" : "bg-gray-50"
+                    }`}
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
@@ -441,11 +627,16 @@ export default function EvidenceSubmissionPage() {
                       ref={fileInputRef}
                       accept="image/*,video/*"
                     />
-                    <Label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center">
+                    <Label
+                      htmlFor="file-upload"
+                      className="cursor-pointer flex flex-col items-center"
+                    >
                       <div className="mb-4 p-4 bg-[#800000]/10 rounded-full">
                         <Upload className="h-8 w-8 text-[#800000]" />
                       </div>
-                      <h3 className="text-lg font-medium text-gray-700 mb-2">Drag & Drop Files Here</h3>
+                      <h3 className="text-lg font-medium text-gray-700 mb-2">
+                        Drag & Drop Files Here
+                      </h3>
                       <p className="text-gray-500 mb-4">or</p>
                       <Button
                         type="button"
@@ -454,7 +645,9 @@ export default function EvidenceSubmissionPage() {
                       >
                         Browse Files
                       </Button>
-                      <p className="text-xs text-gray-500 mt-4">Supports JPG, PNG, MP4 (Max 10MB each)</p>
+                      <p className="text-xs text-gray-500 mt-4">
+                        Supports JPG, PNG, MP4 (Max 10MB each)
+                      </p>
                     </Label>
                   </div>
 
@@ -479,7 +672,7 @@ export default function EvidenceSubmissionPage() {
                               size="sm"
                               className="text-xs h-8 border-gray-200 text-gray-600 hover:text-[#800000] hover:border-[#800000]/20"
                               onClick={() => {
-                                fileInputRef.current?.click()
+                                fileInputRef.current?.click();
                               }}
                             >
                               <Plus className="h-3.5 w-3.5 mr-1" />
@@ -521,7 +714,11 @@ export default function EvidenceSubmissionPage() {
                                 </div>
                               ) : file.type.startsWith("video/") ? (
                                 <div className="relative aspect-video bg-black">
-                                  <video src={file.data} controls className="w-full h-full" />
+                                  <video
+                                    src={file.data}
+                                    controls
+                                    className="w-full h-full"
+                                  />
                                 </div>
                               ) : (
                                 <div className="aspect-square flex items-center justify-center bg-gray-100">
@@ -533,10 +730,15 @@ export default function EvidenceSubmissionPage() {
                                 <div className="flex items-start gap-2">
                                   {getFileIcon(file.type)}
                                   <div className="min-w-0 flex-1">
-                                    <p className="text-sm font-medium text-gray-700 truncate" title={file.name}>
+                                    <p
+                                      className="text-sm font-medium text-gray-700 truncate"
+                                      title={file.name}
+                                    >
                                       {file.name}
                                     </p>
-                                    <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
+                                    <p className="text-xs text-gray-500">
+                                      {formatFileSize(file.size)}
+                                    </p>
                                   </div>
                                 </div>
                               </div>
@@ -555,7 +757,9 @@ export default function EvidenceSubmissionPage() {
                   <div className="flex items-center justify-between p-6">
                     <div className="flex items-center gap-2">
                       <User className="text-[#800000] h-5 w-5" />
-                      <h2 className="text-lg font-semibold text-gray-800">Witness Information</h2>
+                      <h2 className="text-lg font-semibold text-gray-800">
+                        Witness Information
+                      </h2>
                     </div>
                     <Button
                       type="button"
@@ -584,7 +788,11 @@ export default function EvidenceSubmissionPage() {
                           >
                             <div
                               className="flex items-center justify-between p-4 bg-gray-50 border-b border-gray-200 cursor-pointer"
-                              onClick={() => setExpandedWitness(expandedWitness === index ? null : index)}
+                              onClick={() =>
+                                setExpandedWitness(
+                                  expandedWitness === index ? null : index
+                                )
+                              }
                             >
                               <div className="flex items-center gap-3">
                                 <div className="bg-[#800000]/10 p-2 rounded-full">
@@ -592,10 +800,14 @@ export default function EvidenceSubmissionPage() {
                                 </div>
                                 <div>
                                   <h3 className="font-medium text-gray-800">
-                                    {witness.name ? witness.name : `Witness #${index + 1}`}
+                                    {witness.name
+                                      ? witness.name
+                                      : `Witness #${index + 1}`}
                                   </h3>
                                   {witness.contactInformation && (
-                                    <p className="text-xs text-gray-500">{witness.contactInformation}</p>
+                                    <p className="text-xs text-gray-500">
+                                      {witness.contactInformation}
+                                    </p>
                                   )}
                                 </div>
                               </div>
@@ -605,8 +817,8 @@ export default function EvidenceSubmissionPage() {
                                   variant="ghost"
                                   size="sm"
                                   onClick={(e) => {
-                                    e.stopPropagation()
-                                    handleRemoveWitness(index)
+                                    e.stopPropagation();
+                                    handleRemoveWitness(index);
                                   }}
                                   className="h-8 w-8 p-0 text-gray-500 hover:text-[#800000] hover:bg-[#800000]/10 rounded-full"
                                 >
@@ -638,17 +850,25 @@ export default function EvidenceSubmissionPage() {
                                         selectedUsers={witness.users || []}
                                         onUsersChange={(users) => {
                                           // Update witness with selected users
-                                          const updatedWitnesses = [...formData.witnesses];
+                                          const updatedWitnesses = [
+                                            ...formData.witnesses,
+                                          ];
                                           updatedWitnesses[index] = {
                                             ...updatedWitnesses[index],
                                             users: users,
                                             // If there are users, use the user's name and email as default
-                                            name: users.length > 0 ? users[0].fullName : "",
-                                            contactInformation: users.length > 0 ? users[0].email : ""
+                                            name:
+                                              users.length > 0
+                                                ? users[0].fullName
+                                                : "",
+                                            contactInformation:
+                                              users.length > 0
+                                                ? users[0].email
+                                                : "",
                                           };
                                           setFormData((prev) => ({
                                             ...prev,
-                                            witnesses: updatedWitnesses
+                                            witnesses: updatedWitnesses,
                                           }));
                                         }}
                                         placeholder="Type @ to mention a witness"
@@ -656,18 +876,21 @@ export default function EvidenceSubmissionPage() {
                                         className="border-gray-200 focus:border-[#800000] focus:ring-[#800000]/20"
                                       />
                                     </div>
-                                    
-                                    {witness.users && witness.users.length > 0 && (
-                                      <div className="space-y-2">
-                                        <Label className="text-sm font-medium flex items-center gap-1.5">
-                                          <Phone className="h-3.5 w-3.5 text-[#800000]/70" />
-                                          Contact Information
-                                        </Label>
-                                        <div className="flex items-center p-2 border border-gray-200 rounded-md bg-gray-50">
-                                          <span className="text-gray-600">{witness.users[0].email}</span>
+
+                                    {witness.users &&
+                                      witness.users.length > 0 && (
+                                        <div className="space-y-2">
+                                          <Label className="text-sm font-medium flex items-center gap-1.5">
+                                            <Phone className="h-3.5 w-3.5 text-[#800000]/70" />
+                                            Contact Information
+                                          </Label>
+                                          <div className="flex items-center p-2 border border-gray-200 rounded-md bg-gray-50">
+                                            <span className="text-gray-600">
+                                              {witness.users[0].email}
+                                            </span>
+                                          </div>
                                         </div>
-                                      </div>
-                                    )}
+                                      )}
                                     <div className="space-y-2">
                                       <Label className="text-sm font-medium flex items-center gap-1.5">
                                         <PenLine className="h-3.5 w-3.5 text-[#800000]/70" />
@@ -675,7 +898,13 @@ export default function EvidenceSubmissionPage() {
                                       </Label>
                                       <Textarea
                                         value={witness.additionalNotes}
-                                        onChange={(e) => handleWitnessChange(index, "additionalNotes", e.target.value)}
+                                        onChange={(e) =>
+                                          handleWitnessChange(
+                                            index,
+                                            "additionalNotes",
+                                            e.target.value
+                                          )
+                                        }
                                         placeholder="Describe what the witness observed"
                                         className="min-h-[100px] border-gray-200 focus:border-[#800000] focus:ring-[#800000]/20 resize-none"
                                       />
@@ -692,9 +921,12 @@ export default function EvidenceSubmissionPage() {
                         <div className="mb-3 bg-[#800000]/10 h-16 w-16 rounded-full flex items-center justify-center mx-auto">
                           <User className="h-8 w-8 text-[#800000]" />
                         </div>
-                        <h3 className="text-base font-medium text-gray-700 mb-2">No Witnesses Added</h3>
+                        <h3 className="text-base font-medium text-gray-700 mb-2">
+                          No Witnesses Added
+                        </h3>
                         <p className="text-sm text-gray-500 mb-4 max-w-md mx-auto">
-                          If anyone witnessed the incident, add their information to help with the investigation.
+                          If anyone witnessed the incident, add their
+                          information to help with the investigation.
                         </p>
                         <Button
                           type="button"
@@ -761,7 +993,9 @@ export default function EvidenceSubmissionPage() {
                       >
                         <div className="space-y-4">
                           <div>
-                            <h3 className="text-sm font-medium text-white/90 mb-2">Evidence Tips</h3>
+                            <h3 className="text-sm font-medium text-white/90 mb-2">
+                              Evidence Tips
+                            </h3>
                             <ul className="space-y-3">
                               {[
                                 {
@@ -781,8 +1015,13 @@ export default function EvidenceSubmissionPage() {
                                   text: "At least one piece of evidence (file or witness) is required",
                                 },
                               ].map((tip, index) => (
-                                <li key={index} className="flex items-start gap-2 text-sm text-white/80">
-                                  <div className="mt-0.5 bg-white/10 p-1.5 rounded-full">{tip.icon}</div>
+                                <li
+                                  key={index}
+                                  className="flex items-start gap-2 text-sm text-white/80"
+                                >
+                                  <div className="mt-0.5 bg-white/10 p-1.5 rounded-full">
+                                    {tip.icon}
+                                  </div>
                                   <span>{tip.text}</span>
                                 </li>
                               ))}
@@ -790,10 +1029,13 @@ export default function EvidenceSubmissionPage() {
                           </div>
 
                           <div className="pt-4 border-t border-white/20">
-                            <h3 className="text-sm font-medium text-white/90 mb-2">What Happens Next?</h3>
+                            <h3 className="text-sm font-medium text-white/90 mb-2">
+                              What Happens Next?
+                            </h3>
                             <p className="text-sm text-white/80 mb-2">
-                              After submitting evidence, you'll review all information before final submission. Your
-                              report will be assigned a tracking number for follow-up.
+                              After submitting evidence, you'll review all
+                              information before final submission. Your report
+                              will be assigned a tracking number for follow-up.
                             </p>
                           </div>
                         </div>
@@ -819,7 +1061,9 @@ export default function EvidenceSubmissionPage() {
                         </div>
                         <span className="text-sm font-medium">Files</span>
                       </div>
-                      <span className="text-lg font-bold text-[#800000]">{formData.fileInfos.length}</span>
+                      <span className="text-lg font-bold text-[#800000]">
+                        {formData.fileInfos.length}
+                      </span>
                     </div>
 
                     <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
@@ -829,7 +1073,9 @@ export default function EvidenceSubmissionPage() {
                         </div>
                         <span className="text-sm font-medium">Witnesses</span>
                       </div>
-                      <span className="text-lg font-bold text-[#800000]">{formData.witnesses.length}</span>
+                      <span className="text-lg font-bold text-[#800000]">
+                        {formData.witnesses.length}
+                      </span>
                     </div>
 
                     <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
@@ -841,12 +1087,14 @@ export default function EvidenceSubmissionPage() {
                       </div>
                       <span
                         className={`text-sm font-medium px-2.5 py-1 rounded-full ${
-                          formData.fileInfos.length > 0 || formData.witnesses.length > 0
+                          formData.fileInfos.length > 0 ||
+                          formData.witnesses.length > 0
                             ? "bg-green-100 text-green-800"
                             : "bg-amber-100 text-amber-800"
                         }`}
                       >
-                        {formData.fileInfos.length > 0 || formData.witnesses.length > 0
+                        {formData.fileInfos.length > 0 ||
+                        formData.witnesses.length > 0
                           ? "Ready to Continue"
                           : "Evidence Required"}
                       </span>
@@ -863,7 +1111,9 @@ export default function EvidenceSubmissionPage() {
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>{fileToDelete !== null ? "Remove File" : "Remove Witness"}</DialogTitle>
+            <DialogTitle>
+              {fileToDelete !== null ? "Remove File" : "Remove Witness"}
+            </DialogTitle>
             <DialogDescription>
               {fileToDelete !== null
                 ? "Are you sure you want to remove this file? This action cannot be undone."
@@ -874,9 +1124,9 @@ export default function EvidenceSubmissionPage() {
             <Button
               variant="outline"
               onClick={() => {
-                setFileToDelete(null)
-                setWitnessToDelete(null)
-                setShowDeleteDialog(false)
+                setFileToDelete(null);
+                setWitnessToDelete(null);
+                setShowDeleteDialog(false);
               }}
               className="border-gray-300 text-gray-700 hover:bg-gray-50"
             >
@@ -886,9 +1136,9 @@ export default function EvidenceSubmissionPage() {
               variant="destructive"
               onClick={() => {
                 if (fileToDelete !== null) {
-                  confirmDeleteFile()
+                  confirmDeleteFile();
                 } else if (witnessToDelete !== null) {
-                  confirmDeleteWitness()
+                  confirmDeleteWitness();
                 }
               }}
               className="bg-[#800000] hover:bg-[#600000] text-white"
@@ -899,5 +1149,5 @@ export default function EvidenceSubmissionPage() {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }

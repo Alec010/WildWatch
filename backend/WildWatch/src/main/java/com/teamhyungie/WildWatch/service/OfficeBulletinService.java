@@ -21,6 +21,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import static com.teamhyungie.WildWatch.config.TimezoneConfig.APP_TIMEZONE;
 
 @Service
 @RequiredArgsConstructor
@@ -45,7 +46,7 @@ public class OfficeBulletinService {
         bulletin.setTitle(request.getTitle());
         bulletin.setDescription(request.getDescription());
         bulletin.setCreatedBy(user);
-        bulletin.setCreatedAt(LocalDateTime.now());
+        bulletin.setCreatedAt(LocalDateTime.now(APP_TIMEZONE));
         bulletin.setIsActive(true);
 
         // Handle related incidents
@@ -82,7 +83,7 @@ public class OfficeBulletinService {
                         media.setFileUrl(fileUrl);
                         media.setFileType(file.getContentType());
                         media.setFileSize(file.getSize());
-                        media.setUploadedAt(LocalDateTime.now());
+                        media.setUploadedAt(LocalDateTime.now(APP_TIMEZONE));
                         
                         mediaAttachments.add(bulletinMediaRepository.save(media));
                     } catch (Exception e) {

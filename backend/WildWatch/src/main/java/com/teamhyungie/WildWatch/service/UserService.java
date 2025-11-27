@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+import static com.teamhyungie.WildWatch.config.TimezoneConfig.APP_TIMEZONE;
 
 @Service
 @RequiredArgsConstructor
@@ -55,7 +56,7 @@ public class UserService {
         // Generate verification token
         String verificationToken = UUID.randomUUID().toString();
         user.setVerificationToken(verificationToken);
-        user.setVerificationTokenExpiry(LocalDateTime.now().plusHours(24));
+        user.setVerificationTokenExpiry(LocalDateTime.now(APP_TIMEZONE).plusHours(24));
 
         user = userRepository.save(user);
 
@@ -73,7 +74,7 @@ public class UserService {
         User user = userRepository.findByVerificationToken(token)
                 .orElseThrow(() -> new RuntimeException("Invalid verification token"));
 
-        if (user.getVerificationTokenExpiry().isBefore(LocalDateTime.now())) {
+        if (user.getVerificationTokenExpiry().isBefore(LocalDateTime.now(APP_TIMEZONE))) {
             throw new RuntimeException("Verification token has expired");
         }
 
@@ -153,7 +154,7 @@ public class UserService {
         // Generate reset token
         String resetToken = UUID.randomUUID().toString();
         user.setResetToken(resetToken);
-        user.setResetTokenExpiry(LocalDateTime.now().plusHours(1));
+        user.setResetTokenExpiry(LocalDateTime.now(APP_TIMEZONE).plusHours(1));
         userRepository.save(user);
 
         try {
@@ -168,7 +169,7 @@ public class UserService {
         User user = userRepository.findByResetToken(token)
                 .orElseThrow(() -> new RuntimeException("Invalid reset token"));
 
-        if (user.getResetTokenExpiry().isBefore(LocalDateTime.now())) {
+        if (user.getResetTokenExpiry().isBefore(LocalDateTime.now(APP_TIMEZONE))) {
             throw new RuntimeException("Reset token has expired");
         }
 

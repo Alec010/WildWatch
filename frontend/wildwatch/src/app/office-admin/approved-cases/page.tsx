@@ -30,6 +30,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
 import { api } from "@/utils/apiClient"
+import { formatDateWithYear, parseUTCDate } from "@/utils/dateUtils"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -208,12 +209,7 @@ export default function VerifiedCaseTracker() {
   const currentIncidents = filteredIncidents.slice(startIndex, endIndex)
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    })
+    return formatDateWithYear(dateString)
   }
 
   if (loading) {

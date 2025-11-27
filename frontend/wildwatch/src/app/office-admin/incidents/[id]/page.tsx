@@ -58,6 +58,7 @@ import { Switch } from "@/components/ui/switch";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import { formatDateOnly, parseUTCDate } from "@/utils/dateUtils";
 
 interface Witness {
   id: string;
@@ -715,7 +716,7 @@ export default function IncidentDetailsPage() {
                       <div className="flex flex-col items-end">
                         <p className="text-white/80 text-sm">Reported</p>
                         <p className="font-medium">
-                          {new Date(incident.submittedAt).toLocaleDateString()}
+                          {formatDateOnly(incident.submittedAt)}
                         </p>
                       </div>
                     </div>
@@ -732,9 +733,9 @@ export default function IncidentDetailsPage() {
                           Date of Incident
                         </p>
                         <p className="font-medium">
-                          {new Date(
+                          {formatDateOnly(
                             incident.dateOfIncident
-                          ).toLocaleDateString()}
+                          )}
                         </p>
                       </div>
                     </div>
@@ -845,9 +846,9 @@ export default function IncidentDetailsPage() {
                                 <p className="text-xs text-gray-500">
                                   {(file.fileSize / 1024 / 1024).toFixed(2)} MB
                                   •{" "}
-                                  {new Date(
+                                  {formatDateOnly(
                                     file.uploadedAt
-                                  ).toLocaleDateString()}
+                                  )}
                                 </p>
                               </div>
                             </motion.div>
@@ -1150,7 +1151,7 @@ export default function IncidentDetailsPage() {
                       <div>
                         <p className="text-sm text-gray-500">Submission Date</p>
                         <p className="font-medium text-[#8B0000]">
-                          {new Date(incident.submittedAt).toLocaleString()}
+                          {formatDateOnly(incident.submittedAt)}
                         </p>
                       </div>
                     </div>
@@ -1218,7 +1219,7 @@ export default function IncidentDetailsPage() {
                       <CheckCircle2 className="h-4 w-4 mt-0.5" />
                       <span>
                         Verified by {incident.verifiedBy} on{" "}
-                        {new Date(incident.verifiedAt!).toLocaleString()}
+                        {incident.verifiedAt ? formatDateOnly(incident.verifiedAt) : 'N/A'}
                       </span>
                     </div>
                   )}

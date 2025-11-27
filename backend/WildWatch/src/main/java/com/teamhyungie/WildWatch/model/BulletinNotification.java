@@ -9,6 +9,7 @@ import org.hibernate.annotations.GenericGenerator;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import static com.teamhyungie.WildWatch.config.TimezoneConfig.APP_TIMEZONE;
 
 /**
  * Entity to store aggregated bulletin upvote notifications
@@ -37,10 +38,10 @@ public class BulletinNotification {
     private NotificationType notificationType;
     
     @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime createdAt = LocalDateTime.now(APP_TIMEZONE);
     
     @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt = LocalDateTime.now();
+    private LocalDateTime updatedAt = LocalDateTime.now(APP_TIMEZONE);
     
     @Column(name = "is_read", nullable = false)
     private Boolean isRead = false;

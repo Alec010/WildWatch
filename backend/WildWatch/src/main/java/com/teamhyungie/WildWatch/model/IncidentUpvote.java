@@ -3,6 +3,7 @@ package com.teamhyungie.WildWatch.model;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
+import static com.teamhyungie.WildWatch.config.TimezoneConfig.APP_TIMEZONE;
 
 @Entity
 @Table(name = "incident_upvotes")
@@ -25,6 +26,6 @@ public class IncidentUpvote {
 
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
+        createdAt = LocalDateTime.now(APP_TIMEZONE);
     }
 } 

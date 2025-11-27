@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import { useEffect, useState, useRef } from "react"
-import { useRouter, useParams } from "next/navigation"
-import Link from "next/link"
+import { useEffect, useState, useRef } from "react";
+import { useRouter, useParams } from "next/navigation";
+import Link from "next/link";
 import {
   ChevronRight,
   Calendar,
@@ -24,15 +24,15 @@ import {
   Info,
   Tag,
   CalendarPlus,
-} from "lucide-react"
-import { Badge } from "@/components/ui/badge"
-import { OfficeAdminSidebar } from "@/components/OfficeAdminSidebar"
-import { OfficeAdminNavbar } from "@/components/OfficeAdminNavbar"
-import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
-import { Input } from "@/components/ui/input"
-import { toast } from "sonner"
-import { Toaster } from "sonner"
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { OfficeAdminSidebar } from "@/components/OfficeAdminSidebar";
+import { OfficeAdminNavbar } from "@/components/OfficeAdminNavbar";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
+import { Toaster } from "sonner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,122 +42,138 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { API_BASE_URL } from "@/utils/api"
-import { RatingModal } from "@/components/RatingModal"
-import ExtendResolutionModal from "@/components/ExtendResolutionModal"
-import { api } from "@/utils/apiClient"
-import { useSidebar } from "@/contexts/SidebarContext"
-import { motion } from "framer-motion"
-import { Inter } from "next/font/google"
-import { Checkbox } from "@/components/ui/checkbox"
+} from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { API_BASE_URL } from "@/utils/api";
+import { RatingModal } from "@/components/RatingModal";
+import ExtendResolutionModal from "@/components/ExtendResolutionModal";
+import { api } from "@/utils/apiClient";
+import { useSidebar } from "@/contexts/SidebarContext";
+import { motion } from "framer-motion";
+import { Inter } from "next/font/google";
+import { Checkbox } from "@/components/ui/checkbox";
+import { formatDateOnly, parseUTCDate, formatDateWithYear } from "@/utils/dateUtils"
 
-const inter = Inter({ subsets: ["latin"] })
+const inter = Inter({ subsets: ["latin"] });
 
 interface IncidentUpdate {
-  id: number
-  message: string
-  status: string
-  updatedByFullName: string
-  updatedByName?: string
-  updatedAt: string
-  visibleToReporter: boolean
+  id: number;
+  message: string;
+  status: string;
+  updatedByFullName: string;
+  updatedByName?: string;
+  updatedAt: string;
+  visibleToReporter: boolean;
 }
 
-function getEstimatedResolution(submittedAt: string, priority: string, extendedDate?: string) {
+function getEstimatedResolution(
+  submittedAt: string,
+  priority: string,
+  extendedDate?: string
+) {
   // If there's an extended date from the backend, use that
   if (extendedDate) {
-    return new Date(extendedDate)
+    return parseUTCDate(extendedDate);
   }
-  
+
   // Otherwise, calculate based on priority
-  const base = new Date(submittedAt)
-  let days = 2
-  if (priority === "MEDIUM") days = 3
-  if (priority === "HIGH") days = 5
-  base.setDate(base.getDate() + days)
-  return base
+  const base = parseUTCDate(submittedAt);
+  let days = 2;
+  if (priority === "MEDIUM") days = 3;
+  if (priority === "HIGH") days = 5;
+  base.setDate(base.getDate() + days);
+  return base;
 }
 
 function formatDate(dateString: string) {
   try {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    })
+    if (!dateString) return 'Invalid date'
+    return formatDateOnly(dateString)
   } catch (error) {
     return 'Invalid date'
   }
 }
 
 interface Incident {
-  id: string
-  trackingNumber: string
-  dateOfIncident: string
-  timeOfIncident: string
-  location: string
-  incidentType: string
-  description: string
-  submittedByFullName: string
-  submittedByEmail: string
-  submittedByPhone: string
-  submittedByRole: string
-  submittedByIdNumber: string
-  status: string
-  priorityLevel: "HIGH" | "MEDIUM" | "LOW"
-  submittedAt?: string
-  estimatedResolutionDate?: string
-  resolutionExtendedBy?: string
-  resolutionExtendedAt?: string
+  id: string;
+  trackingNumber: string;
+  dateOfIncident: string;
+  timeOfIncident: string;
+  location: string;
+  incidentType: string;
+  description: string;
+  submittedByFullName: string;
+  submittedByEmail: string;
+  submittedByPhone: string;
+  submittedByRole: string;
+  submittedByIdNumber: string;
+  status: string;
+  priorityLevel: "HIGH" | "MEDIUM" | "LOW";
+  submittedAt?: string;
+  estimatedResolutionDate?: string;
+  resolutionExtendedBy?: string;
+  resolutionExtendedAt?: string;
 }
 
 interface UpdateRequest {
-  status: string
-  updateMessage: string
-  updatedBy: string
-  visibleToReporter: boolean
-  priorityLevel: "HIGH" | "MEDIUM" | "LOW"
+  status: string;
+  updateMessage: string;
+  updatedBy: string;
+  visibleToReporter: boolean;
+  priorityLevel: "HIGH" | "MEDIUM" | "LOW";
 }
 
 interface TransferRequest {
-  newOffice: string
-  transferNotes: string
+  newOffice: string;
+  transferNotes: string;
 }
 
 export default function UpdateVerifiedCasePage() {
-  const params = useParams()
-  const router = useRouter()
-  const { collapsed } = useSidebar()
-  const [incident, setIncident] = useState<Incident | null>(null)
-  const [updates, setUpdates] = useState<IncidentUpdate[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [updateMessage, setUpdateMessage] = useState("")
-  const [updatedBy, setUpdatedBy] = useState("")
-  const [isVisibleToReporter, setIsVisibleToReporter] = useState(true)
+  const params = useParams();
+  const router = useRouter();
+  const { collapsed } = useSidebar();
+  const [incident, setIncident] = useState<Incident | null>(null);
+  const [updates, setUpdates] = useState<IncidentUpdate[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [updateMessage, setUpdateMessage] = useState("");
+  const [updatedBy, setUpdatedBy] = useState("");
+  const [isVisibleToReporter, setIsVisibleToReporter] = useState(true);
   // Status is read-only in this view; use incident.status directly
-  const [priorityLevel, setPriorityLevel] = useState<"HIGH" | "MEDIUM" | "LOW">("MEDIUM")
-  const [isSending, setIsSending] = useState(false)
-  const [isResolveDialogOpen, setIsResolveDialogOpen] = useState(false)
-  const [isCloseDialogOpen, setIsCloseDialogOpen] = useState(false)
-  const [resolutionNotes, setResolutionNotes] = useState("")
-  const [confirmResolution, setConfirmResolution] = useState(false)
-  const [confirmAIGuideline, setConfirmAIGuideline] = useState(false)
-  const [showTransferModal, setShowTransferModal] = useState(false)
-  const [transferNotes, setTransferNotes] = useState("")
-  const [selectedOffice, setSelectedOffice] = useState("")
-  const [showExtendModal, setShowExtendModal] = useState(false)
-  const [isTransferring, setIsTransferring] = useState(false)
-  const [offices, setOffices] = useState<{ code: string; fullName: string; description: string }[]>([])
-  const [officesLoading, setOfficesLoading] = useState(false)
-  const [officesError, setOfficesError] = useState<string | null>(null)
-  const [officeName, setOfficeName] = useState<string>("")
-  const [showRatingModal, setShowRatingModal] = useState(false)
-  const [showSuccessDialog, setShowSuccessDialog] = useState(false)
+  const [priorityLevel, setPriorityLevel] = useState<"HIGH" | "MEDIUM" | "LOW">(
+    "MEDIUM"
+  );
+  const [isSending, setIsSending] = useState(false);
+  const [isResolveDialogOpen, setIsResolveDialogOpen] = useState(false);
+  const [isCloseDialogOpen, setIsCloseDialogOpen] = useState(false);
+  const [resolutionNotes, setResolutionNotes] = useState("");
+  const [confirmResolution, setConfirmResolution] = useState(false);
+  const [confirmAIGuideline, setConfirmAIGuideline] = useState(false);
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [transferNotes, setTransferNotes] = useState("");
+  const [selectedOffice, setSelectedOffice] = useState("");
+  const [showExtendModal, setShowExtendModal] = useState(false);
+  const [isTransferring, setIsTransferring] = useState(false);
+  const [offices, setOffices] = useState<
+    { code: string; fullName: string; description: string }[]
+  >([]);
+  const [officesLoading, setOfficesLoading] = useState(false);
+  const [officesError, setOfficesError] = useState<string | null>(null);
+  const [officeName, setOfficeName] = useState<string>("");
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   // Removed editable status tracking
 
   // Fetch user's office name when component mounts
@@ -167,10 +183,10 @@ export default function UpdateVerifiedCasePage() {
         const token = document.cookie
           .split("; ")
           .find((row) => row.startsWith("token="))
-          ?.split("=")[1]
+          ?.split("=")[1];
 
         if (!token) {
-          throw new Error("No authentication token found")
+          throw new Error("No authentication token found");
         }
 
         const response = await fetch(`${API_BASE_URL}/api/auth/profile`, {
@@ -178,145 +194,156 @@ export default function UpdateVerifiedCasePage() {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-        })
+        });
 
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        const profile = await response.json()
+        const profile = await response.json();
         if (profile.officeCode) {
           // Fetch office details to get the full name
-          const officeResponse = await fetch(`${API_BASE_URL}/api/offices`)
+          const officeResponse = await fetch(`${API_BASE_URL}/api/offices`);
           if (officeResponse.ok) {
-            const offices = await officeResponse.json()
-            const office = offices.find((o: any) => o.code === profile.officeCode)
+            const offices = await officeResponse.json();
+            const office = offices.find(
+              (o: any) => o.code === profile.officeCode
+            );
             if (office) {
-              setOfficeName(office.fullName)
-              setUpdatedBy(office.fullName) // Set the initial value
+              setOfficeName(office.fullName);
+              setUpdatedBy(office.fullName); // Set the initial value
             }
           }
         }
       } catch (error) {
-        console.error("Error fetching office name:", error)
+        console.error("Error fetching office name:", error);
       }
-    }
+    };
 
-    fetchOfficeName()
-  }, [])
+    fetchOfficeName();
+  }, []);
 
   const fetchUpdates = async () => {
     try {
       const token = document.cookie
         .split("; ")
         .find((row) => row.startsWith("token="))
-        ?.split("=")[1]
+        ?.split("=")[1];
 
       if (!token) {
-        throw new Error("No authentication token found")
+        throw new Error("No authentication token found");
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/incidents/${params.id}/updates`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      })
+      const response = await fetch(
+        `${API_BASE_URL}/api/incidents/${params.id}/updates`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json()
-      console.log("Raw updates data from API:", data)
+      const data = await response.json();
+      console.log("Raw updates data from API:", data);
 
       // Transform and validate the data
       const transformedData = data.map((update: any) => {
         const transformed = {
           ...update,
           visibleToReporter: Boolean(update.visibleToReporter),
-        }
-        console.log("Transformed update:", transformed)
-        return transformed
-      })
+        };
+        console.log("Transformed update:", transformed);
+        return transformed;
+      });
 
-      console.log("Final transformed updates:", transformedData)
-      setUpdates(transformedData)
+      console.log("Final transformed updates:", transformedData);
+      setUpdates(transformedData);
     } catch (error) {
-      console.error("Error fetching updates:", error)
+      console.error("Error fetching updates:", error);
     }
-  }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        setLoading(true)
+        setLoading(true);
         const token = document.cookie
           .split("; ")
           .find((row) => row.startsWith("token="))
-          ?.split("=")[1]
+          ?.split("=")[1];
 
         if (!token) {
-          throw new Error("No authentication token found")
+          throw new Error("No authentication token found");
         }
 
         // Fetch incident details
-        const incidentResponse = await fetch(`${API_BASE_URL}/api/incidents/${params.id}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        })
+        const incidentResponse = await fetch(
+          `${API_BASE_URL}/api/incidents/${params.id}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
 
         if (!incidentResponse.ok) {
-          throw new Error(`HTTP error! status: ${incidentResponse.status}`)
+          throw new Error(`HTTP error! status: ${incidentResponse.status}`);
         }
 
-        const incidentData = await incidentResponse.json()
-        setIncident(incidentData)
+        const incidentData = await incidentResponse.json();
+        setIncident(incidentData);
 
         // Fetch updates
-        await fetchUpdates()
+        await fetchUpdates();
       } catch (error) {
-        console.error("Error fetching data:", error)
-        setError(error instanceof Error ? error.message : "Failed to load data")
+        console.error("Error fetching data:", error);
+        setError(
+          error instanceof Error ? error.message : "Failed to load data"
+        );
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    fetchData()
-  }, [params.id])
+    fetchData();
+  }, [params.id]);
 
   useEffect(() => {
     if (incident) {
-      setPriorityLevel(incident.priorityLevel)
+      setPriorityLevel(incident.priorityLevel);
     }
-  }, [incident])
+  }, [incident]);
 
   const formatDateTime = (dateString: string) => {
-    return new Date(dateString).toLocaleString("en-US", {
+    const date = parseUTCDate(dateString)
+    return date.toLocaleString("en-US", {
       month: "short",
       day: "numeric",
       year: "numeric",
       hour: "numeric",
       minute: "numeric",
       hour12: true,
-    })
-  }
+    });
+  };
 
   const handleSendUpdate = async () => {
-    if (!incident || !updateMessage.trim() || !updatedBy.trim()) return
+    if (!incident || !updateMessage.trim() || !updatedBy.trim()) return;
 
     try {
-      setIsSending(true)
+      setIsSending(true);
       const token = document.cookie
         .split("; ")
         .find((row) => row.startsWith("token="))
-        ?.split("=")[1]
+        ?.split("=")[1];
 
       if (!token) {
-        throw new Error("No authentication token found")
+        throw new Error("No authentication token found");
       }
 
       const updateRequest: UpdateRequest = {
@@ -325,44 +352,49 @@ export default function UpdateVerifiedCasePage() {
         updatedBy: updatedBy.trim(),
         visibleToReporter: isVisibleToReporter,
         priorityLevel,
-      }
+      };
 
-      const response = await fetch(`${API_BASE_URL}/api/incidents/${params.id}`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(updateRequest),
-      })
+      const response = await fetch(
+        `${API_BASE_URL}/api/incidents/${params.id}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(updateRequest),
+        }
+      );
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       toast.success("Update sent successfully", {
         id: `update-sent-success-${Date.now()}`,
-        description: "The incident has been updated and the reporter will be notified.",
+        description:
+          "The incident has been updated and the reporter will be notified.",
         duration: 5000,
-      })
+      });
 
-      setUpdateMessage("")
+      setUpdateMessage("");
       // Keep updatedBy field populated with office name
-      setIsVisibleToReporter(true)
+      setIsVisibleToReporter(true);
 
       // Refresh the updates list
-      await fetchUpdates()
+      await fetchUpdates();
     } catch (error) {
-      console.error("Error sending update:", error)
+      console.error("Error sending update:", error);
       toast.error("Failed to send update", {
         id: "update-send-error",
-        description: "There was an error sending your update. Please try again.",
+        description:
+          "There was an error sending your update. Please try again.",
         duration: 5000,
-      })
+      });
     } finally {
-      setIsSending(false)
+      setIsSending(false);
     }
-  }
+  };
 
   const handleResolveCase = async () => {
     if (!resolutionNotes.trim() || !confirmResolution || !confirmAIGuideline) {
@@ -372,18 +404,18 @@ export default function UpdateVerifiedCasePage() {
           : "Please check both confirmation boxes before submitting.",
         duration: 5000,
         id: "resolution-form-incomplete-error",
-      })
-      return
+      });
+      return;
     }
     try {
-      setIsSending(true)
+      setIsSending(true);
       const token = document.cookie
         .split("; ")
         .find((row) => row.startsWith("token="))
-        ?.split("=")[1]
+        ?.split("=")[1];
 
       if (!token) {
-        throw new Error("No authentication token found")
+        throw new Error("No authentication token found");
       }
 
       const updateRequest: UpdateRequest = {
@@ -394,56 +426,59 @@ export default function UpdateVerifiedCasePage() {
         priorityLevel,
         // @ts-ignore backend accepts this extra field
         resolutionNotes: resolutionNotes.trim(),
-      }
+      };
 
-      const response = await fetch(`${API_BASE_URL}/api/incidents/${params.id}`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(updateRequest),
-      })
+      const response = await fetch(
+        `${API_BASE_URL}/api/incidents/${params.id}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(updateRequest),
+        }
+      );
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       toast.success("Case resolved successfully", {
         description: "The incident has been marked as resolved.",
         duration: 5000,
         id: `case-resolved-success-${Date.now()}`,
-      })
+      });
 
-      setIncident((prev) => (prev ? { ...prev, status: "Resolved" } : prev))
-      await fetchUpdates()
-      setShowRatingModal(true)
+      setIncident((prev) => (prev ? { ...prev, status: "Resolved" } : prev));
+      await fetchUpdates();
+      setShowRatingModal(true);
     } catch (error) {
-      console.error("Error resolving case:", error)
+      console.error("Error resolving case:", error);
       toast.error("Failed to resolve case", {
         description: "There was an error resolving the case. Please try again.",
         duration: 5000,
         id: "case-resolve-error",
-      })
+      });
     } finally {
-      setIsSending(false)
-      setIsResolveDialogOpen(false)
-      setResolutionNotes("")
-      setConfirmResolution(false)
-      setConfirmAIGuideline(false)
+      setIsSending(false);
+      setIsResolveDialogOpen(false);
+      setResolutionNotes("");
+      setConfirmResolution(false);
+      setConfirmAIGuideline(false);
     }
-  }
+  };
 
   const handleCloseCase = async () => {
     try {
-      setIsSending(true)
+      setIsSending(true);
       const token = document.cookie
         .split("; ")
         .find((row) => row.startsWith("token="))
-        ?.split("=")[1]
+        ?.split("=")[1];
 
       if (!token) {
-        throw new Error("No authentication token found")
+        throw new Error("No authentication token found");
       }
 
       const updateRequest: UpdateRequest = {
@@ -452,41 +487,44 @@ export default function UpdateVerifiedCasePage() {
         updatedBy: updatedBy || "System",
         visibleToReporter: true,
         priorityLevel,
-      }
+      };
 
-      const response = await fetch(`${API_BASE_URL}/api/incidents/${params.id}`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(updateRequest),
-      })
+      const response = await fetch(
+        `${API_BASE_URL}/api/incidents/${params.id}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(updateRequest),
+        }
+      );
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       toast.success("Case dismissed successfully", {
         description: "The incident has been dismissed.",
         duration: 5000,
         id: `case-dismissed-success-${Date.now()}`,
-      })
+      });
 
-      setIncident((prev) => (prev ? { ...prev, status: "Dismissed" } : prev))
-      await fetchUpdates()
+      setIncident((prev) => (prev ? { ...prev, status: "Dismissed" } : prev));
+      await fetchUpdates();
     } catch (error) {
-      console.error("Error closing case:", error)
+      console.error("Error closing case:", error);
       toast.error("Failed to dismiss case", {
         description: "Please try again.",
         duration: 5000,
         id: "case-dismiss-error",
-      })
+      });
     } finally {
-      setIsSending(false)
-      setIsCloseDialogOpen(false)
+      setIsSending(false);
+      setIsCloseDialogOpen(false);
     }
-  }
+  };
 
   // Removed destructive resolve-and-dismiss action per request
 
@@ -494,102 +532,112 @@ export default function UpdateVerifiedCasePage() {
     if (!selectedOffice) {
       toast.error("Please select an office to transfer to", {
         id: "transfer-office-required-error",
-      })
-      return
+      });
+      return;
     }
 
     try {
-      setIsTransferring(true)
+      setIsTransferring(true);
       const token = document.cookie
         .split("; ")
         .find((row) => row.startsWith("token="))
-        ?.split("=")[1]
+        ?.split("=")[1];
 
       if (!token) {
-        throw new Error("No authentication token found")
+        throw new Error("No authentication token found");
       }
 
       const transferRequest: TransferRequest = {
         newOffice: selectedOffice,
         transferNotes: transferNotes,
-      }
+      };
 
-      const response = await fetch(`${API_BASE_URL}/api/incidents/${params.id}/transfer`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(transferRequest),
-      })
+      const response = await fetch(
+        `${API_BASE_URL}/api/incidents/${params.id}/transfer`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(transferRequest),
+        }
+      );
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       toast.success("Case transferred successfully", {
         id: `case-transferred-success-${Date.now()}`,
-        description: "The incident has been transferred to the selected office.",
+        description:
+          "The incident has been transferred to the selected office.",
         duration: 5000,
-      })
+      });
 
       // Refresh the incident data
-      await fetchUpdates()
-      setShowTransferModal(false)
+      await fetchUpdates();
+      setShowTransferModal(false);
     } catch (error) {
-      console.error("Error transferring case:", error)
+      console.error("Error transferring case:", error);
       toast.error("Failed to transfer case", {
         id: "case-transfer-error",
-        description: "There was an error transferring the case. Please try again.",
+        description:
+          "There was an error transferring the case. Please try again.",
         duration: 5000,
-      })
+      });
     } finally {
-      setIsTransferring(false)
+      setIsTransferring(false);
     }
-  }
+  };
 
   const handleExtendResolution = async (newDate: string) => {
     try {
-      const response = await api.extendResolutionDate(params.id as string, newDate)
+      const response = await api.extendResolutionDate(
+        params.id as string,
+        newDate
+      );
       // Update the incident data with the response
-      setIncident(response)
+      setIncident(response);
       toast.success("Resolution date extended successfully", {
         id: `resolution-extended-success-${Date.now()}`,
-        description: `New estimated resolution date: ${new Date(newDate).toLocaleDateString()}`,
+        description: `New estimated resolution date: ${new Date(
+          newDate
+        ).toLocaleDateString()}`,
         duration: 4000,
-      })
+      });
     } catch (error: any) {
-      console.error("Failed to extend resolution date:", error)
-      throw new Error(error.message || "Failed to extend resolution date")
+      console.error("Failed to extend resolution date:", error);
+      throw new Error(error.message || "Failed to extend resolution date");
     }
-  }
+  };
 
   // Fetch offices when transfer modal is opened
   useEffect(() => {
     if (showTransferModal) {
-      setOfficesLoading(true)
+      setOfficesLoading(true);
       fetch(`${API_BASE_URL}/api/offices`)
         .then((res) => res.json())
         .then((data) => {
-          setOffices(data)
-          setOfficesLoading(false)
+          setOffices(data);
+          setOfficesLoading(false);
         })
         .catch((err) => {
-          setOfficesError("Failed to load offices")
-          setOfficesLoading(false)
-        })
+          setOfficesError("Failed to load offices");
+          setOfficesLoading(false);
+        });
     }
-  }, [showTransferModal])
+  }, [showTransferModal]);
 
   const handleRatingSuccess = () => {
-    setShowRatingModal(false)
-    setShowSuccessDialog(true)
-  }
+    setShowRatingModal(false);
+    setShowSuccessDialog(true);
+  };
 
   const handleCloseSuccessDialog = () => {
-    setShowSuccessDialog(false)
-    router.push("/office-admin/dashboard")
-  }
+    setShowSuccessDialog(false);
+    router.push("/office-admin/dashboard");
+  };
 
   // Status is not editable on this page
 
@@ -598,7 +646,9 @@ export default function UpdateVerifiedCasePage() {
       <div className="min-h-screen flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9]">
         <OfficeAdminSidebar />
         <div
-          className={`flex-1 flex items-center justify-center transition-all duration-300 ${collapsed ? "ml-[5rem]" : "ml-64"}`}
+          className={`flex-1 flex items-center justify-center transition-all duration-300 ${
+            collapsed ? "ml-[5rem]" : "ml-64"
+          }`}
         >
           <div className="text-center">
             <div className="relative w-20 h-20 mx-auto">
@@ -606,18 +656,24 @@ export default function UpdateVerifiedCasePage() {
               <div className="absolute inset-2 rounded-full border-r-2 border-l-2 border-[#DAA520] animate-spin animation-delay-150"></div>
               <div className="absolute inset-4 rounded-full border-t-2 border-b-2 border-[#8B0000] animate-spin animation-delay-300"></div>
             </div>
-            <p className="mt-6 text-gray-600 font-medium">Loading case details...</p>
+            <p className="mt-6 text-gray-600 font-medium">
+              Loading case details...
+            </p>
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   if (error || !incident) {
     return (
       <div className="min-h-screen flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9]">
         <OfficeAdminSidebar />
-        <div className={`flex-1 p-8 transition-all duration-300 ${collapsed ? "ml-[5rem]" : "ml-64"}`}>
+        <div
+          className={`flex-1 p-8 transition-all duration-300 ${
+            collapsed ? "ml-[5rem]" : "ml-64"
+          }`}
+        >
           <div className="max-w-7xl mx-auto">
             <div className="bg-red-50 border border-red-200 rounded-lg p-6 shadow-sm">
               <div className="flex items-start gap-4">
@@ -625,8 +681,12 @@ export default function UpdateVerifiedCasePage() {
                   <AlertTriangle className="h-6 w-6 text-red-600" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-red-800 mb-2">Error Loading Case</h3>
-                  <p className="text-red-700">{error || "Incident not found"}</p>
+                  <h3 className="text-lg font-semibold text-red-800 mb-2">
+                    Error Loading Case
+                  </h3>
+                  <p className="text-red-700">
+                    {error || "Incident not found"}
+                  </p>
                   <Button
                     className="mt-4 bg-[#8B0000] hover:bg-[#6B0000] text-white"
                     onClick={() => router.push("/office-admin/approved-cases")}
@@ -639,7 +699,7 @@ export default function UpdateVerifiedCasePage() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   const formatDate = (date: string) => {
@@ -647,38 +707,40 @@ export default function UpdateVerifiedCasePage() {
       month: "long",
       day: "numeric",
       year: "numeric",
-    })
-  }
+    });
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case "In Progress":
-        return "bg-blue-100 text-blue-800 border-blue-200"
+        return "bg-blue-100 text-blue-800 border-blue-200";
       case "Resolved":
-        return "bg-green-100 text-green-800 border-green-200"
+        return "bg-green-100 text-green-800 border-green-200";
       case "Dismissed":
-        return "bg-gray-100 text-gray-800 border-gray-200"
+        return "bg-gray-100 text-gray-800 border-gray-200";
       default:
-        return "bg-gray-100 text-gray-800 border-gray-200"
+        return "bg-gray-100 text-gray-800 border-gray-200";
     }
-  }
+  };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case "HIGH":
-        return "bg-red-100 text-red-800 border-red-200"
+        return "bg-red-100 text-red-800 border-red-200";
       case "MEDIUM":
-        return "bg-orange-100 text-orange-800 border-orange-200"
+        return "bg-orange-100 text-orange-800 border-orange-200";
       case "LOW":
-        return "bg-green-100 text-green-800 border-green-200"
+        return "bg-green-100 text-green-800 border-green-200";
       default:
-        return "bg-gray-100 text-gray-800 border-gray-200"
+        return "bg-gray-100 text-gray-800 border-gray-200";
     }
-  }
+  };
 
   return (
     <>
-      <div className={`min-h-screen flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9] ${inter.className}`}>
+      <div
+        className={`min-h-screen flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9] ${inter.className}`}
+      >
         <OfficeAdminSidebar />
         <OfficeAdminNavbar
           title="Update Case"
@@ -687,8 +749,16 @@ export default function UpdateVerifiedCasePage() {
           showQuickActions={true}
         />
 
-        <div className={`flex-1 overflow-auto transition-all duration-300 ${collapsed ? "ml-[5rem]" : "ml-64"} pt-24`}>
-          <div className={`p-6 -mt-3 mx-8 ${collapsed ? "max-w-[95vw]" : "max-w-[calc(100vw-8rem)]"}`}>
+        <div
+          className={`flex-1 overflow-auto transition-all duration-300 ${
+            collapsed ? "ml-[5rem]" : "ml-64"
+          } pt-24`}
+        >
+          <div
+            className={`p-6 -mt-3 mx-8 ${
+              collapsed ? "max-w-[95vw]" : "max-w-[calc(100vw-8rem)]"
+            }`}
+          >
             {/* Breadcrumb and Header */}
             <div className="mb-6">
               <div className="flex items-center text-sm text-gray-500 mb-4">
@@ -705,14 +775,27 @@ export default function UpdateVerifiedCasePage() {
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2">
-                    <h1 className="text-2xl font-bold text-[#8B0000]">Case #{incident.trackingNumber}</h1>
-                    <Badge className={`${getStatusColor(incident.status)} border`}>{incident.status}</Badge>
+                    <h1 className="text-2xl font-bold text-[#8B0000]">
+                      Case #{incident.trackingNumber}
+                    </h1>
+                    <Badge
+                      className={`${getStatusColor(incident.status)} border`}
+                    >
+                      {incident.status}
+                    </Badge>
                   </div>
                   <div className="flex items-center gap-2 mt-2">
-                    <Badge variant="outline" className="bg-[#8B0000]/5 text-[#8B0000] border-[#DAA520]/30">
+                    <Badge
+                      variant="outline"
+                      className="bg-[#8B0000]/5 text-[#8B0000] border-[#DAA520]/30"
+                    >
                       {incident.incidentType}
                     </Badge>
-                    <Badge className={`${getPriorityColor(incident.priorityLevel)} border`}>
+                    <Badge
+                      className={`${getPriorityColor(
+                        incident.priorityLevel
+                      )} border`}
+                    >
                       {incident.priorityLevel} Priority
                     </Badge>
                   </div>
@@ -732,16 +815,24 @@ export default function UpdateVerifiedCasePage() {
                       <TooltipTrigger asChild>
                         <Button
                           onClick={() => setIsResolveDialogOpen(true)}
-                          disabled={incident.status === "Resolved" || incident.status === "Dismissed" || isSending}
+                          disabled={
+                            incident.status === "Resolved" ||
+                            incident.status === "Dismissed" ||
+                            isSending
+                          }
                           className="bg-green-600 hover:bg-green-700 text-white"
                           size="sm"
                         >
                           <CheckCircle2 className="h-4 w-4 mr-2" />
-                          <span className="hidden sm:inline">Mark as Resolved</span>
+                          <span className="hidden sm:inline">
+                            Mark as Resolved
+                          </span>
                           <span className="sm:hidden">Resolve</span>
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent>Mark this case as resolved</TooltipContent>
+                      <TooltipContent>
+                        Mark this case as resolved
+                      </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
 
@@ -750,7 +841,9 @@ export default function UpdateVerifiedCasePage() {
                       <TooltipTrigger asChild>
                         <Button
                           onClick={() => setIsCloseDialogOpen(true)}
-                          disabled={incident.status === "Dismissed" || isSending}
+                          disabled={
+                            incident.status === "Dismissed" || isSending
+                          }
                           variant="destructive"
                           size="sm"
                         >
@@ -759,7 +852,9 @@ export default function UpdateVerifiedCasePage() {
                           <span className="sm:hidden">Resolve</span>
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent>Resolve and dismiss this case</TooltipContent>
+                      <TooltipContent>
+                        Resolve and dismiss this case
+                      </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 </div>
@@ -780,7 +875,9 @@ export default function UpdateVerifiedCasePage() {
                       <div className="bg-[#8B0000]/10 p-2 rounded-lg">
                         <FileText className="h-5 w-5 text-[#8B0000]" />
                       </div>
-                      <h2 className="text-lg font-semibold text-[#8B0000]">Incident Summary</h2>
+                      <h2 className="text-lg font-semibold text-[#8B0000]">
+                        Incident Summary
+                      </h2>
                     </div>
                   </div>
                   <div className="p-6">
@@ -794,7 +891,8 @@ export default function UpdateVerifiedCasePage() {
                             Date & Time
                           </h3>
                           <p className="text-sm font-medium text-[#8B0000]">
-                            {formatDate(incident.dateOfIncident)} at {incident.timeOfIncident}
+                            {formatDate(incident.dateOfIncident)} at{" "}
+                            {incident.timeOfIncident}
                           </p>
                         </div>
 
@@ -811,10 +909,15 @@ export default function UpdateVerifiedCasePage() {
                             )}
                           </h3>
                           <p className="text-sm font-medium text-[#8B0000]">
-                            {incident.submittedAt ? 
-                              formatDate(getEstimatedResolution(incident.submittedAt, incident.priorityLevel, incident.estimatedResolutionDate).toISOString()) : 
-                              'Not available'
-                            }
+                            {incident.submittedAt
+                              ? formatDate(
+                                  getEstimatedResolution(
+                                    incident.submittedAt,
+                                    incident.priorityLevel,
+                                    incident.estimatedResolutionDate
+                                  ).toISOString()
+                                )
+                              : "Not available"}
                           </p>
                           {incident.resolutionExtendedBy && (
                             <p className="text-xs text-gray-500 mt-1">
@@ -830,12 +933,16 @@ export default function UpdateVerifiedCasePage() {
                             </div>
                             Location
                           </h3>
-                          <p className="text-sm font-medium text-[#8B0000]">{incident.location}</p>
+                          <p className="text-sm font-medium text-[#8B0000]">
+                            {incident.location}
+                          </p>
                         </div>
                       </div>
 
                       <div>
-                        <h3 className="text-sm font-medium text-gray-500 mb-1">Description</h3>
+                        <h3 className="text-sm font-medium text-gray-500 mb-1">
+                          Description
+                        </h3>
                         <div className="bg-[#8B0000]/5 p-3 rounded-md border border-[#DAA520]/20 text-sm whitespace-pre-wrap max-h-[150px] overflow-y-auto">
                           {incident.description}
                         </div>
@@ -856,13 +963,17 @@ export default function UpdateVerifiedCasePage() {
                       <div className="bg-[#8B0000]/10 p-2 rounded-lg">
                         <Clock className="h-5 w-5 text-[#8B0000]" />
                       </div>
-                      <h2 className="text-lg font-semibold text-[#8B0000]">Send Update to Reporter</h2>
+                      <h2 className="text-lg font-semibold text-[#8B0000]">
+                        Send Update to Reporter
+                      </h2>
                     </div>
                   </div>
                   <div className="p-6 space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <label className="text-sm font-medium text-[#8B0000]">Updated By</label>
+                        <label className="text-sm font-medium text-[#8B0000]">
+                          Updated By
+                        </label>
                         <Input
                           value={updatedBy}
                           disabled
@@ -872,7 +983,9 @@ export default function UpdateVerifiedCasePage() {
                       </div>
 
                       <div className="space-y-2">
-                        <label className="text-sm font-medium text-[#8B0000]">Status</label>
+                        <label className="text-sm font-medium text-[#8B0000]">
+                          Status
+                        </label>
                         <Input
                           value={incident.status || "In Progress"}
                           disabled
@@ -883,22 +996,35 @@ export default function UpdateVerifiedCasePage() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <label className="text-sm font-medium text-[#8B0000]">Priority</label>
+                        <label className="text-sm font-medium text-[#8B0000]">
+                          Priority
+                        </label>
                         <Select
                           value={priorityLevel}
-                          onValueChange={(value) => setPriorityLevel(value as "HIGH" | "MEDIUM" | "LOW")}
+                          onValueChange={(value) =>
+                            setPriorityLevel(value as "HIGH" | "MEDIUM" | "LOW")
+                          }
                         >
                           <SelectTrigger className="border-[#DAA520]/20 focus:ring-[#8B0000]/20 focus:border-[#8B0000]">
                             <SelectValue placeholder="Select priority" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="HIGH" className="text-red-600 font-medium">
+                            <SelectItem
+                              value="HIGH"
+                              className="text-red-600 font-medium"
+                            >
                               High Priority
                             </SelectItem>
-                            <SelectItem value="MEDIUM" className="text-orange-600 font-medium">
+                            <SelectItem
+                              value="MEDIUM"
+                              className="text-orange-600 font-medium"
+                            >
                               Medium Priority
                             </SelectItem>
-                            <SelectItem value="LOW" className="text-green-600 font-medium">
+                            <SelectItem
+                              value="LOW"
+                              className="text-green-600 font-medium"
+                            >
                               Low Priority
                             </SelectItem>
                           </SelectContent>
@@ -906,11 +1032,15 @@ export default function UpdateVerifiedCasePage() {
                       </div>
 
                       <div className="space-y-2">
-                        <label className="text-sm font-medium text-[#8B0000]">Visibility</label>
+                        <label className="text-sm font-medium text-[#8B0000]">
+                          Visibility
+                        </label>
                         <Button
                           type="button"
                           variant="outline"
-                          onClick={() => setIsVisibleToReporter(!isVisibleToReporter)}
+                          onClick={() =>
+                            setIsVisibleToReporter(!isVisibleToReporter)
+                          }
                           className={`w-full justify-start border-[#DAA520]/20 ${
                             isVisibleToReporter
                               ? "bg-green-50 text-green-700 hover:bg-green-100 border-green-200"
@@ -935,7 +1065,13 @@ export default function UpdateVerifiedCasePage() {
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-[#8B0000] flex items-center justify-between">
                         <span>Update Message</span>
-                        <span className={`text-xs ${updateMessage.length > 255 ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>
+                        <span
+                          className={`text-xs ${
+                            updateMessage.length > 255
+                              ? "text-red-600 font-semibold"
+                              : "text-gray-500"
+                          }`}
+                        >
                           {updateMessage.length}/255
                         </span>
                       </label>
@@ -958,16 +1094,16 @@ export default function UpdateVerifiedCasePage() {
                         <CalendarPlus className="h-4 w-4" />
                         Extend Resolution
                       </Button>
-                      
+
                       <div className="flex gap-3">
                         <Button
                           variant="outline"
                           onClick={() => {
-                            setUpdateMessage("")
+                            setUpdateMessage("");
                             // Keep updatedBy populated with office name
-                            setIsVisibleToReporter(true)
+                            setIsVisibleToReporter(true);
                             if (incident) {
-                              setPriorityLevel(incident.priorityLevel)
+                              setPriorityLevel(incident.priorityLevel);
                             }
                           }}
                           disabled={isSending}
@@ -977,7 +1113,11 @@ export default function UpdateVerifiedCasePage() {
                         </Button>
                         <Button
                           onClick={handleSendUpdate}
-                          disabled={!updateMessage.trim() || !updatedBy.trim() || isSending}
+                          disabled={
+                            !updateMessage.trim() ||
+                            !updatedBy.trim() ||
+                            isSending
+                          }
                           className="bg-[#8B0000] hover:bg-[#6B0000] text-white"
                         >
                           {isSending ? (
@@ -1008,7 +1148,9 @@ export default function UpdateVerifiedCasePage() {
                       <div className="bg-[#8B0000]/10 p-2 rounded-lg">
                         <User className="h-5 w-5 text-[#8B0000]" />
                       </div>
-                      <h2 className="text-lg font-semibold text-[#8B0000]">Reporter Information</h2>
+                      <h2 className="text-lg font-semibold text-[#8B0000]">
+                        Reporter Information
+                      </h2>
                     </div>
                   </div>
                   <div className="p-0">
@@ -1019,7 +1161,9 @@ export default function UpdateVerifiedCasePage() {
                         </div>
                         <div>
                           <p className="text-xs text-gray-500">Name</p>
-                          <p className="text-sm font-medium text-[#8B0000]">{incident.submittedByFullName}</p>
+                          <p className="text-sm font-medium text-[#8B0000]">
+                            {incident.submittedByFullName}
+                          </p>
                         </div>
                       </div>
                       <div className="px-6 py-3 flex items-center">
@@ -1028,7 +1172,9 @@ export default function UpdateVerifiedCasePage() {
                         </div>
                         <div>
                           <p className="text-xs text-gray-500">Email</p>
-                          <p className="text-sm font-medium text-[#8B0000]">{incident.submittedByEmail}</p>
+                          <p className="text-sm font-medium text-[#8B0000]">
+                            {incident.submittedByEmail}
+                          </p>
                         </div>
                       </div>
                       <div className="px-6 py-3 flex items-center">
@@ -1048,7 +1194,9 @@ export default function UpdateVerifiedCasePage() {
                         </div>
                         <div>
                           <p className="text-xs text-gray-500">Role</p>
-                          <p className="text-sm font-medium text-[#8B0000]">{incident.submittedByRole || "Student"}</p>
+                          <p className="text-sm font-medium text-[#8B0000]">
+                            {incident.submittedByRole || "Student"}
+                          </p>
                         </div>
                       </div>
                       <div className="px-6 py-3 flex items-center">
@@ -1078,7 +1226,9 @@ export default function UpdateVerifiedCasePage() {
                       <div className="bg-[#8B0000]/10 p-2 rounded-lg">
                         <Clock className="h-5 w-5 text-[#8B0000]" />
                       </div>
-                      <h2 className="text-lg font-semibold text-[#8B0000]">Update History</h2>
+                      <h2 className="text-lg font-semibold text-[#8B0000]">
+                        Update History
+                      </h2>
                     </div>
                   </div>
                   <div className="p-0 max-h-[500px] overflow-y-auto">
@@ -1106,9 +1256,12 @@ export default function UpdateVerifiedCasePage() {
                               <div className="flex-1 min-w-0">
                                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
                                   <p className="text-sm font-medium text-[#8B0000]">
-                                    {update.updatedByName || update.updatedByFullName}
+                                    {update.updatedByName ||
+                                      update.updatedByFullName}
                                   </p>
-                                  <p className="text-xs text-gray-500">{formatDateTime(update.updatedAt)}</p>
+                                  <p className="text-xs text-gray-500">
+                                    {formatDateTime(update.updatedAt)}
+                                  </p>
                                 </div>
                                 <div className="mt-2 text-sm text-gray-700 whitespace-pre-wrap bg-[#8B0000]/5 p-3 rounded-md border border-[#DAA520]/20">
                                   {update.message}
@@ -1149,19 +1302,29 @@ export default function UpdateVerifiedCasePage() {
         </div>
       </div>
 
-      <AlertDialog open={isResolveDialogOpen} onOpenChange={setIsResolveDialogOpen}>
+      <AlertDialog
+        open={isResolveDialogOpen}
+        onOpenChange={setIsResolveDialogOpen}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Mark as Resolved</AlertDialogTitle>
             <AlertDialogDescription>
-              Provide resolution notes. These notes will be shared with the reporter and help future cases.
+              Provide resolution notes. These notes will be shared with the
+              reporter and help future cases.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
               <label className="text-sm font-medium text-[#8B0000] flex items-center justify-between">
                 <span>Resolution Notes</span>
-                <span className={`text-xs ${resolutionNotes.length > 255 ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>
+                <span
+                  className={`text-xs ${
+                    resolutionNotes.length > 255
+                      ? "text-red-600 font-semibold"
+                      : "text-gray-500"
+                  }`}
+                >
                   {resolutionNotes.length}/255
                 </span>
               </label>
@@ -1180,7 +1343,10 @@ export default function UpdateVerifiedCasePage() {
                   onCheckedChange={(v) => setConfirmResolution(Boolean(v))}
                   className="mt-0.5"
                 />
-                <span>I confirm this incident is fully resolved and the notes are accurate.</span>
+                <span>
+                  I confirm this incident is fully resolved and the notes are
+                  accurate.
+                </span>
               </label>
               <label className="flex items-start gap-2 text-sm text-gray-700">
                 <Checkbox
@@ -1188,7 +1354,10 @@ export default function UpdateVerifiedCasePage() {
                   onCheckedChange={(v) => setConfirmAIGuideline(Boolean(v))}
                   className="mt-0.5"
                 />
-                <span>I understand these resolution notes may be used by AI to improve solutions for similar incidents.</span>
+                <span>
+                  I understand these resolution notes may be used by AI to
+                  improve solutions for similar incidents.
+                </span>
               </label>
             </div>
           </div>
@@ -1196,7 +1365,12 @@ export default function UpdateVerifiedCasePage() {
             <AlertDialogCancel disabled={isSending}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleResolveCase}
-              disabled={isSending || !resolutionNotes.trim() || !confirmResolution || !confirmAIGuideline}
+              disabled={
+                isSending ||
+                !resolutionNotes.trim() ||
+                !confirmResolution ||
+                !confirmAIGuideline
+              }
               className="bg-green-600 hover:bg-green-700 text-white"
             >
               {isSending ? (
@@ -1217,8 +1391,8 @@ export default function UpdateVerifiedCasePage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Resolve Case</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to resolve and dismiss this case? This action will mark the case as dismissed and
-              notify the reporter.
+              Are you sure you want to resolve and dismiss this case? This
+              action will mark the case as dismissed and notify the reporter.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1245,9 +1419,12 @@ export default function UpdateVerifiedCasePage() {
       <AlertDialog open={showTransferModal} onOpenChange={setShowTransferModal}>
         <AlertDialogContent className="max-w-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-xl font-bold text-[#8B0000]">Transfer Case</AlertDialogTitle>
+            <AlertDialogTitle className="text-xl font-bold text-[#8B0000]">
+              Transfer Case
+            </AlertDialogTitle>
             <AlertDialogDescription className="text-gray-600">
-              Transfer this case to another office. This will notify both the new office and the case reporter.
+              Transfer this case to another office. This will notify both the
+              new office and the case reporter.
             </AlertDialogDescription>
           </AlertDialogHeader>
 
@@ -1258,15 +1435,24 @@ export default function UpdateVerifiedCasePage() {
                   <ArrowRightLeft className="h-4 w-4" />
                   Transfer To
                 </label>
-                <Select value={selectedOffice} onValueChange={setSelectedOffice}>
+                <Select
+                  value={selectedOffice}
+                  onValueChange={setSelectedOffice}
+                >
                   <SelectTrigger className="border-[#DAA520]/20 focus:ring-[#8B0000]/20 focus:border-[#8B0000] h-12">
-                    <SelectValue placeholder={officesLoading ? "Loading offices..." : "Select office"} />
+                    <SelectValue
+                      placeholder={
+                        officesLoading ? "Loading offices..." : "Select office"
+                      }
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     {officesLoading ? (
                       <div className="px-4 py-2 text-gray-500">Loading...</div>
                     ) : officesError ? (
-                      <div className="px-4 py-2 text-red-500">{officesError}</div>
+                      <div className="px-4 py-2 text-red-500">
+                        {officesError}
+                      </div>
                     ) : (
                       offices.map((office) => (
                         <SelectItem
@@ -1295,10 +1481,16 @@ export default function UpdateVerifiedCasePage() {
                     </div>
                     <div>
                       <h4 className="font-medium text-[#8B0000] mb-1">
-                        {offices.find(o => o.code === selectedOffice)?.fullName}
+                        {
+                          offices.find((o) => o.code === selectedOffice)
+                            ?.fullName
+                        }
                       </h4>
                       <p className="text-sm text-gray-600 whitespace-pre-line">
-                        {offices.find(o => o.code === selectedOffice)?.description}
+                        {
+                          offices.find((o) => o.code === selectedOffice)
+                            ?.description
+                        }
                       </p>
                     </div>
                   </div>
@@ -1321,7 +1513,7 @@ export default function UpdateVerifiedCasePage() {
           </div>
 
           <AlertDialogFooter className="gap-3">
-            <AlertDialogCancel 
+            <AlertDialogCancel
               disabled={isTransferring}
               className="border-[#DAA520]/30 text-[#8B0000] hover:bg-[#8B0000]/5"
             >
@@ -1376,5 +1568,5 @@ export default function UpdateVerifiedCasePage() {
         }
       `}</style>
     </>
-  )
+  );
 }

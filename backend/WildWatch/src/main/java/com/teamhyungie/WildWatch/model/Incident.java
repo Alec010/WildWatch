@@ -8,11 +8,11 @@ import lombok.EqualsAndHashCode;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Set;
 import java.util.HashSet;
+import static com.teamhyungie.WildWatch.config.TimezoneConfig.APP_TIMEZONE;
 
 @Entity
 @Table(name = "incidents")
@@ -153,10 +153,10 @@ public class Incident {
 
     @PrePersist
     protected void onCreate() {
-        submittedAt = LocalDateTime.now(ZoneOffset.UTC);
+        submittedAt = LocalDateTime.now(APP_TIMEZONE);
         if (trackingNumber == null) {
             // Generate a tracking number: INC-YYYYMMDD-XXXX (X = random alphanumeric)
-            String datePart = LocalDate.now(ZoneOffset.UTC).toString().replace("-", "");
+            String datePart = LocalDate.now(APP_TIMEZONE).toString().replace("-", "");
             String randomPart = String.format("%04d", (int) (Math.random() * 10000));
             trackingNumber = "INC-" + datePart + "-" + randomPart;
         }

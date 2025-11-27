@@ -24,20 +24,17 @@ import { formatLocationCompact } from "@/utils/locationFormatter";
 import { api } from "@/utils/apiClient";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { motion } from "framer-motion";
+import {
+  formatDateWithYear,
+  formatDate,
+  parseUTCDate,
+} from "@/utils/dateUtils";
 
 const inter = Inter({ subsets: ["latin"] });
 
 // Utility functions for estimated resolution
 const formatEstimatedDate = (dateString: string) => {
-  const date = new Date(dateString);
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "numeric",
-    hour12: true,
-  });
+  return formatDateWithYear(dateString);
 };
 
 const getEstimatedResolution = (
@@ -46,9 +43,9 @@ const getEstimatedResolution = (
   extendedDate?: string
 ) => {
   if (extendedDate) {
-    return new Date(extendedDate);
+    return parseUTCDate(extendedDate);
   }
-  const base = new Date(submittedAt);
+  const base = parseUTCDate(submittedAt);
   let days = 2;
   if (priority === "MEDIUM") days = 3;
   if (priority === "HIGH") days = 5;
@@ -126,11 +123,11 @@ export default function OfficeAdminDashboard() {
           .sort((a: Incident, b: Incident) => {
             // Use lastUpdatedAt if available, otherwise fall back to submittedAt
             const dateA = a.lastUpdatedAt
-              ? new Date(a.lastUpdatedAt)
-              : new Date(a.submittedAt);
+              ? parseUTCDate(a.lastUpdatedAt)
+              : parseUTCDate(a.submittedAt);
             const dateB = b.lastUpdatedAt
-              ? new Date(b.lastUpdatedAt)
-              : new Date(b.submittedAt);
+              ? parseUTCDate(b.lastUpdatedAt)
+              : parseUTCDate(b.submittedAt);
             return dateB.getTime() - dateA.getTime();
           });
         setRecentIncidents(sortedIncidents);
@@ -160,17 +157,6 @@ export default function OfficeAdminDashboard() {
     });
     setFilteredIncidents(filtered);
   }, [searchQuery, recentIncidents]);
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "numeric",
-      hour12: true,
-    });
-  };
 
   const getContentMargin = () => {
     return collapsed ? "ml-18" : "ml-64";

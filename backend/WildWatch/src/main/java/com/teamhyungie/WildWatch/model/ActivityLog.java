@@ -3,6 +3,7 @@ package com.teamhyungie.WildWatch.model;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
+import static com.teamhyungie.WildWatch.config.TimezoneConfig.APP_TIMEZONE;
 
 @Entity
 @Table(name = "activity_logs")
@@ -23,7 +24,7 @@ public class ActivityLog {
     private String description;
 
     @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime createdAt = LocalDateTime.now(APP_TIMEZONE);
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")

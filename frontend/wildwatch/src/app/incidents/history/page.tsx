@@ -34,6 +34,7 @@ import { useSidebar } from "@/contexts/SidebarContext"
 import { toast } from "sonner"
 import { Navbar } from "@/components/Navbar"
 import { Inter } from "next/font/google"
+import { formatDateOnly, parseUTCDate } from "@/utils/dateUtils"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -331,16 +332,16 @@ export default function IncidentHistoryPage() {
       addFieldRow("Department", incident.officeAdminName || "-", "", "")
       addFieldRow(
         "Submitted",
-        new Date(incident.submittedAt).toLocaleDateString(),
+        formatDateOnly(incident.submittedAt),
         "Finished Date",
-        incident.finishedDate ? new Date(incident.finishedDate).toLocaleDateString() : "-",
+        incident.finishedDate ? formatDateOnly(incident.finishedDate) : "-",
       )
       y += sectionSpacing
 
       // Incident Details Section
       addSectionTitle("Incident Details")
       addFieldRow("Incident Type", incident.incidentType, "Location", incident.location)
-      addFieldRow("Date Reported", new Date(incident.dateOfIncident).toLocaleDateString(), "", "")
+      addFieldRow("Date Reported", formatDateOnly(incident.dateOfIncident), "", "")
       doc.setFont("helvetica", "bold")
       doc.text("Description:", margin, y)
       doc.setFont("helvetica", "normal")
@@ -539,7 +540,7 @@ export default function IncidentHistoryPage() {
           doc.text(update.title || update.status || `Update ${idx + 1}`, margin + 15, y + 5)
           doc.setFont("helvetica", "normal")
           doc.setFontSize(9)
-          const updateDate = update.updatedAt ? new Date(update.updatedAt).toLocaleDateString() : "-"
+          const updateDate = update.updatedAt ? formatDateOnly(update.updatedAt) : "-"
           const updateAuthor = update.updatedByName || update.updatedByFullName || update.author || "-"
           doc.text(`${updateDate} by ${updateAuthor}`, margin + 15, y + 13)
           if (update.message || update.description) {
@@ -915,7 +916,7 @@ export default function IncidentHistoryPage() {
                           <td className="px-3 py-3 whitespace-nowrap">
                             <div className="flex items-center text-sm text-gray-700">
                               <Calendar className="h-4 w-4 text-gray-400 mr-2" />
-                              {new Date(incident.submittedAt).toLocaleDateString()}
+                              {formatDateOnly(incident.submittedAt)}
                             </div>
                           </td>
                           <td className="px-3 py-3 whitespace-nowrap">
@@ -951,7 +952,7 @@ export default function IncidentHistoryPage() {
                             {incident.officeAdminName || "-"}
                           </td>
                           <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-700">
-                            {incident.finishedDate ? new Date(incident.finishedDate).toLocaleDateString() : "-"}
+                            {incident.finishedDate ? formatDateOnly(incident.finishedDate) : "-"}
                           </td>
                           <td className="px-3 py-3 whitespace-nowrap text-center">
                             <Button
