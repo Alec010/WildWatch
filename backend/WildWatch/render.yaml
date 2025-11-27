@@ -3,8 +3,10 @@ services:
     name: wildwatch-backend
     env: java
     buildCommand: ./mvnw clean package -DskipTests
-    startCommand: java -jar target/WildWatch-0.0.1-SNAPSHOT.jar
+    startCommand: TZ=UTC java -jar target/WildWatch-0.0.1-SNAPSHOT.jar
     envVars:
+      - key: TZ
+        value: UTC
       - key: DB_URL
         sync: false
       - key: DB_USER
