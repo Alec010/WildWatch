@@ -1,6 +1,6 @@
 // Backend URLs
 const LOCAL_BACKEND = "http://localhost:8080";
-const DEPLOYED_BACKEND = "https://wildwatch-9djc.onrender.com";
+const DEPLOYED_BACKEND = "https://wildwatch-zgaw.onrender.com";
 
 // Get the active backend URL based on environment
 const getBackendUrl = () => {

@@ -1,6 +1,6 @@
 // Backend URLs
 const LOCAL_BACKEND = "http://localhost:8080";
-const DEPLOYED_BACKEND = "https://wildwatch-9djc.onrender.com";
+const DEPLOYED_BACKEND = "https://wildwatch-zgaw.onrender.com";
 
 // Get the active backend URL based on environment
 const getBackendUrl = () => {
@@ -20,7 +20,7 @@ const getBackendUrl = () => {
 
 // WebSocket URLs - SockJS works with HTTP/HTTPS URLs
 const LOCAL_WS = "http://localhost:8080"; 
-const DEPLOYED_WS = "https://wildwatch-9djc.onrender.com";
+const DEPLOYED_WS = "https://wildwatch-zgaw.onrender.com";
 
 // Get the active WebSocket URL based on environment
 // Note: SockJS requires HTTP/HTTPS URLs, not WS/WSS URLs
