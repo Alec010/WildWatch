@@ -16,6 +16,7 @@ import TopSpacing from "../../components/TopSpacing";
 import { useMyHistory } from "../../src/features/incidents/hooks/useMyHistory";
 import type { IncidentResponseDto } from "../../src/features/incidents/models/IncidentModels";
 import { CircularLoader } from "../../components/CircularLoader";
+import { sanitizeLocation } from "../../src/utils/locationUtils";
 
 export default function HistoryScreen() {
   // ====== DATA HOOKS (unchanged logic) ======
@@ -618,7 +619,9 @@ export default function HistoryScreen() {
                       </Text>
                     </View>
 
-                    {items.map((incident) => (
+                    {items.map((incident) => {
+                      const sanitizedLocation = sanitizeLocation(incident.location);
+                      return (
                       <TouchableOpacity
                         key={incident.id}
                         onPress={() =>
@@ -740,7 +743,7 @@ export default function HistoryScreen() {
                                   )}
                                 </Text>
                               </View>
-                              {incident.location ? (
+                              {sanitizedLocation ? (
                                 <>
                                   <Text
                                     className="text-gray-300 mx-2"
@@ -759,7 +762,7 @@ export default function HistoryScreen() {
                                       style={{ fontSize: isCompact ? 11 : 12 }}
                                       numberOfLines={isCompact ? 2 : 1}
                                     >
-                                      {incident.location}
+                                      {sanitizedLocation}
                                     </Text>
                                   </View>
                                 </>
@@ -842,7 +845,8 @@ export default function HistoryScreen() {
                           </View>
                         </View>
                       </TouchableOpacity>
-                    ))}
+                    );
+                    })}
                   </View>
                 ))}
               </View>

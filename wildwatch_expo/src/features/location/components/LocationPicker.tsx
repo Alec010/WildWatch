@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocation } from '../hooks/useLocation';
 import { LocationData } from '../models/LocationModels';
 import MapPickerModal from './MapPickerModal';
+import { sanitizeLocation } from '../../../utils/locationUtils';
 
 interface LocationPickerProps {
   onLocationSelect: (locationData: LocationData) => void;
@@ -156,6 +157,7 @@ export default function LocationPicker({
     if (!selectedLocation) return null;
 
     const isOutsideCampus = selectedLocation.withinCampus === false;
+    const formattedAddress = sanitizeLocation(selectedLocation.formattedAddress);
 
     return (
       <View style={[
@@ -215,7 +217,7 @@ export default function LocationPicker({
               </View>
             )}
 
-            {selectedLocation.formattedAddress && (
+            {formattedAddress && (
               <View style={styles.addressInfo}>
                 <Ionicons
                   name="location"
@@ -226,7 +228,7 @@ export default function LocationPicker({
                   styles.addressText,
                   isOutsideCampus ? styles.outsideCampusText : styles.insideCampusText
                 ]}>
-                  {selectedLocation.formattedAddress}
+                  {formattedAddress}
                 </Text>
               </View>
             )}

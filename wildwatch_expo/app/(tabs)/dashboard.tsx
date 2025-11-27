@@ -17,6 +17,7 @@ import { incidentAPI } from "../../src/features/incidents/api/incident_api";
 import { config } from "../../lib/config";
 import type { IncidentResponseDto } from "../../src/features/incidents/models/IncidentModels";
 import { CircularLoader } from "../../components/CircularLoader";
+import { sanitizeLocation } from "../../src/utils/locationUtils";
 
 // --- Helper Functions (No changes here) ---
 function getStatusInfo(status?: string | null) {
@@ -63,19 +64,16 @@ function formatRelative(dateString?: string | null): string {
 }
 
 function formatLocationShort(location?: string | null): string {
-  if (!location) return "N/A";
-  const parts = location.split(",").map((p) => p.trim());
-  const plusCodeRegex = /^[A-Z0-9]{4}\+[A-Z0-9]{2,}/;
-  if (plusCodeRegex.test(parts[0])) {
-    const barangay = parts.length > 1 ? parts[1] : "";
-    return barangay ? `${parts[0]}, ${barangay}` : parts[0];
-  }
-  return parts[0];
+  const sanitized = sanitizeLocation(location);
+  if (!sanitized) return "Location not specified";
+  const parts = sanitized.split(",").map((p) => p.trim()).filter(Boolean);
+  return parts[0] || sanitized;
 }
 
 function openInGoogleMaps(location?: string | null) {
   if (!location) return;
-  const encodedLocation = encodeURIComponent(location);
+  const query = sanitizeLocation(location) || location;
+  const encodedLocation = encodeURIComponent(query);
   const url = `https://www.google.com/maps/search/?api=1&query=${encodedLocation}`;
   Linking.openURL(url).catch((err) =>
     console.error("Failed to open maps:", err)

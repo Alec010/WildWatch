@@ -28,6 +28,7 @@ import { useUserProfile } from "../../src/features/users/hooks/useUserProfile";
 import { CircularLoader } from "../../components/CircularLoader";
 import { getReporterDisplayName, getReporterDisplayEmail, getReporterDisplayPhone } from "../../src/utils/anonymousUtils";
 import { FollowUpDialog } from "../../src/features/incidents/components/FollowUpDialog";
+import { sanitizeLocation } from "../../src/utils/locationUtils";
 
 interface ProgressStep {
   title: string;
@@ -105,6 +106,8 @@ export default function CaseDetailsScreen() {
   const [ratingType, setRatingType] = React.useState<"reporter" | "office">(
     "reporter"
   );
+  const isFollowUpOnCooldown =
+    !!followUpCooldown && new Date() < followUpCooldown;
 
   const H = Dimensions.get("window").height;
   const W = Dimensions.get("window").width;
@@ -357,6 +360,8 @@ export default function CaseDetailsScreen() {
       return d || "-";
     }
   };
+
+  const cleanedIncidentLocation = sanitizeLocation(incident?.location);
 
   const formatDateTime = (dateString?: string, timeString?: string) => {
     try {
@@ -832,14 +837,14 @@ export default function CaseDetailsScreen() {
           {/* Location Row - Clickable to open Google Maps */}
           <TouchableOpacity
             onPress={() => {
-              if (incident.location) {
+            if (cleanedIncidentLocation) {
                 const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                  incident.location
+                cleanedIncidentLocation
                 )}`;
                 Linking.openURL(url);
               }
             }}
-            disabled={!incident.location}
+          disabled={!cleanedIncidentLocation}
             activeOpacity={0.7}
             style={{
               flexDirection: "row",
@@ -858,7 +863,7 @@ export default function CaseDetailsScreen() {
                 }}
               >
                 <Text style={styles.rowLabel}>Location</Text>
-                {incident.location && (
+                {cleanedIncidentLocation && (
                   <Ionicons
                     name="open-outline"
                     size={14}
@@ -869,13 +874,13 @@ export default function CaseDetailsScreen() {
               <Text
                 style={[
                   styles.rowValue,
-                  incident.location && {
+                  cleanedIncidentLocation && {
                     color: PALETTE.maroon,
                     textDecorationLine: "underline",
                   },
                 ]}
               >
-                {incident.location || "Not specified"}
+                {cleanedIncidentLocation || "Not specified"}
               </Text>
             </View>
           </TouchableOpacity>
@@ -1173,32 +1178,27 @@ export default function CaseDetailsScreen() {
                     style={[
                       styles.btn,
                       {
-                        backgroundColor: followUpCooldown && new Date() < followUpCooldown
+                        backgroundColor: isFollowUpOnCooldown
                           ? PALETTE.border
                           : PALETTE.maroon,
                       },
                     ]}
                     onPress={() => setShowFollowUpDialog(true)}
-                    disabled={followUpCooldown && new Date() < followUpCooldown}
+                    disabled={isFollowUpOnCooldown}
                   >
                     <Ionicons
                       name="notifications"
                       size={16}
-                      color={
-                        followUpCooldown && new Date() < followUpCooldown
-                          ? PALETTE.text
-                          : "#FFFFFF"
-                      }
+                      color={isFollowUpOnCooldown ? PALETTE.text : "#FFFFFF"}
                     />
                     <Text
                       style={[
                         styles.btnText,
-                        followUpCooldown &&
-                          new Date() < followUpCooldown && { color: PALETTE.text },
+                        isFollowUpOnCooldown && { color: PALETTE.text },
                       ]}
                     >
-                      {followUpCooldown && new Date() < followUpCooldown
-                        ? `Follow-up Available ${followUpCooldown.toLocaleDateString()}`
+                      {isFollowUpOnCooldown
+                        ? `Follow-up Available ${followUpCooldown?.toLocaleDateString()}`
                         : "Send Follow-up Request"}
                     </Text>
                   </TouchableOpacity>
