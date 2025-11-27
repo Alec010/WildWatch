@@ -25,6 +25,7 @@ import {
   XCircleIcon,
   ArrowRightLeft,
   Info,
+  Search,
 } from "lucide-react";
 import Image from "next/image";
 import { Label } from "@/components/ui/label";
@@ -139,6 +140,7 @@ export default function IncidentDetailsPage() {
   const [isPrivate, setIsPrivate] = useState<boolean>(false);
   const [verifyError, setVerifyError] = useState("");
   const [statusError, setStatusError] = useState("");
+  const [officeSearchQuery, setOfficeSearchQuery] = useState("");
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Handle countdown and navigation
@@ -209,6 +211,7 @@ export default function IncidentDetailsPage() {
   useEffect(() => {
     if (showTransferModal) {
       setOfficesLoading(true);
+      setOfficeSearchQuery(""); // Clear search when modal opens
       fetch(`${API_BASE_URL}/api/offices`)
         .then((res) => res.json())
         .then(
@@ -221,6 +224,8 @@ export default function IncidentDetailsPage() {
           setOfficesError("Failed to load offices");
           setOfficesLoading(false);
         });
+    } else {
+      setOfficeSearchQuery(""); // Clear search when modal closes
     }
   }, [showTransferModal]);
 
@@ -462,6 +467,15 @@ export default function IncidentDetailsPage() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
+      case "Pending":
+        return (
+          <Badge
+            variant="outline"
+            className="bg-orange-100 text-orange-700 border-orange-200"
+          >
+            Pending
+          </Badge>
+        );
       case "In Progress":
         return (
           <Badge
@@ -619,13 +633,21 @@ export default function IncidentDetailsPage() {
         } pt-24`}
       >
         <div
-          className={`p-6 -mt-3 mx-8 ${
+          className={`p-6 mx-2 ${
             collapsed ? "max-w-[95vw]" : "max-w-[calc(100vw-8rem)]"
           }`}
         >
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3 mb-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => router.push("/office-admin/incidents")}
+                  className="text-[#8B0000] hover:bg-[#8B0000]/10 hover:text-[#8B0000]"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
                 <h1 className="text-2xl font-bold text-[#8B0000]">
                   Review Incident
                 </h1>
@@ -648,7 +670,7 @@ export default function IncidentDetailsPage() {
                   </Badge>
                 )}
               </div>
-              <p className="text-gray-500 mt-1">
+              <p className="text-gray-500 mt-1 ml-12">
                 Case #{incident.trackingNumber} • {incident.incidentType}
               </p>
             </div>
@@ -660,14 +682,6 @@ export default function IncidentDetailsPage() {
               >
                 <ArrowRightLeft className="h-4 w-4" />
                 Transfer Case
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => router.back()}
-                className="flex items-center gap-2 border-[#DAA520]/30 text-[#8B0000] hover:bg-[#8B0000] hover:text-white"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Back to Incidents
               </Button>
             </div>
           </div>
@@ -1238,92 +1252,289 @@ export default function IncidentDetailsPage() {
 
           {/* Transfer Modal */}
           <Dialog open={showTransferModal} onOpenChange={setShowTransferModal}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Transfer Incident</DialogTitle>
+            <DialogContent className="max-w-[95vw] w-full sm:max-w-[90vw] md:max-w-[600px] lg:max-w-[650px] xl:max-w-[700px] max-h-[95vh] flex flex-col p-0 gap-0">
+              <DialogHeader className="space-y-2 sm:space-y-3 pb-3 sm:pb-4 border-b border-gray-100 px-4 sm:px-6 pt-4 sm:pt-6 flex-shrink-0">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="bg-gradient-to-br from-[#8B0000] to-[#6B0000] p-2 sm:p-3 rounded-lg sm:rounded-xl shadow-lg flex-shrink-0">
+                    <ArrowRightLeft className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <DialogTitle className="text-lg sm:text-xl md:text-2xl font-bold text-[#8B0000] truncate">
+                      Transfer Incident
+                    </DialogTitle>
+                    <p className="text-xs sm:text-sm text-gray-500 mt-0.5 sm:mt-1 truncate">
+                      Reassign this case to a different office
+                    </p>
+                  </div>
+                </div>
               </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">
-                    Transfer to Office
-                  </label>
+
+              <div className="space-y-4 sm:space-y-5 py-4 sm:py-5 px-4 sm:px-6 overflow-y-auto flex-1">
+                {/* Current Assignment Info */}
+                <div className="bg-gradient-to-br from-[#8B0000]/5 via-[#8B0000]/5 to-transparent rounded-lg sm:rounded-xl border border-[#DAA520]/30 p-3 sm:p-4 shadow-sm">
+                  <div className="flex items-start gap-2 sm:gap-3">
+                    <div className="bg-[#8B0000]/10 p-2 sm:p-2.5 rounded-lg flex-shrink-0">
+                      <Shield className="h-4 w-4 sm:h-5 sm:w-5 text-[#8B0000]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
+                        Currently Assigned To
+                      </p>
+                      <p className="text-sm sm:text-base font-semibold text-[#8B0000] truncate">
+                        {incident.assignedOffice}
+                      </p>
+                      <p className="text-[10px] sm:text-xs text-gray-500 mt-1">
+                        Case #{incident.trackingNumber}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Transfer Arrow Visual */}
+                <div className="flex items-center justify-center -my-1 sm:-my-2">
+                  <div className="bg-[#DAA520]/20 p-1.5 sm:p-2 rounded-full">
+                    <ArrowRightLeft className="h-4 w-4 sm:h-5 sm:w-5 text-[#8B0000]" />
+                  </div>
+                </div>
+
+                {/* Office Selection */}
+                <div className="space-y-2 sm:space-y-2.5">
+                  <Label className="text-xs sm:text-sm font-semibold text-[#8B0000] flex items-center gap-1.5 sm:gap-2">
+                    <Shield className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                    Select Destination Office
+                    <span className="text-red-500">*</span>
+                  </Label>
                   <Select
                     value={selectedOffice}
                     onValueChange={setSelectedOffice}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="h-10 sm:h-12 text-sm sm:text-base border-[#DAA520]/30 focus:ring-1 focus:ring-[#8B0000]/15 focus:border-[#8B0000]/60 transition-all">
                       <SelectValue
                         placeholder={
                           officesLoading
                             ? "Loading offices..."
-                            : "Select an office"
+                            : "Choose an office to transfer to"
                         }
-                      />
+                      >
+                        {selectedOffice
+                          ? `${
+                              offices.find((o) => o.code === selectedOffice)
+                                ?.fullName
+                            } (${selectedOffice})`
+                          : null}
+                      </SelectValue>
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent
+                      position="popper"
+                      side="bottom"
+                      align="center"
+                      sideOffset={8}
+                      alignOffset={0}
+                      avoidCollisions={true}
+                      collisionPadding={{
+                        top: 140,
+                        right: 16,
+                        bottom: 80,
+                        left: 16,
+                      }}
+                      sticky="partial"
+                      className="max-h-[min(calc(100vh-450px),200px)] sm:max-h-[min(calc(100vh-400px),220px)] md:max-h-[min(calc(100vh-360px),260px)] w-[calc(100vw-2rem)] sm:w-auto sm:min-w-[min(420px,80vw)] sm:max-w-[min(520px,85vw)] md:max-w-[520px] p-1.5 sm:p-2 overflow-y-auto overflow-x-hidden z-[9999]"
+                      style={{
+                        scrollBehavior: "smooth",
+                        scrollbarWidth: "thin",
+                        scrollbarColor: "rgba(139, 0, 0, 0.2) transparent",
+                      }}
+                    >
                       {officesLoading ? (
-                        <div className="px-4 py-2 text-gray-500">
-                          Loading...
+                        <div className="px-4 py-8 text-center text-gray-500">
+                          <div className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-solid border-[#8B0000] border-r-transparent mb-2"></div>
+                          <p>Loading offices...</p>
                         </div>
                       ) : officesError ? (
-                        <div className="px-4 py-2 text-red-500">
+                        <div className="px-4 py-4 text-center text-red-500 flex items-center justify-center gap-2">
+                          <AlertTriangle className="h-4 w-4" />
                           {officesError}
                         </div>
                       ) : (
-                        offices.map((office) => (
-                          <SelectItem
-                            key={office.code}
-                            value={office.code}
-                            className="flex items-center justify-between gap-2"
-                          >
-                            <span>{office.fullName}</span>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span className="ml-2 cursor-pointer">
-                                    <Info className="h-4 w-4 text-gray-400 hover:text-[#8B0000]" />
-                                  </span>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <div className="font-semibold">
-                                    {office.fullName}
+                        <>
+                          {/* Search Input */}
+                          <div className="sticky top-0 z-10 bg-white border-b border-gray-200 pb-2 mb-2">
+                            <div className="relative">
+                              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-400" />
+                              <input
+                                type="text"
+                                placeholder="Search offices..."
+                                value={officeSearchQuery}
+                                onChange={(e) =>
+                                  setOfficeSearchQuery(e.target.value)
+                                }
+                                className="w-full pl-8 sm:pl-9 pr-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-[#DAA520]/30 rounded-md focus:outline-none focus:ring-1 focus:ring-[#8B0000]/15 focus:border-[#8B0000]/60 transition-all"
+                                onClick={(e) => e.stopPropagation()}
+                                onKeyDown={(e) => e.stopPropagation()}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Offices List */}
+                          <div className="space-y-0.5 sm:space-y-1 pr-0.5 sm:pr-1">
+                            {(() => {
+                              const filteredOffices = offices.filter(
+                                (office) =>
+                                  office.code !== incident.assignedOffice &&
+                                  (officeSearchQuery === "" ||
+                                    office.fullName
+                                      .toLowerCase()
+                                      .includes(
+                                        officeSearchQuery.toLowerCase()
+                                      ) ||
+                                    office.code
+                                      .toLowerCase()
+                                      .includes(
+                                        officeSearchQuery.toLowerCase()
+                                      ) ||
+                                    office.description
+                                      .toLowerCase()
+                                      .includes(
+                                        officeSearchQuery.toLowerCase()
+                                      ))
+                              );
+
+                              if (filteredOffices.length === 0) {
+                                return (
+                                  <div className="px-4 py-8 text-center text-gray-500">
+                                    <Search className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                                    <p className="text-sm">No offices found</p>
+                                    {officeSearchQuery && (
+                                      <p className="text-xs mt-1">
+                                        Try adjusting your search
+                                      </p>
+                                    )}
                                   </div>
-                                  <div className="text-xs text-gray-500 max-w-xs whitespace-pre-line">
-                                    {office.description}
+                                );
+                              }
+
+                              return filteredOffices.map((office, index) => (
+                                <SelectItem
+                                  key={office.code}
+                                  value={office.code}
+                                  textValue={`${office.fullName} (${office.code})`}
+                                  className="py-2.5 sm:py-3.5 px-2 sm:px-3 cursor-pointer hover:bg-[#8B0000]/5 transition-colors group h-auto rounded-md sm:rounded-lg mb-0.5 sm:mb-1 last:mb-0 focus:bg-[#8B0000]/10 data-[highlighted]:bg-[#8B0000]/5"
+                                >
+                                  <div className="flex items-start gap-2 sm:gap-3 w-full max-w-full">
+                                    <div className="bg-[#8B0000]/10 p-1.5 sm:p-2 rounded-md sm:rounded-lg mt-0.5 group-hover:bg-[#8B0000]/20 transition-colors flex-shrink-0">
+                                      <Shield className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[#8B0000]" />
+                                    </div>
+                                    <div className="flex-1 min-w-0 max-w-full overflow-hidden">
+                                      <div className="text-sm sm:text-base font-semibold text-[#8B0000] mb-1 sm:mb-1.5 break-words whitespace-normal">
+                                        {office.fullName}{" "}
+                                        <span className="font-normal text-gray-600 text-xs sm:text-sm">
+                                          ({office.code})
+                                        </span>
+                                      </div>
+                                      <div className="text-[10px] sm:text-[11px] text-gray-500 leading-[1.5] line-clamp-3 group-hover:text-gray-700 transition-colors whitespace-normal break-words overflow-hidden">
+                                        {office.description}
+                                      </div>
+                                    </div>
                                   </div>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          </SelectItem>
-                        ))
+                                </SelectItem>
+                              ));
+                            })()}
+                          </div>
+                        </>
                       )}
                     </SelectContent>
                   </Select>
+                  <p className="text-[10px] sm:text-xs text-gray-500 flex items-center gap-1 sm:gap-1.5 mt-1 sm:mt-1.5">
+                    <Info className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
+                    <span>
+                      Only offices different from the current assignment are
+                      shown
+                    </span>
+                  </p>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Transfer Notes</label>
+
+                {/* Transfer Notes */}
+                <div className="space-y-2 sm:space-y-2.5">
+                  <Label className="text-xs sm:text-sm font-semibold text-[#8B0000] flex items-center gap-1.5 sm:gap-2">
+                    <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                    Transfer Reason & Notes
+                  </Label>
                   <Textarea
-                    placeholder="Enter reason for transfer..."
+                    placeholder="Explain why this case is being transferred (e.g., jurisdiction, expertise, workload distribution)..."
                     value={transferNotes}
                     onChange={(e) => setTransferNotes(e.target.value)}
-                    rows={4}
-                    className="focus:ring-2 focus:ring-[#8B0000]/20 focus:border-[#8B0000]"
+                    rows={3}
+                    className="resize-none text-sm sm:text-base border-[#DAA520]/30 focus:ring-1 focus:ring-[#8B0000]/15 focus:border-[#8B0000]/60 transition-all"
                   />
+                  <p className="text-[10px] sm:text-xs text-gray-500 flex items-start gap-1 sm:gap-1.5">
+                    <Info className="h-3 w-3 sm:h-3.5 sm:w-3.5 mt-0.5 flex-shrink-0" />
+                    <span>
+                      These notes will be included in the transfer record and
+                      visible to the receiving office
+                    </span>
+                  </p>
                 </div>
+
+                {/* Warning Notice */}
+                {selectedOffice && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-amber-50 border border-amber-200 rounded-lg p-3 sm:p-4 flex items-start gap-2 sm:gap-3"
+                  >
+                    <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs sm:text-sm font-semibold text-amber-900">
+                        Confirm Transfer
+                      </p>
+                      <p className="text-[10px] sm:text-xs text-amber-700 mt-0.5 sm:mt-1">
+                        This action will immediately reassign the incident to{" "}
+                        <span className="font-semibold break-words">
+                          {
+                            offices.find((o) => o.code === selectedOffice)
+                              ?.fullName
+                          }
+                        </span>
+                        . You will no longer have access to manage this case.
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
               </div>
-              <DialogFooter>
+
+              <DialogFooter className="flex-col sm:flex-row gap-2 pt-3 sm:pt-4 pb-4 sm:pb-6 px-4 sm:px-6 border-t border-gray-100 flex-shrink-0 bg-white">
                 <Button
                   variant="outline"
-                  onClick={() => setShowTransferModal(false)}
+                  onClick={() => {
+                    setShowTransferModal(false);
+                    setSelectedOffice("");
+                    setTransferNotes("");
+                  }}
+                  className="w-full sm:w-auto border-gray-300 hover:bg-gray-50 h-9 sm:h-10 text-sm sm:text-base"
+                  disabled={isTransferring}
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleTransfer}
-                  disabled={isTransferring}
-                  className="bg-[#8B0000] hover:bg-[#6B0000] text-white"
+                  disabled={isTransferring || !selectedOffice}
+                  className="w-full sm:w-auto bg-gradient-to-r from-[#8B0000] to-[#6B0000] hover:from-[#6B0000] hover:to-[#8B0000] text-white shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed min-w-0 sm:min-w-[120px] md:min-w-[140px] h-9 sm:h-10 text-sm sm:text-base"
                 >
-                  {isTransferring ? "Transferring..." : "Transfer"}
+                  {isTransferring ? (
+                    <>
+                      <div className="inline-block h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin rounded-full border-2 border-solid border-white border-r-transparent mr-2"></div>
+                      <span className="text-sm sm:text-base">
+                        Transferring...
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <ArrowRightLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-2" />
+                      <span className="text-sm sm:text-base">
+                        Transfer Case
+                      </span>
+                    </>
+                  )}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -1357,13 +1568,160 @@ export default function IncidentDetailsPage() {
         )}
       </div>
 
-      {/* Add custom styles for animation delays */}
+      {/* Add custom styles for animation delays and scrollbar */}
       <style jsx global>{`
         .animation-delay-150 {
           animation-delay: 150ms;
         }
         .animation-delay-300 {
           animation-delay: 300ms;
+        }
+
+        /* Custom scrollbar styling for webkit browsers */
+        [data-radix-select-content]::-webkit-scrollbar {
+          width: 8px;
+        }
+
+        [data-radix-select-content]::-webkit-scrollbar-track {
+          background: transparent;
+          border-radius: 10px;
+        }
+
+        [data-radix-select-content]::-webkit-scrollbar-thumb {
+          background: rgba(139, 0, 0, 0.15);
+          border-radius: 10px;
+          transition: background 0.2s ease;
+        }
+
+        [data-radix-select-content]::-webkit-scrollbar-thumb:hover {
+          background: rgba(139, 0, 0, 0.3);
+        }
+
+        /* Dialog scrollbar styling */
+        [role="dialog"]::-webkit-scrollbar {
+          width: 6px;
+        }
+
+        [role="dialog"]::-webkit-scrollbar-track {
+          background: transparent;
+        }
+
+        [role="dialog"]::-webkit-scrollbar-thumb {
+          background: rgba(139, 0, 0, 0.2);
+          border-radius: 10px;
+        }
+
+        [role="dialog"]::-webkit-scrollbar-thumb:hover {
+          background: rgba(139, 0, 0, 0.35);
+        }
+
+        /* Responsive viewport adjustments */
+        @media (max-width: 480px) {
+          [role="dialog"] {
+            border-radius: 12px !important;
+          }
+        }
+
+        @media (min-width: 1920px) {
+          [role="dialog"][data-state="open"] {
+            max-width: 750px !important;
+          }
+        }
+
+        /* Prevent body scroll when dialog is open */
+        body:has([role="dialog"][data-state="open"]) {
+          overflow: hidden;
+        }
+
+        /* Ensure select dropdown stays within viewport bounds */
+        [data-radix-select-content] {
+          max-width: calc(100vw - 32px) !important;
+          max-height: min(200px, calc(100vh - 450px)) !important;
+        }
+
+        /* Position select content properly within viewport */
+        [data-radix-select-viewport] {
+          max-width: 100%;
+          max-height: inherit;
+        }
+
+        /* Ensure dropdown doesn't overflow on mobile */
+        @media (max-width: 640px) {
+          [data-radix-select-content] {
+            left: 16px !important;
+            right: 16px !important;
+            max-width: calc(100vw - 32px) !important;
+            max-height: min(180px, calc(100vh - 480px)) !important;
+          }
+        }
+
+        /* Tablet adjustments */
+        @media (min-width: 640px) and (max-width: 768px) {
+          [data-radix-select-content] {
+            max-height: min(200px, calc(100vh - 440px)) !important;
+          }
+        }
+
+        /* Desktop adjustments */
+        @media (min-width: 768px) {
+          [data-radix-select-content] {
+            max-height: min(260px, calc(100vh - 380px)) !important;
+          }
+        }
+
+        /* Constrain dropdown within dialog boundaries */
+        [role="dialog"] [data-radix-select-content] {
+          max-width: min(calc(100vw - 32px), 520px);
+          max-height: min(200px, calc(100vh - 480px)) !important;
+        }
+
+        @media (max-width: 640px) {
+          [role="dialog"] [data-radix-select-content] {
+            max-width: calc(100vw - 32px) !important;
+            max-height: min(160px, calc(100vh - 500px)) !important;
+          }
+        }
+
+        @media (min-width: 640px) and (max-width: 768px) {
+          [role="dialog"] [data-radix-select-content] {
+            max-height: min(180px, calc(100vh - 460px)) !important;
+          }
+        }
+
+        @media (min-width: 768px) {
+          [role="dialog"] [data-radix-select-content] {
+            max-height: min(240px, calc(100vh - 400px)) !important;
+          }
+        }
+
+        /* Prevent dropdown from extending beyond browser chrome */
+        [data-radix-popper-content-wrapper] {
+          max-height: calc(100vh - 250px);
+        }
+
+        /* Smooth animation for dropdown */
+        [data-radix-select-content][data-state="open"] {
+          animation: slideDown 0.15s ease-out;
+        }
+
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            transform: translateY(-4px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        /* Ensure dropdown respects boundaries with margins */
+        [data-radix-select-content][data-side="bottom"] {
+          margin-bottom: 80px;
+        }
+
+        [data-radix-select-content][data-side="top"] {
+          margin-top: 80px;
         }
       `}</style>
     </div>

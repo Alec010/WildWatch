@@ -61,6 +61,12 @@ interface Incident {
   trackingNumber: string;
   incidentType: string;
   location: string;
+  formattedAddress?: string;
+  buildingName?: string;
+  building?: {
+    fullName?: string;
+    code?: string;
+  };
   dateOfIncident: string;
   timeOfIncident: string;
   status: string;
@@ -99,17 +105,6 @@ export default function OfficeAdminDashboard() {
         }
 
         const incidents = await response.json();
-
-        // Debug: Log the first incident to see what fields are available
-        console.log("Admin Dashboard - First incident data:", incidents[0]);
-        console.log(
-          "Admin Dashboard - estimatedResolutionDate:",
-          incidents[0]?.estimatedResolutionDate
-        );
-        console.log(
-          "Admin Dashboard - priorityLevel:",
-          incidents[0]?.priorityLevel
-        );
 
         // Calculate statistics
         const stats = {
