@@ -1,6 +1,6 @@
 /**
- * Parse a date string from the backend as UTC
- * Backend sends LocalDateTime without timezone, which we treat as UTC
+ * Parse a date string from the backend as UTC+8 (Asia/Manila)
+ * Backend sends LocalDateTime in UTC+8 timezone
  */
 export function parseUTCDate(dateString: string): Date {
   if (!dateString) {
@@ -12,12 +12,12 @@ export function parseUTCDate(dateString: string): Date {
     return new Date(dateString)
   }
   
-  // If no timezone, treat as UTC by appending 'Z'
-  return new Date(dateString + 'Z')
+  // If no timezone, treat as UTC+8 by appending '+08:00'
+  return new Date(dateString + '+08:00')
 }
 
 /**
- * Format date for display
+ * Format date for display (UTC+8 / Asia/Manila)
  */
 export function formatDate(dateString: string): string {
   const date = parseUTCDate(dateString)
@@ -27,11 +27,12 @@ export function formatDate(dateString: string): string {
     hour: "numeric",
     minute: "numeric",
     hour12: true,
+    timeZone: "Asia/Manila",
   })
 }
 
 /**
- * Format date with year
+ * Format date with year (UTC+8 / Asia/Manila)
  */
 export function formatDateWithYear(dateString: string): string {
   const date = parseUTCDate(dateString)
@@ -42,11 +43,12 @@ export function formatDateWithYear(dateString: string): string {
     hour: "numeric",
     minute: "numeric",
     hour12: true,
+    timeZone: "Asia/Manila",
   })
 }
 
 /**
- * Format date only (no time)
+ * Format date only (no time) (UTC+8 / Asia/Manila)
  */
 export function formatDateOnly(dateString: string): string {
   const date = parseUTCDate(dateString)
@@ -54,11 +56,12 @@ export function formatDateOnly(dateString: string): string {
     month: "short",
     day: "numeric",
     year: "numeric",
+    timeZone: "Asia/Manila",
   })
 }
 
 /**
- * Format time only
+ * Format time only (UTC+8 / Asia/Manila)
  */
 export function formatTime(dateString: string): string {
   const date = parseUTCDate(dateString)
@@ -66,21 +69,26 @@ export function formatTime(dateString: string): string {
     hour: "2-digit",
     minute: "2-digit",
     hour12: true,
+    timeZone: "Asia/Manila",
   })
 }
 
 /**
- * Format date for "Today/Yesterday" display
+ * Format date for "Today/Yesterday" display (UTC+8 / Asia/Manila)
  */
 export function formatRelativeDate(dateString: string): string {
   const date = parseUTCDate(dateString)
-  const today = new Date()
+  const today = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" }))
   const yesterday = new Date(today)
   yesterday.setDate(yesterday.getDate() - 1)
 
-  if (date.toDateString() === today.toDateString()) {
+  const dateStr = date.toLocaleDateString("en-US", { timeZone: "Asia/Manila" })
+  const todayStr = today.toLocaleDateString("en-US", { timeZone: "Asia/Manila" })
+  const yesterdayStr = yesterday.toLocaleDateString("en-US", { timeZone: "Asia/Manila" })
+
+  if (dateStr === todayStr) {
     return `Today, ${formatTime(dateString)}`
-  } else if (date.toDateString() === yesterday.toDateString()) {
+  } else if (dateStr === yesterdayStr) {
     return `Yesterday, ${formatTime(dateString)}`
   } else {
     return `${formatDateOnly(dateString)}, ${formatTime(dateString)}`

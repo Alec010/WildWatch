@@ -276,20 +276,24 @@ export default function IncidentDetailsPage() {
       setShowModal(true);
       setCountdown(3);
 
+      // Clear any existing interval
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current);
+      }
+
       // Start countdown
-      const countdownInterval = setInterval(() => {
+      countdownIntervalRef.current = setInterval(() => {
         setCountdown((prev) => {
           if (prev <= 1) {
-            clearInterval(countdownInterval);
-            router.push("/office-admin/dashboard");
+            if (countdownIntervalRef.current) {
+              clearInterval(countdownIntervalRef.current);
+              countdownIntervalRef.current = null;
+            }
             return 0;
           }
           return prev - 1;
         });
       }, 1000);
-
-      // Cleanup interval on unmount
-      return () => clearInterval(countdownInterval);
     } catch (error) {
       console.error("Error approving incident:", error);
       setModalContent({
@@ -438,20 +442,24 @@ export default function IncidentDetailsPage() {
       setShowModal(true);
       setCountdown(3);
 
+      // Clear any existing interval
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current);
+      }
+
       // Start countdown
-      const countdownInterval = setInterval(() => {
+      countdownIntervalRef.current = setInterval(() => {
         setCountdown((prev) => {
           if (prev <= 1) {
-            clearInterval(countdownInterval);
-            router.push("/office-admin/dashboard");
+            if (countdownIntervalRef.current) {
+              clearInterval(countdownIntervalRef.current);
+              countdownIntervalRef.current = null;
+            }
             return 0;
           }
           return prev - 1;
         });
       }, 1000);
-
-      // Cleanup interval on unmount
-      return () => clearInterval(countdownInterval);
     } catch (error) {
       console.error("Error transferring incident:", error);
       setModalContent({

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Search, Plus } from "lucide-react";
-import NotificationDropdown from "@/components/ui/notificationdropdown";
+import OfficeAdminNotificationDropdown from "@/components/ui/OfficeAdminNotificationDropdown";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { useUser } from "@/contexts/UserContext";
@@ -172,7 +172,7 @@ export function OfficeAdminNavbar({
 
               {/* Notification dropdown */}
               <div>
-                <NotificationDropdown />
+                <OfficeAdminNotificationDropdown />
               </div>
             </div>
           </div>

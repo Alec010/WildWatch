@@ -1,12 +1,12 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { Sidebar } from "@/components/Sidebar"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { UpvoteModal } from "@/components/ui/upvote-modal"
-import { CustomLoader } from "@/components/ui/custom-loader"
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Sidebar } from "@/components/Sidebar";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { UpvoteModal } from "@/components/ui/upvote-modal";
+import { CustomLoader } from "@/components/ui/custom-loader";
 import {
   MapPin,
   Clock,
@@ -22,67 +22,81 @@ import {
   TrendingUp,
   Sparkles,
   Shield,
-} from "lucide-react"
-import { API_BASE_URL } from "@/utils/api"
-import { formatLocationDisplay } from "@/utils/locationFormatter"
-import { filterIncidentsByPrivacy, getReporterDisplayName } from "@/utils/anonymization"
-import { Inter } from "next/font/google"
-import { Client } from "@stomp/stompjs"
+  Heart,
+} from "lucide-react";
+import { API_BASE_URL } from "@/utils/api";
+import { formatLocationCompact } from "@/utils/locationFormatter";
+import {
+  filterIncidentsByPrivacy,
+  getReporterDisplayName,
+} from "@/utils/anonymization";
+import { Inter } from "next/font/google";
+import { Client } from "@stomp/stompjs";
 // @ts-ignore
-import SockJS from "sockjs-client"
-import { Navbar } from "@/components/Navbar"
-import { useSidebar } from "@/contexts/SidebarContext"
-import { useUser } from "@/contexts/UserContext"
-import { formatDate, formatDateWithYear, parseUTCDate } from "@/utils/dateUtils"
+import SockJS from "sockjs-client";
+import { Navbar } from "@/components/Navbar";
+import { useSidebar } from "@/contexts/SidebarContext";
+import { useUser } from "@/contexts/UserContext";
+import {
+  formatDate,
+  formatDateWithYear,
+  parseUTCDate,
+} from "@/utils/dateUtils";
 
 interface Incident {
-  id: string
-  trackingNumber: string
-  incidentType: string
-  location: string
-  dateOfIncident: string
-  timeOfIncident: string
-  status: string
-  description: string
-  submittedAt: string
-  isAnonymous?: boolean
-  isPrivate?: boolean
-  preferAnonymous?: boolean
-  submittedBy: string
-  submittedByFullName?: string
-  submittedByIdNumber?: string
-  submittedByEmail?: string
-  submittedByPhone?: string
-  upvoteCount: number
-  estimatedResolutionDate?: string
+  id: string;
+  trackingNumber: string;
+  incidentType: string;
+  location: string;
+  dateOfIncident: string;
+  timeOfIncident: string;
+  status: string;
+  description: string;
+  submittedAt: string;
+  isAnonymous?: boolean;
+  isPrivate?: boolean;
+  preferAnonymous?: boolean;
+  submittedBy: string;
+  submittedByFullName?: string;
+  submittedByIdNumber?: string;
+  submittedByEmail?: string;
+  submittedByPhone?: string;
+  upvoteCount: number;
+  estimatedResolutionDate?: string;
 }
 
-const inter = Inter({ subsets: ["latin"] })
+const inter = Inter({ subsets: ["latin"] });
 
 export default function PublicIncidentsPage() {
-  const router = useRouter()
-  const [incidents, setIncidents] = useState<Incident[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [filteredIncidents, setFilteredIncidents] = useState<Incident[]>([])
-  const [statusFilter, setStatusFilter] = useState<string>("All")
-  const [upvotedIncidents, setUpvotedIncidents] = useState<Set<string>>(new Set())
-  const [upvoteModalOpen, setUpvoteModalOpen] = useState(false)
-  const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null)
-  const [isUpvotedModal, setIsUpvotedModal] = useState(false)
-  const [lastUpvoteAction, setLastUpvoteAction] = useState<number>(0)
-  const [pendingUpvote, setPendingUpvote] = useState<{ [id: string]: boolean | undefined }>({})
+  const router = useRouter();
+  const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filteredIncidents, setFilteredIncidents] = useState<Incident[]>([]);
+  const [statusFilter, setStatusFilter] = useState<string>("All");
+  const [upvotedIncidents, setUpvotedIncidents] = useState<Set<string>>(
+    new Set()
+  );
+  const [upvoteModalOpen, setUpvoteModalOpen] = useState(false);
+  const [selectedIncident, setSelectedIncident] = useState<Incident | null>(
+    null
+  );
+  const [isUpvotedModal, setIsUpvotedModal] = useState(false);
+  const [lastUpvoteAction, setLastUpvoteAction] = useState<number>(0);
+  const [pendingUpvote, setPendingUpvote] = useState<{
+    [id: string]: boolean | undefined;
+  }>({});
 
-  const { collapsed } = useSidebar()
-  const { userRole } = useUser()
+  const { collapsed } = useSidebar();
+  const { userRole } = useUser();
 
   const getContentMargin = () => {
     if (userRole === "OFFICE_ADMIN") {
-      return collapsed ? "ml-20" : "ml-72"
+      return collapsed ? "ml-20" : "ml-72";
     }
-    return collapsed ? "ml-18" : "ml-64"
-  }
+    return collapsed ? "ml-18" : "ml-64";
+  };
 
   useEffect(() => {
     const fetchIncidents = async () => {
@@ -90,10 +104,10 @@ export default function PublicIncidentsPage() {
         const token = document.cookie
           .split("; ")
           .find((row) => row.startsWith("token="))
-          ?.split("=")[1]
+          ?.split("=")[1];
 
         if (!token) {
-          throw new Error("No authentication token found")
+          throw new Error("No authentication token found");
         }
 
         const response = await fetch(`${API_BASE_URL}/api/incidents/public`, {
@@ -101,22 +115,26 @@ export default function PublicIncidentsPage() {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-        })
+        });
 
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        const data = await response.json()
-      // Filter incidents based on privacy settings (public view)
-      const filteredData = filterIncidentsByPrivacy(data, false, false) as Incident[]
-      // Sort by upvote count (descending)
-      filteredData.sort((a, b) => {
-        const aCount = typeof a.upvoteCount === 'number' ? a.upvoteCount : 0;
-        const bCount = typeof b.upvoteCount === 'number' ? b.upvoteCount : 0;
-        return bCount - aCount;
-      })
-      setIncidents(filteredData)
+        const data = await response.json();
+        // Filter incidents based on privacy settings (public view)
+        const filteredData = filterIncidentsByPrivacy(
+          data,
+          false,
+          false
+        ) as Incident[];
+        // Sort by upvote count (descending)
+        filteredData.sort((a, b) => {
+          const aCount = typeof a.upvoteCount === "number" ? a.upvoteCount : 0;
+          const bCount = typeof b.upvoteCount === "number" ? b.upvoteCount : 0;
+          return bCount - aCount;
+        });
+        setIncidents(filteredData);
 
         // Fetch upvote status for each incident
         const upvotePromises = filteredData.map((incident: Incident) =>
@@ -125,288 +143,332 @@ export default function PublicIncidentsPage() {
               Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
             },
-          }).then((res) => res.json()),
-        )
+          }).then((res) => res.json())
+        );
 
-        const upvoteResults = await Promise.all(upvotePromises)
-        const upvoted = new Set<string>()
+        const upvoteResults = await Promise.all(upvotePromises);
+        const upvoted = new Set<string>();
         filteredData.forEach((incident: Incident, index: number) => {
           if (upvoteResults[index] === true) {
-            upvoted.add(incident.id)
+            upvoted.add(incident.id);
           }
-        })
-        setUpvotedIncidents(upvoted)
+        });
+        setUpvotedIncidents(upvoted);
       } catch (error) {
-        console.error("Error fetching incidents:", error)
-        setError(error instanceof Error ? error.message : "Failed to load incidents")
+        console.error("Error fetching incidents:", error);
+        setError(
+          error instanceof Error ? error.message : "Failed to load incidents"
+        );
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    fetchIncidents()
-  }, [])
+    fetchIncidents();
+  }, []);
 
   useEffect(() => {
     const filtered = incidents.filter((incident) => {
       const matchesSearch =
         searchQuery === "" ||
-        incident.incidentType.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        incident.trackingNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        incident.location.toLowerCase().includes(searchQuery.toLowerCase())
+        incident.incidentType
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase()) ||
+        incident.trackingNumber
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase()) ||
+        incident.location.toLowerCase().includes(searchQuery.toLowerCase());
 
-      const matchesStatus = statusFilter === "All" || incident.status.toLowerCase() === statusFilter.toLowerCase()
+      const matchesStatus =
+        statusFilter === "All" ||
+        incident.status.toLowerCase() === statusFilter.toLowerCase();
 
-      return matchesSearch && matchesStatus
-    })
+      return matchesSearch && matchesStatus;
+    });
 
-    setFilteredIncidents(filtered)
-  }, [searchQuery, statusFilter, incidents])
+    setFilteredIncidents(filtered);
+  }, [searchQuery, statusFilter, incidents]);
 
   useEffect(() => {
-    const socket = new SockJS(`${API_BASE_URL.replace("/api", "")}/ws`)
+    const socket = new SockJS(`${API_BASE_URL.replace("/api", "")}/ws`);
     const stompClient = new Client({
       webSocketFactory: () => socket,
       reconnectDelay: 5000,
       onConnect: () => {
         incidents.forEach((incident) => {
           stompClient.subscribe(`/topic/upvotes/${incident.id}`, (message) => {
-            const newCount = Number.parseInt(message.body, 10)
-            setIncidents((prev) => prev.map((i) => (i.id === incident.id ? { ...i, upvoteCount: newCount } : i)))
+            const newCount = Number.parseInt(message.body, 10);
+            setIncidents((prev) =>
+              prev.map((i) =>
+                i.id === incident.id ? { ...i, upvoteCount: newCount } : i
+              )
+            );
             setPendingUpvote((prev) => {
-              const copy = { ...prev }
-              delete copy[incident.id]
-              return copy
-            })
-          })
-        })
+              const copy = { ...prev };
+              delete copy[incident.id];
+              return copy;
+            });
+          });
+        });
       },
-    })
-    stompClient.activate()
+    });
+    stompClient.activate();
     return () => {
-      stompClient.deactivate()
-    }
-  }, [incidents])
+      stompClient.deactivate();
+    };
+  }, [incidents]);
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
+    const date = new Date(dateString);
     return date.toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
       hour: "numeric",
       minute: "numeric",
       hour12: true,
-    })
-  }
+    });
+  };
 
   const formatEstimatedDate = (dateString: string) => {
-    return formatDateWithYear(dateString)
-  }
+    return formatDateWithYear(dateString);
+  };
 
   const getStatusIcon = (status: string) => {
     switch (status.toLowerCase()) {
       case "pending":
-        return <Clock className="h-4 w-4" />
+        return <Clock className="h-4 w-4" />;
       case "in progress":
-        return <AlertCircle className="h-4 w-4" />
+        return <AlertCircle className="h-4 w-4" />;
       case "resolved":
-        return <CheckCircle className="h-4 w-4" />
+        return <CheckCircle className="h-4 w-4" />;
       default:
-        return <AlertTriangle className="h-4 w-4" />
+        return <AlertTriangle className="h-4 w-4" />;
     }
-  }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case "pending":
-        return "from-amber-500 to-orange-500"
+        return "from-amber-500 to-orange-500";
       case "in progress":
-        return "from-blue-500 to-indigo-500"
+        return "from-blue-500 to-indigo-500";
       case "resolved":
-        return "from-green-500 to-emerald-500"
+        return "from-green-500 to-emerald-500";
       default:
-        return "from-gray-500 to-slate-500"
+        return "from-gray-500 to-slate-500";
     }
-  }
+  };
 
   const getStatusBadgeColor = (status: string) => {
     switch (status.toLowerCase()) {
       case "pending":
-        return "bg-amber-100 text-amber-800 border-amber-200"
+        return "bg-amber-100 text-amber-800 border-amber-200";
       case "in progress":
-        return "bg-blue-100 text-blue-800 border-blue-200"
+        return "bg-blue-100 text-blue-800 border-blue-200";
       case "resolved":
-        return "bg-green-100 text-green-800 border-green-200"
+        return "bg-green-100 text-green-800 border-green-200";
       default:
-        return "bg-gray-100 text-gray-800 border-gray-200"
+        return "bg-gray-100 text-gray-800 border-gray-200";
     }
-  }
+  };
 
   const handleUpvote = async (incidentId: string, wasUpvoted?: boolean) => {
     try {
-      setLastUpvoteAction(Date.now())
+      setLastUpvoteAction(Date.now());
       const token = document.cookie
         .split("; ")
         .find((row) => row.startsWith("token="))
-        ?.split("=")[1]
+        ?.split("=")[1];
 
       if (!token) {
-        throw new Error("No authentication token found")
+        throw new Error("No authentication token found");
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/incidents/${incidentId}/upvote`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      })
+      const response = await fetch(
+        `${API_BASE_URL}/api/incidents/${incidentId}/upvote`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const isUpvoted = await response.json()
+      const isUpvoted = await response.json();
 
-      const incidentRes = await fetch(`${API_BASE_URL}/api/incidents/${incidentId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      })
+      const incidentRes = await fetch(
+        `${API_BASE_URL}/api/incidents/${incidentId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
       if (incidentRes.ok) {
-        const updatedIncident = await incidentRes.json()
+        const updatedIncident = await incidentRes.json();
         setIncidents((prevIncidents) =>
           prevIncidents.map((incident) =>
             incident.id === incidentId
               ? {
                   ...incident,
-                  upvoteCount: typeof updatedIncident.upvoteCount === "number" ? updatedIncident.upvoteCount : 0,
+                  upvoteCount:
+                    typeof updatedIncident.upvoteCount === "number"
+                      ? updatedIncident.upvoteCount
+                      : 0,
                 }
-              : incident,
-          ),
-        )
+              : incident
+          )
+        );
       }
       setUpvotedIncidents((prev) => {
-        const newSet = new Set(prev)
+        const newSet = new Set(prev);
         if (isUpvoted) {
-          newSet.add(incidentId)
+          newSet.add(incidentId);
         } else {
-          newSet.delete(incidentId)
+          newSet.delete(incidentId);
         }
-        return newSet
-      })
+        return newSet;
+      });
     } catch (error) {
       if (selectedIncident && wasUpvoted !== undefined) {
         setIncidents((prevIncidents) =>
           prevIncidents.map((incident) => {
             if (incident.id === incidentId) {
-              const safeCount = typeof incident.upvoteCount === "number" ? incident.upvoteCount : 0
+              const safeCount =
+                typeof incident.upvoteCount === "number"
+                  ? incident.upvoteCount
+                  : 0;
               return {
                 ...incident,
                 upvoteCount: wasUpvoted ? safeCount + 1 : safeCount - 1,
-              }
+              };
             }
-            return incident
-          }),
-        )
+            return incident;
+          })
+        );
         setUpvotedIncidents((prev) => {
-          const newSet = new Set(prev)
+          const newSet = new Set(prev);
           if (wasUpvoted) {
-            newSet.add(incidentId)
+            newSet.add(incidentId);
           } else {
-            newSet.delete(incidentId)
+            newSet.delete(incidentId);
           }
-          return newSet
-        })
+          return newSet;
+        });
       }
-      console.error("Error toggling upvote:", error)
+      console.error("Error toggling upvote:", error);
     }
-  }
+  };
 
   const handleUpvoteClick = (incident: Incident) => {
-    setSelectedIncident(incident)
-    setIsUpvotedModal(upvotedIncidents.has(incident.id))
-    setUpvoteModalOpen(true)
-  }
+    setSelectedIncident(incident);
+    setIsUpvotedModal(upvotedIncidents.has(incident.id));
+    setUpvoteModalOpen(true);
+  };
 
   const handleUpvoteConfirm = async () => {
     if (selectedIncident) {
-      const isCurrentlyUpvoted = upvotedIncidents.has(selectedIncident.id)
+      const isCurrentlyUpvoted = upvotedIncidents.has(selectedIncident.id);
       setIncidents((prevIncidents) =>
         prevIncidents.map((incident) => {
           if (incident.id === selectedIncident.id) {
-            const safeCount = typeof incident.upvoteCount === "number" ? incident.upvoteCount : 0
+            const safeCount =
+              typeof incident.upvoteCount === "number"
+                ? incident.upvoteCount
+                : 0;
             return {
               ...incident,
               upvoteCount: isCurrentlyUpvoted ? safeCount - 1 : safeCount + 1,
-            }
+            };
           }
-          return incident
-        }),
-      )
+          return incident;
+        })
+      );
       setUpvotedIncidents((prev) => {
-        const newSet = new Set(prev)
+        const newSet = new Set(prev);
         if (isCurrentlyUpvoted) {
-          newSet.delete(selectedIncident.id)
+          newSet.delete(selectedIncident.id);
         } else {
-          newSet.add(selectedIncident.id)
+          newSet.add(selectedIncident.id);
         }
-        return newSet
-      })
-      setPendingUpvote((prev) => ({ ...prev, [selectedIncident.id]: !isCurrentlyUpvoted }))
-      await handleUpvote(selectedIncident.id, isCurrentlyUpvoted)
+        return newSet;
+      });
+      setPendingUpvote((prev) => ({
+        ...prev,
+        [selectedIncident.id]: !isCurrentlyUpvoted,
+      }));
+      await handleUpvote(selectedIncident.id, isCurrentlyUpvoted);
     }
-  }
+  };
 
   const handleRefresh = async () => {
     try {
-      setLoading(true)
+      setLoading(true);
       const token = document.cookie
         .split("; ")
         .find((row) => row.startsWith("token="))
-        ?.split("=")[1]
-      if (!token) throw new Error("No authentication token found")
+        ?.split("=")[1];
+      if (!token) throw new Error("No authentication token found");
       const response = await fetch(`${API_BASE_URL}/api/incidents/public`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-      })
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
-      const data = await response.json()
+      });
+      if (!response.ok)
+        throw new Error(`HTTP error! status: ${response.status}`);
+      const data = await response.json();
       // Filter incidents based on privacy settings (public view)
-      const filteredData = filterIncidentsByPrivacy(data, false, false) as Incident[]
+      const filteredData = filterIncidentsByPrivacy(
+        data,
+        false,
+        false
+      ) as Incident[];
       // Sort by upvote count (descending)
       filteredData.sort((a, b) => {
-        const aCount = typeof a.upvoteCount === 'number' ? a.upvoteCount : 0;
-        const bCount = typeof b.upvoteCount === 'number' ? b.upvoteCount : 0;
+        const aCount = typeof a.upvoteCount === "number" ? a.upvoteCount : 0;
+        const bCount = typeof b.upvoteCount === "number" ? b.upvoteCount : 0;
         return bCount - aCount;
-      })
-      setIncidents(filteredData)
+      });
+      setIncidents(filteredData);
     } catch (error) {
-      setError(error instanceof Error ? error.message : "Failed to refresh incidents")
+      setError(
+        error instanceof Error ? error.message : "Failed to refresh incidents"
+      );
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   if (loading) {
     return (
       <div className="min-h-screen flex bg-gradient-to-br from-slate-50 via-white to-slate-100">
         <Sidebar />
-        <div className={`flex-1 relative transition-all duration-300 ${getContentMargin()}`}>
-          <Navbar title="Public Incidents" subtitle="Loading incidents..." showSearch={false} showNewIncident={false} />
+        <div
+          className={`flex-1 relative transition-all duration-300 ${getContentMargin()}`}
+        >
+          <Navbar
+            title="Public Incidents"
+            subtitle="Loading incidents..."
+            showSearch={false}
+            showNewIncident={false}
+          />
           <div className="pt-24">
-            <CustomLoader 
+            <CustomLoader
               title="Loading community incidents..."
-              subtitle="Fetching the latest safety reports"
+              subtitle="Fetching the latest public incident reports"
               contentOnly
             />
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   if (error) {
@@ -419,7 +481,9 @@ export default function PublicIncidentsPage() {
           showSearch={false}
           showNewIncident={false}
         />
-        <div className={`flex-1 p-8 transition-all duration-300 ${getContentMargin()} pt-20`}>
+        <div
+          className={`flex-1 p-8 transition-all duration-300 ${getContentMargin()} pt-20`}
+        >
           <div className="max-w-7xl mx-auto">
             <div className="bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-2xl p-8 shadow-xl">
               <div className="flex items-center gap-6">
@@ -427,10 +491,14 @@ export default function PublicIncidentsPage() {
                   <AlertTriangle className="h-8 w-8 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-red-800 font-bold text-xl mb-2">Unable to Load Incidents</h3>
+                  <h3 className="text-red-800 font-bold text-xl mb-2">
+                    Unable to Load Incidents
+                  </h3>
                   <p className="text-red-700 text-lg">{error}</p>
                   <button
-                    onClick={() => typeof window !== 'undefined' && window.location.reload()}
+                    onClick={() =>
+                      typeof window !== "undefined" && window.location.reload()
+                    }
                     className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
                   >
                     Try Again
@@ -441,17 +509,27 @@ export default function PublicIncidentsPage() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
-    <div className={`min-h-screen flex bg-gradient-to-br from-[#fafafa] via-white to-[#f8f9fa] ${inter.className}`}>
+    <div
+      className={`min-h-screen flex bg-gradient-to-br from-[#fafafa] via-white to-[#f8f9fa] ${inter.className}`}
+    >
       <Sidebar />
 
       {/* Main Content */}
-      <div className={`flex-1 transition-all duration-300 ${collapsed ? "ml-20" : "ml-64"}`}>
+      <div
+        className={`flex-1 transition-all duration-300 ${
+          collapsed ? "ml-20" : "ml-64"
+        }`}
+      >
         {/* Navbar */}
-        <Navbar title="Community Incidents" subtitle="View all public incident reports" onSearch={setSearchQuery} />
+        <Navbar
+          title="Community Incidents"
+          subtitle="View all public incident reports"
+          onSearch={setSearchQuery}
+        />
 
         <div className="pt-24 px-6 pb-10">
           {/* Enhanced Welcome Banner */}
@@ -484,8 +562,9 @@ export default function PublicIncidentsPage() {
                     </h1>
                   </div>
                   <p className="text-lg sm:text-xl text-white/90 leading-relaxed max-w-2xl">
-                    Stay informed about campus safety and security reports. Your community's transparency hub for
-                    incident awareness and collective safety.
+                    Stay informed about campus safety and security reports. Your
+                    community's transparency hub for incident awareness and
+                    collective safety.
                   </p>
                   <div className="flex items-center gap-4 mt-4">
                     <div className="flex items-center gap-2 text-white/80">
@@ -494,7 +573,9 @@ export default function PublicIncidentsPage() {
                     </div>
                     <div className="flex items-center gap-2 text-white/80">
                       <Shield className="h-4 w-4" />
-                      <span className="text-sm font-medium">Verified Reports</span>
+                      <span className="text-sm font-medium">
+                        Verified Reports
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -532,7 +613,10 @@ export default function PublicIncidentsPage() {
                     <option value="All" className="text-gray-900 bg-white">
                       All Status
                     </option>
-                    <option value="In Progress" className="text-gray-900 bg-white">
+                    <option
+                      value="In Progress"
+                      className="text-gray-900 bg-white"
+                    >
                       In Progress
                     </option>
                     <option value="Resolved" className="text-gray-900 bg-white">
@@ -568,135 +652,185 @@ export default function PublicIncidentsPage() {
                   const isOptimisticallyUpvoted =
                     pendingUpvote[incident.id] !== undefined
                       ? pendingUpvote[incident.id]
-                      : upvotedIncidents.has(incident.id)
+                      : upvotedIncidents.has(incident.id);
 
                   return (
                     <article
                       key={incident.id}
-                      className="group relative bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-visible border border-slate-200/50 hover:border-[#D4AF37]/40 transform hover:-translate-y-2 flex flex-col"
+                      className="group relative bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200/60 hover:border-[#D4AF37]/50 transform hover:-translate-y-3 flex flex-col backdrop-blur-sm"
                       style={{
                         animationName: "fadeInUp",
                         animationDuration: "0.8s",
                         animationTimingFunction: "ease-out",
                         animationFillMode: "forwards",
-                        animationDelay: `${index * 100}ms`
+                        animationDelay: `${index * 100}ms`,
                       }}
                     >
-                      {/* Enhanced Status Banner */}
+                      {/* Premium Status Banner with Gradient */}
                       <div
-                        className={`h-3 bg-gradient-to-r ${getStatusColor(incident.status)} relative overflow-hidden`}
+                        className={`h-1.5 bg-gradient-to-r ${getStatusColor(
+                          incident.status
+                        )} relative overflow-hidden`}
                       >
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer"></div>
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer"></div>
+                        <div className="absolute inset-0 bg-gradient-to-r from-black/5 via-transparent to-black/5"></div>
                       </div>
 
-                      {/* Card Content */}
-                      <div className="flex flex-col flex-1 p-6">
-                        {/* Card Header */}
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-3">
+                      {/* Card Content with Better Padding */}
+                      <div className="flex flex-col flex-1 p-7 bg-gradient-to-br from-white to-slate-50/30">
+                        {/* Premium Header Section */}
+                        <div className="mb-5">
+                          {/* Status and Upvote Row */}
+                          <div className="flex items-start justify-between mb-4">
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
                               <div
-                                className={`p-2 rounded-xl bg-gradient-to-r ${getStatusColor(incident.status)} text-white shadow-lg`}
+                                className={`p-2.5 rounded-2xl bg-gradient-to-br ${getStatusColor(
+                                  incident.status
+                                )} text-white shadow-xl shadow-black/10 flex-shrink-0`}
                               >
                                 {getStatusIcon(incident.status)}
                               </div>
-                              <div className="flex items-center gap-2">
+                              <div className="flex flex-col gap-1.5 min-w-0 flex-1">
                                 <span
-                                  className={`px-4 py-1.5 rounded-full text-xs font-bold border ${getStatusBadgeColor(incident.status)} shadow-sm`}
+                                  className={`px-3 py-1 rounded-xl text-xs font-bold border-2 ${getStatusBadgeColor(
+                                    incident.status
+                                  )} shadow-sm inline-block w-fit`}
                                 >
                                   {incident.status}
                                 </span>
                                 {incident.estimatedResolutionDate && (
-                                  <div className="relative group">
-                                    <Calendar className="h-4 w-4 text-[#800000] cursor-help transition-all duration-200 group-hover:scale-110 group-hover:text-[#A00000]" />
-                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-3 px-4 py-3 bg-[#8B0000] text-white text-sm rounded-lg shadow-lg opacity-0 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300 whitespace-nowrap z-[9999] pointer-events-none overflow-visible group-hover:animate-in group-hover:slide-in-from-bottom-2 group-hover:fade-in-0">
-                                      <div className="font-medium">Est. Resolution</div>
-                                      <div className="text-xs text-gray-100 mt-1">
-                                        {formatEstimatedDate(incident.estimatedResolutionDate)}
+                                  <div className="relative group/calendar">
+                                    <div className="flex items-center gap-1.5 text-[#800000]">
+                                      <Calendar className="h-3.5 w-3.5" />
+                                      <span className="text-[10px] font-semibold">
+                                        Est:{" "}
+                                        {
+                                          formatEstimatedDate(
+                                            incident.estimatedResolutionDate
+                                          ).split(",")[0]
+                                        }
+                                      </span>
+                                    </div>
+                                    <div className="absolute bottom-full left-0 mb-2 px-3 py-2 bg-[#8B0000] text-white text-xs rounded-lg shadow-xl opacity-0 group-hover/calendar:opacity-100 transition-all duration-300 whitespace-nowrap z-[9999] pointer-events-none">
+                                      <div className="font-semibold mb-0.5">
+                                        Estimated Resolution
+                                      </div>
+                                      <div className="text-[10px] text-gray-200">
+                                        {formatEstimatedDate(
+                                          incident.estimatedResolutionDate
+                                        )}
+                                      </div>
+                                      <div className="absolute bottom-0 left-4 transform translate-y-full">
+                                        <div className="w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-[#8B0000]"></div>
                                       </div>
                                     </div>
                                   </div>
                                 )}
                               </div>
                             </div>
-                            <h2 className="text-xl font-bold text-slate-800 group-hover:text-[#800000] transition-colors duration-300 line-clamp-2 leading-tight">
-                              {incident.incidentType}
-                            </h2>
-                          </div>
 
-                          {/* Enhanced Upvote Button */}
-                          <button
-                            onClick={() => handleUpvoteClick(incident)}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-2xl transition-all duration-300 transform hover:scale-105 ${
-                              isOptimisticallyUpvoted
-                                ? "bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-xl shadow-green-500/25"
-                                : "bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-[#800000] shadow-md"
-                            }`}
-                          >
-                            <img
-                              src="/upvote.svg"
-                              alt="Upvote"
-                              className={`h-5 w-5 transition-all duration-300 ${
-                                isOptimisticallyUpvoted 
-                                  ? "scale-110 drop-shadow-sm [filter:brightness(0)_invert(1)" 
-                                  : "group-hover:scale-110"
+                            {/* Premium Upvote Button */}
+                            <button
+                              onClick={() => handleUpvoteClick(incident)}
+                              className={`flex flex-col items-center justify-center gap-1 px-3.5 py-2.5 rounded-2xl transition-all duration-300 transform hover:scale-110 active:scale-95 flex-shrink-0 ${
+                                isOptimisticallyUpvoted
+                                  ? "bg-gradient-to-br from-red-500 via-pink-500 to-red-600 text-white shadow-xl shadow-red-500/40 ring-2 ring-red-200"
+                                  : "bg-gradient-to-br from-slate-50 to-slate-100 hover:from-slate-100 hover:to-slate-200 text-slate-700 hover:text-[#800000] shadow-md border border-slate-200/50"
                               }`}
-                              style={{
-                                filter: isOptimisticallyUpvoted ? "brightness(0) invert(1)" : "none"
-                              }}
-                            />
-                            <span className="text-sm font-bold">
-                              {typeof incident.upvoteCount === "number" ? incident.upvoteCount : 0}
+                            >
+                              <Heart
+                                className={`h-5 w-5 transition-all duration-300 ${
+                                  isOptimisticallyUpvoted
+                                    ? "drop-shadow-lg fill-current"
+                                    : "group-hover:scale-110"
+                                }`}
+                                fill={
+                                  isOptimisticallyUpvoted
+                                    ? "currentColor"
+                                    : "none"
+                                }
+                                strokeWidth={2}
+                              />
+                              <span
+                                className={`text-xs font-bold leading-none ${
+                                  isOptimisticallyUpvoted
+                                    ? "text-white"
+                                    : "text-slate-700"
+                                }`}
+                              >
+                                {typeof incident.upvoteCount === "number"
+                                  ? incident.upvoteCount
+                                  : 0}
+                              </span>
+                            </button>
+                          </div>
+
+                          {/* Incident Type Title */}
+                          <h2 className="text-xl font-bold text-slate-900 group-hover:text-[#800000] transition-colors duration-300 line-clamp-2 leading-tight mb-1">
+                            {incident.incidentType}
+                          </h2>
+                        </div>
+
+                        {/* Premium Location and Time Section */}
+                        <div className="flex flex-col gap-2 mb-5">
+                          <div className="flex items-start gap-2 text-slate-600">
+                            <MapPin className="h-4 w-4 text-[#800000] mt-0.5 flex-shrink-0" />
+                            <a
+                              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                                incident.location
+                              )}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                            >
+                              {formatLocationCompact(incident)}
+                            </a>
+                          </div>
+                          <div className="flex items-center gap-2 text-slate-600">
+                            <Clock className="h-4 w-4 text-[#800000]" />
+                            <span className="text-sm font-medium">
+                              {formatDate(incident.submittedAt)}
                             </span>
-                          </button>
-                        </div>
-
-                        {/* Enhanced Location and Time */}
-                        <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600 mb-4">
-                          <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg">
-                            <MapPin className="h-4 w-4 text-[#800000]" />
-                            <span className="font-medium">{formatLocationDisplay(incident)}</span>
                           </div>
-                          <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg">
-                            <Calendar className="h-4 w-4 text-[#800000]" />
-                            <span>{formatDate(incident.submittedAt)}</span>
-                          </div>
-                        </div>
-
-                        {/* Enhanced Description */}
-                        <p className="text-slate-700 leading-relaxed line-clamp-3 mb-4 text-sm flex-1">
-                          {incident.description}
-                        </p>
-
-                        {/* Enhanced Metadata */}
-                        <div className="flex items-center justify-between pt-4 border-t border-slate-100 mb-6">
-                          <div className="flex items-center gap-2 text-xs text-slate-500">
-                            <User className="h-3 w-3" />
-                            <span className="font-medium">
+                          <div className="flex items-center gap-2 text-slate-600">
+                            <User className="h-4 w-4 text-[#800000]" />
+                            <span className="text-sm font-medium">
                               {getReporterDisplayName(incident, false, false)}
                             </span>
                           </div>
-                          <div className="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 px-2 py-1 rounded-md">
-                            <FileText className="h-3 w-3" />
-                            <span className="font-mono">#{incident.trackingNumber.slice(-6)}</span>
-                          </div>
                         </div>
 
-                        {/* View Full Details Button */}
+                        {/* Premium Description Section */}
+                        <div className="mb-5 flex-1">
+                          <p className="text-slate-600 leading-relaxed line-clamp-3 text-sm font-normal">
+                            {incident.description}
+                          </p>
+                        </div>
+
+                        {/* Premium View Details Button */}
                         <Button
                           variant="outline"
-                          className="w-full border-2 border-[#800000] text-[#800000] hover:bg-[#800000] hover:text-white transition-all duration-300 rounded-2xl font-semibold py-3 group mt-auto"
-                          onClick={() => router.push(`/incidents/tracking/${incident.trackingNumber}`)}
+                          className="w-full border-2 border-[#800000] text-[#800000] hover:bg-gradient-to-r hover:from-[#800000] hover:to-[#9a0000] hover:text-white hover:border-[#800000] transition-all duration-300 rounded-2xl font-bold py-3.5 group shadow-md hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98]"
+                          onClick={() =>
+                            router.push(
+                              `/incidents/tracking/${incident.trackingNumber}`
+                            )
+                          }
                         >
                           <Eye className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" />
                           View Full Details
                         </Button>
                       </div>
 
-                      {/* Enhanced Hover Effect Overlay */}
+                      {/* Premium Hover Effect Overlay */}
                       <div className="absolute inset-0 bg-gradient-to-br from-[#800000]/5 via-transparent to-[#D4AF37]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none rounded-3xl"></div>
+
+                      {/* Shine Effect on Hover */}
+                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 pointer-events-none rounded-3xl overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000"></div>
+                      </div>
                     </article>
-                  )
+                  );
                 })}
               </div>
             ) : (
@@ -705,16 +839,20 @@ export default function PublicIncidentsPage() {
                   <div className="w-32 h-32 bg-gradient-to-br from-slate-100 to-slate-200 rounded-full flex items-center justify-center mx-auto mb-8 shadow-lg">
                     <Search className="h-16 w-16 text-slate-400" />
                   </div>
-                  <h3 className="text-3xl font-bold text-slate-800 mb-4">No Incidents Found</h3>
+                  <h3 className="text-3xl font-bold text-slate-800 mb-4">
+                    No Incidents Found
+                  </h3>
                   <p className="text-slate-600 text-lg leading-relaxed">
-                    We couldn't find any incidents matching your search criteria.
+                    We couldn't find any incidents matching your search
+                    criteria.
                     <br />
-                    Try adjusting your filters or check back later for new reports.
+                    Try adjusting your filters or check back later for new
+                    reports.
                   </p>
                   <button
                     onClick={() => {
-                      setSearchQuery("")
-                      setStatusFilter("All")
+                      setSearchQuery("");
+                      setStatusFilter("All");
                     }}
                     className="mt-6 px-6 py-3 bg-[#800000] text-white rounded-2xl hover:bg-[#700000] transition-colors font-medium"
                   >
@@ -746,7 +884,7 @@ export default function PublicIncidentsPage() {
             transform: translateY(0);
           }
         }
-        
+
         @keyframes shimmer {
           0% {
             transform: translateX(-100%);
@@ -755,18 +893,18 @@ export default function PublicIncidentsPage() {
             transform: translateX(100%);
           }
         }
-        
+
         .animate-shimmer {
           animation: shimmer 2s infinite;
         }
-        
+
         .line-clamp-2 {
           display: -webkit-box;
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
           overflow: hidden;
         }
-        
+
         .line-clamp-3 {
           display: -webkit-box;
           -webkit-line-clamp: 3;
@@ -775,5 +913,5 @@ export default function PublicIncidentsPage() {
         }
       `}</style>
     </div>
-  )
+  );
 }

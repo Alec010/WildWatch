@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
-import { API_BASE_URL, WS_BASE_URL } from "@/utils/api";
+import { getApiBaseUrl, getWsBaseUrl } from "@/utils/api";
 import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 import {
@@ -28,11 +28,16 @@ import {
   parseUTCDate,
 } from "@/utils/dateUtils";
 
-// Helper function to sort notifications by createdAt (newest first)
+// Helper function to sort notifications: unread first (newest first), then read (newest first)
 const sortNotificationsByDate = (
   notifications: ActivityLog[]
 ): ActivityLog[] => {
   return [...notifications].sort((a, b) => {
+    // First, prioritize unread over read
+    if (a.isRead !== b.isRead) {
+      return a.isRead ? 1 : -1;
+    }
+    // Then sort by date (newest first)
     try {
       const dateA = parseUTCDate(a.createdAt).getTime();
       const dateB = parseUTCDate(b.createdAt).getTime();
@@ -54,15 +59,16 @@ interface ActivityLog {
     trackingNumber: string;
   } | null;
   isRead?: boolean;
+  userId?: string;
 }
 
-interface NotificationDropdownProps {
+interface OfficeAdminNotificationDropdownProps {
   className?: string;
 }
 
-export default function NotificationDropdown({
+export default function OfficeAdminNotificationDropdown({
   className,
-}: NotificationDropdownProps) {
+}: OfficeAdminNotificationDropdownProps) {
   const router = useRouter();
   const [notifications, setNotifications] = useState<ActivityLog[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -70,12 +76,55 @@ export default function NotificationDropdown({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [hasNewNotification, setHasNewNotification] = useState(false);
   const [wsConnected, setWsConnected] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
   const stompClientRef = useRef<Client | null>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const notificationAudio =
     typeof window !== "undefined" ? new Audio("/notification_sound.mp3") : null;
+
+  // Fetch current user profile to get user ID and role
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const token =
+          typeof document !== "undefined"
+            ? document.cookie
+                .split("; ")
+                .find((row) => row.startsWith("token="))
+                ?.split("=")[1]
+            : null;
+
+        if (!token) {
+          return;
+        }
+
+        const apiBaseUrl = getApiBaseUrl();
+        if (!apiBaseUrl) {
+          return;
+        }
+
+        const response = await fetch(`${apiBaseUrl}/api/auth/profile`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (response.ok) {
+          const userData = await response.json();
+          setCurrentUserId(userData.id);
+          setUserRole(userData.role);
+        }
+      } catch (error) {
+        console.error("Error fetching user profile:", error);
+      }
+    };
+
+    fetchUserProfile();
+  }, []);
 
   // Close notifications when clicking outside
   useEffect(() => {
@@ -107,20 +156,43 @@ export default function NotificationDropdown({
           : null;
 
       if (!token) {
-        throw new Error("No authentication token found");
+        console.warn("No authentication token found for notifications");
+        setNotifications([]);
+        setUnreadCount(0);
+        return;
+      }
+
+      const apiBaseUrl = getApiBaseUrl();
+      if (!apiBaseUrl) {
+        console.error("API base URL is not configured");
+        setNotifications([]);
+        setUnreadCount(0);
+        return;
       }
 
       const response = await fetch(
-        `${API_BASE_URL}/api/activity-logs?page=0&size=10`,
+        `${apiBaseUrl}/api/activity-logs?page=0&size=10`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
         }
-      );
+      ).catch((fetchError) => {
+        // Handle network errors (CORS, connection refused, etc.)
+        console.error("Network error fetching notifications:", fetchError);
+        throw new Error(
+          `Failed to connect to server. Please check your connection and ensure the API server is running.`
+        );
+      });
 
       if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          console.warn("Authentication failed, clearing notifications");
+          setNotifications([]);
+          setUnreadCount(0);
+          return;
+        }
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
@@ -129,19 +201,25 @@ export default function NotificationDropdown({
         throw new Error("Invalid response format");
       }
 
-      // Filter out OFFICE_ADMIN specific notifications
-      const officeAdminActivityTypes = [
-        "NEW_CASE_ASSIGNED",
-        "TRANSFER_RECEIVED",
-        "TRANSFER_APPROVED",
-        "NEW_REPORT_RECEIVED",
-      ];
+      // Filter notifications based on user_id and role
+      // Only show notifications where user_id matches current user AND user role is OFFICE_ADMIN
       const filteredNotifications = data.content.filter(
-        (notification: ActivityLog) =>
-          !officeAdminActivityTypes.includes(notification.activityType)
+        (notification: ActivityLog) => {
+          // Check if user role is OFFICE_ADMIN
+          if (userRole !== "OFFICE_ADMIN") {
+            return false;
+          }
+          // Check if notification's userId matches current user's ID
+          if (currentUserId && notification.userId) {
+            return notification.userId === currentUserId;
+          }
+          // If userId is not available in notification, include it for backward compatibility
+          // but only if role check passes
+          return true;
+        }
       );
 
-      // Sort notifications by date (newest first)
+      // Sort notifications: unread first (newest first), then read (newest first)
       const sortedNotifications = sortNotificationsByDate(
         filteredNotifications
       );
@@ -167,9 +245,19 @@ export default function NotificationDropdown({
 
     const connectStomp = () => {
       try {
-        console.log("Connecting to WebSocket at:", `${WS_BASE_URL}/ws`);
+        const wsBaseUrl = getWsBaseUrl();
+        if (!wsBaseUrl) {
+          console.error("WebSocket base URL is not configured");
+          // Fall back to polling if WebSocket URL is not configured
+          if (!pollInterval) {
+            console.log("Falling back to polling for notifications");
+            pollInterval = setInterval(fetchNotifications, 30000);
+          }
+          return;
+        }
+        console.log("Connecting to WebSocket at:", `${wsBaseUrl}/ws`);
         // Create SockJS connection with error handling
-        const socket = new SockJS(`${WS_BASE_URL}/ws`, null, {
+        const socket = new SockJS(`${wsBaseUrl}/ws`, null, {
           transports: ["websocket", "xhr-streaming", "xhr-polling"],
           timeout: 10000,
         });
@@ -188,18 +276,17 @@ export default function NotificationDropdown({
             stompClient.subscribe("/topic/notifications", (message) => {
               const notification = JSON.parse(message.body);
 
-              // Filter out OFFICE_ADMIN specific notifications
-              const officeAdminActivityTypes = [
-                "NEW_CASE_ASSIGNED",
-                "TRANSFER_RECEIVED",
-                "TRANSFER_APPROVED",
-                "NEW_REPORT_RECEIVED",
-              ];
+              // Filter notifications based on user_id and role
+              // Only show notifications where user_id matches current user AND user role is OFFICE_ADMIN
+              if (userRole !== "OFFICE_ADMIN") {
+                return; // Ignore if user is not OFFICE_ADMIN
+              }
 
-              if (
-                officeAdminActivityTypes.includes(notification.activityType)
-              ) {
-                return; // Ignore office admin notifications
+              // Check if notification's userId matches current user's ID
+              if (currentUserId && notification.userId) {
+                if (notification.userId !== currentUserId) {
+                  return; // Ignore notifications not for this user
+                }
               }
 
               setNotifications((prev) => {
@@ -222,7 +309,7 @@ export default function NotificationDropdown({
                   setTimeout(() => setHasNewNotification(false), 3000);
                 }
 
-                // Sort by date to ensure newest is always first
+                // Sort: unread first (newest first), then read (newest first)
                 const sortedNotifications =
                   sortNotificationsByDate(updatedNotifications);
                 const newUnreadCount = sortedNotifications.filter(
@@ -267,11 +354,13 @@ export default function NotificationDropdown({
       }
     };
 
-    // Connect to WebSocket first, only fetch notifications once
-    connectStomp();
-
-    // Initial fetch of notifications
-    fetchNotifications();
+    // Only connect if user profile is loaded and user is OFFICE_ADMIN
+    if (currentUserId && userRole === "OFFICE_ADMIN") {
+      // Connect to WebSocket first, only fetch notifications once
+      connectStomp();
+      // Initial fetch of notifications
+      fetchNotifications();
+    }
 
     // Don't set up polling here - it will only be set up if WebSocket fails
 
@@ -279,7 +368,7 @@ export default function NotificationDropdown({
       stompClientRef.current?.deactivate();
       if (pollInterval) clearInterval(pollInterval);
     };
-  }, []);
+  }, [currentUserId, userRole]);
 
   const isNotificationNew = (dateString: string): boolean => {
     try {
@@ -349,12 +438,19 @@ export default function NotificationDropdown({
         setUnreadCount((prev) => Math.max(0, prev - 1));
       }
 
-      // Redirect to the correct page if there's an incident
-      // Regular users always go to tracking page
-      if (notification.incident && notification.incident.trackingNumber) {
-        router.push(
-          `/incidents/tracking/${notification.incident.trackingNumber}`
-        );
+      // Redirect to office-admin incident pages
+      if (notification.incident) {
+        if (
+          notification.activityType === "NEW_CASE_ASSIGNED" ||
+          notification.activityType === "TRANSFER_RECEIVED" ||
+          notification.activityType === "TRANSFER_APPROVED"
+        ) {
+          router.push(`/office-admin/incidents/${notification.incident.id}`);
+        } else if (notification.incident.trackingNumber) {
+          router.push(`/office-admin/incidents/${notification.incident.id}`);
+        } else {
+          router.push(`/office-admin/incidents/${notification.incident.id}`);
+        }
       }
     } catch (error) {
       console.error("Error handling notification click:", error);
@@ -369,6 +465,7 @@ export default function NotificationDropdown({
           ...notification,
           isRead: true,
         }));
+        // Sort: unread first (newest first), then read (newest first)
         return sortNotificationsByDate(updated);
       });
       setUnreadCount(0);
@@ -385,16 +482,24 @@ export default function NotificationDropdown({
         throw new Error("No authentication token found");
       }
 
-      const response = await fetch(
-        `${API_BASE_URL}/api/activity-logs/read-all`,
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const apiBaseUrl = getApiBaseUrl();
+      if (!apiBaseUrl) {
+        throw new Error("API base URL is not configured");
+      }
+
+      const response = await fetch(`${apiBaseUrl}/api/activity-logs/read-all`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      }).catch((fetchError) => {
+        // Handle network errors
+        console.error("Network error marking all as read:", fetchError);
+        throw new Error(
+          `Failed to connect to server. Please check your connection.`
+        );
+      });
 
       if (!response.ok) {
         // If the API call fails, revert the local state and maintain sort order
@@ -429,8 +534,13 @@ export default function NotificationDropdown({
         throw new Error("No authentication token found");
       }
 
+      const apiBaseUrl = getApiBaseUrl();
+      if (!apiBaseUrl) {
+        throw new Error("API base URL is not configured");
+      }
+
       const response = await fetch(
-        `${API_BASE_URL}/api/activity-logs/${id}/read`,
+        `${apiBaseUrl}/api/activity-logs/${id}/read`,
         {
           method: "PUT",
           headers: {
@@ -438,7 +548,13 @@ export default function NotificationDropdown({
             "Content-Type": "application/json",
           },
         }
-      );
+      ).catch((fetchError) => {
+        // Handle network errors
+        console.error("Network error marking as read:", fetchError);
+        throw new Error(
+          `Failed to connect to server. Please check your connection.`
+        );
+      });
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -451,6 +567,7 @@ export default function NotificationDropdown({
             ? { ...notification, isRead: true }
             : notification
         );
+        // Sort: unread first (newest first), then read (newest first)
         return sortNotificationsByDate(updated);
       });
       setUnreadCount((prev) => Math.max(0, prev - 1));
@@ -529,6 +646,17 @@ export default function NotificationDropdown({
         accent: "border-l-indigo-400",
       };
     }
+    if (
+      activityType.includes("transfer") ||
+      activityType.includes("assigned")
+    ) {
+      return {
+        bg: isRead ? "bg-purple-50/30" : "bg-purple-50/50",
+        border: `border-purple-${isRead ? "100" : "200"}`,
+        icon: `text-purple-${isRead ? "300" : "400"}`,
+        accent: "border-l-purple-400",
+      };
+    }
     if (activityType.includes("comment") || activityType.includes("message")) {
       return {
         bg: isRead ? "bg-green-50/30" : "bg-green-50/50",
@@ -577,6 +705,12 @@ export default function NotificationDropdown({
     ) {
       return <CheckCircle className="h-5 w-5 text-amber-400" />;
     }
+    if (
+      activityType.includes("transfer") ||
+      activityType.includes("assigned")
+    ) {
+      return <ArrowRightLeft className="h-5 w-5 text-purple-400" />;
+    }
     if (activityType.includes("points") || activityType.includes("reward")) {
       return <TrendingUp className="h-5 w-5 text-emerald-400" />;
     }
@@ -609,6 +743,8 @@ export default function NotificationDropdown({
         return "Case Received";
       case "TRANSFER_APPROVED":
         return "Transfer Verified";
+      case "NEW_CASE_ASSIGNED":
+        return "New Case Assigned";
       case "UPVOTE":
         return "New Upvote";
       case "RESOLUTION_EXTENDED":
@@ -618,32 +754,8 @@ export default function NotificationDropdown({
     }
   };
 
-  const handleViewAllNotifications = async () => {
-    try {
-      const token = Cookies.get("token");
-      if (!token) {
-        router.push("/login");
-        return;
-      }
-      const response = await fetch(`${API_BASE_URL}/api/auth/profile`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-      if (!response.ok) {
-        router.push("/login");
-        return;
-      }
-      const user = await response.json();
-      if (user.role === "OFFICE_ADMIN") {
-        router.push("/office-admin/notifications");
-      } else {
-        router.push("/notifications");
-      }
-    } catch {
-      router.push("/notifications");
-    }
+  const handleViewAllNotifications = () => {
+    router.push("/office-admin/notifications");
   };
 
   return (
@@ -674,7 +786,7 @@ export default function NotificationDropdown({
       {showNotifications && (
         <div className="absolute right-0 mt-2 w-[400px] sm:w-[450px] md:w-[500px] bg-white rounded-lg shadow-lg border border-gray-200 z-50">
           <div className="p-3 border-b border-gray-200 flex justify-between items-center">
-            <h3 className="font-semibold text-gray-800">Notifications</h3>
+            <h3 className="font-semibold text-gray-800">Admin Notifications</h3>
             <div className="flex items-center gap-2">
               <Button
                 variant="ghost"
