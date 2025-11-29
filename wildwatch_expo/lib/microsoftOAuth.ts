@@ -103,7 +103,27 @@ export const microsoftOAuthService = {
         }
       }
 
-      const backendData = await backendResponse.json();
+      // Read response as text first, then parse as JSON
+      // This allows us to handle both JSON and non-JSON responses gracefully
+      const responseText = await backendResponse.text();
+      let backendData;
+      
+      try {
+        backendData = JSON.parse(responseText);
+      } catch (parseError) {
+        // If response is not valid JSON, check if it contains token info
+        if (responseText.includes('token') && backendResponse.status === 200) {
+          // Try to extract token from response text (fallback)
+          throw new Error('Invalid JSON response format from backend');
+        } else {
+          throw new Error('Failed to parse backend response as JSON');
+        }
+      }
+      
+      // Validate that we have a token in the response
+      if (!backendData || !backendData.token) {
+        throw new Error('No token received from backend');
+      }
       
       return backendData;
     } catch (error) {

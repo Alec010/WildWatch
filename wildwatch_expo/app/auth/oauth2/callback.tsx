@@ -10,6 +10,7 @@ export default function OAuth2Callback() {
 
   useEffect(() => {
     const handleCallback = async () => {
+      let tokenSaved = false;
       try {
         // Check if we have an authorization code
         const { code, error } = params;
@@ -25,9 +26,6 @@ export default function OAuth2Callback() {
           const result = await microsoftOAuthService.exchangeCodeForTokens(code as string);
           
           if (result.token) {
-            // Save token
-            await storage.setToken(result.token);
-            
             // Check if we have user data in the response
             if (result.user) {
               const user = result.user;
@@ -35,29 +33,38 @@ export default function OAuth2Callback() {
               // Store user data temporarily for the registration flow
               await AsyncStorage.setItem('oauthUserData', JSON.stringify(user));
               
-              // STEP 1: Check if terms are accepted (for all OAuth users)
-              if (!user.termsAccepted) {
-                router.replace('/auth/terms');
-                return;
-              }
+              // Check if this is a new user registration (needs terms or setup)
+              const needsTerms = !user.termsAccepted;
+              const needsSetup = (user.authProvider === 'microsoft' || user.authProvider === 'microsoft_mobile') &&
+                                (!user.contactNumber || 
+                                 user.contactNumber === 'Not provided' || 
+                                 user.contactNumber === '+639000000000' ||
+                                 !user.password);
               
-              // STEP 2: Check if contact number and password are set (for Microsoft OAuth users)
-              if (user.authProvider === 'microsoft' || user.authProvider === 'microsoft_mobile') {
-                const contactNeedsSetup = !user.contactNumber || 
-                                         user.contactNumber === 'Not provided' || 
-                                         user.contactNumber === '+639000000000';
-                const passwordNeedsSetup = !user.password;
+              // If user needs to complete registration (terms or setup), don't save token
+              // They should log in manually after completing registration
+              if (needsTerms || needsSetup) {
+                // Don't save token - user must complete registration first
+                // STEP 1: Check if terms are accepted (for all OAuth users)
+                if (needsTerms) {
+                  router.replace('/auth/terms');
+                  return;
+                }
                 
-                if (contactNeedsSetup || passwordNeedsSetup) {
+                // STEP 2: Check if contact number and password are set (for Microsoft OAuth users)
+                if (needsSetup) {
                   router.replace('/auth/setup');
                   return;
                 }
+              } else {
+                // User has completed registration - save token and log them in
+                await storage.setToken(result.token);
+                tokenSaved = true;
+                
+                // Clear OAuth user data as it's no longer needed
+                await AsyncStorage.removeItem('oauthUserData');
+                router.replace('/(tabs)');
               }
-              
-              // All registration steps completed
-              // Clear OAuth user data as it's no longer needed
-              await AsyncStorage.removeItem('oauthUserData');
-              router.replace('/(tabs)');
             } else {
               // If no user data, try to fetch profile to check status
               try {
@@ -76,8 +83,29 @@ export default function OAuth2Callback() {
           throw new Error('No authorization code received');
         }
         
-      } catch (error) {
-        Alert.alert('Authentication Error', 'Failed to complete Microsoft login. Please try again.');
+      } catch (error: any) {
+        // If token was saved, user is likely authenticated
+        // Don't show error or redirect to login if authentication succeeded
+        if (tokenSaved) {
+          // Verify token is still valid by checking if we can get it
+          const savedToken = await storage.getToken();
+          if (savedToken) {
+            // Token exists, user is authenticated - navigate to dashboard
+            // The error might be from navigation or other non-critical issues
+            try {
+              router.replace('/(tabs)');
+            } catch (navError) {
+              // If navigation fails, at least don't show error to user
+              // They're already logged in
+              console.warn('Navigation error after successful auth:', navError);
+            }
+            return;
+          }
+        }
+        
+        // Only show error if token wasn't saved (actual authentication failure)
+        const errorMessage = error?.message || 'Failed to complete Microsoft login. Please try again.';
+        Alert.alert('Authentication Error', errorMessage);
         router.replace('/auth/login');
       }
     };

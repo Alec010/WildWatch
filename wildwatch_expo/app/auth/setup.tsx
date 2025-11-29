@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authAPI } from '../../src/features/auth/api/auth_api';
+import { storage } from '../../lib/storage';
 import Colors from '../../constants/Colors';
 
 const COLORS = {
@@ -117,22 +118,72 @@ export default function SetupPage() {
     setIsLoading(true);
     try {
       const rawContact = getRawContactNumber(contactNumber);
+      
+      // Check user's auth provider to determine which endpoint to use
+      // If user has "microsoft" provider (from web OAuth), we need to use web endpoint
+      // If user has "microsoft_mobile" provider, use mobile endpoint
+      try {
+        const profile = await authAPI.getProfile();
+        const authProvider = profile.authProvider;
+        
+        // If provider is "microsoft" (web OAuth), try web endpoint first
+        if (authProvider === 'microsoft') {
+          try {
+            const { api } = await import('../../lib/api');
+            const response = await api.post<{ message: string }>('/auth/setup', {
+              contactNumber: rawContact,
+              password,
+            });
+            
+            // Clear OAuth user data and token
+            await AsyncStorage.removeItem('oauthUserData');
+            await storage.removeToken(); // Remove token so user must log in manually
+            
+            Alert.alert(
+              'Setup Complete',
+              'Your account setup is complete. Please log in to access your account.',
+              [{ text: 'OK', onPress: () => router.replace('/auth/login') }]
+            );
+            return;
+          } catch (webError: any) {
+            // If web endpoint fails, fall through to try mobile endpoint
+            console.warn('Web setup endpoint failed, trying mobile endpoint:', webError);
+          }
+        }
+      } catch (profileError) {
+        // If we can't get profile, continue with mobile endpoint
+        console.warn('Could not fetch profile, using mobile endpoint:', profileError);
+      }
+      
+      // Try mobile endpoint (for microsoft_mobile users or as fallback)
       await authAPI.setupOAuthUser(rawContact, password);
 
-      // Clear OAuth user data
+      // Clear OAuth user data and token
       await AsyncStorage.removeItem('oauthUserData');
+      await storage.removeToken(); // Remove token so user must log in manually
 
       Alert.alert(
         'Setup Complete',
-        'Your account setup is complete. You can now access all features.',
-        [{ text: 'OK', onPress: () => router.replace('/(tabs)') }]
+        'Your account setup is complete. Please log in to access your account.',
+        [{ text: 'OK', onPress: () => router.replace('/auth/login') }]
       );
     } catch (error: any) {
       console.error('Setup error:', error);
-      Alert.alert(
-        'Setup Failed',
-        error?.response?.data?.message || error?.message || 'Failed to complete setup. Please try again.'
-      );
+      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to complete setup. Please try again.';
+      
+      // Provide helpful error message if it's a provider mismatch
+      if (errorMessage.includes('Microsoft Mobile OAuth users') || errorMessage.includes('Current provider: microsoft')) {
+        Alert.alert(
+          'Setup Failed',
+          'Your account was created via web OAuth. Please contact support or try logging in through the web application to complete setup.',
+          [{ text: 'OK' }]
+        );
+      } else {
+        Alert.alert(
+          'Setup Failed',
+          errorMessage
+        );
+      }
     } finally {
       setIsLoading(false);
     }

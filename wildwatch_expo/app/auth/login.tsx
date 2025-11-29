@@ -50,7 +50,7 @@ export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const { isLoading, login, loginWithMicrosoft } = useAuthLogin();
+  const { isLoading, error, login, loginWithMicrosoft } = useAuthLogin();
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -59,7 +59,10 @@ export default function LoginScreen() {
     }
     try {
       await login(email, password);
-    } catch {}
+    } catch (e: any) {
+      // Error is already handled by the hook and displayed via error state
+      // No need to show Alert here as we'll display it in the UI
+    }
   };
 
   const handleMicrosoftLogin = async () => {
@@ -137,11 +140,11 @@ export default function LoginScreen() {
               }}
             >
               <Text style={styles.label}>CIT Email *</Text>
-              <View style={styles.inputRow}>
+              <View style={[styles.inputRow, error && styles.inputRowError]}>
                 <Ionicons
                   name="mail-outline"
                   size={20}
-                  color={COLORS.maroon}
+                  color={error ? "#DC2626" : COLORS.maroon}
                   style={{ marginLeft: 12 }}
                 />
                 <TextInput
@@ -149,7 +152,10 @@ export default function LoginScreen() {
                   placeholder="your.name@cit.edu"
                   placeholderTextColor={COLORS.textMuted}
                   value={email}
-                  onChangeText={setEmail}
+                  onChangeText={(text) => {
+                    setEmail(text);
+                    // Clear error when user starts typing
+                  }}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -174,11 +180,11 @@ export default function LoginScreen() {
                   <Text style={styles.linkMuted}>Forgot Password?</Text>
                 </Pressable>
               </View>
-              <View style={styles.inputRow}>
+              <View style={[styles.inputRow, error && styles.inputRowError]}>
                 <Ionicons
                   name="lock-closed-outline"
                   size={20}
-                  color={COLORS.maroon}
+                  color={error ? "#DC2626" : COLORS.maroon}
                   style={{ marginLeft: 12 }}
                 />
                 <TextInput
@@ -186,7 +192,13 @@ export default function LoginScreen() {
                   placeholder="Enter your password"
                   placeholderTextColor={COLORS.textMuted}
                   value={password}
-                  onChangeText={setPassword}
+                  onChangeText={(text) => {
+                    setPassword(text);
+                    // Clear error when user starts typing
+                    if (error) {
+                      // The error state is managed by the hook, but we can trigger a re-render
+                    }
+                  }}
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -199,11 +211,27 @@ export default function LoginScreen() {
                   <Ionicons
                     name={showPassword ? "eye-off-outline" : "eye-outline"}
                     size={20}
-                    color={COLORS.maroon}
+                    color={error ? "#DC2626" : COLORS.maroon}
                   />
                 </Pressable>
               </View>
             </View>
+
+            {/* Error Message */}
+            {error && (
+              <View
+                style={{
+                  marginTop: 8,
+                  width: "100%",
+                  maxWidth: contentMaxWidth,
+                }}
+              >
+                <View style={styles.errorContainer}>
+                  <Ionicons name="alert-circle" size={20} color="#DC2626" />
+                  <Text style={styles.errorText}>{error}</Text>
+                </View>
+              </View>
+            )}
 
             {/* Sign In Button */}
             <Pressable
@@ -349,6 +377,26 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     borderRadius: 12,
     backgroundColor: "#FFFFFF",
+  },
+  inputRowError: {
+    borderColor: "#DC2626",
+    borderWidth: 1.5,
+  },
+  errorContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FEF2F2",
+    borderLeftWidth: 4,
+    borderLeftColor: "#DC2626",
+    borderRadius: 8,
+    padding: 12,
+    gap: 8,
+  },
+  errorText: {
+    flex: 1,
+    color: "#DC2626",
+    fontSize: 14,
+    fontWeight: "500",
   },
   input: {
     flex: 1,

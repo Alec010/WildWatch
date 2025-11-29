@@ -125,8 +125,14 @@ export default function TermsPage() {
         }
       }
 
-      // Always check if setup is needed after accepting terms
-      // This ensures OAuth users complete the setup flow
+      // For OAuth users, ALWAYS redirect to setup after accepting terms
+      // This ensures first-time OAuth users complete the setup flow (contact number and password)
+      if (isOAuthUser) {
+        router.replace('/auth/setup');
+        return;
+      }
+
+      // For regular (non-OAuth) users, check profile and redirect accordingly
       const token = await storage.getToken();
       if (token) {
         try {
@@ -150,17 +156,12 @@ export default function TermsPage() {
             }
           }
         } catch (e) {
-          // If we can't fetch profile, but this is an OAuth user, still go to setup
-          if (isOAuthUser) {
-            router.replace('/auth/setup');
-            return;
-          }
+          // If we can't fetch profile, navigate to dashboard
+          console.warn('Could not fetch profile after accepting terms:', e);
         }
-      } else if (isOAuthUser) {
-        // If no token but OAuth user, still go to setup
-        router.replace('/auth/setup');
-        return;
       }
+      
+      // Default: navigate to dashboard
       router.replace('/(tabs)');
     } catch (error: any) {
       const errorMessage = error?.response?.data?.message || error?.message || 'Failed to accept terms. Please try again.';
