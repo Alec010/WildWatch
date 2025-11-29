@@ -259,11 +259,6 @@ export default function ReportScreen() {
   const hourPickerRef = useRef<ScrollView>(null);
   const minutePickerRef = useRef<ScrollView>(null);
 
-  // Ref for debouncing tag generation
-  const tagGenerationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null
-  );
-
   // Use the centralized form hook
   const {
     form,
@@ -290,7 +285,6 @@ export default function ReportScreen() {
   const [isGeneratingTags, setIsGeneratingTags] = useState(false);
   const [tagsError, setTagsError] = useState<string | null>(null);
   const [tagSelectError, setTagSelectError] = useState<string | null>(null);
-  const [autoGenerateAttempted, setAutoGenerateAttempted] = useState(false);
 
   // Image picker state
   const [isUploading, setIsUploading] = useState(false);
@@ -633,52 +627,6 @@ export default function ReportScreen() {
       return () => clearTimeout(timer);
     }
   }, [showTimePicker, selectedHour, selectedMinute]);
-
-  // Auto-generate tags with debouncing when description changes
-  useEffect(() => {
-    // Clear existing timeout
-    if (tagGenerationTimeoutRef.current) {
-      clearTimeout(tagGenerationTimeoutRef.current);
-    }
-
-    // Reset auto-generation flag if description becomes too short
-    if (form.description.trim().length < 10 && autoGenerateAttempted) {
-      setAutoGenerateAttempted(false);
-    }
-
-    // Only auto-generate if:
-    // - Description has content (minimum 10 characters)
-    // - Location data is available
-    // - We haven't already attempted auto-generation for this content
-    // - User is not currently generating tags
-    if (
-      form.description.trim().length >= 10 &&
-      form.latitude &&
-      form.longitude &&
-      !autoGenerateAttempted &&
-      !isGeneratingTags &&
-      form.tags.length === 0
-    ) {
-      // Debounce the tag generation by 2 seconds
-      tagGenerationTimeoutRef.current = setTimeout(() => {
-        generateTagsAuto();
-      }, 2000);
-    }
-
-    // Cleanup timeout on unmount or dependency change
-    return () => {
-      if (tagGenerationTimeoutRef.current) {
-        clearTimeout(tagGenerationTimeoutRef.current);
-      }
-    };
-  }, [
-    form.description,
-    form.latitude,
-    form.longitude,
-    autoGenerateAttempted,
-    isGeneratingTags,
-    form.tags.length,
-  ]);
 
   // Show Need Help Dialog when both fields are empty (on step 1 only)
   useEffect(() => {
@@ -1290,60 +1238,6 @@ export default function ReportScreen() {
     }
   };
 
-  // Auto-generate tags (silent, no alerts)
-  const generateTagsAuto = async () => {
-    if (
-      !token ||
-      !form.description.trim() ||
-      !form.latitude ||
-      !form.longitude
-    ) {
-      return;
-    }
-
-    setIsGeneratingTags(true);
-    setTagsError(null);
-    setAutoGenerateAttempted(true);
-
-    try {
-      const response = await fetch(`${config.API.BASE_URL}/tags/generate`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          description: form.description.trim(),
-          incidentType: form.incidentType,
-          location:
-            form.formattedAddress ||
-            form.location ||
-            `${form.latitude}, ${form.longitude}`,
-          formattedAddress: form.formattedAddress,
-          buildingName: form.buildingName,
-          buildingCode: form.buildingCode,
-          latitude: form.latitude,
-          longitude: form.longitude,
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const generatedTags = data.tags || [];
-        setGeneratedTags(generatedTags);
-
-        // Auto-select the first 5 tags (best tags)
-        const autoSelectedTags = generatedTags.slice(0, 5);
-        updateForm("tags", autoSelectedTags);
-      }
-    } catch (error: any) {
-      console.error("Error auto-generating tags:", error);
-      // Silent failure for auto-generation
-    } finally {
-      setIsGeneratingTags(false);
-    }
-  };
-
   // Manual generate tags (with user feedback)
   const generateTags = async () => {
     if (!token) {
@@ -1362,7 +1256,6 @@ export default function ReportScreen() {
     setIsGeneratingTags(true);
     setTagsError(null);
     setGeneratedTags([]);
-    setAutoGenerateAttempted(true);
 
     try {
       const response = await fetch(`${config.API.BASE_URL}/tags/generate`, {
@@ -1394,16 +1287,24 @@ export default function ReportScreen() {
       }
 
       const data = await response.json();
-      const generatedTags = data.tags || [];
-      setGeneratedTags(generatedTags);
 
-      // Auto-select the first 5 tags (best tags)
-      const autoSelectedTags = generatedTags.slice(0, 5);
-      updateForm("tags", autoSelectedTags);
+      // Handle response format: allTags (all 20 generated tags) and top5Tags (top 5 scored tags)
+      const allGeneratedTags = data.allTags || data.tags || [];
+      const top5Tags =
+        data.top5Tags ||
+        data.top5ScoredTags?.map((ts: any) => ts.tag) ||
+        allGeneratedTags.slice(0, 5);
 
+      // Store all generated tags (20 tags) for display
+      setGeneratedTags(allGeneratedTags);
+
+      // Auto-select the top 5 scored tags (best weighted tags from backend)
+      updateForm("tags", top5Tags);
+
+      const totalGenerated = data.totalGenerated || allGeneratedTags.length;
       Alert.alert(
         "Success",
-        "Tags generated successfully! AI has analyzed your description and selected the 5 most relevant tags."
+        `Tags generated successfully! Generated ${totalGenerated} tags. Selected top 5 most relevant based on weighted scoring.`
       );
     } catch (error: any) {
       console.error("Error generating tags:", error);
@@ -1872,66 +1773,62 @@ export default function ReportScreen() {
                       </Text>
                     </View>
 
-                    {/* Manual Generate Button (fallback) */}
-                    {(!form.description.trim() ||
-                      !form.latitude ||
-                      !form.longitude) && (
-                      <TouchableOpacity
-                        onPress={generateTags}
-                        disabled={isGeneratingTags}
-                        style={{
-                          backgroundColor: isGeneratingTags
-                            ? "#E5E7EB"
-                            : "#8B0000",
-                          borderRadius: 12,
-                          paddingVertical: 16,
-                          paddingHorizontal: 20,
-                          alignItems: "center",
-                          justifyContent: "center",
-                          flexDirection: "row",
-                          marginBottom: 16,
-                          shadowColor: isGeneratingTags ? "#000" : "#8B0000",
-                          shadowOffset: { width: 0, height: 2 },
-                          shadowOpacity: isGeneratingTags ? 0.1 : 0.2,
-                          shadowRadius: 4,
-                          elevation: 3,
-                        }}
-                      >
-                        {isGeneratingTags ? (
-                          <>
-                            <ActivityIndicator size="small" color="#FFFFFF" />
-                            <Text
-                              style={{
-                                color: "#FFFFFF",
-                                fontSize: fontSize,
-                                fontWeight: "600",
-                                marginLeft: 12,
-                              }}
-                            >
-                              Generating Tags...
-                            </Text>
-                          </>
-                        ) : (
-                          <>
-                            <Ionicons
-                              name="sparkles"
-                              size={22}
-                              color="#FFFFFF"
-                            />
-                            <Text
-                              style={{
-                                color: "#FFFFFF",
-                                fontSize: fontSize,
-                                fontWeight: "600",
-                                marginLeft: 12,
-                              }}
-                            >
-                              Generate Tags
-                            </Text>
-                          </>
-                        )}
-                      </TouchableOpacity>
-                    )}
+                    {/* Generate Tags Button - Always visible */}
+                    <TouchableOpacity
+                      onPress={generateTags}
+                      disabled={isGeneratingTags || !form.description.trim() || !form.latitude || !form.longitude}
+                      style={{
+                        backgroundColor: (isGeneratingTags || !form.description.trim() || !form.latitude || !form.longitude)
+                          ? "#E5E7EB"
+                          : "#8B0000",
+                        borderRadius: 12,
+                        paddingVertical: 16,
+                        paddingHorizontal: 20,
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexDirection: "row",
+                        marginBottom: 16,
+                        shadowColor: (isGeneratingTags || !form.description.trim() || !form.latitude || !form.longitude) ? "#000" : "#8B0000",
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: (isGeneratingTags || !form.description.trim() || !form.latitude || !form.longitude) ? 0.1 : 0.2,
+                        shadowRadius: 4,
+                        elevation: 3,
+                      }}
+                    >
+                      {isGeneratingTags ? (
+                        <>
+                          <ActivityIndicator size="small" color="#FFFFFF" />
+                          <Text
+                            style={{
+                              color: "#FFFFFF",
+                              fontSize: fontSize,
+                              fontWeight: "600",
+                              marginLeft: 12,
+                            }}
+                          >
+                            Generating Tags...
+                          </Text>
+                        </>
+                      ) : (
+                        <>
+                          <Ionicons
+                            name="sparkles"
+                            size={22}
+                            color="#FFFFFF"
+                          />
+                          <Text
+                            style={{
+                              color: "#FFFFFF",
+                              fontSize: fontSize,
+                              fontWeight: "600",
+                              marginLeft: 12,
+                            }}
+                          >
+                            Generate Tags
+                          </Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
 
                     {/* Auto-generation Loading Indicator */}
                     {isGeneratingTags &&
@@ -2030,8 +1927,7 @@ export default function ReportScreen() {
                               lineHeight: (fontSize - 1) * 1.3,
                             }}
                           >
-                            AI automatically selects the 5 best tags. You can
-                            remove up to 2 tags (minimum 3 required)
+                            You can remove up to 2 tags (minimum 3 required)
                           </Text>
                         </View>
                       </View>
@@ -4672,7 +4568,7 @@ const styles = StyleSheet.create({
   // ------ ScrollView Content ------
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: Platform.OS === "ios" ? 20 : 40,
+    paddingBottom: Platform.OS === "ios" ? 100 : 120,
   },
 
   // ------ Header ------
