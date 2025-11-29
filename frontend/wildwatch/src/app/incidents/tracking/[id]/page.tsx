@@ -348,7 +348,11 @@ export default function CaseDetailsPage() {
           const ratingRes = await fetch(
             `${API_BASE_URL}/api/ratings/incidents/${data.trackingNumber}`,
             {
-              credentials: "include",
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+                Accept: "application/json",
+              },
             }
           );
           if (ratingRes.ok) {

@@ -137,8 +137,13 @@ public class SecurityConfig {
                     // For mobile apps without Origin header, we don't set CORS headers
                     // This is fine because mobile apps aren't subject to CORS restrictions
 
-                    if (request.getHeader("Accept") != null
-                            && request.getHeader("Accept").contains("application/json")) {
+                    // Check if this is an API request (has Authorization header or Accept: application/json)
+                    // API requests should return JSON, not redirect
+                    boolean isApiRequest = (request.getHeader("Authorization") != null
+                            || (request.getHeader("Accept") != null
+                                    && request.getHeader("Accept").contains("application/json")));
+
+                    if (isApiRequest) {
                         response.setStatus(401);
                         response.setContentType("application/json");
                         response.getWriter().write("{\"error\":\"Unauthorized\"}");

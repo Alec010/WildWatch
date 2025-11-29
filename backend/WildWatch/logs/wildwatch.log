@@ -2274,3 +2274,211 @@ Caused by: org.postgresql.util.PSQLException: FATAL: Max client connections reac
 2025-11-30 02:19:52 INFO  org.ehcache.core.EhcacheManager - Cache 'goldEliteUsers' removed from EhcacheManager.
 2025-11-30 02:19:52 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident.tags' removed from EhcacheManager.
 2025-11-30 02:19:52 INFO  org.ehcache.core.EhcacheManager - Cache 'activeCases' removed from EhcacheManager.
+2025-11-30 02:34:19 INFO  c.t.W.WildWatchApplicationTests - Starting WildWatchApplicationTests using Java 22.0.2 with PID 24356 (started by katri in D:\Downloads\WildWatch 2.0\WildWatch\backend\WildWatch)
+2025-11-30 02:34:19 INFO  c.t.W.WildWatchApplicationTests - No active profile set, falling back to 1 default profile: "default"
+2025-11-30 02:34:28 INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2025-11-30 02:34:29 INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 828 ms. Found 18 JPA repository interfaces.
+2025-11-30 02:34:39 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 10.0MB in chunks
+2025-11-30 02:34:39 INFO  org.ehcache.core.EhcacheManager - Cache 'goldEliteUsers' created in EhcacheManager.
+2025-11-30 02:34:39 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 10.0MB in chunks
+2025-11-30 02:34:39 INFO  org.ehcache.core.EhcacheManager - Cache 'activeCases' created in EhcacheManager.
+2025-11-30 02:34:39 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Evidence' created in EhcacheManager.
+2025-11-30 02:34:39 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 10.0MB in chunks
+2025-11-30 02:34:39 INFO  org.ehcache.core.EhcacheManager - Cache 'userIncidentHistory' created in EhcacheManager.
+2025-11-30 02:34:40 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 10.0MB in chunks
+2025-11-30 02:34:40 INFO  org.ehcache.core.EhcacheManager - Cache 'org.hibernate.cache.spi.TimestampsCache' created in EhcacheManager.
+2025-11-30 02:34:40 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 10.0MB in chunks
+2025-11-30 02:34:40 INFO  org.ehcache.core.EhcacheManager - Cache 'org.hibernate.cache.internal.StandardQueryCache' created in EhcacheManager.
+2025-11-30 02:34:40 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 10.0MB in chunks
+2025-11-30 02:34:40 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.User' created in EhcacheManager.
+2025-11-30 02:34:40 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 10.0MB in chunks
+2025-11-30 02:34:40 INFO  org.ehcache.core.EhcacheManager - Cache 'goldEliteOffices' created in EhcacheManager.
+2025-11-30 02:34:40 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident.witnesses' created in EhcacheManager.
+2025-11-30 02:34:40 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 20.0MB in chunks
+2025-11-30 02:34:40 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident' created in EhcacheManager.
+2025-11-30 02:34:40 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 10.0MB in chunks
+2025-11-30 02:34:40 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Witness' created in EhcacheManager.
+2025-11-30 02:34:40 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 10.0MB in chunks
+2025-11-30 02:34:40 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.OfficeAdmin' created in EhcacheManager.
+2025-11-30 02:34:40 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident.evidence' created in EhcacheManager.
+2025-11-30 02:34:40 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident.tags' created in EhcacheManager.
+2025-11-30 02:34:42 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./D./Downloads/WildWatch%202.0/WildWatch/backend/WildWatch/target/test-classes/ehcache.xml,Cache=goldEliteUsers
+2025-11-30 02:34:42 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./D./Downloads/WildWatch%202.0/WildWatch/backend/WildWatch/target/test-classes/ehcache.xml,Cache=activeCases
+2025-11-30 02:34:42 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./D./Downloads/WildWatch%202.0/WildWatch/backend/WildWatch/target/test-classes/ehcache.xml,Cache=com.teamhyungie.WildWatch.model.Evidence
+2025-11-30 02:34:42 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./D./Downloads/WildWatch%202.0/WildWatch/backend/WildWatch/target/test-classes/ehcache.xml,Cache=userIncidentHistory
+2025-11-30 02:34:42 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./D./Downloads/WildWatch%202.0/WildWatch/backend/WildWatch/target/test-classes/ehcache.xml,Cache=org.hibernate.cache.spi.TimestampsCache
+2025-11-30 02:34:42 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./D./Downloads/WildWatch%202.0/WildWatch/backend/WildWatch/target/test-classes/ehcache.xml,Cache=org.hibernate.cache.internal.StandardQueryCache
+2025-11-30 02:34:42 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./D./Downloads/WildWatch%202.0/WildWatch/backend/WildWatch/target/test-classes/ehcache.xml,Cache=com.teamhyungie.WildWatch.model.User
+2025-11-30 02:34:42 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./D./Downloads/WildWatch%202.0/WildWatch/backend/WildWatch/target/test-classes/ehcache.xml,Cache=goldEliteOffices
+2025-11-30 02:34:42 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./D./Downloads/WildWatch%202.0/WildWatch/backend/WildWatch/target/test-classes/ehcache.xml,Cache=com.teamhyungie.WildWatch.model.Incident.witnesses
+2025-11-30 02:34:42 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./D./Downloads/WildWatch%202.0/WildWatch/backend/WildWatch/target/test-classes/ehcache.xml,Cache=com.teamhyungie.WildWatch.model.Incident
+2025-11-30 02:34:42 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./D./Downloads/WildWatch%202.0/WildWatch/backend/WildWatch/target/test-classes/ehcache.xml,Cache=com.teamhyungie.WildWatch.model.Witness
+2025-11-30 02:34:42 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./D./Downloads/WildWatch%202.0/WildWatch/backend/WildWatch/target/test-classes/ehcache.xml,Cache=com.teamhyungie.WildWatch.model.OfficeAdmin
+2025-11-30 02:34:42 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./D./Downloads/WildWatch%202.0/WildWatch/backend/WildWatch/target/test-classes/ehcache.xml,Cache=com.teamhyungie.WildWatch.model.Incident.evidence
+2025-11-30 02:34:42 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./D./Downloads/WildWatch%202.0/WildWatch/backend/WildWatch/target/test-classes/ehcache.xml,Cache=com.teamhyungie.WildWatch.model.Incident.tags
+2025-11-30 02:34:43 INFO  o.h.jpa.internal.util.LogHelper - HHH000204: Processing PersistenceUnitInfo [name: default]
+2025-11-30 02:34:44 INFO  org.hibernate.Version - HHH000412: Hibernate ORM core version 6.6.11.Final
+2025-11-30 02:34:45 INFO  o.h.c.i.RegionFactoryInitiator - HHH000025: Second-level cache region factory [org.hibernate.cache.jcache.internal.JCacheRegionFactory]
+2025-11-30 02:34:49 INFO  o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2025-11-30 02:34:49 INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Starting...
+2025-11-30 02:34:55 INFO  com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@6889e714
+2025-11-30 02:34:55 INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Start completed.
+2025-11-30 02:34:55 WARN  org.hibernate.orm.deprecation - HHH90000025: PostgreSQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2025-11-30 02:34:55 INFO  o.hibernate.orm.connections.pooling - HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 15.8
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2025-11-30 02:34:58 INFO  org.ehcache.core.EhcacheManager - Cache 'default-update-timestamps-region' created in EhcacheManager.
+2025-11-30 02:34:58 INFO  org.ehcache.core.EhcacheManager - Cache 'default-query-results-region' created in EhcacheManager.
+2025-11-30 02:34:59 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident.witnesses' created in EhcacheManager.
+2025-11-30 02:34:59 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident.evidence' created in EhcacheManager.
+2025-11-30 02:34:59 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident.generalTags' created in EhcacheManager.
+2025-11-30 02:34:59 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.User' created in EhcacheManager.
+2025-11-30 02:34:59 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident' created in EhcacheManager.
+2025-11-30 02:34:59 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.IncidentGeneralTag' created in EhcacheManager.
+2025-11-30 02:35:05 INFO  o.h.e.t.j.p.i.JtaPlatformInitiator - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2025-11-30 02:35:13 INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2025-11-30 02:35:16 INFO  o.s.d.j.r.query.QueryEnhancerFactory - Hibernate is in classpath; If applicable, HQL parser will be used.
+2025-11-30 02:35:27 INFO  c.t.W.service.SupabaseStorageService - Initializing Supabase Storage Service with URL: https://jcldwuryjuqtrbsqlgoi.supabase.co/
+2025-11-30 02:35:31 WARN  o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2025-11-30 02:35:31 INFO  o.s.s.c.a.a.c.InitializeUserDetailsBeanManagerConfigurer$InitializeUserDetailsManagerConfigurer - Global AuthenticationManager configured with UserDetailsService bean with name userDetailsService
+2025-11-30 02:35:36 INFO  o.s.m.s.b.SimpleBrokerMessageHandler - Starting...
+2025-11-30 02:35:36 INFO  o.s.m.s.b.SimpleBrokerMessageHandler - BrokerAvailabilityEvent[available=true, SimpleBrokerMessageHandler [org.springframework.messaging.simp.broker.DefaultSubscriptionRegistry@4231001a]]
+2025-11-30 02:35:36 INFO  o.s.m.s.b.SimpleBrokerMessageHandler - Started.
+2025-11-30 02:35:39 INFO  c.t.W.WildWatchApplicationTests - Started WildWatchApplicationTests in 83.812 seconds (process running for 90.86)
+2025-11-30 02:35:42 INFO  o.s.m.s.b.SimpleBrokerMessageHandler - Stopping...
+2025-11-30 02:35:42 INFO  o.s.m.s.b.SimpleBrokerMessageHandler - BrokerAvailabilityEvent[available=false, SimpleBrokerMessageHandler [org.springframework.messaging.simp.broker.DefaultSubscriptionRegistry@4231001a]]
+2025-11-30 02:35:42 INFO  o.s.m.s.b.SimpleBrokerMessageHandler - Stopped.
+2025-11-30 02:35:42 INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Closing JPA EntityManagerFactory for persistence unit 'default'
+2025-11-30 02:35:42 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.User' removed from EhcacheManager.
+2025-11-30 02:35:42 INFO  org.ehcache.core.EhcacheManager - Cache 'default-query-results-region' removed from EhcacheManager.
+2025-11-30 02:35:42 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident.generalTags' removed from EhcacheManager.
+2025-11-30 02:35:42 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident.witnesses' removed from EhcacheManager.
+2025-11-30 02:35:42 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident' removed from EhcacheManager.
+2025-11-30 02:35:42 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident.evidence' removed from EhcacheManager.
+2025-11-30 02:35:42 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.IncidentGeneralTag' removed from EhcacheManager.
+2025-11-30 02:35:42 INFO  org.ehcache.core.EhcacheManager - Cache 'default-update-timestamps-region' removed from EhcacheManager.
+2025-11-30 02:35:42 INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown initiated...
+2025-11-30 02:35:42 INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown completed.
+2025-11-30 02:35:42 INFO  org.ehcache.core.EhcacheManager - Cache 'userIncidentHistory' removed from EhcacheManager.
+2025-11-30 02:35:42 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Evidence' removed from EhcacheManager.
+2025-11-30 02:35:42 INFO  org.ehcache.core.EhcacheManager - Cache 'org.hibernate.cache.spi.TimestampsCache' removed from EhcacheManager.
+2025-11-30 02:35:42 INFO  org.ehcache.core.EhcacheManager - Cache 'org.hibernate.cache.internal.StandardQueryCache' removed from EhcacheManager.
+2025-11-30 02:35:42 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.User' removed from EhcacheManager.
+2025-11-30 02:35:42 INFO  org.ehcache.core.EhcacheManager - Cache 'goldEliteOffices' removed from EhcacheManager.
+2025-11-30 02:35:42 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident.witnesses' removed from EhcacheManager.
+2025-11-30 02:35:42 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident' removed from EhcacheManager.
+2025-11-30 02:35:42 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Witness' removed from EhcacheManager.
+2025-11-30 02:35:42 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.OfficeAdmin' removed from EhcacheManager.
+2025-11-30 02:35:42 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident.evidence' removed from EhcacheManager.
+2025-11-30 02:35:42 INFO  org.ehcache.core.EhcacheManager - Cache 'goldEliteUsers' removed from EhcacheManager.
+2025-11-30 02:35:42 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident.tags' removed from EhcacheManager.
+2025-11-30 02:35:42 INFO  org.ehcache.core.EhcacheManager - Cache 'activeCases' removed from EhcacheManager.
+2025-11-30 02:37:26 INFO  c.t.W.WildWatchApplicationTests - Starting WildWatchApplicationTests using Java 22.0.2 with PID 24408 (started by katri in D:\Downloads\WildWatch 2.0\WildWatch\backend\WildWatch)
+2025-11-30 02:37:26 INFO  c.t.W.WildWatchApplicationTests - No active profile set, falling back to 1 default profile: "default"
+2025-11-30 02:37:36 INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2025-11-30 02:37:37 INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 1337 ms. Found 18 JPA repository interfaces.
+2025-11-30 02:37:45 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 10.0MB in chunks
+2025-11-30 02:37:45 INFO  org.ehcache.core.EhcacheManager - Cache 'goldEliteUsers' created in EhcacheManager.
+2025-11-30 02:37:45 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 10.0MB in chunks
+2025-11-30 02:37:45 INFO  org.ehcache.core.EhcacheManager - Cache 'activeCases' created in EhcacheManager.
+2025-11-30 02:37:45 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Evidence' created in EhcacheManager.
+2025-11-30 02:37:45 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 10.0MB in chunks
+2025-11-30 02:37:45 INFO  org.ehcache.core.EhcacheManager - Cache 'userIncidentHistory' created in EhcacheManager.
+2025-11-30 02:37:45 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 10.0MB in chunks
+2025-11-30 02:37:45 INFO  org.ehcache.core.EhcacheManager - Cache 'org.hibernate.cache.spi.TimestampsCache' created in EhcacheManager.
+2025-11-30 02:37:45 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 10.0MB in chunks
+2025-11-30 02:37:45 INFO  org.ehcache.core.EhcacheManager - Cache 'org.hibernate.cache.internal.StandardQueryCache' created in EhcacheManager.
+2025-11-30 02:37:45 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 10.0MB in chunks
+2025-11-30 02:37:45 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.User' created in EhcacheManager.
+2025-11-30 02:37:45 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 10.0MB in chunks
+2025-11-30 02:37:45 INFO  org.ehcache.core.EhcacheManager - Cache 'goldEliteOffices' created in EhcacheManager.
+2025-11-30 02:37:45 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident.witnesses' created in EhcacheManager.
+2025-11-30 02:37:45 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 20.0MB in chunks
+2025-11-30 02:37:45 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident' created in EhcacheManager.
+2025-11-30 02:37:45 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 10.0MB in chunks
+2025-11-30 02:37:46 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Witness' created in EhcacheManager.
+2025-11-30 02:37:46 INFO  o.e.s.o.t.o.p.UpfrontAllocatingPageSource - Allocating 10.0MB in chunks
+2025-11-30 02:37:46 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.OfficeAdmin' created in EhcacheManager.
+2025-11-30 02:37:46 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident.evidence' created in EhcacheManager.
+2025-11-30 02:37:46 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident.tags' created in EhcacheManager.
+2025-11-30 02:37:46 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./D./Downloads/WildWatch%202.0/WildWatch/backend/WildWatch/target/test-classes/ehcache.xml,Cache=goldEliteUsers
+2025-11-30 02:37:46 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./D./Downloads/WildWatch%202.0/WildWatch/backend/WildWatch/target/test-classes/ehcache.xml,Cache=activeCases
+2025-11-30 02:37:46 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./D./Downloads/WildWatch%202.0/WildWatch/backend/WildWatch/target/test-classes/ehcache.xml,Cache=com.teamhyungie.WildWatch.model.Evidence
+2025-11-30 02:37:46 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./D./Downloads/WildWatch%202.0/WildWatch/backend/WildWatch/target/test-classes/ehcache.xml,Cache=userIncidentHistory
+2025-11-30 02:37:46 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./D./Downloads/WildWatch%202.0/WildWatch/backend/WildWatch/target/test-classes/ehcache.xml,Cache=org.hibernate.cache.spi.TimestampsCache
+2025-11-30 02:37:46 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./D./Downloads/WildWatch%202.0/WildWatch/backend/WildWatch/target/test-classes/ehcache.xml,Cache=org.hibernate.cache.internal.StandardQueryCache
+2025-11-30 02:37:46 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./D./Downloads/WildWatch%202.0/WildWatch/backend/WildWatch/target/test-classes/ehcache.xml,Cache=com.teamhyungie.WildWatch.model.User
+2025-11-30 02:37:46 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./D./Downloads/WildWatch%202.0/WildWatch/backend/WildWatch/target/test-classes/ehcache.xml,Cache=goldEliteOffices
+2025-11-30 02:37:46 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./D./Downloads/WildWatch%202.0/WildWatch/backend/WildWatch/target/test-classes/ehcache.xml,Cache=com.teamhyungie.WildWatch.model.Incident.witnesses
+2025-11-30 02:37:46 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./D./Downloads/WildWatch%202.0/WildWatch/backend/WildWatch/target/test-classes/ehcache.xml,Cache=com.teamhyungie.WildWatch.model.Incident
+2025-11-30 02:37:46 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./D./Downloads/WildWatch%202.0/WildWatch/backend/WildWatch/target/test-classes/ehcache.xml,Cache=com.teamhyungie.WildWatch.model.Witness
+2025-11-30 02:37:46 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./D./Downloads/WildWatch%202.0/WildWatch/backend/WildWatch/target/test-classes/ehcache.xml,Cache=com.teamhyungie.WildWatch.model.OfficeAdmin
+2025-11-30 02:37:46 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./D./Downloads/WildWatch%202.0/WildWatch/backend/WildWatch/target/test-classes/ehcache.xml,Cache=com.teamhyungie.WildWatch.model.Incident.evidence
+2025-11-30 02:37:46 INFO  o.ehcache.jsr107.Eh107CacheManager - Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=file./D./Downloads/WildWatch%202.0/WildWatch/backend/WildWatch/target/test-classes/ehcache.xml,Cache=com.teamhyungie.WildWatch.model.Incident.tags
+2025-11-30 02:37:48 INFO  o.h.jpa.internal.util.LogHelper - HHH000204: Processing PersistenceUnitInfo [name: default]
+2025-11-30 02:37:48 INFO  org.hibernate.Version - HHH000412: Hibernate ORM core version 6.6.11.Final
+2025-11-30 02:37:49 INFO  o.h.c.i.RegionFactoryInitiator - HHH000025: Second-level cache region factory [org.hibernate.cache.jcache.internal.JCacheRegionFactory]
+2025-11-30 02:37:51 INFO  o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2025-11-30 02:37:51 INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Starting...
+2025-11-30 02:37:54 INFO  com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@69e308e2
+2025-11-30 02:37:54 INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Start completed.
+2025-11-30 02:37:54 WARN  org.hibernate.orm.deprecation - HHH90000025: PostgreSQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2025-11-30 02:37:54 INFO  o.hibernate.orm.connections.pooling - HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 15.8
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2025-11-30 02:37:57 INFO  org.ehcache.core.EhcacheManager - Cache 'default-update-timestamps-region' created in EhcacheManager.
+2025-11-30 02:37:57 INFO  org.ehcache.core.EhcacheManager - Cache 'default-query-results-region' created in EhcacheManager.
+2025-11-30 02:37:58 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident.witnesses' created in EhcacheManager.
+2025-11-30 02:37:58 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident.generalTags' created in EhcacheManager.
+2025-11-30 02:37:58 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.IncidentGeneralTag' created in EhcacheManager.
+2025-11-30 02:37:58 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.User' created in EhcacheManager.
+2025-11-30 02:37:58 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident' created in EhcacheManager.
+2025-11-30 02:37:58 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident.evidence' created in EhcacheManager.
+2025-11-30 02:38:06 INFO  o.h.e.t.j.p.i.JtaPlatformInitiator - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2025-11-30 02:38:12 INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2025-11-30 02:38:15 INFO  o.s.d.j.r.query.QueryEnhancerFactory - Hibernate is in classpath; If applicable, HQL parser will be used.
+2025-11-30 02:38:26 INFO  c.t.W.service.SupabaseStorageService - Initializing Supabase Storage Service with URL: https://jcldwuryjuqtrbsqlgoi.supabase.co/
+2025-11-30 02:38:30 WARN  o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2025-11-30 02:38:30 INFO  o.s.s.c.a.a.c.InitializeUserDetailsBeanManagerConfigurer$InitializeUserDetailsManagerConfigurer - Global AuthenticationManager configured with UserDetailsService bean with name userDetailsService
+2025-11-30 02:38:36 INFO  o.s.m.s.b.SimpleBrokerMessageHandler - Starting...
+2025-11-30 02:38:36 INFO  o.s.m.s.b.SimpleBrokerMessageHandler - BrokerAvailabilityEvent[available=true, SimpleBrokerMessageHandler [org.springframework.messaging.simp.broker.DefaultSubscriptionRegistry@23df6ad8]]
+2025-11-30 02:38:36 INFO  o.s.m.s.b.SimpleBrokerMessageHandler - Started.
+2025-11-30 02:38:38 INFO  c.t.W.WildWatchApplicationTests - Started WildWatchApplicationTests in 75.612 seconds (process running for 83.48)
+2025-11-30 02:38:41 INFO  o.s.m.s.b.SimpleBrokerMessageHandler - Stopping...
+2025-11-30 02:38:41 INFO  o.s.m.s.b.SimpleBrokerMessageHandler - BrokerAvailabilityEvent[available=false, SimpleBrokerMessageHandler [org.springframework.messaging.simp.broker.DefaultSubscriptionRegistry@23df6ad8]]
+2025-11-30 02:38:41 INFO  o.s.m.s.b.SimpleBrokerMessageHandler - Stopped.
+2025-11-30 02:38:41 INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Closing JPA EntityManagerFactory for persistence unit 'default'
+2025-11-30 02:38:41 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.User' removed from EhcacheManager.
+2025-11-30 02:38:41 INFO  org.ehcache.core.EhcacheManager - Cache 'default-query-results-region' removed from EhcacheManager.
+2025-11-30 02:38:41 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident.generalTags' removed from EhcacheManager.
+2025-11-30 02:38:41 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident.witnesses' removed from EhcacheManager.
+2025-11-30 02:38:41 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident' removed from EhcacheManager.
+2025-11-30 02:38:41 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.IncidentGeneralTag' removed from EhcacheManager.
+2025-11-30 02:38:41 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident.evidence' removed from EhcacheManager.
+2025-11-30 02:38:41 INFO  org.ehcache.core.EhcacheManager - Cache 'default-update-timestamps-region' removed from EhcacheManager.
+2025-11-30 02:38:41 INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown initiated...
+2025-11-30 02:38:42 INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown completed.
+2025-11-30 02:38:42 INFO  org.ehcache.core.EhcacheManager - Cache 'userIncidentHistory' removed from EhcacheManager.
+2025-11-30 02:38:42 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Evidence' removed from EhcacheManager.
+2025-11-30 02:38:42 INFO  org.ehcache.core.EhcacheManager - Cache 'org.hibernate.cache.spi.TimestampsCache' removed from EhcacheManager.
+2025-11-30 02:38:42 INFO  org.ehcache.core.EhcacheManager - Cache 'org.hibernate.cache.internal.StandardQueryCache' removed from EhcacheManager.
+2025-11-30 02:38:42 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.User' removed from EhcacheManager.
+2025-11-30 02:38:42 INFO  org.ehcache.core.EhcacheManager - Cache 'goldEliteOffices' removed from EhcacheManager.
+2025-11-30 02:38:42 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident.witnesses' removed from EhcacheManager.
+2025-11-30 02:38:42 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident' removed from EhcacheManager.
+2025-11-30 02:38:42 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Witness' removed from EhcacheManager.
+2025-11-30 02:38:42 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.OfficeAdmin' removed from EhcacheManager.
+2025-11-30 02:38:42 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident.evidence' removed from EhcacheManager.
+2025-11-30 02:38:42 INFO  org.ehcache.core.EhcacheManager - Cache 'goldEliteUsers' removed from EhcacheManager.
+2025-11-30 02:38:42 INFO  org.ehcache.core.EhcacheManager - Cache 'com.teamhyungie.WildWatch.model.Incident.tags' removed from EhcacheManager.
+2025-11-30 02:38:42 INFO  org.ehcache.core.EhcacheManager - Cache 'activeCases' removed from EhcacheManager.
