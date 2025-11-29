@@ -85,6 +85,7 @@ public class SecurityConfig {
                 .requestMatchers("/uploads/**").permitAll()
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/chatbot").permitAll()
+                .requestMatchers("/ws/**").permitAll() // Allow WebSocket endpoints without auth
                 .requestMatchers(
                         "/api/auth/**",
                         "/api/mobile/auth/**",
@@ -116,6 +117,17 @@ public class SecurityConfig {
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .exceptionHandling(exception -> exception
                 .authenticationEntryPoint((request, response, authException) -> {
+                    // Add CORS headers before any response to prevent CORS errors
+                    String origin = request.getHeader("Origin");
+                    if (origin != null && !origin.isEmpty()) {
+                        // Validate origin against allowed patterns
+                        if (isOriginAllowed(origin)) {
+                            response.setHeader("Access-Control-Allow-Origin", origin);
+                            response.setHeader("Access-Control-Allow-Credentials", "true");
+                            response.setHeader("Access-Control-Expose-Headers", "Location");
+                        }
+                    }
+                    
                     if (request.getHeader("Accept") != null
                             && request.getHeader("Accept").contains("application/json")) {
                         response.setStatus(401);
@@ -154,12 +166,14 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
+        // Use origin patterns for flexible matching
         configuration.setAllowedOriginPatterns(Arrays.asList(
                 "http://localhost:3000",
                 "https://jcldwuryjuqtrbsqlgoi.supabase.co",
                 "https://*.onrender.com",
                 "https://wildwatch.onrender.com",
                 "https://*.vercel.app",
+                "https://wild-watch.vercel.app",
                 "https://wild-watch-cca16hidi-alec010s-projects.vercel.app",
                 "wildwatch://*")); // Added mobile app scheme
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
@@ -182,6 +196,37 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
+    }
+
+    /**
+     * Helper method to validate if an origin is allowed
+     * This is used by the authentication entry point to set CORS headers
+     */
+    private boolean isOriginAllowed(String origin) {
+        List<String> allowedPatterns = Arrays.asList(
+                "http://localhost:3000",
+                "https://jcldwuryjuqtrbsqlgoi.supabase.co",
+                "https://wildwatch.onrender.com",
+                "https://wild-watch.vercel.app",
+                "https://wild-watch-cca16hidi-alec010s-projects.vercel.app");
+        
+        // Check exact matches first
+        if (allowedPatterns.contains(origin)) {
+            return true;
+        }
+        
+        // Check pattern matches
+        if (origin.matches("https://.*\\.onrender\\.com")) {
+            return true;
+        }
+        if (origin.matches("https://.*\\.vercel\\.app")) {
+            return true;
+        }
+        if (origin.startsWith("wildwatch://")) {
+            return true;
+        }
+        
+        return false;
     }
 
     @Bean
