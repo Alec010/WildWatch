@@ -71,12 +71,15 @@ export const logout = async () => {
   }
 };
 
-export const handleAuthRedirect = (user: { role: string; termsAccepted: boolean }) => {
+export const handleAuthRedirect = (user: { role?: string; userRole?: string; termsAccepted: boolean }) => {
   if (!user.termsAccepted) {
     return '/terms';
   }
 
-  switch (user.role) {
+  // Support both 'role' and 'userRole' field names
+  const userRole = user.role || user.userRole;
+
+  switch (userRole) {
     case 'OFFICE_ADMIN':
       return '/office-admin/dashboard';
     case 'SYSTEM_ADMIN':
