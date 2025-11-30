@@ -6,10 +6,13 @@ import {
   StyleSheet,
   Dimensions,
   Platform,
+  Alert,
+  Linking,
 } from "react-native";
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { storage } from "../../lib/storage";
+import * as ImagePicker from "expo-image-picker";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const isSmallDevice = SCREEN_WIDTH < 375;
@@ -58,24 +61,123 @@ function CustomTabBar({ state, descriptors, navigation }: CustomTabBarProps) {
         // Special styling for Report button (FAB) - smart routing based on flow step
         if (route.name === "report") {
           const handleReportPress = async () => {
-            // Get the current flow step from storage
-            const flowStep = await storage.getReportFlowStep();
+            try {
+              // Request permissions upfront when user presses report button
+              console.log("Report button pressed - requesting permissions...");
+              
+              // Check current permission status first
+              const [cameraStatus, mediaStatus] = await Promise.all([
+                ImagePicker.getCameraPermissionsAsync().catch(() => ({ status: "undetermined", canAskAgain: true })),
+                ImagePicker.getMediaLibraryPermissionsAsync().catch(() => ({ status: "undetermined", canAskAgain: true })),
+              ]);
 
-            console.log("Report tab pressed, routing to flow step:", flowStep);
+              console.log("Current permissions - Camera:", cameraStatus.status, "Media:", mediaStatus.status);
 
-            // Route to the appropriate screen based on where user left off
-            switch (flowStep) {
-              case 1:
-                navigation.navigate("camera");
-                break;
-              case 2:
-                navigation.navigate("location");
-                break;
-              case 3:
-                navigation.navigate("report");
-                break;
-              default:
-                navigation.navigate("camera"); // Default to camera
+              // Request camera permission if not granted
+              let finalCameraStatus = cameraStatus.status;
+              if (cameraStatus.status !== "granted") {
+                try {
+                  const cameraResult = await ImagePicker.requestCameraPermissionsAsync();
+                  finalCameraStatus = cameraResult.status;
+                  console.log("Camera permission request result:", finalCameraStatus);
+                  
+                  // On Android, wait before requesting media library permission to avoid conflicts
+                  if (Platform.OS === "android" && finalCameraStatus !== "granted") {
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+                  }
+                } catch (cameraError: any) {
+                  console.error("Error requesting camera permission:", cameraError);
+                  finalCameraStatus = "denied";
+                }
+              }
+
+              // Wait a bit longer on Android to ensure camera dialog is fully dismissed
+              if (Platform.OS === "android") {
+                await new Promise(resolve => setTimeout(resolve, 2000));
+              }
+
+              // Request media library permission if not granted
+              let finalMediaStatus = mediaStatus.status;
+              if (mediaStatus.status !== "granted") {
+                try {
+                  const mediaResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                  finalMediaStatus = mediaResult.status;
+                  console.log("Media library permission request result:", finalMediaStatus);
+                } catch (mediaError: any) {
+                  console.error("Error requesting media library permission:", mediaError);
+                  finalMediaStatus = "denied";
+                }
+              }
+
+              // Check if any permissions are permanently denied
+              const [finalCameraCheck, finalMediaCheck] = await Promise.all([
+                ImagePicker.getCameraPermissionsAsync().catch(() => ({ status: finalCameraStatus, canAskAgain: false })),
+                ImagePicker.getMediaLibraryPermissionsAsync().catch(() => ({ status: finalMediaStatus, canAskAgain: false })),
+              ]);
+
+              const cameraPermanentlyDenied = finalCameraCheck.status === "denied" && !finalCameraCheck.canAskAgain;
+              const mediaPermanentlyDenied = finalMediaCheck.status === "denied" && !finalMediaCheck.canAskAgain;
+
+              if (cameraPermanentlyDenied || mediaPermanentlyDenied) {
+                Alert.alert(
+                  "Permissions Required",
+                  "Camera and photo library permissions are required to report incidents. Please enable them in your device settings.",
+                  [
+                    { text: "Cancel" },
+                    {
+                      text: "Open Settings",
+                      onPress: () => {
+                        if (Platform.OS === "ios") {
+                          Linking.openURL("app-settings:");
+                        } else {
+                          Linking.openSettings();
+                        }
+                      },
+                    },
+                  ]
+                );
+                return; // Don't navigate if permissions are permanently denied
+              }
+
+              // If permissions are granted or can still be asked, proceed with navigation
+              console.log("Permissions handled - Camera:", finalCameraStatus, "Media:", finalMediaStatus);
+
+              // Get the current flow step from storage
+              const flowStep = await storage.getReportFlowStep();
+
+              console.log("Report tab pressed, routing to flow step:", flowStep);
+
+              // Route to the appropriate screen based on where user left off
+              switch (flowStep) {
+                case 1:
+                  navigation.navigate("camera");
+                  break;
+                case 2:
+                  navigation.navigate("location");
+                  break;
+                case 3:
+                  navigation.navigate("report");
+                  break;
+                default:
+                  navigation.navigate("camera"); // Default to camera
+              }
+            } catch (error: any) {
+              console.error("Error in handleReportPress:", error);
+              // On error, still try to navigate (permissions might be handled on camera screen)
+              const flowStep = await storage.getReportFlowStep();
+              switch (flowStep) {
+                case 1:
+                  navigation.navigate("camera");
+                  break;
+                case 2:
+                  navigation.navigate("location");
+                  break;
+                case 3:
+                  navigation.navigate("report");
+                  break;
+                default:
+                  navigation.navigate("camera");
+              }
             }
           };
 

@@ -16,7 +16,13 @@
     "ios": {
       "bundleIdentifier": "com.wildwatch.app",
       "buildNumber": "1",
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "WildWatch needs access to your camera to capture evidence photos for incident reports.",
+        "NSPhotoLibraryUsageDescription": "WildWatch needs access to your photo library to attach evidence images to reports.",
+        "NSLocationWhenInUseUsageDescription": "WildWatch needs your location to accurately report incident locations on campus.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "WildWatch needs your location to accurately report incident locations on campus."
+      }
     },
     "android": {
       "package": "com.wildwatch.app",
@@ -31,6 +37,8 @@
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE",
+        "READ_MEDIA_IMAGES",
+        "READ_MEDIA_VIDEO",
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION"
       ]
@@ -42,7 +50,21 @@
     },
     "plugins": [
       "expo-router",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "WildWatch needs access to your photos to attach evidence images to incident reports.",
+          "cameraPermission": "WildWatch needs access to your camera to capture evidence photos for incident reports."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "WildWatch needs your location to accurately report incident locations on campus."
+        }
+      ],
+      "expo-notifications"
     ],
     "experiments": {
       "typedRoutes": true

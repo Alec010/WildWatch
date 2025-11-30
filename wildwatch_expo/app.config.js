@@ -62,7 +62,10 @@ module.exports = function() {
           // Location permissions (foreground only)
           'ACCESS_FINE_LOCATION',
           'ACCESS_COARSE_LOCATION'
-        ]
+        ],
+        // Allow cleartext traffic for development (HTTP requests)
+        // Remove this in production if using HTTPS only
+        usesCleartextTraffic: true
       },
       web: {
         bundler: 'metro',
@@ -84,7 +87,8 @@ module.exports = function() {
           {
             locationAlwaysAndWhenInUsePermission: 'WildWatch needs your location to accurately report incident locations on campus.'
           }
-        ]
+        ],
+        'expo-notifications'
       ],
       experiments: {
         typedRoutes: true
