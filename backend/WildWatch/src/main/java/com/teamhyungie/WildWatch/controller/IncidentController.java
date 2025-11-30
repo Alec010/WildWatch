@@ -55,9 +55,17 @@ public class IncidentController {
             IncidentRequest request = objectMapper.readValue(incidentDataJson, IncidentRequest.class);
             IncidentResponse response = incidentService.createIncident(request, userDetails.getUsername(), files);
             return ResponseEntity.ok(response);
-        } catch (Exception e) {
+        } catch (com.fasterxml.jackson.core.JsonParseException e) {
+            // JSON parsing error - likely special characters in input
             e.printStackTrace();
-            return ResponseEntity.badRequest().build();
+            System.err.println("JSON Parse Error - Input JSON: " + incidentDataJson);
+            return ResponseEntity.badRequest().body(null);
+        } catch (Exception e) {
+            // General error - log the full exception
+            e.printStackTrace();
+            System.err.println("Incident creation error: " + e.getMessage());
+            System.err.println("Input JSON: " + incidentDataJson);
+            return ResponseEntity.badRequest().body(null);
         }
     }
 

@@ -10,7 +10,7 @@ public class NotificationDTO {
     private String description;
     private LocalDateTime createdAt;
     private Boolean isRead;
-    private String userId; // User ID to filter notifications
+    private Long userId; // Add userId for client-side validation
     private IncidentDTO incident;
 
     @Data

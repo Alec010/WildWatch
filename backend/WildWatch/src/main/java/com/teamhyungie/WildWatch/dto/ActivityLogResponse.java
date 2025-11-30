@@ -11,7 +11,6 @@ public class ActivityLogResponse {
     private String description;
     private LocalDateTime createdAt;
     private Boolean isRead;
-    private String userId; // User ID to filter notifications
     private IncidentInfo incident;
 
     @Data
@@ -27,9 +26,6 @@ public class ActivityLogResponse {
         response.setDescription(activityLog.getDescription());
         response.setCreatedAt(activityLog.getCreatedAt());
         response.setIsRead(activityLog.getIsRead());
-        if (activityLog.getUser() != null) {
-            response.setUserId(String.valueOf(activityLog.getUser().getId()));
-        }
 
         if (activityLog.getIncident() != null) {
             IncidentInfo incidentInfo = new IncidentInfo();

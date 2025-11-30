@@ -64,11 +64,12 @@ public class OfficeAssignmentService {
                         .append("\n");
             }
 
-            String prompt = String.format(
-                    "Assign this incident to the correct office code.\n\n" +
-                    "Description: %s\n" +
-                    "Location: %s\n" +
-                    "Tags: %s\n\n" +
+            // Use String concatenation instead of String.format to avoid format specifier issues
+            // This allows users to include special characters like %, -, etc. in their descriptions
+            String prompt = "Assign this incident to the correct office code.\n\n" +
+                    "Description: " + truncatedDescription + "\n" +
+                    "Location: " + simplifiedLocation + "\n" +
+                    "Tags: " + String.join(", ", relevantTags) + "\n\n" +
                     "CRITICAL RULES (FOLLOW IN ORDER):\n" +
                     "1. NGE Building rooms starting with 1 or 2 (NGE102, NGE203, etc.) → TSG (computer labs)\n" +
                     "2. Student fights/bullying/misbehavior/conflicts → SSO (disciplinary)\n" +
@@ -82,12 +83,8 @@ public class OfficeAssignmentService {
                     "- Student-on-student incidents (fights, bullying) = SSO\n" +
                     "- External threats or theft = SSD\n" +
                     "- NGE rooms NGE1XX or NGE2XX = TSG (computer labs)\n\n" +
-                    "Offices:\n%s\n" +
-                    "Return ONLY: TSG, OPC, SSO, SSD, or SSG",
-                    truncatedDescription,
-                    simplifiedLocation,
-                    String.join(", ", relevantTags),
-                    officeDescriptions.toString());
+                    "Offices:\n" + officeDescriptions.toString() + "\n" +
+                    "Return ONLY: TSG, OPC, SSO, SSD, or SSG";
             
             log.debug("Attempting office assignment with {} model", modelName);
 

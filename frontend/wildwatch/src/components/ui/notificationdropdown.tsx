@@ -49,7 +49,6 @@ interface ActivityLog {
   activityType: string;
   description: string;
   createdAt: string;
-  userId?: string; // User ID to filter notifications
   incident: {
     id: string;
     trackingNumber: string;
@@ -71,55 +70,13 @@ export default function NotificationDropdown({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [hasNewNotification, setHasNewNotification] = useState(false);
   const [wsConnected, setWsConnected] = useState(false);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const currentUserIdRef = useRef<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
   const stompClientRef = useRef<Client | null>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const notificationAudio = useRef<HTMLAudioElement | null>(null);
 
-  // Initialize audio on mount
-  useEffect(() => {
-    if (typeof window !== "undefined" && !notificationAudio.current) {
-      notificationAudio.current = new Audio("/notification_sound.mp3");
-    }
-  }, []);
-
-  // Fetch current user ID on mount
-  useEffect(() => {
-    const fetchCurrentUserId = async () => {
-      try {
-        const token =
-          typeof document !== "undefined"
-            ? document.cookie
-                .split("; ")
-                .find((row) => row.startsWith("token="))
-                ?.split("=")[1]
-            : null;
-
-        if (!token) {
-          return;
-        }
-
-        const response = await fetch(`${API_BASE_URL}/api/auth/profile`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        });
-
-        if (response.ok) {
-          const userData = await response.json();
-          setCurrentUserId(userData.id);
-          currentUserIdRef.current = userData.id;
-        }
-      } catch (error) {
-        console.error("Error fetching current user ID:", error);
-      }
-    };
-
-    fetchCurrentUserId();
-  }, []);
+  const notificationAudio =
+    typeof window !== "undefined" ? new Audio("/notification_sound.mp3") : null;
 
   // Close notifications when clicking outside
   useEffect(() => {
@@ -154,17 +111,26 @@ export default function NotificationDropdown({
         throw new Error("No authentication token found");
       }
 
-      // Get the latest userId from ref (most up-to-date)
-      const userId = currentUserIdRef.current || currentUserId;
-      
-      // Don't fetch if we don't have userId yet (wait for it to be set)
-      if (!userId) {
-        console.log("Waiting for userId before fetching notifications");
-        return;
+      // Fetch user profile to get user ID if not already fetched
+      if (!currentUserId) {
+        try {
+          const profileResponse = await fetch(`${API_BASE_URL}/api/auth/profile`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          });
+          if (profileResponse.ok) {
+            const profileData = await profileResponse.json();
+            setCurrentUserId(profileData.id);
+          }
+        } catch (error) {
+          console.error("Error fetching user profile:", error);
+        }
       }
 
       const response = await fetch(
-        `${API_BASE_URL}/api/activity-logs?page=0&size=50`,
+        `${API_BASE_URL}/api/activity-logs?page=0&size=10`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -174,12 +140,6 @@ export default function NotificationDropdown({
       );
 
       if (!response.ok) {
-        if (response.status === 401 || response.status === 403) {
-          console.warn("Authentication failed, clearing notifications");
-          setNotifications([]);
-          setUnreadCount(0);
-          return;
-        }
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
@@ -195,41 +155,25 @@ export default function NotificationDropdown({
         "TRANSFER_APPROVED",
         "NEW_REPORT_RECEIVED",
       ];
-      
-      // Filter notifications by current user ID and exclude office admin types
       const filteredNotifications = data.content.filter(
-        (notification: ActivityLog) => {
-          // Exclude office admin notifications
-          if (officeAdminActivityTypes.includes(notification.activityType)) {
-            return false;
-          }
-          // Only show notifications that belong to the current user
-          if (notification.userId) {
-            return notification.userId === userId;
-          }
-          // If userId is not available in notification, skip it (we have userId, so be strict)
-          return false;
-        }
+        (notification: ActivityLog) =>
+          !officeAdminActivityTypes.includes(notification.activityType)
       );
 
       // Sort notifications by date (newest first)
       const sortedNotifications = sortNotificationsByDate(
         filteredNotifications
       );
-      
-      // Simple replacement - trust the server state
-      // WebSocket updates will be re-added when they come through
       setNotifications(sortedNotifications);
-      
-      // Calculate and update unread count
       const unreadCount = sortedNotifications.filter(
         (notification: ActivityLog) => !notification.isRead
       ).length;
       setUnreadCount(unreadCount);
     } catch (error) {
       console.error("Error fetching notifications:", error);
-      // Don't clear notifications on error - keep existing ones
-      // Only clear if it's an auth error (handled above)
+      // Set empty notifications and zero unread count on error
+      setNotifications([]);
+      setUnreadCount(0);
     }
   };
 
@@ -241,8 +185,15 @@ export default function NotificationDropdown({
     const RECONNECT_DELAY = 5000;
 
     const connectStomp = () => {
+      // Only connect if we have a user ID
+      if (!currentUserId) {
+        console.log("Waiting for user ID before connecting to WebSocket...");
+        return;
+      }
+
       try {
         console.log("Connecting to WebSocket at:", `${WS_BASE_URL}/ws`);
+        console.log("Will subscribe to user-specific channel:", `/topic/notifications/${currentUserId}`);
         // Create SockJS connection with error handling
         const socket = new SockJS(`${WS_BASE_URL}/ws`, null, {
           transports: ["websocket", "xhr-streaming", "xhr-polling"],
@@ -260,8 +211,15 @@ export default function NotificationDropdown({
               clearInterval(pollInterval);
               pollInterval = null;
             }
-            stompClient.subscribe("/topic/notifications", (message) => {
+            // Subscribe to user-specific notification channel
+            stompClient.subscribe(`/topic/notifications/${currentUserId}`, (message) => {
               const notification = JSON.parse(message.body);
+
+              // Additional safety check: verify userId matches
+              if (notification.userId && notification.userId !== currentUserId) {
+                console.warn("Received notification for different user, ignoring:", notification.userId);
+                return;
+              }
 
               // Filter out OFFICE_ADMIN specific notifications
               const officeAdminActivityTypes = [
@@ -277,17 +235,6 @@ export default function NotificationDropdown({
                 return; // Ignore office admin notifications
               }
 
-              // Only process notifications that belong to the current user
-              const userId = currentUserIdRef.current;
-              if (userId && notification.userId && notification.userId !== userId) {
-                return; // Ignore notifications not for this user
-              }
-
-              // If userId is not available in notification, skip for safety
-              if (userId && !notification.userId) {
-                return; // Skip notifications without userId when we have currentUserId
-              }
-
               setNotifications((prev) => {
                 const exists = prev.some((n) => n.id === notification.id);
                 let updatedNotifications: ActivityLog[];
@@ -299,10 +246,9 @@ export default function NotificationDropdown({
                   );
                 } else {
                   // Add new notification
-                  if (notificationAudio.current) {
-                    notificationAudio.current.play().catch((error) => {
-                      console.log("Notification sound play failed:", error);
-                    });
+                  if (notificationAudio) {
+                    notificationAudio.play();
+                    console.log("Notification sound played");
                   }
                   updatedNotifications = [notification, ...prev];
                   setHasNewNotification(true);
@@ -323,23 +269,13 @@ export default function NotificationDropdown({
           onStompError: () => {
             setWsConnected(false);
             if (!pollInterval) {
-              pollInterval = setInterval(() => {
-                // Only fetch if we have userId
-                if (currentUserIdRef.current) {
-                  fetchNotifications();
-                }
-              }, 30000); // Poll every 30 seconds
+              pollInterval = setInterval(fetchNotifications, 30000); // Increase to 30 seconds
             }
           },
           onWebSocketClose: () => {
             setWsConnected(false);
             if (!pollInterval) {
-              pollInterval = setInterval(() => {
-                // Only fetch if we have userId
-                if (currentUserIdRef.current) {
-                  fetchNotifications();
-                }
-              }, 30000); // Poll every 30 seconds
+              pollInterval = setInterval(fetchNotifications, 30000); // Increase to 30 seconds
             }
             if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
               reconnectAttempts++;
@@ -359,18 +295,18 @@ export default function NotificationDropdown({
         // Fall back to polling if WebSocket fails
         if (!pollInterval) {
           console.log("Falling back to polling for notifications");
-          pollInterval = setInterval(() => {
-            // Only fetch if we have userId
-            if (currentUserIdRef.current) {
-              fetchNotifications();
-            }
-          }, 30000);
+          pollInterval = setInterval(fetchNotifications, 30000);
         }
       }
     };
 
-    // Connect to WebSocket first
-    connectStomp();
+    // Connect to WebSocket only after we have user ID
+    if (currentUserId) {
+      connectStomp();
+    }
+
+    // Initial fetch of notifications
+    fetchNotifications();
 
     // Don't set up polling here - it will only be set up if WebSocket fails
 
@@ -378,35 +314,7 @@ export default function NotificationDropdown({
       stompClientRef.current?.deactivate();
       if (pollInterval) clearInterval(pollInterval);
     };
-  }, []); // Only run once on mount
-
-  // Fetch notifications when currentUserId is available
-  useEffect(() => {
-    if (currentUserId) {
-      // Small delay to ensure ref is also updated
-      const timer = setTimeout(() => {
-        fetchNotifications();
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUserId]);
-
-  // Periodic refresh of notifications (every 60 seconds) to sync with server
-  useEffect(() => {
-    if (!currentUserId) return;
-    
-    const refreshInterval = setInterval(() => {
-      // Always refresh to keep in sync with server
-      // The merge logic will preserve the correct state
-      if (currentUserIdRef.current) {
-        fetchNotifications();
-      }
-    }, 60000); // Refresh every 60 seconds
-
-    return () => clearInterval(refreshInterval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUserId]);
+  }, [currentUserId]); // Re-run when currentUserId changes
 
   const isNotificationNew = (dateString: string): boolean => {
     try {

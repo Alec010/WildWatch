@@ -26,20 +26,20 @@ public class ModerationService {
 
     public Result review(String incidentType, String description, String enhancedLocation, List<String> tags, List<String> officeNames) {
         try {
-            String prompt = String.format(
-                    "You are a strict content moderator for a university incident reporting system.\n" +
+            // Use String concatenation instead of String.format to avoid format specifier issues
+            // This allows users to include special characters like %, -, etc. in their descriptions
+            String prompt = "You are a strict content moderator for a university incident reporting system.\n" +
                     "Decide whether to ALLOW or BLOCK a report BEFORE it is saved.\n" +
                     "BLOCK if ANY of the following apply:\n" +
                     "- Harassment, slurs, demeaning stereotypes, targeted insults, threats.\n" +
                     "- Rudeness/abuse without a legitimate incident description.\n" +
-                    "- Disparagement/shaming/defamation directed at any university office (e.g., accusing or ridiculing an office, degrading its image or reputation) without constructive, factual reporting intent. The university offices include: %s.\n" +
+                    "- Disparagement/shaming/defamation directed at any university office (e.g., accusing or ridiculing an office, degrading its image or reputation) without constructive, factual reporting intent. The university offices include: " + 
+                    (officeNames == null || officeNames.isEmpty() ? "[]" : officeNames.toString()) + ".\n" +
                     "- Calls to harm, doxx, or publicize staff.\n" +
                     "ALLOW when text is neutral, factual, or safety-focused even if it mentions offices neutrally.\n" +
-                    "Inputs:\n- IncidentType: '%s'\n- Description: '%s'\n- Location: '%s'\n- Tags: %s\n\n" +
-                    "Return JSON with fields only: decision (ALLOW|BLOCK), confidence (0-1), reasons (array of short phrases such as 'harassment', 'hate-speech', 'office-disparagement'). No extra text.",
-                    officeNames == null || officeNames.isEmpty() ? "[]" : officeNames.toString(),
-                    safe(incidentType), safe(description), safe(enhancedLocation), tags == null ? "[]" : tags.toString()
-            );
+                    "Inputs:\n- IncidentType: '" + safe(incidentType) + "'\n- Description: '" + safe(description) + 
+                    "'\n- Location: '" + safe(enhancedLocation) + "'\n- Tags: " + (tags == null ? "[]" : tags.toString()) + "\n\n" +
+                    "Return JSON with fields only: decision (ALLOW|BLOCK), confidence (0-1), reasons (array of short phrases such as 'harassment', 'hate-speech', 'office-disparagement'). No extra text.";
 
             Map<String, Object> part = new HashMap<>();
             part.put("text", prompt);

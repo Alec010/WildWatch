@@ -27,8 +27,8 @@ public class ActivityLogService {
         log.setIncident(incident);
         log.setUser(user);
         activityLogRepository.save(log);
-        // Send notification to WebSocket topic
-        messagingTemplate.convertAndSend("/topic/notifications", toNotificationDTO(log));
+        // Send notification to user-specific WebSocket topic to prevent cross-user notification leakage
+        messagingTemplate.convertAndSend("/topic/notifications/" + user.getId(), toNotificationDTO(log));
     }
 
     private NotificationDTO toNotificationDTO(ActivityLog log) {
@@ -38,8 +38,9 @@ public class ActivityLogService {
         dto.setDescription(log.getDescription());
         dto.setCreatedAt(log.getCreatedAt());
         dto.setIsRead(log.getIsRead());
+        // Include userId for client-side validation
         if (log.getUser() != null) {
-            dto.setUserId(String.valueOf(log.getUser().getId()));
+            dto.setUserId(log.getUser().getId());
         }
         if (log.getIncident() != null) {
             NotificationDTO.IncidentDTO incidentDTO = new NotificationDTO.IncidentDTO();

@@ -41,47 +41,27 @@ public class TagGenerationService {
 
     public List<String> generateTags(String description, String location, String incidentType) {
         try {
-            // Normalize special characters (em dash, en dash to regular hyphen)
-            if (location != null) {
-                location = location.replace('\u2013', '-')  // En dash
-                                  .replace('\u2014', '-')   // Em dash
-                                  .replace('\u2015', '-');  // Horizontal bar
-            }
-            if (incidentType != null) {
-                incidentType = incidentType.replace('\u2013', '-')  // En dash
-                                          .replace('\u2014', '-')   // Em dash
-                                          .replace('\u2015', '-');  // Horizontal bar
-            }
-            if (description != null) {
-                description = description.replace('\u2013', '-')  // En dash
-                                        .replace('\u2014', '-')   // Em dash
-                                        .replace('\u2015', '-');  // Horizontal bar
-            }
-            
             // Sanitize location by removing plus codes before sending to AI
             String sanitizedLocation = removePlusCodes(location);
 
-            String formatString = "You are classifying an incident into tags.\n"
-                    + "Input:\n"
-                    + "- Incident Type: '%s'\n"
-                    + "- Description: '%s'\n"
-                    + "- Location: '%s'\n"
-                    + "Task:\n"
-                    + "- Generate EXACTLY 5 single-word tags (NO phrases, NO hyphens, ONLY one word per tag).\n"
-                    + "- First 2 tags MUST be location-related (building names, room identifiers like NGE207, area names from the location).\n"
-                    + "- Next 3 tags MUST be about the incident description and incident type (context, severity, parties involved, impact).\n"
-                    + "- MANDATORY: If the location contains building identifiers or room codes (e.g., 'NGE207', 'GLE', 'MIS'), include them as location tags WITHOUT hyphens (e.g., 'NGE207' NOT 'NGE-207').\n"
-                    + "- DO NOT include date or time tags (e.g., '2025-09-23', '10:30', dates, times).\n"
-                    + "- DO NOT add external campuses, cities, or countries that are not explicitly present in the input.\n"
-                    + "- Each tag MUST be a SINGLE WORD ONLY in sentence case (first letter capitalized, rest lowercase), except building codes which should be uppercase (e.g., 'NGE207', 'GLE').\n"
-                    + "- Avoid duplicates and avoid generic single-word tags like 'Issue' or 'Problem'.\n"
-                    + "- Output format: LocationTag1, LocationTag2, DescTag1, DescTag2, DescTag3\n"
-                    + "- Example: NGE207, Building, Vandalism, Damage, Urgent";
-            String prompt = String.format(formatString,
-                    incidentType == null ? "" : incidentType,
-                    description == null ? "" : description,
-                    sanitizedLocation
-            );
+            // Use String concatenation instead of String.format to avoid format specifier issues
+            // This allows users to include special characters like %, -, etc. in their descriptions
+            String prompt = "You are classifying an incident into tags.\n" +
+                    "Input:\n" +
+                    "- Incident Type: '" + (incidentType == null ? "" : incidentType) + "'\n" +
+                    "- Description: '" + (description == null ? "" : description) + "'\n" +
+                    "- Location: '" + sanitizedLocation + "'\n" +
+                    "Task:\n" +
+                    "- Generate EXACTLY 20 single-word tags (NO phrases, NO hyphens, ONLY one word per tag).\n" +
+                    "- First 3 tags MUST be location-related (building names, room identifiers, area names from the location).\n" +
+                    "- Next 17 tags MUST be about the incident description and incident type (context, severity, parties involved, impact).\n" +
+                    "- MANDATORY: If the location contains building identifiers or acronyms (e.g., 'GLE', 'MIS'), include them as location tags.\n" +
+                    "- DO NOT include date or time tags (e.g., '2025-09-23', '10:30', dates, times).\n" +
+                    "- DO NOT add external campuses, cities, or countries that are not explicitly present in the input.\n" +
+                    "- Each tag MUST be a SINGLE WORD ONLY in sentence case (first letter capitalized, rest lowercase).\n" +
+                    "- Avoid duplicates and avoid generic single-word tags like 'Issue' or 'Problem'.\n" +
+                    "- Output format: LocationTag1, LocationTag2, LocationTag3, DescTag1, DescTag2, ..., DescTag17\n" +
+                    "- Example: Gle, Classroom, Building, Vandalism, Property, Damage, Window, Broken, Safety, Urgent, Student, Witness, Report, Security, Glass, Shattered, Morning, Incident, Investigation, Evidence";
 
             // Build Gemini API request body
             Map<String, Object> part = new HashMap<>();
@@ -122,13 +102,13 @@ public class TagGenerationService {
             Map<String, Object> body = response.getBody();
             if (body == null || !body.containsKey("candidates")) {
                 log.error("Invalid response from Gemini API: {}", body);
-                return generateFallbackTags(description, location, incidentType);
+                return List.of();
             }
 
             List candidates = (List) body.get("candidates");
             if (candidates.isEmpty()) {
                 log.error("No candidates in Gemini API response");
-                return generateFallbackTags(description, location, incidentType);
+                return List.of();
             }
 
             Map firstCandidate = (Map) candidates.get(0);
@@ -136,16 +116,11 @@ public class TagGenerationService {
             List parts = (List) contentMap.get("parts");
             if (parts.isEmpty()) {
                 log.error("No parts in Gemini API response content");
-                return generateFallbackTags(description, location, incidentType);
+                return List.of();
             }
 
             Map responsePart = (Map) parts.get(0);
             String tagsText = ((String) responsePart.get("text")).trim();
-            
-            if (tagsText == null || tagsText.isEmpty()) {
-                log.error("Empty tags text from Gemini API");
-                return generateFallbackTags(description, location, incidentType);
-            }
 
             // Patterns to detect date/time tags
             Pattern datePattern = Pattern.compile("\\d{4}-\\d{2}-\\d{2}"); // YYYY-MM-DD
@@ -166,9 +141,9 @@ public class TagGenerationService {
                                 && !dayPattern.matcher(tagLower).find();
                     })
                     .filter(tag -> {
-                        // ONLY allow single words (no spaces, no hyphens, alphanumeric only)
-                        // Building codes like NGE207 should be without hyphens
-                        return tag.matches("^[A-Za-z0-9]+$");
+                        // ONLY allow single words (no spaces, hyphens, or special characters except building codes like GLE-202)
+                        // Allow alphanumeric and single hyphen for building codes
+                        return tag.matches("^[A-Za-z0-9]+(-[A-Za-z0-9]+)?$");
                     })
                     .collect(Collectors.toList());
 
@@ -208,17 +183,7 @@ public class TagGenerationService {
                     // Skip geo-like tag that doesn't appear in the original input
                     continue;
                 }
-                // Normalize building codes: remove hyphens (e.g., NGE-207 -> NGE207)
-                String normalized = t;
-                if (t.contains("-")) {
-                    // Check if it's a building code pattern (e.g., NGE-207, GLE-202)
-                    Pattern buildingCodeWithHyphen = Pattern.compile("^([A-Z]{2,})-(\\d+)$");
-                    Matcher m = buildingCodeWithHyphen.matcher(t);
-                    if (m.matches()) {
-                        normalized = m.group(1) + m.group(2); // Remove hyphen: NGE-207 -> NGE207
-                    }
-                }
-                cleanedGenerated.add(normalized);
+                cleanedGenerated.add(t);
             }
 
             // Post-process to ensure building/location codes are present (e.g., GLE, GLE-202)
@@ -228,7 +193,7 @@ public class TagGenerationService {
             String safeLocation = location == null ? "" : location;
             String safeDescription = description == null ? "" : description;
 
-            // 1) Extract patterns like GLE202 / GLE-202 / GLE 202 from location and description, normalize to GLE202 (NO hyphen, NO space)
+            // 1) Extract patterns like GLE202 / GLE-202 from location and description, normalize to GLE-202
             Pattern buildingRoomPattern = Pattern.compile("\\b([A-Z]{2,})[- ]?(\\d{1,4})\\b");
             for (String source : Arrays.asList(safeLocation, safeDescription)) {
                 Matcher m = buildingRoomPattern.matcher(source);
@@ -236,21 +201,21 @@ public class TagGenerationService {
                     String building = m.group(1);
                     String room = m.group(2);
                     if (!acronymStoplist.contains(building)) {
-                        String normalized = building + room; // NO hyphen - e.g., NGE207 not NGE-207
+                        String normalized = building + "-" + room;
                         mandatoryLocationTokens.add(building);
                         mandatoryLocationTokens.add(normalized);
                     }
                 }
             }
 
-            // 2) Force include building code/name tokens like "GLE" and "GLEBuilding" (no hyphen)
+            // 2) Force include building code/name tokens like "GLE" and "GLE-Building"
             Pattern buildingNamePattern = Pattern.compile("\\b([A-Z]{2,})\\s+Building\\b", Pattern.CASE_INSENSITIVE);
             Matcher nameMatcher = buildingNamePattern.matcher(safeLocation);
             while (nameMatcher.find()) {
                 String code = nameMatcher.group(1).toUpperCase();
                 if (!acronymStoplist.contains(code)) {
                     mandatoryLocationTokens.add(code);
-                    mandatoryLocationTokens.add(code + "Building"); // No hyphen
+                    mandatoryLocationTokens.add(code + "-Building");
                 }
             }
 
@@ -280,36 +245,17 @@ public class TagGenerationService {
                 merged.add(t); // Already normalized to sentence case
             }
 
-            // Enforce exactly 5 tags (2 location + 3 description), prioritizing mandatory tokens
-            List<String> finalTags = new ArrayList<>(5);
+            // Enforce exactly 20 tags, prioritizing mandatory tokens
+            List<String> finalTags = new ArrayList<>(20);
             for (String t : merged) {
-                if (finalTags.size() >= 5) {
+                if (finalTags.size() >= 20) {
                     break;
                 }
                 finalTags.add(t);
             }
 
-            if (finalTags.size() != 5) {
-                log.warn("Generated {} tags after enforcement (expected 5)", finalTags.size());
-                // If we have fewer than 3 tags, add fallback tags to ensure minimum
-                if (finalTags.size() < 3) {
-                    log.error("Critical: Only {} tags generated, adding fallback tags", finalTags.size());
-                    // Add generic fallback tags if we have too few
-                    if (finalTags.size() == 0) {
-                        finalTags.add("Incident");
-                        finalTags.add("Report");
-                        finalTags.add("Concern");
-                    } else if (finalTags.size() == 1) {
-                        finalTags.add("Report");
-                        finalTags.add("Incident");
-                    } else if (finalTags.size() == 2) {
-                        finalTags.add("Incident");
-                    }
-                    // Fill to 5 if needed
-                    while (finalTags.size() < 5) {
-                        finalTags.add("General");
-                    }
-                }
+            if (finalTags.size() != 20) {
+                log.warn("Generated {} tags after enforcement (expected 20)", finalTags.size());
             }
 
             return finalTags;
@@ -318,82 +264,14 @@ public class TagGenerationService {
 
             // Check if API key is configured
             if (apiKey == null || apiKey.trim().isEmpty() || apiKey.equals("${GEMINI_API_KEY}")) {
-                log.error("Gemini API key is not configured. Using fallback tags.");
-                return generateFallbackTags(description, location, incidentType);
+                log.error("Gemini API key is not configured. Please set GEMINI_API_KEY environment variable.");
+                throw new RuntimeException("AI service not configured. Please contact administrator.");
             }
 
             // Log more specific error details
-            log.error("Gemini API Error Details: {}. Using fallback tags.", e.getMessage());
-            return generateFallbackTags(description, location, incidentType);
+            log.error("Gemini API Error Details: {}", e.getMessage());
+            throw new RuntimeException("Failed to generate tags: " + e.getMessage());
         }
-    }
-    
-    /**
-     * Generate fallback tags when AI generation fails
-     * Always returns exactly 5 tags
-     */
-    private List<String> generateFallbackTags(String description, String location, String incidentType) {
-        List<String> fallbackTags = new ArrayList<>(5);
-        
-        // Extract building code from location if available
-        if (location != null) {
-            Pattern buildingRoomPattern = Pattern.compile("\\b([A-Z]{2,})[- ]?(\\d{1,4})\\b");
-            Matcher m = buildingRoomPattern.matcher(location);
-            if (m.find()) {
-                String building = m.group(1);
-                String room = m.group(2);
-                fallbackTags.add(building + room); // e.g., NGE201
-                fallbackTags.add(building); // e.g., NGE
-            } else {
-                // Try to find standalone building codes
-                Pattern buildingPattern = Pattern.compile("\\b([A-Z]{2,})\\b");
-                Matcher bm = buildingPattern.matcher(location);
-                if (bm.find()) {
-                    fallbackTags.add(bm.group(1));
-                }
-            }
-        }
-        
-        // Add location-related tags
-        if (fallbackTags.size() < 2) {
-            if (location != null && location.toLowerCase().contains("building")) {
-                fallbackTags.add("Building");
-            }
-            if (fallbackTags.size() < 2) {
-                fallbackTags.add("Location");
-            }
-        }
-        
-        // Add description-related tags based on keywords
-        if (description != null) {
-            String descLower = description.toLowerCase();
-            if (descLower.contains("keyboard") || descLower.contains("usb") || descLower.contains("port") || descLower.contains("lan")) {
-                fallbackTags.add("Hardware");
-            } else if (descLower.contains("broken") || descLower.contains("damaged") || descLower.contains("non-functional")) {
-                fallbackTags.add("Damage");
-            } else {
-                fallbackTags.add("Equipment");
-            }
-            
-            if (descLower.contains("network") || descLower.contains("connect") || descLower.contains("lan")) {
-                fallbackTags.add("Network");
-            } else if (descLower.contains("workstation") || descLower.contains("pc") || descLower.contains("computer")) {
-                fallbackTags.add("Computer");
-            } else {
-                fallbackTags.add("Technical");
-            }
-        } else {
-            fallbackTags.add("Incident");
-            fallbackTags.add("Report");
-        }
-        
-        // Ensure we have exactly 5 tags
-        while (fallbackTags.size() < 5) {
-            fallbackTags.add("General");
-        }
-        
-        // Trim to exactly 5
-        return fallbackTags.subList(0, 5);
     }
 
     /**
@@ -407,22 +285,22 @@ public class TagGenerationService {
 
     /**
      * Score tags based on relevance factors and return top 5
-     * Structure: First 2 tags from allTags are location tags, next 3 are description tags
+     * Structure: First 3 tags from allTags are location tags, next 17 are description tags
      * Returns: Top 2 location tags + Top 3 description tags
      */
     private List<TagScore> scoreAndRankTags(List<String> tags, String description, String location, String incidentType) {
         List<TagScore> result = new ArrayList<>();
         
-        // Expecting: First 2 tags are location tags, next 3 are description/incident tags
-        // Return: First 2 location tags + Next 3 description tags
+        // Expecting: First 3 tags are location tags, next 17 are description/incident tags
+        // Return: First 2 location tags + First 3 description tags
         
-        if (tags.size() < 5) {
+        if (tags.size() < 6) {
             // Fallback: if not enough tags, return what we have
             for (int i = 0; i < Math.min(5, tags.size()); i++) {
                 TagScore ts = new TagScore();
                 ts.setTag(tags.get(i));
                 ts.setScore(100.0 - (i * 10.0));
-                ts.setReason(i < 2 ? "Location tag" : "Description tag");
+                ts.setReason(i < 3 ? "Location tag" : "Description tag");
                 result.add(ts);
             }
             return result;
@@ -437,11 +315,12 @@ public class TagGenerationService {
             result.add(ts);
         }
         
-        // Take next 3 description tags (indices 2, 3, 4)
-        for (int i = 2; i < Math.min(5, tags.size()); i++) {
+        // Take first 3 description tags (indices 3, 4, 5)
+        // Skip index 2 (3rd location tag) and start from index 3
+        for (int i = 3; i < Math.min(6, tags.size()); i++) {
             TagScore ts = new TagScore();
             ts.setTag(tags.get(i));
-            ts.setScore(90.0 - ((i - 2) * 5.0)); // Slightly lower score for description tags
+            ts.setScore(90.0 - ((i - 3) * 5.0)); // Slightly lower score for description tags
             ts.setReason("Description tag");
             result.add(ts);
         }
@@ -451,16 +330,12 @@ public class TagGenerationService {
 
     /**
      * Converts a tag to sentence case (first letter capitalized, rest
-     * lowercase). Preserves building codes like NGE207 in uppercase.
+     * lowercase). Handles hyphenated tags by capitalizing each word. Preserves
+     * acronyms (2-3 uppercase letters in a row).
      */
     private String toSentenceCase(String tag) {
         if (tag == null || tag.isEmpty()) {
             return tag;
-        }
-
-        // Check if it's a building code (2+ uppercase letters followed by digits, e.g., NGE207, GLE202)
-        if (Pattern.compile("^[A-Z]{2,}\\d+$").matcher(tag).matches()) {
-            return tag.toUpperCase(); // Keep building codes like NGE207 uppercase
         }
 
         // Check if it's an acronym (2-3 uppercase letters, possibly with numbers)
@@ -468,7 +343,34 @@ public class TagGenerationService {
             return tag.toUpperCase(); // Keep acronyms uppercase
         }
 
-        // Simple case: single word - convert to sentence case
+        // Handle hyphenated tags
+        if (tag.contains("-")) {
+            String[] parts = tag.split("-");
+            StringBuilder result = new StringBuilder();
+            for (int i = 0; i < parts.length; i++) {
+                if (i > 0) {
+                    result.append("-");
+                }
+                String part = parts[i].trim();
+                if (!part.isEmpty()) {
+                    // Check if part is an acronym
+                    if (Pattern.compile("^[A-Z]{2,3}(\\d+)?$").matcher(part).matches()) {
+                        result.append(part.toUpperCase());
+                    } else {
+                        part = part.toLowerCase();
+                        if (!part.isEmpty()) {
+                            result.append(Character.toUpperCase(part.charAt(0)));
+                            if (part.length() > 1) {
+                                result.append(part.substring(1));
+                            }
+                        }
+                    }
+                }
+            }
+            return result.toString();
+        }
+
+        // Simple case: single word
         tag = tag.toLowerCase();
         if (tag.isEmpty()) {
             return tag;

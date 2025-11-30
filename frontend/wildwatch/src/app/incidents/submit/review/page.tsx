@@ -278,16 +278,20 @@ export default function ReviewSubmissionPage() {
         }
       });
 
-      formData.append(
-        "incidentData",
-        JSON.stringify({
-          ...incidentData,
-          witnesses: processedWitnesses,
-          preferAnonymous: !!preferAnonymous,
-          tags: incidentData.tags || [], // Top 5 selected tags
-          allTags: incidentData.allTags || incidentData.tags || [], // All 20 tags for database
-        })
-      );
+      // Prepare incident data
+      const incidentPayload = {
+        ...incidentData,
+        witnesses: processedWitnesses,
+        preferAnonymous: !!preferAnonymous,
+        tags: incidentData.tags || [], // Top 5 selected tags
+        allTags: incidentData.allTags || incidentData.tags || [], // All 20 tags for database
+      };
+
+      // Log the payload for debugging (remove in production)
+      console.log("Incident payload:", incidentPayload);
+
+      // Use JSON.stringify which properly handles special characters
+      formData.append("incidentData", JSON.stringify(incidentPayload));
 
       const loadingToast = toast.loading("Processing files...", {
         description: "Uploading evidence files to secure storage.",
@@ -321,8 +325,16 @@ export default function ReviewSubmissionPage() {
 
       toast.dismiss(submissionToast);
 
-      if (!response.ok)
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (!response.ok) {
+        // Log the actual error response for debugging
+        const errorText = await response.text();
+        console.error("Submission error:", {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorText,
+        });
+        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+      }
 
       const responseData = await response.json();
       setTrackingNumber(responseData.trackingNumber);
@@ -345,6 +357,7 @@ export default function ReviewSubmissionPage() {
         id: `report-submitted-success-${Date.now()}`, // Unique timestamp-based ID to prevent duplicates
       });
     } catch (error) {
+      console.error("Submission error details:", error);
       throw error;
     } finally {
       setIsSubmitting(false);

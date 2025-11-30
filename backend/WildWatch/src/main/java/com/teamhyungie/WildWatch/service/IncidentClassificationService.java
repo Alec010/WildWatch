@@ -31,10 +31,11 @@ public class IncidentClassificationService {
      */
     public boolean isRealIncident(String incidentType, String description) {
         try {
-            String prompt = String.format(
-                    "Analyze this report and determine if it is a REAL INCIDENT or just a CONCERN:\n\n" +
-                    "Incident Type: '%s'\n" +
-                    "Description: '%s'\n\n" +
+            // Use String concatenation instead of String.format to avoid format specifier issues
+            // This allows users to include special characters like %, -, etc. in their descriptions
+            String prompt = "Analyze this report and determine if it is a REAL INCIDENT or just a CONCERN:\n\n" +
+                    "Incident Type: '" + safe(incidentType) + "'\n" +
+                    "Description: '" + safe(description) + "'\n\n" +
                     "A REAL INCIDENT is:\n" +
                     "- An actual event that occurred (theft, vandalism, harassment, safety hazard, etc.)\n" +
                     "- Something that requires immediate action or investigation\n" +
@@ -47,10 +48,7 @@ public class IncidentClassificationService {
                     "- A request for information\n" +
                     "- A general observation without a specific incident\n\n" +
                     "Return ONLY 'true' if it's a REAL INCIDENT, or 'false' if it's just a CONCERN. " +
-                    "Do not include any explanations or additional text.",
-                    safe(incidentType),
-                    safe(description)
-            );
+                    "Do not include any explanations or additional text.";
 
             // Build Gemini API request body
             Map<String, Object> part = new HashMap<>();
