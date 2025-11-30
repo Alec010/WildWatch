@@ -509,6 +509,7 @@ export default function ReportScreen() {
       building: params.building,
       buildingName: params.buildingName,
       buildingCode: params.buildingCode,
+      room: params.room,
       withinCampus: params.withinCampus,
       hasProcessedLocationParams,
     });
@@ -520,6 +521,7 @@ export default function ReportScreen() {
       const building = (params.building as string) || "";
       const buildingName = (params.buildingName as string) || "";
       const buildingCode = (params.buildingCode as string) || "";
+      const room = (params.room as string) || "";
       const withinCampus =
         params.withinCampus === "true"
           ? true
@@ -539,6 +541,7 @@ export default function ReportScreen() {
         building,
         buildingName,
         buildingCode,
+        room,
         withinCampus,
         distanceFromCampusCenter,
         location,
@@ -554,6 +557,7 @@ export default function ReportScreen() {
       updateForm("building", building);
       updateForm("buildingName", buildingName);
       updateForm("buildingCode", buildingCode);
+      updateForm("room", room);
       updateForm("withinCampus", withinCampus);
       updateForm("distanceFromCampusCenter", distanceFromCampusCenter);
       updateForm("location", location);
@@ -566,6 +570,7 @@ export default function ReportScreen() {
         building,
         buildingName,
         buildingCode,
+        room,
         withinCampus,
         distanceFromCampusCenter,
         location,
@@ -931,6 +936,7 @@ export default function ReportScreen() {
       building: form.building,
       buildingName: form.buildingName,
       buildingCode: form.buildingCode,
+      room: form.room,
       withinCampus: form.withinCampus,
       distanceFromCampusCenter: form.distanceFromCampusCenter,
       description: form.description.trim(),
@@ -1513,6 +1519,21 @@ export default function ReportScreen() {
                           >
                             Building: {form.buildingName}{" "}
                             {form.buildingCode && `(${form.buildingCode})`}
+                          </Text>
+                        )}
+                        {form.room && form.room.trim() && (
+                          <Text
+                            style={{
+                              color:
+                                form.withinCampus === false
+                                  ? "#991B1B"
+                                  : "#166534",
+                              fontSize: fontSize - 3,
+                              fontWeight: "600",
+                              marginTop: 4,
+                            }}
+                          >
+                            Specific Location: {form.room}
                           </Text>
                         )}
                       </View>
@@ -2648,6 +2669,21 @@ export default function ReportScreen() {
                         >
                           Building: {form.buildingName}{" "}
                           {form.buildingCode && `(${form.buildingCode})`}
+                        </Text>
+                      )}
+                      {form.room && form.room.trim() && (
+                        <Text
+                          style={{
+                            fontSize: fontSize - 2,
+                            color:
+                              form.withinCampus === false
+                                ? "#991B1B"
+                                : "#6B7280",
+                            fontWeight: "500",
+                            marginTop: 6,
+                          }}
+                        >
+                          Specific Location: {form.room}
                         </Text>
                       )}
                     </View>

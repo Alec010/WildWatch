@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
   Dimensions,
+  TextInput,
 } from 'react-native';
 import MapView, { Marker, Polygon, PROVIDER_GOOGLE } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,6 +31,7 @@ export default function MapPickerModal({
   const [isLoading, setIsLoading] = useState(true);
   const [selectedLocation, setSelectedLocation] = useState<LocationData | null>(null);
   const [isProcessingLocation, setIsProcessingLocation] = useState(false);
+  const [room, setRoom] = useState<string>('');
   const [mapRegion, setMapRegion] = useState({
     latitude: CAMPUS_CONFIG.CENTER.LATITUDE,
     longitude: CAMPUS_CONFIG.CENTER.LONGITUDE,
@@ -181,12 +183,16 @@ export default function MapPickerModal({
 
   const handleConfirmSelection = useCallback(() => {
     if (selectedLocation) {
-      onLocationSelect(selectedLocation);
+      onLocationSelect({
+        ...selectedLocation,
+        room: room.trim() || undefined,
+      });
     }
-  }, [selectedLocation, onLocationSelect]);
+  }, [selectedLocation, room, onLocationSelect]);
 
   const handleClose = useCallback(() => {
     setSelectedLocation(null);
+    setRoom('');
     onClose();
   }, [onClose]);
 
@@ -273,6 +279,38 @@ export default function MapPickerModal({
                 {selectedLocation.formattedAddress}
               </Text>
             )}
+
+            {/* Room/Specific Location Input */}
+            <View style={styles.roomInputContainer}>
+              <View style={styles.roomInputLabelRow}>
+                <Ionicons
+                  name="door-open"
+                  size={16}
+                  color={isOutsideCampus ? '#dc2626' : '#16a34a'}
+                />
+                <Text style={[
+                  styles.roomInputLabel,
+                  isOutsideCampus ? styles.outsideCampusText : styles.insideCampusText
+                ]}>
+                  Specific Room/Location
+                </Text>
+                <Text style={styles.roomInputOptional}>(Optional)</Text>
+              </View>
+              <TextInput
+                style={[
+                  styles.roomInput,
+                  isOutsideCampus ? styles.roomInputOutsideCampus : styles.roomInputInsideCampus
+                ]}
+                placeholder="e.g., NGE101, GL2304"
+                placeholderTextColor="#9ca3af"
+                value={room}
+                onChangeText={setRoom}
+                editable={!isOutsideCampus}
+              />
+              <Text style={styles.roomInputHint}>
+                Enter the specific room or location within the building
+              </Text>
+            </View>
 
             <Text style={[
               styles.coordinatesText,
@@ -604,6 +642,49 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: 'monospace',
     opacity: 0.8,
+  },
+  roomInputContainer: {
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  roomInputLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+    gap: 6,
+    flexWrap: 'wrap',
+  },
+  roomInputLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  roomInputOptional: {
+    fontSize: 11,
+    color: '#6b7280',
+    fontWeight: '400',
+  },
+  roomInput: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  roomInputInsideCampus: {
+    borderColor: '#bbf7d0',
+    backgroundColor: '#ffffff',
+    color: '#111827',
+  },
+  roomInputOutsideCampus: {
+    borderColor: '#fecaca',
+    backgroundColor: '#fef2f2',
+    color: '#6b7280',
+  },
+  roomInputHint: {
+    fontSize: 11,
+    color: '#6b7280',
+    marginTop: 2,
   },
   instructionsCard: {
     margin: 20,

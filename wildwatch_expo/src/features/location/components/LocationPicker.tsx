@@ -233,6 +233,22 @@ export default function LocationPicker({
               </View>
             )}
 
+            {selectedLocation.room && (
+              <View style={styles.roomInfo}>
+                <Ionicons
+                  name="door-open"
+                  size={16}
+                  color={isOutsideCampus ? '#dc2626' : '#16a34a'}
+                />
+                <Text style={[
+                  styles.roomText,
+                  isOutsideCampus ? styles.outsideCampusText : styles.insideCampusText
+                ]}>
+                  Specific Location: {selectedLocation.room}
+                </Text>
+              </View>
+            )}
+
             {selectedLocation.latitude && selectedLocation.longitude && (
               <Text style={[
                 styles.coordinatesText,
@@ -482,6 +498,17 @@ const styles = StyleSheet.create({
   },
   addressText: {
     fontSize: 14,
+    flex: 1,
+  },
+  roomInfo: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+    gap: 6,
+  },
+  roomText: {
+    fontSize: 14,
+    fontWeight: '500',
     flex: 1,
   },
   coordinatesText: {
