@@ -28,7 +28,7 @@ public class ActivityLogResponse {
         response.setCreatedAt(activityLog.getCreatedAt());
         response.setIsRead(activityLog.getIsRead());
         if (activityLog.getUser() != null) {
-            response.setUserId(activityLog.getUser().getId());
+            response.setUserId(String.valueOf(activityLog.getUser().getId()));
         }
 
         if (activityLog.getIncident() != null) {
