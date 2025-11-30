@@ -65,24 +65,16 @@ export function LoginForm() {
         throw new Error(data.message || "Failed to login")
       }
 
+      // Show loader immediately
+      setShowLoader(true)
+      setLoadingMessage("Preparing your dashboard...")
+
       // Store the token using token service (handles automatic refresh)
       const tokenService = (await import('@/utils/tokenService')).default;
       tokenService.setToken(data.token);
 
-      toast.success("Login successful!", {
-        description: "Welcome back to WildWatch",
-        icon: <CheckCircle2 className="h-5 w-5 text-green-500" />,
-        className: "bg-white border-green-100 text-green-800",
-        duration: 3000,
-        id: `login-success-${Date.now()}`,
-      })
-
-      // Show loader after toast
-      setShowLoader(true)
-      setLoadingMessage("Preparing your dashboard...")
-
-      // Wait a moment for token to be properly stored
-      await new Promise(resolve => setTimeout(resolve, 300));
+      // Wait for token to be properly stored and context to update
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       // Check if user data exists and has required properties
       if (!data.user || typeof data.user.termsAccepted === 'undefined') {
@@ -102,16 +94,36 @@ export function LoginForm() {
         const userData = await profileResponse.json()
         const redirectPath = handleAuthRedirect(userData)
         
-        // Small delay before redirect to ensure everything is ready
-        await new Promise(resolve => setTimeout(resolve, 200));
+        // Navigate and show success toast after navigation starts
         router.push(redirectPath)
+        
+        // Small delay to let navigation start, then show toast
+        setTimeout(() => {
+          toast.success("Login successful!", {
+            description: "Welcome back to WildWatch",
+            icon: <CheckCircle2 className="h-5 w-5 text-green-500" />,
+            className: "bg-white border-green-100 text-green-800",
+            duration: 2000,
+            id: `login-success-${Date.now()}`,
+          })
+        }, 100)
       } else {
         // Use the user data from login response
         const redirectPath = handleAuthRedirect(data.user)
         
-        // Small delay before redirect to ensure everything is ready
-        await new Promise(resolve => setTimeout(resolve, 200));
+        // Navigate and show success toast after navigation starts
         router.push(redirectPath)
+        
+        // Small delay to let navigation start, then show toast
+        setTimeout(() => {
+          toast.success("Login successful!", {
+            description: "Welcome back to WildWatch",
+            icon: <CheckCircle2 className="h-5 w-5 text-green-500" />,
+            className: "bg-white border-green-100 text-green-800",
+            duration: 2000,
+            id: `login-success-${Date.now()}`,
+          })
+        }, 100)
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Failed to login"

@@ -25,7 +25,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const fetchUserProfile = useCallback(async () => {
     const token = Cookies.get('token');
     
-    // If no token, reset state
+    // If no token, reset state immediately
     if (!token) {
       setUserRole(null);
       setIsLoading(false);
@@ -33,7 +33,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      setIsLoading(true);
       const response = await api.get('/api/auth/profile');
       if (response.ok) {
         const data = await response.json();
@@ -67,9 +66,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
         setUserRole(null);
         setIsLoading(false);
       }
-      // If token exists, always refetch to get the latest user role
+      // If token exists, refetch profile
+      // Add a small delay to prevent racing with navigation
       else if (token && fetchUserProfileRef.current) {
-        fetchUserProfileRef.current();
+        setTimeout(() => {
+          if (fetchUserProfileRef.current) {
+            fetchUserProfileRef.current();
+          }
+        }, 200);
       }
     };
 

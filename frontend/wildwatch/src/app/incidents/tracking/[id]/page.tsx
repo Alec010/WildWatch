@@ -6,6 +6,7 @@ import { Sidebar } from "@/components/Sidebar";
 import { OfficeAdminSidebar } from "@/components/OfficeAdminSidebar";
 import { Navbar } from "@/components/Navbar";
 import { useSidebar } from "@/contexts/SidebarContext";
+import { useUser } from "@/contexts/UserContext";
 import {
   CheckCircle,
   Clock,
@@ -148,11 +149,8 @@ export default function CaseDetailsPage() {
   const { id } = useParams(); // id is trackingNumber
   const router = useRouter();
   const { collapsed } = useSidebar();
-  const [userRole, setUserRole] = useState<string | null>(() =>
-    typeof window !== "undefined"
-      ? sessionStorage.getItem("userRole") || null
-      : null
-  );
+  const { userRole: contextUserRole, isLoading: isUserLoading } = useUser();
+  const [userRole, setUserRole] = useState<string | null>(null);
   const [incident, setIncident] = useState<IncidentDetails | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -179,13 +177,13 @@ export default function CaseDetailsPage() {
   const [showFollowUpDialog, setShowFollowUpDialog] = useState(false);
   const [isFollowUpLoading, setIsFollowUpLoading] = useState(false);
   const [followUpCooldown, setFollowUpCooldown] = useState<Date | null>(null);
-  const [keepSidebar, setKeepSidebar] = useState<boolean>(() => {
-    try {
-      return sessionStorage.getItem("ww_keep_sidebar") === "1";
-    } catch {
-      return false;
+
+  // Update userRole from context
+  useEffect(() => {
+    if (contextUserRole) {
+      setUserRole(contextUserRole);
     }
-  });
+  }, [contextUserRole]);
 
   const statusSteps = [
     { key: "Submitted", label: "Submitted" },
@@ -269,9 +267,9 @@ export default function CaseDetailsPage() {
     }
   };
 
-  // Fetch user profile (role and email) on mount
+  // Fetch user email on mount
   useEffect(() => {
-    const fetchUserProfile = async () => {
+    const fetchUserEmail = async () => {
       const token = document.cookie
         .split("; ")
         .find((row) => row.startsWith("token="))
@@ -289,15 +287,13 @@ export default function CaseDetailsPage() {
         );
         if (profileResponse.ok) {
           const profileData = await profileResponse.json();
-          setUserRole(profileData.role);
-          sessionStorage.setItem("userRole", profileData.role);
           setUserEmail(profileData.email);
         }
       } catch (e) {
         // ignore
       }
     };
-    fetchUserProfile();
+    fetchUserEmail();
   }, []);
 
   // Fetch incident details (as before)
@@ -382,15 +378,6 @@ export default function CaseDetailsPage() {
     };
     if (id) fetchIncidentDetails();
   }, [id, router]);
-
-  useEffect(() => {
-    if (keepSidebar) {
-      try {
-        sessionStorage.removeItem("ww_keep_sidebar");
-      } catch {}
-      setKeepSidebar(false);
-    }
-  }, [keepSidebar]);
 
   const estimatedResolution = incident
     ? getEstimatedResolution(
@@ -624,7 +611,14 @@ export default function CaseDetailsPage() {
     <div
       className={`min-h-screen flex flex-col bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9] ${inter.className}`}
     >
-      {userRole === "OFFICE_ADMIN" ? <OfficeAdminSidebar /> : <Sidebar />}
+      {/* Show sidebar skeleton while user role is loading */}
+      {isUserLoading || !userRole ? (
+        <SidebarSkeleton />
+      ) : userRole === "OFFICE_ADMIN" ? (
+        <OfficeAdminSidebar />
+      ) : (
+        <Sidebar />
+      )}
       <Navbar
         title="Case Details"
         subtitle={
