@@ -1,5 +1,5 @@
 // app/(tabs)/camera.tsx
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -210,6 +210,18 @@ export default function CameraScreen() {
       }
     }, [isReturningFromLocation, cameraPermission, showFallback, capturedImages.length])
   );
+
+  useEffect(() => {
+    // Verify ImagePicker is available
+    if (!ImagePicker || typeof ImagePicker.getCameraPermissionsAsync !== 'function') {
+      console.error("ImagePicker module not available");
+      Alert.alert(
+        "Error",
+        "Camera module is not available. Please restart the app.",
+        [{ text: "OK" }]
+      );
+    }
+  }, []);
 
   const initializeCamera = async () => {
     try {

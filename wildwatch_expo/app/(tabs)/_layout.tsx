@@ -62,14 +62,42 @@ function CustomTabBar({ state, descriptors, navigation }: CustomTabBarProps) {
         if (route.name === "report") {
           const handleReportPress = async () => {
             try {
+              // Add check to ensure ImagePicker is available
+              if (!ImagePicker || typeof ImagePicker.getCameraPermissionsAsync !== 'function') {
+                console.error("ImagePicker not available");
+                // Fallback navigation
+                const flowStep = await storage.getReportFlowStep();
+                switch (flowStep) {
+                  case 1: navigation.navigate("camera"); break;
+                  case 2: navigation.navigate("location"); break;
+                  case 3: navigation.navigate("report"); break;
+                  default: navigation.navigate("camera");
+                }
+                return;
+              }
+
               // Request permissions upfront when user presses report button
               console.log("Report button pressed - requesting permissions...");
               
-              // Check current permission status first
-              const [cameraStatus, mediaStatus] = await Promise.all([
-                ImagePicker.getCameraPermissionsAsync().catch(() => ({ status: "undetermined", canAskAgain: true })),
-                ImagePicker.getMediaLibraryPermissionsAsync().catch(() => ({ status: "undetermined", canAskAgain: true })),
-              ]);
+              // Check current permission status first with error handling
+              let cameraStatus, mediaStatus;
+              try {
+                [cameraStatus, mediaStatus] = await Promise.all([
+                  ImagePicker.getCameraPermissionsAsync().catch(() => ({ status: "undetermined", canAskAgain: true })),
+                  ImagePicker.getMediaLibraryPermissionsAsync().catch(() => ({ status: "undetermined", canAskAgain: true })),
+                ]);
+              } catch (error) {
+                console.error("Error checking permissions:", error);
+                // Navigate anyway - permissions will be handled on camera screen
+                const flowStep = await storage.getReportFlowStep();
+                switch (flowStep) {
+                  case 1: navigation.navigate("camera"); break;
+                  case 2: navigation.navigate("location"); break;
+                  case 3: navigation.navigate("report"); break;
+                  default: navigation.navigate("camera");
+                }
+                return;
+              }
 
               console.log("Current permissions - Camera:", cameraStatus.status, "Media:", mediaStatus.status);
 

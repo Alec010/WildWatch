@@ -8,14 +8,16 @@
       "developmentClient": false,
       "distribution": "internal",
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "gradleVersion": "8.0"
       }
     },
     "preview": {
       "developmentClient": false,
       "distribution": "internal",
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "gradleVersion": "8.0"
       }
     },
     "standalone": {
@@ -32,7 +34,8 @@
     },
     "production-apk": {
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "gradleVersion": "8.0"
       }
     }
   },
