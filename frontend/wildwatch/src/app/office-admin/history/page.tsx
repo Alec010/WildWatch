@@ -1017,9 +1017,6 @@ export default function OfficeAdminIncidentHistoryPage() {
                         Status
                       </th>
                       <th className="px-3 py-3 text-left text-xs font-medium text-[#8B0000] uppercase tracking-wider">
-                        Department
-                      </th>
-                      <th className="px-3 py-3 text-left text-xs font-medium text-[#8B0000] uppercase tracking-wider">
                         Finished Date
                       </th>
                       <th className="px-3 py-3 text-center text-xs font-medium text-[#8B0000] uppercase tracking-wider">
@@ -1030,7 +1027,7 @@ export default function OfficeAdminIncidentHistoryPage() {
                   <tbody className="bg-white divide-y divide-[#DAA520]/20">
                     {paginatedIncidents.length === 0 ? (
                       <tr>
-                        <td colSpan={10} className="p-6 text-center">
+                        <td colSpan={9} className="p-6 text-center">
                           <div className="w-16 h-16 bg-[#8B0000]/10 rounded-full flex items-center justify-center mx-auto mb-4">
                             <History className="h-8 w-8 text-[#8B0000]" />
                           </div>
@@ -1137,9 +1134,6 @@ export default function OfficeAdminIncidentHistoryPage() {
                                 ? "Dismissed"
                                 : incident.status}
                             </Badge>
-                          </td>
-                          <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-700">
-                            {incident.officeAdminName || "-"}
                           </td>
                           <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-700">
                             {incident.finishedDate

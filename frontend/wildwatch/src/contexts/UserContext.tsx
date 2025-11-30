@@ -66,14 +66,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
         setUserRole(null);
         setIsLoading(false);
       }
-      // If token exists, refetch profile
-      // Add a small delay to prevent racing with navigation
+      // If token exists, refetch profile immediately
       else if (token && fetchUserProfileRef.current) {
-        setTimeout(() => {
-          if (fetchUserProfileRef.current) {
-            fetchUserProfileRef.current();
-          }
-        }, 200);
+        // Set loading state before fetching
+        setIsLoading(true);
+        fetchUserProfileRef.current();
       }
     };
 

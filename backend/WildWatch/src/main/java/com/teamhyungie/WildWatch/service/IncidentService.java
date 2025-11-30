@@ -444,7 +444,30 @@ public class IncidentService {
         OfficeAdmin officeAdmin = officeAdminService.findByUserEmail(userEmail)
                 .orElseThrow(() -> new RuntimeException("User is not an office admin"));
         Office office = Office.valueOf(officeAdmin.getOfficeCode());
-        return incidentRepository.findOfficeAdminIncidents(office);
+        List<IncidentResponse> incidents = incidentRepository.findOfficeAdminIncidents(office);
+        
+        // Populate finishedDate for resolved/dismissed incidents from IncidentUpdate records
+        for (IncidentResponse incident : incidents) {
+            if (incident.getStatus() != null && 
+                (incident.getStatus().equalsIgnoreCase("resolved") || incident.getStatus().equalsIgnoreCase("dismissed"))) {
+                // Get the full incident to query updates
+                Optional<Incident> fullIncident = incidentRepository.findById(incident.getId());
+                if (fullIncident.isPresent()) {
+                    List<IncidentUpdate> updates = incidentUpdateRepository.findByIncidentOrderByUpdatedAtDesc(fullIncident.get());
+                    if (updates != null && !updates.isEmpty()) {
+                        // Find the most recent status change to Resolved or Dismissed
+                        for (IncidentUpdate update : updates) {
+                            if (update.getStatus().equalsIgnoreCase("resolved") || update.getStatus().equalsIgnoreCase("dismissed")) {
+                                incident.setFinishedDate(update.getUpdatedAt());
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        return incidents;
     }
 
     /**

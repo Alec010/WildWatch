@@ -73,8 +73,8 @@ export function LoginForm() {
       const tokenService = (await import('@/utils/tokenService')).default;
       tokenService.setToken(data.token);
 
-      // Wait for token to be properly stored and context to update
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Wait for token to be properly stored and UserContext to update
+      await new Promise(resolve => setTimeout(resolve, 300));
 
       // Check if user data exists and has required properties
       if (!data.user || typeof data.user.termsAccepted === 'undefined') {

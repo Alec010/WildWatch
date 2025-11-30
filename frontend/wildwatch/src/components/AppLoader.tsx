@@ -11,33 +11,21 @@ interface AppLoaderProps {
 export function AppLoader({ children }: AppLoaderProps) {
   const { isLoading } = useUser();
   const pathname = usePathname();
-  const [shouldShowLoader, setShouldShowLoader] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
+  // Track if component has mounted
   useEffect(() => {
-    // Don't show loader on public pages (login, signup, etc.)
-    const publicPages = ['/login', '/signup', '/reset-password', '/verify-email', '/auth/setup', '/auth/error'];
-    const isPublicPage = publicPages.some(page => pathname.startsWith(page));
-    
-    if (isPublicPage) {
-      setShouldShowLoader(false);
-      return;
-    }
+    setMounted(true);
+  }, []);
 
-    // For protected pages, show loader only if loading takes more than 100ms
-    // This prevents the flash when transitioning from login
-    if (isLoading) {
-      const timer = setTimeout(() => {
-        setShouldShowLoader(true);
-      }, 100);
-      
-      return () => clearTimeout(timer);
-    } else {
-      setShouldShowLoader(false);
-    }
-  }, [isLoading, pathname]);
+  // Don't show loader on public pages
+  const publicPages = ['/login', '/signup', '/reset-password', '/verify-email', '/auth/setup', '/auth/error', '/terms', '/'];
+  const isPublicPage = publicPages.some(page => pathname === page || pathname.startsWith(page + '/'));
 
-  // Only show loader for protected pages after delay
-  if (shouldShowLoader && isLoading) {
+  // Show loader if:
+  // 1. Component hasn't mounted yet (prevents hydration mismatch)
+  // 2. We're loading auth state AND not on a public page
+  if (!mounted || (isLoading && !isPublicPage)) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9] flex items-center justify-center">
         <div className="text-center">
@@ -47,7 +35,7 @@ export function AppLoader({ children }: AppLoaderProps) {
             <div className="absolute inset-4 rounded-full border-t-2 border-b-2 border-[#8B0000] animate-spin animation-delay-300"></div>
           </div>
           <p className="mt-6 text-gray-600 font-medium">
-            Loading application...
+            {!mounted ? "Initializing..." : "Loading application..."}
           </p>
         </div>
       </div>
