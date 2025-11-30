@@ -70,16 +70,18 @@ public class OfficeAssignmentService {
                     "Location: %s\n" +
                     "Tags: %s\n\n" +
                     "CRITICAL RULES (FOLLOW IN ORDER):\n" +
-                    "1. Student fights/bullying/misbehavior/conflicts → SSO (disciplinary)\n" +
-                    "2. Parking/car/vehicle issues → SSD\n" +
-                    "3. Theft/robbery/external threats → SSD\n" +
-                    "4. WiFi/network/computer/lab → TSG\n" +
-                    "5. Property/equipment/grounds → OPC\n" +
-                    "6. Academic/counseling → SSO\n" +
-                    "7. Student advocacy → SSG\n\n" +
+                    "1. NGE Building rooms starting with 1 or 2 (NGE102, NGE203, etc.) → TSG (computer labs)\n" +
+                    "2. Student fights/bullying/misbehavior/conflicts → SSO (disciplinary)\n" +
+                    "3. Parking/car/vehicle issues → SSD\n" +
+                    "4. Theft/robbery/external threats → SSD\n" +
+                    "5. WiFi/network/computer/lab → TSG\n" +
+                    "6. Property/equipment/grounds → OPC\n" +
+                    "7. Academic/counseling → SSO\n" +
+                    "8. Student advocacy → SSG\n\n" +
                     "KEY DISTINCTION:\n" +
                     "- Student-on-student incidents (fights, bullying) = SSO\n" +
-                    "- External threats or theft = SSD\n\n" +
+                    "- External threats or theft = SSD\n" +
+                    "- NGE rooms NGE1XX or NGE2XX = TSG (computer labs)\n\n" +
                     "Offices:\n%s\n" +
                     "Return ONLY: TSG, OPC, SSO, SSD, or SSG",
                     truncatedDescription,
@@ -196,7 +198,14 @@ public class OfficeAssignmentService {
         
         String combinedText = (description + " " + String.join(" ", tags)).toLowerCase();
         
-        // Check for parking/car/vehicle keywords (highest priority)
+        // Check for NGE Building computer lab rooms (NGE1XX or NGE2XX) - highest priority
+        if (combinedText.matches(".*nge\\s*[12]\\d{2}.*") || 
+            tags.stream().anyMatch(t -> t.matches("(?i)nge[12]\\d{2}"))) {
+            log.info("Fallback: Assigned to TSG (NGE computer lab room detected)");
+            return Office.TSG;
+        }
+        
+        // Check for parking/car/vehicle keywords
         if (combinedText.contains("parking") || combinedText.contains("car") || 
             combinedText.contains("vehicle") || tags.stream().anyMatch(t -> 
                 t.equalsIgnoreCase("Parking") || t.equalsIgnoreCase("Car") || t.equalsIgnoreCase("Vehicle"))) {
