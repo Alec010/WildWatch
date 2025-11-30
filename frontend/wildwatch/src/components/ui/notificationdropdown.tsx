@@ -76,9 +76,14 @@ export default function NotificationDropdown({
   const notificationRef = useRef<HTMLDivElement>(null);
   const stompClientRef = useRef<Client | null>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const notificationAudio = useRef<HTMLAudioElement | null>(null);
 
-  const notificationAudio =
-    typeof window !== "undefined" ? new Audio("/notification_sound.mp3") : null;
+  // Initialize audio on mount
+  useEffect(() => {
+    if (typeof window !== "undefined" && !notificationAudio.current) {
+      notificationAudio.current = new Audio("/notification_sound.mp3");
+    }
+  }, []);
 
   // Fetch current user ID on mount
   useEffect(() => {
@@ -149,8 +154,17 @@ export default function NotificationDropdown({
         throw new Error("No authentication token found");
       }
 
+      // Get the latest userId from ref (most up-to-date)
+      const userId = currentUserIdRef.current || currentUserId;
+      
+      // Don't fetch if we don't have userId yet (wait for it to be set)
+      if (!userId) {
+        console.log("Waiting for userId before fetching notifications");
+        return;
+      }
+
       const response = await fetch(
-        `${API_BASE_URL}/api/activity-logs?page=0&size=10`,
+        `${API_BASE_URL}/api/activity-logs?page=0&size=50`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -160,6 +174,12 @@ export default function NotificationDropdown({
       );
 
       if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          console.warn("Authentication failed, clearing notifications");
+          setNotifications([]);
+          setUnreadCount(0);
+          return;
+        }
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
@@ -184,11 +204,11 @@ export default function NotificationDropdown({
             return false;
           }
           // Only show notifications that belong to the current user
-          if (currentUserId && notification.userId) {
-            return notification.userId === currentUserId;
+          if (notification.userId) {
+            return notification.userId === userId;
           }
-          // If userId is not available, include for backward compatibility
-          return true;
+          // If userId is not available in notification, skip it (we have userId, so be strict)
+          return false;
         }
       );
 
@@ -196,16 +216,20 @@ export default function NotificationDropdown({
       const sortedNotifications = sortNotificationsByDate(
         filteredNotifications
       );
+      
+      // Simple replacement - trust the server state
+      // WebSocket updates will be re-added when they come through
       setNotifications(sortedNotifications);
+      
+      // Calculate and update unread count
       const unreadCount = sortedNotifications.filter(
         (notification: ActivityLog) => !notification.isRead
       ).length;
       setUnreadCount(unreadCount);
     } catch (error) {
       console.error("Error fetching notifications:", error);
-      // Set empty notifications and zero unread count on error
-      setNotifications([]);
-      setUnreadCount(0);
+      // Don't clear notifications on error - keep existing ones
+      // Only clear if it's an auth error (handled above)
     }
   };
 
@@ -275,9 +299,10 @@ export default function NotificationDropdown({
                   );
                 } else {
                   // Add new notification
-                  if (notificationAudio) {
-                    notificationAudio.play();
-                    console.log("Notification sound played");
+                  if (notificationAudio.current) {
+                    notificationAudio.current.play().catch((error) => {
+                      console.log("Notification sound play failed:", error);
+                    });
                   }
                   updatedNotifications = [notification, ...prev];
                   setHasNewNotification(true);
@@ -298,13 +323,23 @@ export default function NotificationDropdown({
           onStompError: () => {
             setWsConnected(false);
             if (!pollInterval) {
-              pollInterval = setInterval(fetchNotifications, 30000); // Increase to 30 seconds
+              pollInterval = setInterval(() => {
+                // Only fetch if we have userId
+                if (currentUserIdRef.current) {
+                  fetchNotifications();
+                }
+              }, 30000); // Poll every 30 seconds
             }
           },
           onWebSocketClose: () => {
             setWsConnected(false);
             if (!pollInterval) {
-              pollInterval = setInterval(fetchNotifications, 30000); // Increase to 30 seconds
+              pollInterval = setInterval(() => {
+                // Only fetch if we have userId
+                if (currentUserIdRef.current) {
+                  fetchNotifications();
+                }
+              }, 30000); // Poll every 30 seconds
             }
             if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
               reconnectAttempts++;
@@ -324,16 +359,18 @@ export default function NotificationDropdown({
         // Fall back to polling if WebSocket fails
         if (!pollInterval) {
           console.log("Falling back to polling for notifications");
-          pollInterval = setInterval(fetchNotifications, 30000);
+          pollInterval = setInterval(() => {
+            // Only fetch if we have userId
+            if (currentUserIdRef.current) {
+              fetchNotifications();
+            }
+          }, 30000);
         }
       }
     };
 
     // Connect to WebSocket first
     connectStomp();
-
-    // Initial fetch of notifications
-    fetchNotifications();
 
     // Don't set up polling here - it will only be set up if WebSocket fails
 
@@ -343,11 +380,32 @@ export default function NotificationDropdown({
     };
   }, []); // Only run once on mount
 
-  // Refetch notifications when currentUserId changes
+  // Fetch notifications when currentUserId is available
   useEffect(() => {
     if (currentUserId) {
-      fetchNotifications();
+      // Small delay to ensure ref is also updated
+      const timer = setTimeout(() => {
+        fetchNotifications();
+      }, 100);
+      return () => clearTimeout(timer);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUserId]);
+
+  // Periodic refresh of notifications (every 60 seconds) to sync with server
+  useEffect(() => {
+    if (!currentUserId) return;
+    
+    const refreshInterval = setInterval(() => {
+      // Always refresh to keep in sync with server
+      // The merge logic will preserve the correct state
+      if (currentUserIdRef.current) {
+        fetchNotifications();
+      }
+    }, 60000); // Refresh every 60 seconds
+
+    return () => clearInterval(refreshInterval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUserId]);
 
   const isNotificationNew = (dateString: string): boolean => {

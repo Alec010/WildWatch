@@ -122,13 +122,13 @@ public class TagGenerationService {
             Map<String, Object> body = response.getBody();
             if (body == null || !body.containsKey("candidates")) {
                 log.error("Invalid response from Gemini API: {}", body);
-                return List.of();
+                return generateFallbackTags(description, location, incidentType);
             }
 
             List candidates = (List) body.get("candidates");
             if (candidates.isEmpty()) {
                 log.error("No candidates in Gemini API response");
-                return List.of();
+                return generateFallbackTags(description, location, incidentType);
             }
 
             Map firstCandidate = (Map) candidates.get(0);
@@ -136,11 +136,16 @@ public class TagGenerationService {
             List parts = (List) contentMap.get("parts");
             if (parts.isEmpty()) {
                 log.error("No parts in Gemini API response content");
-                return List.of();
+                return generateFallbackTags(description, location, incidentType);
             }
 
             Map responsePart = (Map) parts.get(0);
             String tagsText = ((String) responsePart.get("text")).trim();
+            
+            if (tagsText == null || tagsText.isEmpty()) {
+                log.error("Empty tags text from Gemini API");
+                return generateFallbackTags(description, location, incidentType);
+            }
 
             // Patterns to detect date/time tags
             Pattern datePattern = Pattern.compile("\\d{4}-\\d{2}-\\d{2}"); // YYYY-MM-DD
@@ -313,14 +318,82 @@ public class TagGenerationService {
 
             // Check if API key is configured
             if (apiKey == null || apiKey.trim().isEmpty() || apiKey.equals("${GEMINI_API_KEY}")) {
-                log.error("Gemini API key is not configured. Please set GEMINI_API_KEY environment variable.");
-                throw new RuntimeException("AI service not configured. Please contact administrator.");
+                log.error("Gemini API key is not configured. Using fallback tags.");
+                return generateFallbackTags(description, location, incidentType);
             }
 
             // Log more specific error details
-            log.error("Gemini API Error Details: {}", e.getMessage());
-            throw new RuntimeException("Failed to generate tags: " + e.getMessage());
+            log.error("Gemini API Error Details: {}. Using fallback tags.", e.getMessage());
+            return generateFallbackTags(description, location, incidentType);
         }
+    }
+    
+    /**
+     * Generate fallback tags when AI generation fails
+     * Always returns exactly 5 tags
+     */
+    private List<String> generateFallbackTags(String description, String location, String incidentType) {
+        List<String> fallbackTags = new ArrayList<>(5);
+        
+        // Extract building code from location if available
+        if (location != null) {
+            Pattern buildingRoomPattern = Pattern.compile("\\b([A-Z]{2,})[- ]?(\\d{1,4})\\b");
+            Matcher m = buildingRoomPattern.matcher(location);
+            if (m.find()) {
+                String building = m.group(1);
+                String room = m.group(2);
+                fallbackTags.add(building + room); // e.g., NGE201
+                fallbackTags.add(building); // e.g., NGE
+            } else {
+                // Try to find standalone building codes
+                Pattern buildingPattern = Pattern.compile("\\b([A-Z]{2,})\\b");
+                Matcher bm = buildingPattern.matcher(location);
+                if (bm.find()) {
+                    fallbackTags.add(bm.group(1));
+                }
+            }
+        }
+        
+        // Add location-related tags
+        if (fallbackTags.size() < 2) {
+            if (location != null && location.toLowerCase().contains("building")) {
+                fallbackTags.add("Building");
+            }
+            if (fallbackTags.size() < 2) {
+                fallbackTags.add("Location");
+            }
+        }
+        
+        // Add description-related tags based on keywords
+        if (description != null) {
+            String descLower = description.toLowerCase();
+            if (descLower.contains("keyboard") || descLower.contains("usb") || descLower.contains("port") || descLower.contains("lan")) {
+                fallbackTags.add("Hardware");
+            } else if (descLower.contains("broken") || descLower.contains("damaged") || descLower.contains("non-functional")) {
+                fallbackTags.add("Damage");
+            } else {
+                fallbackTags.add("Equipment");
+            }
+            
+            if (descLower.contains("network") || descLower.contains("connect") || descLower.contains("lan")) {
+                fallbackTags.add("Network");
+            } else if (descLower.contains("workstation") || descLower.contains("pc") || descLower.contains("computer")) {
+                fallbackTags.add("Computer");
+            } else {
+                fallbackTags.add("Technical");
+            }
+        } else {
+            fallbackTags.add("Incident");
+            fallbackTags.add("Report");
+        }
+        
+        // Ensure we have exactly 5 tags
+        while (fallbackTags.size() < 5) {
+            fallbackTags.add("General");
+        }
+        
+        // Trim to exactly 5
+        return fallbackTags.subList(0, 5);
     }
 
     /**
