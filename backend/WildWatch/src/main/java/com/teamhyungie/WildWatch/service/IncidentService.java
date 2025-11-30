@@ -65,21 +65,27 @@ public class IncidentService {
     public IncidentResponse createIncident(IncidentRequest request, String userEmail, List<MultipartFile> files) {
         User user = userService.getUserByEmail(userEmail);
 
+        // Normalize special characters (em dash, en dash to regular hyphen) in all text fields
+        String normalizedDescription = normalizeSpecialCharacters(request.getDescription());
+        String normalizedIncidentType = normalizeSpecialCharacters(request.getIncidentType());
+        String normalizedLocation = normalizeSpecialCharacters(request.getLocation());
+        String normalizedFormattedAddress = normalizeSpecialCharacters(request.getFormattedAddress());
+
         // Prepare enhanced location info for AI services
-        String enhancedLocationInfo = request.getLocation();
+        String enhancedLocationInfo = normalizedLocation;
         if (request.getBuilding() != null) {
-            enhancedLocationInfo = request.getBuilding().getFullName() + " - " + request.getLocation();
-        } else if (request.getFormattedAddress() != null) {
-            enhancedLocationInfo = request.getFormattedAddress() + " - " + request.getLocation();
+            enhancedLocationInfo = request.getBuilding().getFullName() + " - " + normalizedLocation;
+        } else if (normalizedFormattedAddress != null) {
+            enhancedLocationInfo = normalizedFormattedAddress + " - " + normalizedLocation;
         }
 
-        // Use all 20 tags from request (from step 1), or generate if not provided (fallback)
+        // Use all 5 tags from request (from step 1), or generate if not provided (fallback)
         List<String> allGeneratedTags = (request.getAllTags() != null && !request.getAllTags().isEmpty())
                 ? request.getAllTags()
                 : tagGenerationService.generateTags(
-                        request.getDescription(),
+                        normalizedDescription,
                         enhancedLocationInfo,
-                        request.getIncidentType()
+                        normalizedIncidentType
                 );
 
         // Get top 5 selected tags from request (these are the weighted top 5 tags)
@@ -88,12 +94,12 @@ public class IncidentService {
                 ? request.getTags()
                 : (allGeneratedTags.size() >= 5 
                         ? new java.util.ArrayList<>(allGeneratedTags.subList(0, 5))
-                        : tagGenerationService.generateScoredTags(request.getDescription(), enhancedLocationInfo, request.getIncidentType())
+                        : tagGenerationService.generateScoredTags(normalizedDescription, enhancedLocationInfo, normalizedIncidentType)
                                 .stream()
                                 .map(ts -> ts.getTag())
                                 .collect(java.util.stream.Collectors.toList()));
 
-        // Use ALL 20 tags for office assignment (more context = better assignment)
+        // Use ALL 5 tags for office assignment (more context = better assignment)
         // The AI can analyze all tags to make a more informed decision
         List<String> tagsForAssignment = allGeneratedTags;
 
@@ -101,7 +107,7 @@ public class IncidentService {
         Office assignedOffice = request.getAssignedOffice();
         if (assignedOffice == null) {
             // Use the same enhanced location info for office assignment
-            assignedOffice = officeAssignmentService.assignOffice(request.getDescription(), enhancedLocationInfo, tagsForAssignment);
+            assignedOffice = officeAssignmentService.assignOffice(normalizedDescription, enhancedLocationInfo, tagsForAssignment);
         }
 
         // Create and save the incident first with all 20 generated tags
@@ -129,7 +135,7 @@ public class IncidentService {
         // Log activity
         activityLogService.logActivity(
                 "NEW_REPORT",
-                "You submitted a new incident report for " + request.getIncidentType(),
+                "You submitted a new incident report for " + normalizedIncidentType,
                 savedIncident,
                 user
         );
@@ -153,20 +159,25 @@ public class IncidentService {
 
     private Incident createAndSaveIncident(IncidentRequest request, User user, List<String> allTags, List<String> top5Tags) {
         Incident incident = new Incident();
-        incident.setIncidentType(request.getIncidentType());
+        // Normalize special characters before saving
+        incident.setIncidentType(normalizeSpecialCharacters(request.getIncidentType()));
         incident.setDateOfIncident(request.getDateOfIncident());
         incident.setTimeOfIncident(request.getTimeOfIncident());
-        incident.setDescription(request.getDescription());
+        incident.setDescription(normalizeSpecialCharacters(request.getDescription()));
         incident.setAssignedOffice(request.getAssignedOffice());
         incident.setSubmittedBy(user);
         incident.setPreferAnonymous(request.getPreferAnonymous());
         incident.setIsPrivate(request.getIsPrivate());
         incident.setRoom(request.getRoom()); // Set room field
         
+        // Normalize special characters before classification
+        String normalizedIncidentTypeForClassification = normalizeSpecialCharacters(request.getIncidentType());
+        String normalizedDescriptionForClassification = normalizeSpecialCharacters(request.getDescription());
+        
         // Determine if this is a real incident or just a concern (using only incident type and description)
         boolean isIncident = incidentClassificationService.isRealIncident(
-                request.getIncidentType(),
-                request.getDescription()
+                normalizedIncidentTypeForClassification,
+                normalizedDescriptionForClassification
         );
         incident.setIsIncident(isIncident);
 
@@ -210,6 +221,19 @@ public class IncidentService {
      * ELSE IF room exists: "Room - FullAddress"
      * ELSE: "FullAddress" (or coordinates as fallback)
      */
+    /**
+     * Normalize special characters (em dash, en dash, horizontal bar) to regular hyphens
+     * This prevents issues with tag generation and other text processing
+     */
+    private String normalizeSpecialCharacters(String text) {
+        if (text == null) {
+            return null;
+        }
+        return text.replace('\u2013', '-')  // En dash
+                  .replace('\u2014', '-')   // Em dash
+                  .replace('\u2015', '-');  // Horizontal bar
+    }
+
     private String formatLocationString(Building building, String room, String formattedAddress) {
         String buildingCode = (building != null) ? building.name() : null;
         String roomValue = (room != null && !room.trim().isEmpty()) ? room.trim() : null;

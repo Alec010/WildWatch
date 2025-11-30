@@ -10,6 +10,7 @@ public class NotificationDTO {
     private String description;
     private LocalDateTime createdAt;
     private Boolean isRead;
+    private String userId; // User ID to filter notifications
     private IncidentDTO incident;
 
     @Data

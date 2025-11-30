@@ -83,25 +83,25 @@ public class IncidentAnalysisController {
             return ResponseEntity.ok(payload);
         } catch (Exception e) {
             // Fallback to sequential processing if parallel fails
-            Office office = officeAssignmentService.assignOffice(req.description, enhancedLocation, tags);
+        Office office = officeAssignmentService.assignOffice(req.description, enhancedLocation, tags);
             boolean isIncident = incidentClassificationService.isRealIncident(req.incidentType, req.description);
-            ModerationService.Result mod = moderationService.review(req.incidentType, req.description, enhancedLocation, tags, officeNames);
-            
-            Map<String, Object> payload = new java.util.HashMap<>();
-            payload.put("decision", mod.decision.name());
-            payload.put("confidence", mod.confidence);
-            payload.put("reasons", mod.reasons);
-            payload.put("suggestedTags", tags);
-            payload.put("suggestedOffice", office.name());
-            payload.put("normalizedLocation", enhancedLocation);
+        ModerationService.Result mod = moderationService.review(req.incidentType, req.description, enhancedLocation, tags, officeNames);
+
+        Map<String, Object> payload = new java.util.HashMap<>();
+        payload.put("decision", mod.decision.name());
+        payload.put("confidence", mod.confidence);
+        payload.put("reasons", mod.reasons);
+        payload.put("suggestedTags", tags);
+        payload.put("suggestedOffice", office.name());
+        payload.put("normalizedLocation", enhancedLocation);
             payload.put("isIncident", isIncident);
-            
-            if ("ALLOW".equalsIgnoreCase(mod.decision.name())) {
-                var similars = similarityService.findSimilarByTags(tags, 3);
-                payload.put("similarIncidents", similars);
-            }
-            
-            return ResponseEntity.ok(payload);
+
+        if ("ALLOW".equalsIgnoreCase(mod.decision.name())) {
+            var similars = similarityService.findSimilarByTags(tags, 3);
+            payload.put("similarIncidents", similars);
+        }
+
+        return ResponseEntity.ok(payload);
         }
     }
 

@@ -49,6 +49,7 @@ interface ActivityLog {
   activityType: string;
   description: string;
   createdAt: string;
+  userId?: string; // User ID to filter notifications
   incident: {
     id: string;
     trackingNumber: string;
@@ -70,12 +71,50 @@ export default function NotificationDropdown({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [hasNewNotification, setHasNewNotification] = useState(false);
   const [wsConnected, setWsConnected] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const currentUserIdRef = useRef<string | null>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
   const stompClientRef = useRef<Client | null>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const notificationAudio =
     typeof window !== "undefined" ? new Audio("/notification_sound.mp3") : null;
+
+  // Fetch current user ID on mount
+  useEffect(() => {
+    const fetchCurrentUserId = async () => {
+      try {
+        const token =
+          typeof document !== "undefined"
+            ? document.cookie
+                .split("; ")
+                .find((row) => row.startsWith("token="))
+                ?.split("=")[1]
+            : null;
+
+        if (!token) {
+          return;
+        }
+
+        const response = await fetch(`${API_BASE_URL}/api/auth/profile`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (response.ok) {
+          const userData = await response.json();
+          setCurrentUserId(userData.id);
+          currentUserIdRef.current = userData.id;
+        }
+      } catch (error) {
+        console.error("Error fetching current user ID:", error);
+      }
+    };
+
+    fetchCurrentUserId();
+  }, []);
 
   // Close notifications when clicking outside
   useEffect(() => {
@@ -136,9 +175,21 @@ export default function NotificationDropdown({
         "TRANSFER_APPROVED",
         "NEW_REPORT_RECEIVED",
       ];
+      
+      // Filter notifications by current user ID and exclude office admin types
       const filteredNotifications = data.content.filter(
-        (notification: ActivityLog) =>
-          !officeAdminActivityTypes.includes(notification.activityType)
+        (notification: ActivityLog) => {
+          // Exclude office admin notifications
+          if (officeAdminActivityTypes.includes(notification.activityType)) {
+            return false;
+          }
+          // Only show notifications that belong to the current user
+          if (currentUserId && notification.userId) {
+            return notification.userId === currentUserId;
+          }
+          // If userId is not available, include for backward compatibility
+          return true;
+        }
       );
 
       // Sort notifications by date (newest first)
@@ -200,6 +251,17 @@ export default function NotificationDropdown({
                 officeAdminActivityTypes.includes(notification.activityType)
               ) {
                 return; // Ignore office admin notifications
+              }
+
+              // Only process notifications that belong to the current user
+              const userId = currentUserIdRef.current;
+              if (userId && notification.userId && notification.userId !== userId) {
+                return; // Ignore notifications not for this user
+              }
+
+              // If userId is not available in notification, skip for safety
+              if (userId && !notification.userId) {
+                return; // Skip notifications without userId when we have currentUserId
               }
 
               setNotifications((prev) => {
@@ -267,7 +329,7 @@ export default function NotificationDropdown({
       }
     };
 
-    // Connect to WebSocket first, only fetch notifications once
+    // Connect to WebSocket first
     connectStomp();
 
     // Initial fetch of notifications
@@ -279,7 +341,14 @@ export default function NotificationDropdown({
       stompClientRef.current?.deactivate();
       if (pollInterval) clearInterval(pollInterval);
     };
-  }, []);
+  }, []); // Only run once on mount
+
+  // Refetch notifications when currentUserId changes
+  useEffect(() => {
+    if (currentUserId) {
+      fetchNotifications();
+    }
+  }, [currentUserId]);
 
   const isNotificationNew = (dateString: string): boolean => {
     try {

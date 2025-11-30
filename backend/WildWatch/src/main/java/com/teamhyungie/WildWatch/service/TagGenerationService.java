@@ -41,6 +41,23 @@ public class TagGenerationService {
 
     public List<String> generateTags(String description, String location, String incidentType) {
         try {
+            // Normalize special characters (em dash, en dash to regular hyphen)
+            if (location != null) {
+                location = location.replace('\u2013', '-')  // En dash
+                                  .replace('\u2014', '-')   // Em dash
+                                  .replace('\u2015', '-');  // Horizontal bar
+            }
+            if (incidentType != null) {
+                incidentType = incidentType.replace('\u2013', '-')  // En dash
+                                          .replace('\u2014', '-')   // Em dash
+                                          .replace('\u2015', '-');  // Horizontal bar
+            }
+            if (description != null) {
+                description = description.replace('\u2013', '-')  // En dash
+                                        .replace('\u2014', '-')   // Em dash
+                                        .replace('\u2015', '-');  // Horizontal bar
+            }
+            
             // Sanitize location by removing plus codes before sending to AI
             String sanitizedLocation = removePlusCodes(location);
 
@@ -50,16 +67,16 @@ public class TagGenerationService {
                     + "- Description: '%s'\n"
                     + "- Location: '%s'\n"
                     + "Task:\n"
-                    + "- Generate EXACTLY 20 single-word tags (NO phrases, NO hyphens, ONLY one word per tag).\n"
-                    + "- First 3 tags MUST be location-related (building names, room identifiers, area names from the location).\n"
-                    + "- Next 17 tags MUST be about the incident description and incident type (context, severity, parties involved, impact).\n"
-                    + "- MANDATORY: If the location contains building identifiers or acronyms (e.g., 'GLE', 'MIS'), include them as location tags.\n"
+                    + "- Generate EXACTLY 5 single-word tags (NO phrases, NO hyphens, ONLY one word per tag).\n"
+                    + "- First 2 tags MUST be location-related (building names, room identifiers like NGE207, area names from the location).\n"
+                    + "- Next 3 tags MUST be about the incident description and incident type (context, severity, parties involved, impact).\n"
+                    + "- MANDATORY: If the location contains building identifiers or room codes (e.g., 'NGE207', 'GLE', 'MIS'), include them as location tags WITHOUT hyphens (e.g., 'NGE207' NOT 'NGE-207').\n"
                     + "- DO NOT include date or time tags (e.g., '2025-09-23', '10:30', dates, times).\n"
                     + "- DO NOT add external campuses, cities, or countries that are not explicitly present in the input.\n"
-                    + "- Each tag MUST be a SINGLE WORD ONLY in sentence case (first letter capitalized, rest lowercase).\n"
+                    + "- Each tag MUST be a SINGLE WORD ONLY in sentence case (first letter capitalized, rest lowercase), except building codes which should be uppercase (e.g., 'NGE207', 'GLE').\n"
                     + "- Avoid duplicates and avoid generic single-word tags like 'Issue' or 'Problem'.\n"
-                    + "- Output format: LocationTag1, LocationTag2, LocationTag3, DescTag1, DescTag2, ..., DescTag17\n"
-                    + "- Example: Gle, Classroom, Building, Vandalism, Property, Damage, Window, Broken, Safety, Urgent, Student, Witness, Report, Security, Glass, Shattered, Morning, Incident, Investigation, Evidence";
+                    + "- Output format: LocationTag1, LocationTag2, DescTag1, DescTag2, DescTag3\n"
+                    + "- Example: NGE207, Building, Vandalism, Damage, Urgent";
             String prompt = String.format(formatString,
                     incidentType == null ? "" : incidentType,
                     description == null ? "" : description,
@@ -144,9 +161,9 @@ public class TagGenerationService {
                                 && !dayPattern.matcher(tagLower).find();
                     })
                     .filter(tag -> {
-                        // ONLY allow single words (no spaces, hyphens, or special characters except building codes like GLE-202)
-                        // Allow alphanumeric and single hyphen for building codes
-                        return tag.matches("^[A-Za-z0-9]+(-[A-Za-z0-9]+)?$");
+                        // ONLY allow single words (no spaces, no hyphens, alphanumeric only)
+                        // Building codes like NGE207 should be without hyphens
+                        return tag.matches("^[A-Za-z0-9]+$");
                     })
                     .collect(Collectors.toList());
 
@@ -186,7 +203,17 @@ public class TagGenerationService {
                     // Skip geo-like tag that doesn't appear in the original input
                     continue;
                 }
-                cleanedGenerated.add(t);
+                // Normalize building codes: remove hyphens (e.g., NGE-207 -> NGE207)
+                String normalized = t;
+                if (t.contains("-")) {
+                    // Check if it's a building code pattern (e.g., NGE-207, GLE-202)
+                    Pattern buildingCodeWithHyphen = Pattern.compile("^([A-Z]{2,})-(\\d+)$");
+                    Matcher m = buildingCodeWithHyphen.matcher(t);
+                    if (m.matches()) {
+                        normalized = m.group(1) + m.group(2); // Remove hyphen: NGE-207 -> NGE207
+                    }
+                }
+                cleanedGenerated.add(normalized);
             }
 
             // Post-process to ensure building/location codes are present (e.g., GLE, GLE-202)
@@ -196,7 +223,7 @@ public class TagGenerationService {
             String safeLocation = location == null ? "" : location;
             String safeDescription = description == null ? "" : description;
 
-            // 1) Extract patterns like GLE202 / GLE-202 from location and description, normalize to GLE-202
+            // 1) Extract patterns like GLE202 / GLE-202 / GLE 202 from location and description, normalize to GLE202 (NO hyphen, NO space)
             Pattern buildingRoomPattern = Pattern.compile("\\b([A-Z]{2,})[- ]?(\\d{1,4})\\b");
             for (String source : Arrays.asList(safeLocation, safeDescription)) {
                 Matcher m = buildingRoomPattern.matcher(source);
@@ -204,21 +231,21 @@ public class TagGenerationService {
                     String building = m.group(1);
                     String room = m.group(2);
                     if (!acronymStoplist.contains(building)) {
-                        String normalized = building + "-" + room;
+                        String normalized = building + room; // NO hyphen - e.g., NGE207 not NGE-207
                         mandatoryLocationTokens.add(building);
                         mandatoryLocationTokens.add(normalized);
                     }
                 }
             }
 
-            // 2) Force include building code/name tokens like "GLE" and "GLE-Building"
+            // 2) Force include building code/name tokens like "GLE" and "GLEBuilding" (no hyphen)
             Pattern buildingNamePattern = Pattern.compile("\\b([A-Z]{2,})\\s+Building\\b", Pattern.CASE_INSENSITIVE);
             Matcher nameMatcher = buildingNamePattern.matcher(safeLocation);
             while (nameMatcher.find()) {
                 String code = nameMatcher.group(1).toUpperCase();
                 if (!acronymStoplist.contains(code)) {
                     mandatoryLocationTokens.add(code);
-                    mandatoryLocationTokens.add(code + "-Building");
+                    mandatoryLocationTokens.add(code + "Building"); // No hyphen
                 }
             }
 
@@ -248,17 +275,36 @@ public class TagGenerationService {
                 merged.add(t); // Already normalized to sentence case
             }
 
-            // Enforce exactly 20 tags, prioritizing mandatory tokens
-            List<String> finalTags = new ArrayList<>(20);
+            // Enforce exactly 5 tags (2 location + 3 description), prioritizing mandatory tokens
+            List<String> finalTags = new ArrayList<>(5);
             for (String t : merged) {
-                if (finalTags.size() >= 20) {
+                if (finalTags.size() >= 5) {
                     break;
                 }
                 finalTags.add(t);
             }
 
-            if (finalTags.size() != 20) {
-                log.warn("Generated {} tags after enforcement (expected 20)", finalTags.size());
+            if (finalTags.size() != 5) {
+                log.warn("Generated {} tags after enforcement (expected 5)", finalTags.size());
+                // If we have fewer than 3 tags, add fallback tags to ensure minimum
+                if (finalTags.size() < 3) {
+                    log.error("Critical: Only {} tags generated, adding fallback tags", finalTags.size());
+                    // Add generic fallback tags if we have too few
+                    if (finalTags.size() == 0) {
+                        finalTags.add("Incident");
+                        finalTags.add("Report");
+                        finalTags.add("Concern");
+                    } else if (finalTags.size() == 1) {
+                        finalTags.add("Report");
+                        finalTags.add("Incident");
+                    } else if (finalTags.size() == 2) {
+                        finalTags.add("Incident");
+                    }
+                    // Fill to 5 if needed
+                    while (finalTags.size() < 5) {
+                        finalTags.add("General");
+                    }
+                }
             }
 
             return finalTags;
@@ -288,22 +334,22 @@ public class TagGenerationService {
 
     /**
      * Score tags based on relevance factors and return top 5
-     * Structure: First 3 tags from allTags are location tags, next 17 are description tags
+     * Structure: First 2 tags from allTags are location tags, next 3 are description tags
      * Returns: Top 2 location tags + Top 3 description tags
      */
     private List<TagScore> scoreAndRankTags(List<String> tags, String description, String location, String incidentType) {
         List<TagScore> result = new ArrayList<>();
         
-        // Expecting: First 3 tags are location tags, next 17 are description/incident tags
-        // Return: First 2 location tags + First 3 description tags
+        // Expecting: First 2 tags are location tags, next 3 are description/incident tags
+        // Return: First 2 location tags + Next 3 description tags
         
-        if (tags.size() < 6) {
+        if (tags.size() < 5) {
             // Fallback: if not enough tags, return what we have
             for (int i = 0; i < Math.min(5, tags.size()); i++) {
                 TagScore ts = new TagScore();
                 ts.setTag(tags.get(i));
                 ts.setScore(100.0 - (i * 10.0));
-                ts.setReason(i < 3 ? "Location tag" : "Description tag");
+                ts.setReason(i < 2 ? "Location tag" : "Description tag");
                 result.add(ts);
             }
             return result;
@@ -318,12 +364,11 @@ public class TagGenerationService {
             result.add(ts);
         }
         
-        // Take first 3 description tags (indices 3, 4, 5)
-        // Skip index 2 (3rd location tag) and start from index 3
-        for (int i = 3; i < Math.min(6, tags.size()); i++) {
+        // Take next 3 description tags (indices 2, 3, 4)
+        for (int i = 2; i < Math.min(5, tags.size()); i++) {
             TagScore ts = new TagScore();
             ts.setTag(tags.get(i));
-            ts.setScore(90.0 - ((i - 3) * 5.0)); // Slightly lower score for description tags
+            ts.setScore(90.0 - ((i - 2) * 5.0)); // Slightly lower score for description tags
             ts.setReason("Description tag");
             result.add(ts);
         }
@@ -333,12 +378,16 @@ public class TagGenerationService {
 
     /**
      * Converts a tag to sentence case (first letter capitalized, rest
-     * lowercase). Handles hyphenated tags by capitalizing each word. Preserves
-     * acronyms (2-3 uppercase letters in a row).
+     * lowercase). Preserves building codes like NGE207 in uppercase.
      */
     private String toSentenceCase(String tag) {
         if (tag == null || tag.isEmpty()) {
             return tag;
+        }
+
+        // Check if it's a building code (2+ uppercase letters followed by digits, e.g., NGE207, GLE202)
+        if (Pattern.compile("^[A-Z]{2,}\\d+$").matcher(tag).matches()) {
+            return tag.toUpperCase(); // Keep building codes like NGE207 uppercase
         }
 
         // Check if it's an acronym (2-3 uppercase letters, possibly with numbers)
@@ -346,34 +395,7 @@ public class TagGenerationService {
             return tag.toUpperCase(); // Keep acronyms uppercase
         }
 
-        // Handle hyphenated tags
-        if (tag.contains("-")) {
-            String[] parts = tag.split("-");
-            StringBuilder result = new StringBuilder();
-            for (int i = 0; i < parts.length; i++) {
-                if (i > 0) {
-                    result.append("-");
-                }
-                String part = parts[i].trim();
-                if (!part.isEmpty()) {
-                    // Check if part is an acronym
-                    if (Pattern.compile("^[A-Z]{2,3}(\\d+)?$").matcher(part).matches()) {
-                        result.append(part.toUpperCase());
-                    } else {
-                        part = part.toLowerCase();
-                        if (!part.isEmpty()) {
-                            result.append(Character.toUpperCase(part.charAt(0)));
-                            if (part.length() > 1) {
-                                result.append(part.substring(1));
-                            }
-                        }
-                    }
-                }
-            }
-            return result.toString();
-        }
-
-        // Simple case: single word
+        // Simple case: single word - convert to sentence case
         tag = tag.toLowerCase();
         if (tag.isEmpty()) {
             return tag;

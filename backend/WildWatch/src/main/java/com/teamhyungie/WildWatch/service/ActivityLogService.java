@@ -38,6 +38,9 @@ public class ActivityLogService {
         dto.setDescription(log.getDescription());
         dto.setCreatedAt(log.getCreatedAt());
         dto.setIsRead(log.getIsRead());
+        if (log.getUser() != null) {
+            dto.setUserId(log.getUser().getId());
+        }
         if (log.getIncident() != null) {
             NotificationDTO.IncidentDTO incidentDTO = new NotificationDTO.IncidentDTO();
             incidentDTO.setId(log.getIncident().getId());
