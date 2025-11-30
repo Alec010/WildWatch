@@ -1,15 +1,16 @@
 "use client";
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Cookies from 'js-cookie';
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import Cookies from "js-cookie";
 import { API_BASE_URL } from "@/utils/api";
+import { handleAuthRedirect } from "@/utils/auth";
 
 const LoginPage: React.FC = () => {
   const router = useRouter();
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
+    email: "",
+    password: "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -21,11 +22,11 @@ const LoginPage: React.FC = () => {
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-        credentials: 'include',
+        credentials: "include",
         body: JSON.stringify({
           email: formData.email,
           password: formData.password,
@@ -34,33 +35,30 @@ const LoginPage: React.FC = () => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Invalid email or password');
+        throw new Error(errorData.message || "Invalid email or password");
       }
 
       const data = await response.json();
       console.log("Login response:", data); // Debug log
-      Cookies.set('token', data.token);
+      Cookies.set("token", data.token);
 
-      // Check terms acceptance status from the response
-      if (data.termsAccepted === false) {
-        console.log("Terms not accepted, redirecting to terms page"); // Debug log
-        router.push('/terms');
-      } else {
-        console.log("Terms accepted, redirecting to dashboard"); // Debug log
-        router.push('/dashboard');
-      }
+      // Use handleAuthRedirect to determine the correct redirect path based on user role
+      const user = data.user || data;
+      const redirectPath = handleAuthRedirect({
+        role: user.role || user.userRole,
+        termsAccepted: user.termsAccepted !== false,
+      });
+
+      console.log("Redirecting to:", redirectPath); // Debug log
+      router.push(redirectPath);
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'An error occurred');
+      setError(error instanceof Error ? error.message : "An error occurred");
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <div>
-      {/* Render your form here */}
-    </div>
-  );
+  return <div>{/* Render your form here */}</div>;
 };
 
-export default LoginPage; 
+export default LoginPage;
