@@ -7,6 +7,7 @@ interface LocationData {
   formattedAddress?: string;
   buildingName?: string;
   buildingCode?: string;
+  room?: string; // Optional specific room/location within the building
   building?: {
     fullName?: string;
     code?: string;
@@ -14,41 +15,70 @@ interface LocationData {
 }
 
 /**
- * Formats location for display with address and building information
- * Example output: "7VVJ+QFR, Natalio B. Bacalso Ave, Cebu City, 6000 Cebu, Philippines (NGE BUILDING)"
+ * Helper function to format building codes/names by replacing underscores with spaces
+ * Example: "NGE_BUILDING" → "NGE BUILDING"
+ */
+function formatBuildingText(text: string | null | undefined): string | null {
+  if (!text) return null;
+  return text.replace(/_/g, ' ');
+}
+
+/**
+ * Formats a raw location string by replacing underscores with spaces
+ * Used when location is stored as a single string in the database
+ * Example: "NGE_BUILDING - 7VVJ+QFR..." → "NGE BUILDING - 7VVJ+QFR..."
+ */
+export function formatLocationString(location: string | null | undefined): string {
+  if (!location) return 'Location not specified';
+  return location.replace(/_/g, ' ');
+}
+
+/**
+ * Formats location for display according to the agreed format:
+ * IF building exists AND room exists: "BuildingCode - Room - FullAddress"
+ * ELSE IF building exists: "BuildingCode - FullAddress"
+ * ELSE IF room exists: "Room - FullAddress"
+ * ELSE: "FullAddress" (or location/coordinates as fallback)
+ * 
+ * Example outputs:
+ * - "RTL - RTL203 - Cebu Institute of Technology - University, N. Bacalso Ave, Cebu City, 6000 Cebu, Philippines"
+ * - "RTL - Cebu Institute of Technology - University, N. Bacalso Ave, Cebu City, 6000 Cebu, Philippines"
+ * - "RTL203 - Cebu Institute of Technology - University, N. Bacalso Ave, Cebu City, 6000 Cebu, Philippines"
  */
 export function formatLocationDisplay(locationData: LocationData): string {
   if (!locationData) {
     return 'Location not specified';
   }
 
-  let displayText = '';
+  // Get building code and format it (replace underscores with spaces)
+  const rawBuildingCode = locationData.buildingCode || locationData.building?.code || null;
+  const buildingCode = formatBuildingText(rawBuildingCode);
+  
+  // Get room (trim if exists)
+  const room = (locationData.room && locationData.room.trim()) ? locationData.room.trim() : null;
+  
+  // Get full address (prefer formattedAddress, fallback to location)
+  const address = locationData.formattedAddress || locationData.location || null;
+  
+  // If no address available, return fallback
+  if (!address) {
+    return 'Location not specified';
+  }
 
-  // Use formattedAddress if available, otherwise fall back to location
-  if (locationData.formattedAddress) {
-    displayText = locationData.formattedAddress;
-  } else if (locationData.location) {
-    displayText = locationData.location;
+  // Build location string based on available fields
+  if (buildingCode && room) {
+    // Building + Room + Address
+    return `${buildingCode} - ${room} - ${address}`;
+  } else if (buildingCode) {
+    // Building + Address
+    return `${buildingCode} - ${address}`;
+  } else if (room) {
+    // Room + Address (edge case - building detection failed)
+    return `${room} - ${address}`;
   } else {
-    displayText = 'Location not specified';
+    // Just Address (fallback)
+    return address;
   }
-
-  // Add building information if available
-  let buildingInfo = '';
-
-  // Try to get building name from multiple possible sources
-  if (locationData.buildingName) {
-    buildingInfo = locationData.buildingName;
-  } else if (locationData.building?.fullName) {
-    buildingInfo = locationData.building.fullName;
-  }
-
-  // If we have building info, append it in parentheses
-  if (buildingInfo) {
-    displayText += ` (${buildingInfo})`;
-  }
-
-  return displayText;
 }
 
 /**
@@ -59,6 +89,11 @@ export function formatLocationDisplay(locationData: LocationData): string {
 export function formatLocationCompact(locationData: LocationData): string {
   if (!locationData) {
     return 'Location not specified';
+  }
+
+  // If locationData only has a location string (no separate fields), format it directly
+  if (locationData.location && !locationData.buildingName && !locationData.building?.fullName && !locationData.formattedAddress) {
+    return formatLocationString(locationData.location);
   }
 
   let displayText = '';
@@ -106,13 +141,13 @@ export function formatLocationCompact(locationData: LocationData): string {
     displayText = 'Location not specified';
   }
 
-  // Add building information if available
+  // Add building information if available (format with spaces)
   let buildingInfo = '';
 
   if (locationData.buildingName) {
-    buildingInfo = locationData.buildingName;
+    buildingInfo = formatBuildingText(locationData.buildingName) || '';
   } else if (locationData.building?.fullName) {
-    buildingInfo = locationData.building.fullName;
+    buildingInfo = formatBuildingText(locationData.building.fullName) || '';
   }
 
   // If we have building info, append it in parentheses
@@ -132,13 +167,8 @@ export function getBuildingName(locationData: LocationData): string {
     return '';
   }
 
-  if (locationData.buildingName) {
-    return locationData.buildingName;
-  } else if (locationData.building?.fullName) {
-    return locationData.building.fullName;
-  }
-
-  return '';
+  const rawName = locationData.buildingName || locationData.building?.fullName;
+  return formatBuildingText(rawName) || '';
 }
 
 /**
@@ -150,13 +180,8 @@ export function getBuildingCode(locationData: LocationData): string {
     return '';
   }
 
-  if (locationData.buildingCode) {
-    return locationData.buildingCode;
-  } else if (locationData.building?.code) {
-    return locationData.building.code;
-  }
-
-  return '';
+  const rawCode = locationData.buildingCode || locationData.building?.code;
+  return formatBuildingText(rawCode) || '';
 }
 
 /**

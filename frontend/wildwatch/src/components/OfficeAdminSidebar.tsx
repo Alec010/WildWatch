@@ -93,6 +93,9 @@ export function OfficeAdminSidebar() {
   const handleSignOut = async () => {
     const tokenService = (await import("@/utils/tokenService")).default;
     tokenService.removeToken();
+    // Reset local user state
+    setUser(null);
+    setLoading(true);
     router.push("/login");
   };
 

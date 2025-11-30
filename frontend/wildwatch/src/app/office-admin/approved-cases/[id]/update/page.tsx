@@ -125,6 +125,7 @@ interface Incident {
   estimatedResolutionDate?: string;
   resolutionExtendedBy?: string;
   resolutionExtendedAt?: string;
+  isIncident?: boolean;
 }
 
 interface UpdateRequest {
@@ -798,6 +799,14 @@ export default function UpdateVerifiedCasePage() {
                     >
                       {incident.priorityLevel} Priority
                     </Badge>
+                    {incident.isIncident === false && (
+                      <Badge
+                        variant="outline"
+                        className="bg-purple-50 text-purple-700 border-purple-300"
+                      >
+                        Tagged as Concern
+                      </Badge>
+                    )}
                   </div>
                 </div>
 

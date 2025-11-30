@@ -62,12 +62,14 @@ export function Sidebar() {
   useEffect(() => {
     const fetchUserProfile = async () => {
       try {
+        setLoading(true);
         const response = await api.get("/api/auth/profile");
 
         if (!response.ok) {
           if (response.status === 401) {
             // Token is invalid or expired - API client will handle refresh
             console.log("Authentication failed, redirecting to login");
+            setUser(null);
             router.push("/login");
             return;
           }
@@ -83,6 +85,7 @@ export function Sidebar() {
         });
       } catch (error) {
         console.error("Error fetching user profile:", error);
+        setUser(null);
         router.push("/login");
       } finally {
         setLoading(false);
@@ -93,14 +96,18 @@ export function Sidebar() {
     if (!roleLoading && userRole) {
       fetchUserProfile();
     } else if (!roleLoading && !userRole) {
-      // No role means not authenticated, redirect to login
-      router.push("/login");
+      // No role means not authenticated, clear user state
+      setUser(null);
+      setLoading(false);
     }
   }, [router, roleLoading, userRole]);
 
   const handleSignOut = async () => {
     const tokenService = (await import("@/utils/tokenService")).default;
     tokenService.removeToken();
+    // Reset local user state
+    setUser(null);
+    setLoading(true);
     router.push("/login");
   };
 

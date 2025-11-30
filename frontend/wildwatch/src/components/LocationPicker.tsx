@@ -16,6 +16,7 @@ import {
   Building,
   X,
   RotateCcw,
+  DoorOpen,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { locationService, LocationData } from '@/utils/locationService';
@@ -202,6 +203,15 @@ export default function LocationPicker({
                 <MapPin className={`h-4 w-4 ${isOutsideCampus ? 'text-red-600' : 'text-green-600'} mt-0.5`} />
                 <span className={`text-sm ${isOutsideCampus ? 'text-red-700' : 'text-green-700'}`}>
                   {selectedLocation.formattedAddress}
+                </span>
+              </div>
+            )}
+
+            {selectedLocation.room && (
+              <div className="flex items-start gap-2 mt-2">
+                <DoorOpen className={`h-4 w-4 ${isOutsideCampus ? 'text-red-600' : 'text-green-600'} mt-0.5`} />
+                <span className={`text-sm font-medium ${isOutsideCampus ? 'text-red-700' : 'text-green-700'}`}>
+                  Specific Location: {selectedLocation.room}
                 </span>
               </div>
             )}

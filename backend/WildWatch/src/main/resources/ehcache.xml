@@ -102,6 +102,16 @@
         </expiry>
     </cache>
     
+    <!-- Office Admin caches -->
+    <cache alias="officeNames" uses-template="default">
+        <expiry>
+            <ttl unit="hours">2</ttl>
+        </expiry>
+        <resources>
+            <heap>100</heap>
+        </resources>
+    </cache>
+    
     
     <!-- Query caches -->
     <cache alias="org.hibernate.cache.internal.StandardQueryCache" uses-template="default"/>

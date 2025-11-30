@@ -59,6 +59,7 @@ public class IncidentService {
     private final OfficeAssignmentService officeAssignmentService;
     private final GeolocationService geolocationService;
     private final TagService tagService;
+    private final IncidentClassificationService incidentClassificationService;
 
     @Transactional
     public IncidentResponse createIncident(IncidentRequest request, String userEmail, List<MultipartFile> files) {
@@ -72,24 +73,29 @@ public class IncidentService {
             enhancedLocationInfo = request.getFormattedAddress() + " - " + request.getLocation();
         }
 
-        // Generate all 20 tags using AI with enhanced location (always generate for consistency)
-        List<String> allGeneratedTags = tagGenerationService.generateTags(
-                request.getDescription(),
-                enhancedLocationInfo,
-                request.getIncidentType()
-        );
+        // Use all 20 tags from request (from step 1), or generate if not provided (fallback)
+        List<String> allGeneratedTags = (request.getAllTags() != null && !request.getAllTags().isEmpty())
+                ? request.getAllTags()
+                : tagGenerationService.generateTags(
+                        request.getDescription(),
+                        enhancedLocationInfo,
+                        request.getIncidentType()
+                );
 
         // Get top 5 selected tags from request (these are the weighted top 5 tags)
-        // If not provided, get them by scoring all generated tags
+        // If not provided, use first 5 from allTags or generate by scoring
         List<String> top5Tags = (request.getTags() != null && !request.getTags().isEmpty())
                 ? request.getTags()
-                : tagGenerationService.generateScoredTags(request.getDescription(), enhancedLocationInfo, request.getIncidentType())
-                        .stream()
-                        .map(ts -> ts.getTag())
-                        .collect(java.util.stream.Collectors.toList());
+                : (allGeneratedTags.size() >= 5 
+                        ? new java.util.ArrayList<>(allGeneratedTags.subList(0, 5))
+                        : tagGenerationService.generateScoredTags(request.getDescription(), enhancedLocationInfo, request.getIncidentType())
+                                .stream()
+                                .map(ts -> ts.getTag())
+                                .collect(java.util.stream.Collectors.toList()));
 
-        // Use tags for office assignment
-        List<String> tagsForAssignment = top5Tags;
+        // Use ALL 20 tags for office assignment (more context = better assignment)
+        // The AI can analyze all tags to make a more informed decision
+        List<String> tagsForAssignment = allGeneratedTags;
 
         // If no office is assigned in the request, use AI to assign one
         Office assignedOffice = request.getAssignedOffice();
@@ -150,15 +156,26 @@ public class IncidentService {
         incident.setIncidentType(request.getIncidentType());
         incident.setDateOfIncident(request.getDateOfIncident());
         incident.setTimeOfIncident(request.getTimeOfIncident());
-        incident.setLocation(request.getLocation());
         incident.setDescription(request.getDescription());
         incident.setAssignedOffice(request.getAssignedOffice());
         incident.setSubmittedBy(user);
         incident.setPreferAnonymous(request.getPreferAnonymous());
         incident.setIsPrivate(request.getIsPrivate());
+        incident.setRoom(request.getRoom()); // Set room field
+        
+        // Determine if this is a real incident or just a concern (using only incident type and description)
+        boolean isIncident = incidentClassificationService.isRealIncident(
+                request.getIncidentType(),
+                request.getDescription()
+        );
+        incident.setIsIncident(isIncident);
 
-        // Handle geolocation data
+        // Handle geolocation data (this sets building, formattedAddress, latitude, longitude)
         handleGeolocationData(incident, request);
+        
+        // Format location string according to: BuildingCode - Room - FullAddress
+        String formattedLocation = formatLocationString(incident.getBuilding(), request.getRoom(), incident.getFormattedAddress());
+        incident.setLocation(formattedLocation);
 
         // Save incident first to get the ID
         Incident savedIncident = incidentRepository.save(incident);
@@ -184,6 +201,44 @@ public class IncidentService {
         }
 
         return savedIncident;
+    }
+
+    /**
+     * Formats the location string according to the specified format:
+     * IF building exists AND room exists: "BuildingCode - Room - FullAddress"
+     * ELSE IF building exists: "BuildingCode - FullAddress"
+     * ELSE IF room exists: "Room - FullAddress"
+     * ELSE: "FullAddress" (or coordinates as fallback)
+     */
+    private String formatLocationString(Building building, String room, String formattedAddress) {
+        String buildingCode = (building != null) ? building.name() : null;
+        String roomValue = (room != null && !room.trim().isEmpty()) ? room.trim() : null;
+        String address = (formattedAddress != null && !formattedAddress.trim().isEmpty()) 
+                ? formattedAddress.trim() 
+                : null;
+        
+        // If no address available, use coordinates as fallback (shouldn't happen in normal flow)
+        if (address == null) {
+            // This should rarely happen, but if it does, we'll return empty string
+            // The location field is required, so this would cause validation error
+            log.warn("No formatted address available for location formatting");
+            return "";
+        }
+        
+        // Build location string based on available fields
+        if (buildingCode != null && roomValue != null) {
+            // Building + Room + Address
+            return String.format("%s - %s - %s", buildingCode, roomValue, address);
+        } else if (buildingCode != null) {
+            // Building + Address
+            return String.format("%s - %s", buildingCode, address);
+        } else if (roomValue != null) {
+            // Room + Address (edge case - building detection failed but still on campus)
+            return String.format("%s - %s", roomValue, address);
+        } else {
+            // Just Address (fallback - should rarely happen if building detection works)
+            return address;
+        }
     }
 
     private void handleGeolocationData(Incident incident, IncidentRequest request) {

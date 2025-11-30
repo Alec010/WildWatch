@@ -10,6 +10,7 @@ export interface LocationData {
   buildingCode?: string;
   withinCampus?: boolean;
   distanceFromCampusCenter?: number;
+  room?: string; // Optional specific room/location within the building
 }
 
 export interface GeolocationResponse {

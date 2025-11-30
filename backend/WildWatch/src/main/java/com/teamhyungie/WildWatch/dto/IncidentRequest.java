@@ -34,6 +34,8 @@ public class IncidentRequest {
     @JsonDeserialize(using = BuildingDeserializer.class)
     private Building building;
 
+    private String room; // Optional specific room/location within the building
+
     @NotBlank(message = "Description is required")
     private String description;
 
@@ -46,7 +48,9 @@ public class IncidentRequest {
 
     private Boolean isPrivate;
 
-    private List<String> tags;
+    private List<String> tags; // Top 5 selected tags
+
+    private List<String> allTags; // All 20 generated tags (optional, fallback to generation)
 
     @Data
     public static class WitnessDTO {

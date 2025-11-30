@@ -64,8 +64,10 @@ export default function IncidentSubmissionPage() {
     building: "",
     buildingName: "",
     buildingCode: "",
+    room: "", // Optional specific room/location
     description: "",
-    tags: [] as string[],
+    tags: [] as string[], // Top 5 selected tags
+    allTags: [] as string[], // All 20 generated tags
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -89,6 +91,9 @@ export default function IncidentSubmissionPage() {
       if (parsedData.tags) {
         setSelectedTags(parsedData.tags);
       }
+      if (parsedData.allTags) {
+        setTags(parsedData.allTags);
+      }
     }
     setLoading(false);
   }, []);
@@ -102,7 +107,7 @@ export default function IncidentSubmissionPage() {
     ) {
       sessionStorage.setItem(
         "incidentSubmissionData",
-        JSON.stringify({ ...formData, tags: selectedTags })
+        JSON.stringify({ ...formData, tags: selectedTags, allTags: tags })
       );
     }
   }, [formData, selectedTags]);
@@ -214,6 +219,7 @@ export default function IncidentSubmissionPage() {
       building: locationData.building || "",
       buildingName: locationData.buildingName || "",
       buildingCode: locationData.buildingCode || "",
+      room: locationData.room || "",
     }));
 
     // Clear location error if it exists and location is valid
@@ -230,7 +236,7 @@ export default function IncidentSubmissionPage() {
     const errors: { [key: string]: string } = {};
 
     if (!formData.incidentType.trim()) {
-      errors.incidentType = "Incident type is required";
+      errors.incidentType = "Incident title is required";
     }
 
     if (!formData.dateOfIncident) {
@@ -290,7 +296,7 @@ export default function IncidentSubmissionPage() {
     }
     sessionStorage.setItem(
       "incidentSubmissionData",
-      JSON.stringify({ ...formData, tags: selectedTags })
+      JSON.stringify({ ...formData, tags: selectedTags, allTags: tags })
     );
     router.push("/incidents/submit/evidence");
   };
@@ -311,6 +317,7 @@ export default function IncidentSubmissionPage() {
       building: "",
       buildingName: "",
       buildingCode: "",
+      room: "",
       description: "",
       tags: [],
     });
@@ -364,6 +371,9 @@ export default function IncidentSubmissionPage() {
 
       // Store all generated tags (20 tags)
       setTags(allGeneratedTags);
+      
+      // Store all 20 tags in formData for submission
+      setFormData((prev) => ({ ...prev, allTags: allGeneratedTags }));
 
       // Auto-select the top 5 scored tags (best weighted tags)
       setSelectedTags(top5Tags);
@@ -586,13 +596,12 @@ export default function IncidentSubmissionPage() {
                         htmlFor="incidentType"
                         className="text-sm font-medium flex items-center"
                       >
-                        Incident Type{" "}
+                        Incident Title{" "}
                         <span className="text-[#800000] ml-1">*</span>
                         <div className="flex items-center ml-1.5">
                           <HelpCircle className="h-3.5 w-3.5 text-gray-400" />
                           <span className="text-xs text-gray-500 ml-1.5">
-                            Specify the type of incident (e.g., theft,
-                            vandalism, harassment)
+                            Provide a brief, descriptive title that summarizes the incident (e.g., "Broken Monitor in Computer Lab", "Theft of Personal Belongings").
                           </span>
                         </div>
                       </Label>
@@ -601,7 +610,7 @@ export default function IncidentSubmissionPage() {
                         <Input
                           id="incidentType"
                           name="incidentType"
-                          placeholder="E.g., Theft, Vandalism, Harassment"
+                          placeholder="E.g., Broken Monitor in Computer Lab, Theft of Personal Belongings"
                           value={formData.incidentType}
                           onChange={handleInputChange}
                           className={`pl-10 border-gray-200 focus:border-[#800000] focus:ring-[#800000]/20 rounded-lg ${
@@ -719,6 +728,7 @@ export default function IncidentSubmissionPage() {
                               building: formData.building,
                               buildingName: formData.buildingName,
                               buildingCode: formData.buildingCode,
+                              room: formData.room,
                             }
                           : undefined
                       }

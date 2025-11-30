@@ -31,6 +31,7 @@ public class IncidentResponse {
     private Building building;
     private String buildingName;
     private String buildingCode;
+    private String room; // Optional specific room/location within the building
     private String description;
     private Office assignedOffice;
     private PriorityLevel priorityLevel;
@@ -59,6 +60,7 @@ public class IncidentResponse {
     private LocalDateTime resolutionExtendedAt;
     private Boolean preferAnonymous;
     private Boolean isPrivate;
+    private Boolean isIncident; // true if real incident, false if just a concern
 
     /**
      * Constructor for optimized dashboard queries This constructor is used by
@@ -213,6 +215,7 @@ public class IncidentResponse {
         response.setBuilding(incident.getBuilding());
         response.setBuildingName(incident.getBuilding() != null ? incident.getBuilding().getFullName() : null);
         response.setBuildingCode(incident.getBuilding() != null ? incident.getBuilding().getCode() : null);
+        response.setRoom(incident.getRoom());
         response.setDescription(incident.getDescription());
         response.setAssignedOffice(incident.getAssignedOffice());
         response.setPriorityLevel(incident.getPriorityLevel());
@@ -235,6 +238,7 @@ public class IncidentResponse {
         response.setResolutionExtendedAt(incident.getResolutionExtendedAt());
         response.setPreferAnonymous(incident.getPreferAnonymous());
         response.setIsPrivate(incident.getIsPrivate());
+        response.setIsIncident(incident.getIsIncident());
 
         // Map tags - convert generalTags to tag names
         // Note: For display, we'll use the transient tags field if available (contains top 5),

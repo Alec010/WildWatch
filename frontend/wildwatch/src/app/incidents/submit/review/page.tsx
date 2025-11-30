@@ -180,7 +180,7 @@ export default function ReviewSubmissionPage() {
     setShowLoadingDialog(true);
 
     try {
-      // Analyze first (no persistence)
+      // Analyze first (no persistence) - pass tags from step 1
       const analyzeRes = await api.post("/api/incidents/analyze", {
         incidentType: incidentData.incidentType,
         description: incidentData.description,
@@ -190,6 +190,7 @@ export default function ReviewSubmissionPage() {
         buildingCode: incidentData.buildingCode,
         latitude: incidentData.latitude,
         longitude: incidentData.longitude,
+        tags: incidentData.allTags || incidentData.tags || [], // Use all 20 tags if available
       });
 
       if (!analyzeRes.ok) {
@@ -283,7 +284,8 @@ export default function ReviewSubmissionPage() {
           ...incidentData,
           witnesses: processedWitnesses,
           preferAnonymous: !!preferAnonymous,
-          tags: incidentData.tags || [],
+          tags: incidentData.tags || [], // Top 5 selected tags
+          allTags: incidentData.allTags || incidentData.tags || [], // All 20 tags for database
         })
       );
 

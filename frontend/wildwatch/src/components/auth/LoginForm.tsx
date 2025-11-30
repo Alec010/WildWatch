@@ -81,6 +81,9 @@ export function LoginForm() {
       setShowLoader(true)
       setLoadingMessage("Preparing your dashboard...")
 
+      // Wait a moment for token to be properly stored
+      await new Promise(resolve => setTimeout(resolve, 300));
+
       // Check if user data exists and has required properties
       if (!data.user || typeof data.user.termsAccepted === 'undefined') {
         setLoadingMessage("Fetching your profile...")
@@ -98,10 +101,16 @@ export function LoginForm() {
 
         const userData = await profileResponse.json()
         const redirectPath = handleAuthRedirect(userData)
+        
+        // Small delay before redirect to ensure everything is ready
+        await new Promise(resolve => setTimeout(resolve, 200));
         router.push(redirectPath)
       } else {
         // Use the user data from login response
         const redirectPath = handleAuthRedirect(data.user)
+        
+        // Small delay before redirect to ensure everything is ready
+        await new Promise(resolve => setTimeout(resolve, 200));
         router.push(redirectPath)
       }
     } catch (error) {

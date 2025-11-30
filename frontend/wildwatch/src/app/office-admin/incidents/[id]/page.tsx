@@ -103,6 +103,7 @@ interface Incident {
   // Backend may return either camelCase or snake_case
   preferAnonymous?: boolean;
   isPrivate?: boolean;
+  isIncident?: boolean; // AI determination: true = real incident, false = concern
 }
 
 export default function IncidentDetailsPage() {
@@ -142,6 +143,7 @@ export default function IncidentDetailsPage() {
   const [verifyError, setVerifyError] = useState("");
   const [statusError, setStatusError] = useState("");
   const [officeSearchQuery, setOfficeSearchQuery] = useState("");
+  const [isIncidentTag, setIsIncidentTag] = useState<boolean>(true); // true = Incident, false = Concern
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Handle countdown and navigation
@@ -186,6 +188,7 @@ export default function IncidentDetailsPage() {
 
         setIncident(data);
         setAdministrativeNotes(data.administrativeNotes || "");
+        setIsIncidentTag(data.isIncident !== false); // Default to true if not set
         setVerificationNotes(data.verificationNotes || "");
         setIsVerified(data.verified);
         setStatus(data.status);
@@ -256,6 +259,7 @@ export default function IncidentDetailsPage() {
         priorityLevel,
         preferAnonymous: isAnonymous,
         isPrivate: isPrivate,
+        isIncident: isIncidentTag,
       });
 
       if (!response.ok) {
@@ -1059,6 +1063,45 @@ export default function IncidentDetailsPage() {
                       If enabled, this incident will be restricted to authorized
                       personnel only.
                     </p>
+                  </div>
+
+                  {/* Tag Report As */}
+                  <div className="mb-4 p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+                    <Label className="text-sm font-medium text-[#8B0000] mb-3 block">
+                      Tag the report as:
+                    </Label>
+                    <div className="space-y-2">
+                      <label className="flex items-center gap-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={isIncidentTag}
+                          onChange={(e) => setIsIncidentTag(e.target.checked)}
+                          className="h-4 w-4 rounded border-gray-300 text-[#8B0000] focus:ring-[#8B0000]"
+                        />
+                        <span className="text-sm font-medium text-gray-700">
+                          Incident
+                        </span>
+                      </label>
+                      <label className="flex items-center gap-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={!isIncidentTag}
+                          onChange={(e) => setIsIncidentTag(!e.target.checked)}
+                          className="h-4 w-4 rounded border-gray-300 text-[#8B0000] focus:ring-[#8B0000]"
+                        />
+                        <span className="text-sm font-medium text-gray-700">
+                          Concern
+                        </span>
+                      </label>
+                    </div>
+                    {incident?.isIncident !== undefined && (
+                      <div className="mt-3 pt-3 border-t border-blue-200 flex items-center gap-2 text-xs text-blue-700">
+                        <Info className="h-4 w-4 flex-shrink-0" />
+                        <span>
+                          AI suggests this is {incident.isIncident ? "an incident" : "a concern"}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </motion.div>

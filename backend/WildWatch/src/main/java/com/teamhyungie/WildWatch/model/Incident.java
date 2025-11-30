@@ -53,6 +53,9 @@ public class Incident {
     @Column(name = "building")
     private Building building;
 
+    @Column(name = "room")
+    private String room; // Optional specific room/location within the building
+
     @NotBlank(message = "Description is required")
     @Column(length = 1000)
     private String description;
@@ -150,6 +153,9 @@ public class Incident {
 
     @Column(name = "rating")
     private Integer rating;
+
+    @Column(name = "is_incident")
+    private Boolean isIncident = true; // Default to true (treat as incident)
 
     @PrePersist
     protected void onCreate() {

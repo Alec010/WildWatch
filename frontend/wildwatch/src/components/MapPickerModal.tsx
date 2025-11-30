@@ -11,6 +11,8 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   MapPin,
   Loader2,
@@ -18,6 +20,7 @@ import {
   Building,
   Navigation,
   X,
+  DoorOpen,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { locationService, LocationData, BuildingInfo } from '@/utils/locationService';
@@ -45,6 +48,7 @@ export default function MapPickerModal({
   const [selectedLocation, setSelectedLocation] = useState<LocationData | null>(null);
   const [buildings, setBuildings] = useState<BuildingInfo[]>([]);
   const [isProcessingLocation, setIsProcessingLocation] = useState(false);
+  const [room, setRoom] = useState<string>('');
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const markerRef = useRef<any>(null);
@@ -353,12 +357,16 @@ export default function MapPickerModal({
 
   const handleConfirmSelection = useCallback(() => {
     if (selectedLocation) {
-      onLocationSelect(selectedLocation);
+      onLocationSelect({
+        ...selectedLocation,
+        room: room.trim() || undefined,
+      });
     }
-  }, [selectedLocation, onLocationSelect]);
+  }, [selectedLocation, room, onLocationSelect]);
 
   const handleClose = useCallback(() => {
     setSelectedLocation(null);
+    setRoom('');
     if (markerRef.current) {
       markerRef.current.setMap(null);
     }
@@ -367,8 +375,8 @@ export default function MapPickerModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
-        <DialogHeader>
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <MapPin className="h-5 w-5 text-[#800000]" />
             Select Location from Map
@@ -378,7 +386,7 @@ export default function MapPickerModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 flex-1 overflow-y-auto pr-2">
           {/* Map Container */}
           <div className="relative">
             <div 
@@ -409,6 +417,28 @@ export default function MapPickerModal({
               )}
             </Button>
           </div>
+
+          {/* Room/Location Input Field - Above Selected Location */}
+          {selectedLocation && (
+            <div className="bg-white border border-gray-200 rounded-lg p-4">
+              <Label htmlFor="room" className="text-sm font-medium flex items-center gap-2 mb-2">
+                <DoorOpen className="h-4 w-4 text-gray-600" />
+                <span className="text-gray-800">Specific Room/Location</span>
+                <span className="text-xs text-gray-500 font-normal">(Optional)</span>
+              </Label>
+              <Input
+                id="room"
+                type="text"
+                placeholder="e.g., NGE101, GL2304"
+                value={room}
+                onChange={(e) => setRoom(e.target.value)}
+                className="border-gray-300 focus:border-[#800000] focus:ring-[#800000]/20 bg-white"
+              />
+              <p className="text-xs text-gray-500 mt-1.5">
+                Enter the specific room or location within the building (optional)
+              </p>
+            </div>
+          )}
 
           {/* Selected Location Display */}
           {selectedLocation && (() => {
@@ -488,7 +518,7 @@ export default function MapPickerModal({
           )}
         </div>
 
-        <DialogFooter className="flex justify-between">
+        <DialogFooter className="flex justify-between flex-shrink-0 pt-4 border-t border-gray-200">
           <Button
             onClick={handleClose}
             variant="outline"
@@ -498,8 +528,8 @@ export default function MapPickerModal({
           </Button>
           <Button
             onClick={handleConfirmSelection}
-            disabled={!selectedLocation || isProcessingLocation}
-            className="bg-[#800000] hover:bg-[#600000] text-white"
+            disabled={!selectedLocation || isProcessingLocation || selectedLocation?.withinCampus === false}
+            className="bg-[#800000] hover:bg-[#600000] text-white disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isProcessingLocation ? (
               <>

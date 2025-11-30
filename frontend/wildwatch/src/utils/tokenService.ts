@@ -71,6 +71,11 @@ class TokenService {
 
     // Schedule automatic refresh
     this.scheduleTokenRefresh(token);
+
+    // Dispatch custom event to notify UserContext
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('token-changed'));
+    }
   }
 
   /**
@@ -82,6 +87,11 @@ class TokenService {
       if (this.refreshTimer) {
         clearTimeout(this.refreshTimer);
         this.refreshTimer = null;
+      }
+
+      // Dispatch custom event to notify UserContext
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('token-changed'));
       }
     }
   }
