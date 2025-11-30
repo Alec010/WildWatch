@@ -320,6 +320,7 @@ export default function IncidentSubmissionPage() {
       room: "",
       description: "",
       tags: [],
+      allTags: [],
     });
     setSelectedTags([]);
     setTags([]);
