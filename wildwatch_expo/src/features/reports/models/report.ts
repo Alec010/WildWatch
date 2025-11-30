@@ -30,6 +30,7 @@ export interface ReportForm {
   building?: string;
   buildingName?: string;
   buildingCode?: string;
+  room?: string; // Optional specific room/location within the building
   withinCampus?: boolean;
   distanceFromCampusCenter?: number;
   description: string;

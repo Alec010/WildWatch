@@ -26,6 +26,7 @@ export const useReportForm = () => {
       building: '',
       buildingName: '',
       buildingCode: '',
+      room: '',
       withinCampus: undefined,
       distanceFromCampusCenter: undefined,
       description: '',
@@ -51,6 +52,7 @@ export const useReportForm = () => {
       building: '',
       buildingName: '',
       buildingCode: '',
+      room: '',
       withinCampus: undefined,
       distanceFromCampusCenter: undefined,
       description: '',
@@ -129,6 +131,7 @@ export const useReportForm = () => {
       building: locationData.building || '',
       buildingName: locationData.buildingName || '',
       buildingCode: locationData.buildingCode || '',
+      room: locationData.room || '',
       withinCampus: locationData.withinCampus,
       distanceFromCampusCenter: locationData.distanceFromCampusCenter,
     }));

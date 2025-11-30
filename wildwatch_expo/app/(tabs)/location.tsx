@@ -11,6 +11,7 @@ import {
   StatusBar,
   useWindowDimensions,
   Platform,
+  TextInput,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -56,6 +57,7 @@ export default function LocationScreen() {
   const [selectedLocation, setSelectedLocation] = useState<LocationData | null>(
     null
   );
+  const [room, setRoom] = useState<string>("");
   const [isProcessingLocation, setIsProcessingLocation] = useState(false);
   const [mapRegion, setMapRegion] = useState({
     latitude: CAMPUS_CONFIG.CENTER.LATITUDE as number,
@@ -111,6 +113,7 @@ export default function LocationScreen() {
           const persistedLocation = await storage.getLocationData();
           if (persistedLocation) {
             setSelectedLocation(persistedLocation);
+            setRoom(persistedLocation.room || "");
             // Update map region to show the persisted location
             mapRef.current?.animateToRegion(
               {
@@ -131,12 +134,16 @@ export default function LocationScreen() {
     }, [])
   );
 
-  // Save location data whenever selectedLocation changes
+  // Save location data whenever selectedLocation or room changes
   React.useEffect(() => {
     if (selectedLocation) {
-      storage.setLocationData(selectedLocation);
+      const locationDataWithRoom = {
+        ...selectedLocation,
+        room: room.trim() || undefined,
+      };
+      storage.setLocationData(locationDataWithRoom);
     }
-  }, [selectedLocation]);
+  }, [selectedLocation, room]);
 
   const notifySelected = (ld: LocationData) => {
     Alert.alert(
@@ -216,6 +223,7 @@ export default function LocationScreen() {
           buildingCode: geoResponse.buildingCode,
           withinCampus: geoResponse.withinCampus,
           distanceFromCampusCenter: geoResponse.distanceFromCampusCenter,
+          room: room.trim() || undefined,
         };
         setSelectedLocation(locationData);
         // Explicitly save to storage to ensure persistence
@@ -279,6 +287,7 @@ export default function LocationScreen() {
 
   const handleClearLocation = async () => {
     setSelectedLocation(null);
+    setRoom("");
     // Also clear from storage when location is cleared
     await storage.removeLocationData();
   };
@@ -286,10 +295,15 @@ export default function LocationScreen() {
   const handleSaveLocation = async () => {
     if (!selectedLocation) return;
 
-    console.log("Saving location data:", selectedLocation);
+    const locationDataWithRoom = {
+      ...selectedLocation,
+      room: room.trim() || undefined,
+    };
+
+    console.log("Saving location data:", locationDataWithRoom);
 
     // Ensure location data is saved to storage before navigation
-    await storage.setLocationData(selectedLocation);
+    await storage.setLocationData(locationDataWithRoom);
 
     const navigationParams = {
       latitude: selectedLocation.latitude?.toString(),
@@ -298,6 +312,7 @@ export default function LocationScreen() {
       building: selectedLocation.building,
       buildingName: selectedLocation.buildingName,
       buildingCode: selectedLocation.buildingCode,
+      room: room.trim() || "",
       withinCampus: selectedLocation.withinCampus?.toString(),
       distanceFromCampusCenter:
         selectedLocation.distanceFromCampusCenter?.toString(),
@@ -338,6 +353,13 @@ export default function LocationScreen() {
 
     return (
       <View style={styles.floatingLocationContent} pointerEvents="box-none">
+        <TouchableOpacity
+          onPress={handleClearLocation}
+          style={styles.floatingClearButton}
+        >
+          <Ionicons name="close" size={18} color="#6b7280" />
+        </TouchableOpacity>
+
         <View style={styles.floatingLocationHeader}>
           <View style={styles.floatingLocationTitleRow}>
             <Ionicons
@@ -405,21 +427,56 @@ export default function LocationScreen() {
               {sanitizedAddress}
             </Text>
           )}
-
-          <TouchableOpacity
-            onPress={handleSaveLocation}
-            style={styles.saveOverlayButton}
-          >
-            <Ionicons name="checkmark-circle" size={18} color="#ffffff" />
-            <Text style={styles.saveOverlayButtonText}>Save Location</Text>
-          </TouchableOpacity>
         </View>
 
+        {/* Room/Specific Location Input */}
+        <View style={styles.roomInputContainer}>
+          <View style={styles.roomInputLabelRow}>
+            <Ionicons
+              name="door-open"
+              size={16}
+              color={isOutsideCampus ? "#dc2626" : "#16a34a"}
+            />
+            <Text
+              style={[
+                styles.roomInputLabel,
+                isOutsideCampus
+                  ? styles.outsideCampusText
+                  : styles.insideCampusText,
+              ]}
+            >
+              Specific Room/Location
+            </Text>
+            <Text style={styles.roomInputOptional}>(Optional)</Text>
+          </View>
+          <TextInput
+            style={[
+              styles.roomInput,
+              isOutsideCampus
+                ? styles.roomInputOutsideCampus
+                : styles.roomInputInsideCampus,
+            ]}
+            placeholder="e.g., NGE101, GL2304"
+            placeholderTextColor="#9ca3af"
+            value={room}
+            onChangeText={setRoom}
+            editable={!isOutsideCampus}
+            autoCapitalize="characters"
+            autoCorrect={false}
+          />
+          <Text style={styles.roomInputHint}>
+            Enter the specific room or location within the building
+          </Text>
+        </View>
+
+        {/* Save Location Button */}
         <TouchableOpacity
-          onPress={handleClearLocation}
-          style={styles.floatingClearButton}
+          onPress={handleSaveLocation}
+          style={styles.saveOverlayButton}
+          activeOpacity={0.8}
         >
-          <Ionicons name="close" size={16} color="#6b7280" />
+          <Ionicons name="checkmark-circle" size={20} color="#ffffff" />
+          <Text style={styles.saveOverlayButtonText}>Save Location</Text>
         </TouchableOpacity>
       </View>
     );
@@ -643,20 +700,28 @@ const styles = StyleSheet.create({
     elevation: 12,
     borderWidth: 1,
     borderColor: "#E5E7EB",
-    maxHeight: 220,
+    maxHeight: 320,
   },
   floatingLocationContent: {
-    gap: 10,
+    gap: 0,
+    position: "relative",
   },
-  floatingLocationHeader: { marginRight: 0 },
+  floatingLocationHeader: {
+    marginRight: 32,
+    marginBottom: 12,
+  },
   floatingLocationTitleRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 6,
+    marginBottom: 8,
     gap: 8,
     flexWrap: "wrap",
   },
-  floatingLocationTitle: { fontSize: 16, fontWeight: "600" },
+  floatingLocationTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    flex: 1,
+  },
   floatingStatusBadge: {
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -675,14 +740,23 @@ const styles = StyleSheet.create({
     color: "#166534",
     marginBottom: 4,
   },
-  floatingAddressText: { fontSize: 12, lineHeight: 16, color: "#111827" },
+  floatingAddressText: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: "#111827",
+    marginTop: 4,
+  },
   floatingClearButton: {
     position: "absolute",
-    top: 8,
-    right: 8,
-    padding: 8,
-    borderRadius: 8,
+    top: 0,
+    right: 0,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: "#f3f4f6",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 10,
   },
   insideCampusText: { color: "#166534" },
   outsideCampusText: { color: "#dc2626" },
@@ -690,17 +764,74 @@ const styles = StyleSheet.create({
   outsideCampusBadge: { backgroundColor: "#fecaca" },
   insideCampusBadgeText: { color: "#166534" },
   outsideCampusBadgeText: { color: "#dc2626" },
-  saveOverlayButton: {
-    marginTop: 8,
-    backgroundColor: "#16a34a",
+  roomInputContainer: {
+    marginTop: 16,
+    marginBottom: 16,
+  },
+  roomInputLabelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+    gap: 6,
+    flexWrap: "wrap",
+  },
+  roomInputLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  roomInputOptional: {
+    fontSize: 12,
+    color: "#6b7280",
+    fontWeight: "400",
+    marginLeft: 2,
+  },
+  roomInput: {
+    borderWidth: 1.5,
     borderRadius: 10,
+    paddingHorizontal: 14,
     paddingVertical: 12,
+    fontSize: 15,
+    marginBottom: 6,
+    minHeight: 48,
+  },
+  roomInputInsideCampus: {
+    borderColor: "#86efac",
+    backgroundColor: "#ffffff",
+    color: "#111827",
+  },
+  roomInputOutsideCampus: {
+    borderColor: "#fca5a5",
+    backgroundColor: "#fef2f2",
+    color: "#6b7280",
+  },
+  roomInputHint: {
+    fontSize: 11,
+    color: "#6b7280",
+    marginTop: 0,
+    lineHeight: 14,
+  },
+  saveOverlayButton: {
+    marginTop: 0,
+    backgroundColor: "#16a34a",
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
-    gap: 8,
+    gap: 10,
+    shadowColor: "#16a34a",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  saveOverlayButtonText: { color: "#ffffff", fontSize: 15, fontWeight: "700" },
+  saveOverlayButtonText: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+  },
   buttonContainer: {
     marginTop: 0,
     marginBottom: 12,
