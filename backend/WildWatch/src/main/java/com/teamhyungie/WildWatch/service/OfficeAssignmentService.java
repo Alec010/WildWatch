@@ -70,19 +70,22 @@ public class OfficeAssignmentService {
                     "Description: " + truncatedDescription + "\n" +
                     "Location: " + simplifiedLocation + "\n" +
                     "Tags: " + String.join(", ", relevantTags) + "\n\n" +
-                    "CRITICAL RULES (FOLLOW IN ORDER):\n" +
-                    "1. NGE Building rooms starting with 1 or 2 (NGE102, NGE203, etc.) → TSG (computer labs)\n" +
-                    "2. Student fights/bullying/misbehavior/conflicts → SSO (disciplinary)\n" +
-                    "3. Parking/car/vehicle issues → SSD\n" +
-                    "4. Theft/robbery/external threats → SSD\n" +
-                    "5. WiFi/network/computer/lab → TSG\n" +
-                    "6. Property/equipment/grounds → OPC\n" +
-                    "7. Academic/counseling → SSO\n" +
-                    "8. Student advocacy → SSG\n\n" +
-                    "KEY DISTINCTION:\n" +
-                    "- Student-on-student incidents (fights, bullying) = SSO\n" +
-                    "- External threats or theft = SSD\n" +
-                    "- NGE rooms NGE1XX or NGE2XX = TSG (computer labs)\n\n" +
+                    "CRITICAL RULES (FOLLOW IN ORDER - STOP AT FIRST MATCH):\n" +
+                    "1. NGE Building (any mention of NGE) + computer/keyboard/mouse/USB/monitor/lab equipment → TSG\n" +
+                    "2. NGE Building rooms (NGE102, NGE203, NGE1XX, NGE2XX, etc.) → TSG (computer labs)\n" +
+                    "3. WiFi/network/internet/computer/technical issues (anywhere on campus) → TSG\n" +
+                    "4. Student fights/bullying/misbehavior/conflicts/disciplinary → SSO\n" +
+                    "5. Parking/car/vehicle issues → SSD\n" +
+                    "6. Theft/robbery/external threats/security → SSD\n" +
+                    "7. Non-computer property/equipment/grounds/facilities (NOT in NGE, NOT computers) → OPC\n" +
+                    "8. Academic support/counseling/student records → SSO\n" +
+                    "9. Student advocacy/student welfare → SSG\n\n" +
+                    "KEY DISTINCTIONS:\n" +
+                    "- NGE + computer equipment = TSG (NOT OPC)\n" +
+                    "- Computer/technical anywhere = TSG (NOT OPC)\n" +
+                    "- Physical property/buildings (non-computer) = OPC\n" +
+                    "- Student-on-student incidents = SSO\n" +
+                    "- External threats or theft = SSD\n\n" +
                     "Offices:\n" + officeDescriptions.toString() + "\n" +
                     "Return ONLY: TSG, OPC, SSO, SSD, or SSG";
             
@@ -195,14 +198,33 @@ public class OfficeAssignmentService {
         
         String combinedText = (description + " " + String.join(" ", tags)).toLowerCase();
         
-        // Check for NGE Building computer lab rooms (NGE1XX or NGE2XX) - highest priority
+        // Priority 1: NGE + computer/tech equipment (keyboard, mouse, USB, monitor, PC, computer)
+        if (combinedText.contains("nge") && 
+            (combinedText.contains("computer") || combinedText.contains("keyboard") || 
+             combinedText.contains("mouse") || combinedText.contains("usb") || 
+             combinedText.contains("monitor") || combinedText.contains("pc") || 
+             combinedText.contains("lab") || combinedText.contains("tech"))) {
+            log.info("Fallback: Assigned to TSG (NGE + computer equipment)");
+            return Office.TSG;
+        }
+        
+        // Priority 2: NGE Building computer lab rooms (NGE1XX or NGE2XX)
         if (combinedText.matches(".*nge\\s*[12]\\d{2}.*") || 
             tags.stream().anyMatch(t -> t.matches("(?i)nge[12]\\d{2}"))) {
             log.info("Fallback: Assigned to TSG (NGE computer lab room detected)");
             return Office.TSG;
         }
         
-        // Check for parking/car/vehicle keywords
+        // Priority 3: WiFi/network/computer/technical (anywhere on campus)
+        if (combinedText.contains("wifi") || combinedText.contains("network") || 
+            combinedText.contains("internet") || combinedText.contains("computer") ||
+            combinedText.contains("keyboard") || combinedText.contains("mouse") ||
+            combinedText.contains("usb") || combinedText.contains("technical")) {
+            log.info("Fallback: Assigned to TSG (tech detected)");
+            return Office.TSG;
+        }
+        
+        // Priority 4: Parking/car/vehicle keywords
         if (combinedText.contains("parking") || combinedText.contains("car") || 
             combinedText.contains("vehicle") || tags.stream().anyMatch(t -> 
                 t.equalsIgnoreCase("Parking") || t.equalsIgnoreCase("Car") || t.equalsIgnoreCase("Vehicle"))) {
@@ -210,29 +232,22 @@ public class OfficeAssignmentService {
             return Office.SSD;
         }
         
-        // Check for security/safety keywords
+        // Priority 5: Security/safety keywords
         if (combinedText.contains("theft") || combinedText.contains("security") || 
             combinedText.contains("safety") || combinedText.contains("stolen")) {
             log.info("Fallback: Assigned to SSD (security/safety detected)");
             return Office.SSD;
         }
         
-        // Check for WiFi/network keywords
-        if (combinedText.contains("wifi") || combinedText.contains("network") || 
-            combinedText.contains("internet") || combinedText.contains("computer")) {
-            log.info("Fallback: Assigned to TSG (tech detected)");
-            return Office.TSG;
-        }
-        
-        // Check for property keywords
+        // Priority 6: Property keywords (non-computer equipment)
         if (combinedText.contains("property") || combinedText.contains("asset") || 
             combinedText.contains("equipment") || combinedText.contains("grounds")) {
             log.info("Fallback: Assigned to OPC (property detected)");
             return Office.OPC;
         }
         
-        // Default to SSO
-        log.info("Fallback: Assigned to SSO (default)");
-        return Office.SSO;
+        // Default to SSG for general concerns
+        log.info("Fallback: Assigned to SSG (default)");
+        return Office.SSG;
     }
 }
