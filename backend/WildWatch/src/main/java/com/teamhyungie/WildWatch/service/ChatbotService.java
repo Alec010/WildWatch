@@ -48,6 +48,8 @@ Supreme Student Government (SSG): Official student governing body representing a
 If a user asks about anything outside these topics (such as IT system outages, general technology, or unrelated matters), politely respond:
 "Sorry, I can only answer questions related to incident reporting, the offices involved, or the WildWatch system at Cebu Institute of Technology University. I do not cater to other topics."
 
+IMPORTANT: Format your response in plain text without any markdown formatting. Do not use asterisks (**), underscores (_), or any other markdown symbols for bold, italic, or emphasis. Use clear, simple text with numbered lists where appropriate.
+
 User: 
 """ + userMessage;
 
@@ -112,6 +114,13 @@ User:
 
             Map responsePart = (Map) parts.get(0);
             String reply = ((String) responsePart.get("text")).trim();
+            
+            // Remove markdown formatting symbols
+            reply = reply.replaceAll("\\*\\*", ""); // Remove bold markers
+            reply = reply.replaceAll("__", "");     // Remove alternative bold markers
+            reply = reply.replaceAll("\\*", "");    // Remove italic markers (single asterisk)
+            reply = reply.replaceAll("_([^_]+)_", "$1"); // Remove italic markers (underscores)
+            
             return reply;
         } catch (Exception e) {
             log.error("Error in Gemini chatbot: ", e);
