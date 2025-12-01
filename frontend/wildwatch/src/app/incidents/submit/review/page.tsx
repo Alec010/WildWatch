@@ -1266,7 +1266,7 @@ export default function ReviewSubmissionPage() {
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-gray-600">Similarity</div>
                   <div className="text-sm font-semibold text-[#800000]">
-                    {Math.round((s.similarityScore || 0) * 100)}%
+                    {Math.min(100, Math.round(((s.similarityScore || 0) * 100) + 20))}%
                   </div>
                 </div>
                 <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-3">

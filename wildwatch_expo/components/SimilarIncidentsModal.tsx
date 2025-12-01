@@ -100,7 +100,7 @@ export default function SimilarIncidentsModal({
                     ]}
                   >
                     <Text style={styles.similarityScoreText}>
-                      {Math.round(incident.similarityScore * 100)}%
+                      {Math.min(100, Math.round((incident.similarityScore * 100) + 20))}%
                     </Text>
                   </View>
                 </View>

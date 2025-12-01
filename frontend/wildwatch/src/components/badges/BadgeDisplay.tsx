@@ -3,7 +3,7 @@
 import { BadgeProgress, BadgeType, BADGE_COLORS, BADGE_ICONS } from '@/types/badge'
 import { badgeService } from '@/utils/badgeService'
 import { motion } from 'framer-motion'
-import { Award, Check, Star } from 'lucide-react'
+import { Award, Check, Star, Zap, Users, Crown, AlertCircle } from 'lucide-react'
 
 interface BadgeDisplayProps {
   badge: BadgeProgress
@@ -38,24 +38,24 @@ export function BadgeDisplay({
       )
     }
 
-    // Otherwise use emoji or icon
+    // Otherwise use appropriate Lucide icons for each badge type
     switch (badge.badgeType) {
       // Regular user badges
       case 'FIRST_RESPONDER':
-        return <Award className="w-1/2 h-1/2 text-white" />
+        return <AlertCircle className="w-1/2 h-1/2 text-white" />
       case 'COMMUNITY_HELPER':
-        return <Star className="w-1/2 h-1/2 text-white" />
+        return <Users className="w-1/2 h-1/2 text-white" />
       case 'CAMPUS_LEGEND':
-        return <Award className="w-1/2 h-1/2 text-white" />
+        return <Crown className="w-1/2 h-1/2 text-white" />
       // Office admin badges
       case 'FIRST_RESPONSE':
-        return <Check className="w-1/2 h-1/2 text-white" />
+        return <Zap className="w-1/2 h-1/2 text-white" />
       case 'RATING_CHAMPION':
         return <Star className="w-1/2 h-1/2 text-white" />
       case 'OFFICE_LEGEND':
         return <Award className="w-1/2 h-1/2 text-white" />
       default:
-        return <span className="text-lg">{BADGE_ICONS[badge.badgeType] || '🏅'}</span>
+        return <Award className="w-1/2 h-1/2 text-white" />
     }
   }
 
