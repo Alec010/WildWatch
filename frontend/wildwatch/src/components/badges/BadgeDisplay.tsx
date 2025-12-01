@@ -27,18 +27,8 @@ export function BadgeDisplay({
   }
 
   const getBadgeIcon = () => {
-    // If we have an actual icon URL, use it
-    if (badge.iconUrl) {
-      return (
-        <img
-          src={badgeService.getBadgeIconUrl(badge)}
-          alt={badge.name}
-          className="w-1/2 h-1/2 object-contain"
-        />
-      )
-    }
-
-    // Otherwise use appropriate Lucide icons for each badge type
+    // Always use Lucide icons instead of trying to load images
+    // This ensures consistent, professional icons for all badges
     switch (badge.badgeType) {
       // Regular user badges
       case 'FIRST_RESPONDER':
