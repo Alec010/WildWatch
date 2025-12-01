@@ -598,34 +598,28 @@ export default function CameraScreen() {
         return;
       }
 
-      // On Android, check if camera permission was recently requested to avoid dialog conflicts
-      // Android 13+ uses granular permissions and can't show multiple permission dialogs at once
+      // Only check camera permission if it was recently requested (to avoid dialog conflicts)
+      // Otherwise, skip camera check entirely for gallery access
       if (Platform.OS === "android") {
         try {
           const cameraStatus = await ImagePicker.getCameraPermissionsAsync();
           console.log("Camera permission status before gallery request:", cameraStatus.status);
-          // If camera permission is undetermined (just requested) or denied (user just dismissed),
-          // wait longer to ensure any camera permission dialog has fully closed
-          // Android needs more time between permission requests to avoid conflicts
-          if (cameraStatus.status === "undetermined" || cameraStatus.status === "denied") {
-            console.log("Waiting for camera permission dialog to fully close...");
-            // Increased delay to 2 seconds for Android to ensure dialog is fully dismissed
-            await new Promise(resolve => setTimeout(resolve, 2000));
+          // Only wait if camera permission was JUST requested (undetermined) or if we're in a transition state
+          // Don't wait if it's already granted or permanently denied
+          if (cameraStatus.status === "undetermined") {
+            console.log("Camera permission dialog may be showing, waiting...");
+            await new Promise(resolve => setTimeout(resolve, 1500));
           }
         } catch (err) {
           // Ignore camera permission check errors, continue with media library request
           console.log("Could not check camera permission status:", err);
-          // Still wait a bit on Android to be safe
-          await new Promise(resolve => setTimeout(resolve, 1500));
         }
       }
 
-      // Request media library permissions with retry logic for Android
+      // Check and request media library permissions
       let currentStatus = "undetermined";
       let mediaStatus = "undetermined";
       let canAskAgain = true;
-      let retryCount = 0;
-      const maxRetries = Platform.OS === "android" ? 2 : 1;
 
       try {
         console.log("Checking media library permission status...");
@@ -634,129 +628,85 @@ export default function CameraScreen() {
         console.log("Media library permission status:", currentStatus);
       } catch (checkError: any) {
         console.error("Error checking media library permission:", checkError);
-        Alert.alert(
-          "Permission Error",
-          "Unable to check photo library permission. Please try again or enable it in settings.",
-          [
-            { text: "OK" },
-            {
-              text: "Open Settings",
-              onPress: () => {
-                if (Platform.OS === "ios") {
-                  Linking.openURL("app-settings:");
-                } else {
-                  Linking.openSettings();
-                }
-              },
-            },
-          ]
-        );
-        return;
+        // Continue to try requesting permission even if check fails
       }
       
+      // If permission is not granted, request it
       if (currentStatus !== "granted") {
-        while (retryCount < maxRetries && mediaStatus !== "granted") {
-          try {
-            console.log(`Requesting media library permission (attempt ${retryCount + 1})...`);
-            try {
-              const result = await ImagePicker.requestMediaLibraryPermissionsAsync();
-              if (!result) {
-                console.error("Permission request returned null/undefined");
-                throw new Error("Permission request failed - no result returned");
-              }
-              mediaStatus = result.status;
-              canAskAgain = result.canAskAgain ?? true;
-              console.log(`Media library permission request result: ${mediaStatus}, canAskAgain: ${canAskAgain}`);
-            } catch (requestErr: any) {
-              console.error(`Error in permission request attempt ${retryCount + 1}:`, requestErr);
-              // If this is the first attempt and it fails, it might be a system issue
-              if (retryCount === 0) {
-                // Wait a bit longer before retrying
-                await new Promise(resolve => setTimeout(resolve, 2000));
-              }
-              throw requestErr; // Re-throw to be caught by outer catch
-            }
-
-            // If permission was granted, break out of retry loop
-            if (mediaStatus === "granted") {
-              break;
-            }
-
-            // If we can't ask again (permanently denied), don't retry
-            if (!canAskAgain) {
-              break;
-            }
-
-            // On Android, if permission is still undetermined after request, wait and retry
-            // This can happen if another permission dialog was showing
-            if (Platform.OS === "android" && mediaStatus === "undetermined" && retryCount < maxRetries - 1) {
-              console.log("Media library permission request may have been interrupted, retrying...");
-              // Longer delay on retry to ensure any other dialogs are closed
-              await new Promise(resolve => setTimeout(resolve, 2000));
-              retryCount++;
-            } else {
-              break;
-            }
-          } catch (requestError: any) {
-            console.error("Error requesting media library permission (attempt " + (retryCount + 1) + "):", requestError);
-            if (retryCount < maxRetries - 1) {
-              await new Promise(resolve => setTimeout(resolve, 1500));
-              retryCount++;
-            } else {
-              // Final retry failed, show error
-              Alert.alert(
-                "Permission Error",
-                "Failed to request photo library permission. Please enable it in settings.",
-                [
-                  { text: "OK" },
-                  {
-                    text: "Open Settings",
-                    onPress: () => {
-                      if (Platform.OS === "ios") {
-                        Linking.openURL("app-settings:");
-                      } else {
-                        Linking.openSettings();
-                      }
-                    },
+        try {
+          console.log("Requesting media library permission...");
+          const result = await ImagePicker.requestMediaLibraryPermissionsAsync();
+          
+          if (!result) {
+            console.error("Permission request returned null/undefined");
+            Alert.alert(
+              "Permission Error",
+              "Failed to request photo library permission. Please enable it in settings.",
+              [
+                { text: "OK" },
+                {
+                  text: "Open Settings",
+                  onPress: () => {
+                    if (Platform.OS === "ios") {
+                      Linking.openURL("app-settings:");
+                    } else {
+                      Linking.openSettings();
+                    }
                   },
-                ]
-              );
-              return;
-            }
+                },
+              ]
+            );
+            return;
           }
-        }
-        
-        if (mediaStatus !== "granted") {
-          // Re-check permission status to get latest canAskAgain value
-          try {
-            const finalCheck = await ImagePicker.getMediaLibraryPermissionsAsync();
-            canAskAgain = finalCheck.canAskAgain ?? false;
-            mediaStatus = finalCheck.status;
-          } catch (err) {
-            console.error("Error checking final permission status:", err);
+          
+          mediaStatus = result.status;
+          canAskAgain = result.canAskAgain ?? true;
+          console.log(`Media library permission request result: ${mediaStatus}, canAskAgain: ${canAskAgain}`);
+          
+          // If still not granted after request, show appropriate message
+          if (mediaStatus !== "granted") {
+            Alert.alert(
+              "Photo Library Permission Required",
+              mediaStatus === "denied" && !canAskAgain
+                ? "Photo library permission is required to select images. Please enable it in your device settings."
+                : "Photo library permissions are required to select images.",
+              [
+                { text: "OK" },
+                ...(mediaStatus === "denied" && !canAskAgain
+                  ? [
+                      {
+                        text: "Open Settings",
+                        onPress: () => {
+                          if (Platform.OS === "ios") {
+                            Linking.openURL("app-settings:");
+                          } else {
+                            Linking.openSettings();
+                          }
+                        },
+                      },
+                    ]
+                  : []),
+              ]
+            );
+            return;
           }
-
+        } catch (requestError: any) {
+          console.error("Error requesting media library permission:", requestError);
           Alert.alert(
-            "Photo Library Permission Required",
-            mediaStatus === "denied" && !canAskAgain
-              ? "Photo library permission is required to select images. Please enable it in your device settings."
-              : "Photo library permissions are required to select images.",
+            "Permission Error",
+            "Failed to request photo library permission. Please enable it in settings.",
             [
               { text: "OK" },
-              ...(mediaStatus === "denied" && !canAskAgain
-                ? [
-                    {
-                      text: "Open Settings",
-                      onPress: () => {
-                        if (Platform.OS === "ios") {
-                          Linking.openURL("app-settings:");
-                        } else {
-                          Linking.openSettings();
-                        }
-                      },
-                    },
-                  ]
-                : []),
+              {
+                text: "Open Settings",
+                onPress: () => {
+                  if (Platform.OS === "ios") {
+                    Linking.openURL("app-settings:");
+                  } else {
+                    Linking.openSettings();
+                  }
+                },
+              },
             ]
           );
           return;
@@ -933,11 +883,21 @@ export default function CameraScreen() {
     }
   };
 
-  const handleSkipForNow = () =>
-    router.push({
-      pathname: "/(tabs)/location",
-      params: { hasImages: capturedImages.length > 0 ? "true" : "false" },
-    } as any);
+  const handleSkipForNow = () => {
+    try {
+      router.push({
+        pathname: "/(tabs)/location",
+        params: { hasImages: capturedImages.length > 0 ? "true" : "false" },
+      } as any);
+    } catch (error: any) {
+      console.error("Navigation error in handleSkipForNow:", error);
+      try {
+        router.push("/(tabs)/location" as any);
+      } catch (fallbackError: any) {
+        console.error("Fallback navigation failed:", fallbackError);
+      }
+    }
+  };
 
   const handleRemoveImage = (index: number) => {
     setCapturedImages((prev) => {
@@ -1418,26 +1378,72 @@ export default function CameraScreen() {
             <View style={[styles.actionRow, { marginBottom: 0, marginTop: 0 }]}>
               <TouchableOpacity
                 onPress={async () => {
-                  console.log("Saving images to storage:", capturedImages);
+                  try {
+                    console.log("Saving images to storage:", capturedImages);
 
-                  // Save images to storage before navigating
-                  await storage.setEvidenceFiles(capturedImages);
+                    // Validate we have images before proceeding
+                    if (!capturedImages || capturedImages.length === 0) {
+                      Alert.alert(
+                        "No Images",
+                        "Please capture or select at least one image before continuing.",
+                        [{ text: "OK" }]
+                      );
+                      return;
+                    }
 
-                  const navigationParams = {
-                    hasImages: "true",
-                    imageCount: capturedImages.length.toString(),
-                  };
+                    // Save images to storage before navigating
+                    try {
+                      await storage.setEvidenceFiles(capturedImages);
+                      console.log("Images saved to storage successfully");
+                    } catch (storageError: any) {
+                      console.error("Error saving images to storage:", storageError);
+                      Alert.alert(
+                        "Storage Error",
+                        "Failed to save images. Please try again.",
+                        [{ text: "OK" }]
+                      );
+                      return;
+                    }
 
-                  console.log(
-                    "Navigating to location with params:",
-                    navigationParams
-                  );
+                    const navigationParams = {
+                      hasImages: "true",
+                      imageCount: capturedImages.length.toString(),
+                    };
 
-                  // Navigate to location with images data
-                  router.push({
-                    pathname: "/(tabs)/location",
-                    params: navigationParams,
-                  } as any);
+                    console.log(
+                      "Navigating to location with params:",
+                      navigationParams
+                    );
+
+                    // Navigate to location with images data
+                    // Use router.push with proper pathname for tab navigation
+                    try {
+                      router.push({
+                        pathname: "/(tabs)/location",
+                        params: navigationParams,
+                      } as any);
+                    } catch (navError: any) {
+                      console.error("Navigation error:", navError);
+                      // Fallback navigation method - try alternative path
+                      try {
+                        router.push("/(tabs)/location" as any);
+                      } catch (fallbackError: any) {
+                        console.error("Fallback navigation also failed:", fallbackError);
+                        Alert.alert(
+                          "Navigation Error",
+                          "Unable to navigate to location screen. Please try again.",
+                          [{ text: "OK" }]
+                        );
+                      }
+                    }
+                  } catch (error: any) {
+                    console.error("Error in upload button handler:", error);
+                    Alert.alert(
+                      "Error",
+                      error?.message || "An error occurred. Please try again.",
+                      [{ text: "OK" }]
+                    );
+                  }
                 }}
                 style={[styles.btn, styles.btnSuccess, styles.actionFlex]}
                 activeOpacity={0.8}
