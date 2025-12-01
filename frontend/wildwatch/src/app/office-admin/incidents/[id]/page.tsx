@@ -60,6 +60,30 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { formatDateOnly, parseUTCDate } from "@/utils/dateUtils";
 
+function getEstimatedResolution(
+  submittedAt: string,
+  priority: string | null,
+  extendedDate?: string
+) {
+  // If there's an extended date from the backend, use that
+  if (extendedDate) {
+    return parseUTCDate(extendedDate);
+  }
+
+  // If no priority, return null
+  if (!priority) {
+    return null;
+  }
+
+  // Otherwise, calculate based on priority
+  const base = parseUTCDate(submittedAt);
+  let days = 2; // Default for LOW
+  if (priority === "MEDIUM") days = 3;
+  if (priority === "HIGH") days = 5;
+  base.setDate(base.getDate() + days);
+  return base;
+}
+
 interface Witness {
   id: string;
   name: string;
@@ -104,6 +128,7 @@ interface Incident {
   preferAnonymous?: boolean;
   isPrivate?: boolean;
   isIncident?: boolean; // AI determination: true = real incident, false = concern
+  estimatedResolutionDate?: string;
 }
 
 export default function IncidentDetailsPage() {
@@ -251,6 +276,16 @@ export default function IncidentDetailsPage() {
     setPriorityError("");
     setIsProcessing(true);
     try {
+      // Calculate estimated resolution date based on priority
+      const estimatedResolutionDate =
+        incident && priorityLevel
+          ? getEstimatedResolution(
+              incident.submittedAt || incident.dateOfIncident,
+              priorityLevel,
+              incident.estimatedResolutionDate
+            )?.toISOString()
+          : undefined;
+
       const response = await api.put(`/api/incidents/${id}`, {
         administrativeNotes,
         verified: true,
@@ -260,6 +295,7 @@ export default function IncidentDetailsPage() {
         preferAnonymous: isAnonymous,
         isPrivate: isPrivate,
         isIncident: isIncidentTag,
+        estimatedResolutionDate,
       });
 
       if (!response.ok) {
@@ -362,6 +398,16 @@ export default function IncidentDetailsPage() {
   const handleStatusUpdate = async () => {
     setIsProcessing(true);
     try {
+      // Calculate estimated resolution date based on priority
+      const estimatedResolutionDate =
+        incident && priorityLevel
+          ? getEstimatedResolution(
+              incident.submittedAt || incident.dateOfIncident,
+              priorityLevel,
+              incident.estimatedResolutionDate
+            )?.toISOString()
+          : undefined;
+
       const response = await api.put(`/api/incidents/${id}`, {
         administrativeNotes,
         verified: isVerified,
@@ -370,6 +416,7 @@ export default function IncidentDetailsPage() {
         priorityLevel,
         preferAnonymous: isAnonymous,
         isPrivate: isPrivate,
+        estimatedResolutionDate,
       });
 
       if (!response.ok) {
@@ -745,9 +792,7 @@ export default function IncidentDetailsPage() {
                           Date of Incident
                         </p>
                         <p className="font-medium">
-                          {formatDateOnly(
-                            incident.dateOfIncident
-                          )}
+                          {formatDateOnly(incident.dateOfIncident)}
                         </p>
                       </div>
                     </div>
@@ -857,10 +902,7 @@ export default function IncidentDetailsPage() {
                                 </p>
                                 <p className="text-xs text-gray-500">
                                   {(file.fileSize / 1024 / 1024).toFixed(2)} MB
-                                  •{" "}
-                                  {formatDateOnly(
-                                    file.uploadedAt
-                                  )}
+                                  • {formatDateOnly(file.uploadedAt)}
                                 </p>
                               </div>
                             </motion.div>
@@ -1098,7 +1140,8 @@ export default function IncidentDetailsPage() {
                       <div className="mt-3 pt-3 border-t border-blue-200 flex items-center gap-2 text-xs text-blue-700">
                         <Info className="h-4 w-4 flex-shrink-0" />
                         <span>
-                          AI suggests this is {incident.isIncident ? "an incident" : "a concern"}
+                          AI suggests this is{" "}
+                          {incident.isIncident ? "an incident" : "a concern"}
                         </span>
                       </div>
                     )}
@@ -1270,7 +1313,9 @@ export default function IncidentDetailsPage() {
                       <CheckCircle2 className="h-4 w-4 mt-0.5" />
                       <span>
                         Verified by {incident.verifiedBy} on{" "}
-                        {incident.verifiedAt ? formatDateOnly(incident.verifiedAt) : 'N/A'}
+                        {incident.verifiedAt
+                          ? formatDateOnly(incident.verifiedAt)
+                          : "N/A"}
                       </span>
                     </div>
                   )}

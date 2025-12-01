@@ -22,7 +22,6 @@ import {
   TrendingUp,
   Sparkles,
   Shield,
-  Heart,
 } from "lucide-react";
 import { API_BASE_URL } from "@/utils/api";
 import { formatLocationCompact } from "@/utils/locationFormatter";
@@ -698,55 +697,23 @@ export default function PublicIncidentsPage() {
                                 >
                                   {incident.status}
                                 </span>
-                                {incident.estimatedResolutionDate && (
-                                  <div className="relative group/calendar">
-                                    <div className="flex items-center gap-1.5 text-[#800000]">
-                                      <Calendar className="h-3.5 w-3.5" />
-                                      <span className="text-[10px] font-semibold">
-                                        Est:{" "}
-                                        {
-                                          formatEstimatedDate(
-                                            incident.estimatedResolutionDate
-                                          ).split(",")[0]
-                                        }
-                                      </span>
-                                    </div>
-                                    <div className="absolute bottom-full left-0 mb-2 px-3 py-2 bg-[#8B0000] text-white text-xs rounded-lg shadow-xl opacity-0 group-hover/calendar:opacity-100 transition-all duration-300 whitespace-nowrap z-[9999] pointer-events-none">
-                                      <div className="font-semibold mb-0.5">
-                                        Estimated Resolution
-                                      </div>
-                                      <div className="text-[10px] text-gray-200">
-                                        {formatEstimatedDate(
-                                          incident.estimatedResolutionDate
-                                        )}
-                                      </div>
-                                      <div className="absolute bottom-0 left-4 transform translate-y-full">
-                                        <div className="w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-[#8B0000]"></div>
-                                      </div>
-                                    </div>
-                                  </div>
-                                )}
                               </div>
                             </div>
 
                             {/* Premium Upvote Button */}
                             <button
                               onClick={() => handleUpvoteClick(incident)}
-                              className={`flex flex-col items-center justify-center gap-1 px-3.5 py-2.5 rounded-2xl transition-all duration-300 transform hover:scale-110 active:scale-95 flex-shrink-0 ${
-                                isOptimisticallyUpvoted
-                                  ? "bg-gradient-to-br from-red-500 via-pink-500 to-red-600 text-white shadow-xl shadow-red-500/40 ring-2 ring-red-200"
-                                  : "bg-gradient-to-br from-slate-50 to-slate-100 hover:from-slate-100 hover:to-slate-200 text-slate-700 hover:text-[#800000] shadow-md border border-slate-200/50"
-                              }`}
+                              className="flex flex-row items-center justify-center gap-1.5 px-3.5 py-2.5 transition-all duration-300 transform hover:scale-110 active:scale-95 flex-shrink-0"
                             >
-                              <Heart
+                              <ThumbsUp
                                 className={`h-5 w-5 transition-all duration-300 ${
                                   isOptimisticallyUpvoted
-                                    ? "drop-shadow-lg fill-current"
-                                    : "group-hover:scale-110"
+                                    ? "text-[#FFD700] fill-[#FFD700] drop-shadow-lg"
+                                    : "text-slate-700 group-hover:scale-110"
                                 }`}
                                 fill={
                                   isOptimisticallyUpvoted
-                                    ? "currentColor"
+                                    ? "#FFD700"
                                     : "none"
                                 }
                                 strokeWidth={2}
@@ -754,7 +721,7 @@ export default function PublicIncidentsPage() {
                               <span
                                 className={`text-xs font-bold leading-none ${
                                   isOptimisticallyUpvoted
-                                    ? "text-white"
+                                    ? "text-[#FFD700]"
                                     : "text-slate-700"
                                 }`}
                               >
@@ -792,6 +759,34 @@ export default function PublicIncidentsPage() {
                               {formatDate(incident.submittedAt)}
                             </span>
                           </div>
+                          {incident.estimatedResolutionDate && (
+                            <div className="relative group/calendar">
+                              <div className="flex items-center gap-2 text-slate-600">
+                                <Calendar className="h-4 w-4 text-[#800000]" />
+                                <span className="text-sm font-medium">
+                                  Est:{" "}
+                                  {
+                                    formatEstimatedDate(
+                                      incident.estimatedResolutionDate
+                                    ).split(",")[0]
+                                  }
+                                </span>
+                              </div>
+                              <div className="absolute bottom-full left-0 mb-2 px-3 py-2 bg-[#8B0000] text-white text-xs rounded-lg shadow-xl opacity-0 group-hover/calendar:opacity-100 transition-all duration-300 whitespace-nowrap z-[9999] pointer-events-none">
+                                <div className="font-semibold mb-0.5">
+                                  Estimated Resolution
+                                </div>
+                                <div className="text-[10px] text-gray-200">
+                                  {formatEstimatedDate(
+                                    incident.estimatedResolutionDate
+                                  )}
+                                </div>
+                                <div className="absolute bottom-0 left-4 transform translate-y-full">
+                                  <div className="w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-[#8B0000]"></div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
                           <div className="flex items-center gap-2 text-slate-600">
                             <User className="h-4 w-4 text-[#800000]" />
                             <span className="text-sm font-medium">
