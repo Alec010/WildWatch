@@ -23,9 +23,9 @@ export const metadata: Metadata = {
   title: "WildWatch",
   description: "Official incident reporting system for Cebu Institute of Technology - University",
   icons: {
-    icon: "/logo.png",
-    shortcut: "/logo.png",
-    apple: "/logo.png",
+    icon: "/logo2.png",
+    shortcut: "/logo2.png",
+    apple: "/logo2.png",
   },
 };
 

@@ -220,7 +220,7 @@ export default function TermsPage() {
       <div className="bg-white shadow-sm relative">
         <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#800000] via-[#D4AF37] to-[#800000] animate-gradient-x"></div>
         <div className="max-w-[1200px] mx-auto p-4 pt-6">
-          <Image src="/logo.png" alt="WildWatch Logo" width={150} height={50} />
+          <Image src="/logo2.png" alt="WildWatch Logo" width={150} height={50} />
         </div>
       </div>
 
