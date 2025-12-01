@@ -221,7 +221,7 @@ export function OfficeAdminSidebar() {
             collapsed && !isMobile ? "px-4" : "px-4"
           } ${
             collapsed && !isMobile ? "pt-8" : "pt-4"
-         } pb-4 overflow-y-auto hide-scrollbar`}
+          } pb-4 overflow-y-auto hide-scrollbar`}
         >
           <div className="space-y-2">
             {navItems.map((item) => {
@@ -340,10 +340,7 @@ export function OfficeAdminSidebar() {
                     <div className="flex flex-col">
                       <div className="text-sm font-medium truncate max-w-[120px]">
                         {user.firstName} {user.lastName}
-                      </div>
-                      <div className="text-xs text-[#D4AF37]/80 truncate max-w-[120px]">
-                        ID: {user.schoolIdNumber}
-                      </div>
+                      </div>{" "}
                     </div>
                   </>
                 ) : (

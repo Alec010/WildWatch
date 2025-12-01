@@ -539,7 +539,7 @@ export default function CaseDetailsPage() {
   };
 
   // Always render the layout; default to Sidebar until role is known to avoid flicker
-  if (loading && !keepSidebar) {
+  if (loading) {
     return (
       <div
         className={`min-h-screen flex flex-col bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9] ${inter.className}`}
