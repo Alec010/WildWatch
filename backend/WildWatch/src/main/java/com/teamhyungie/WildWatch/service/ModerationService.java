@@ -29,17 +29,39 @@ public class ModerationService {
             // Use String concatenation instead of String.format to avoid format specifier issues
             // This allows users to include special characters like %, -, etc. in their descriptions
             String prompt = "You are a strict content moderator for a university incident reporting system.\n" +
-                    "Decide whether to ALLOW or BLOCK a report BEFORE it is saved.\n" +
+                    "Analyze ONLY the Incident Type and Description fields to decide whether to ALLOW or BLOCK a report.\n" +
+                    "DO NOT rely on tags or location for moderation decisions.\n\n" +
                     "BLOCK if ANY of the following apply:\n" +
-                    "- Harassment, slurs, demeaning stereotypes, targeted insults, threats.\n" +
-                    "- Rudeness/abuse without a legitimate incident description.\n" +
-                    "- Disparagement/shaming/defamation directed at any university office (e.g., accusing or ridiculing an office, degrading its image or reputation) without constructive, factual reporting intent. The university offices include: " + 
-                    (officeNames == null || officeNames.isEmpty() ? "[]" : officeNames.toString()) + ".\n" +
-                    "- Calls to harm, doxx, or publicize staff.\n" +
-                    "ALLOW when text is neutral, factual, or safety-focused even if it mentions offices neutrally.\n" +
-                    "Inputs:\n- IncidentType: '" + safe(incidentType) + "'\n- Description: '" + safe(description) + 
-                    "'\n- Location: '" + safe(enhancedLocation) + "'\n- Tags: " + (tags == null ? "[]" : tags.toString()) + "\n\n" +
-                    "Return JSON with fields only: decision (ALLOW|BLOCK), confidence (0-1), reasons (array of short phrases such as 'harassment', 'hate-speech', 'office-disparagement'). No extra text.";
+                    "1. PROFANITY/INAPPROPRIATE LANGUAGE:\n" +
+                    "   - Any profanity, curse words, or vulgar language including mild profanity (damn, hell, crap, shit, fuck, ass, bitch, bastard, etc.)\n" +
+                    "   - Disrespectful or unprofessional language\n" +
+                    "   - This is a professional university system - NO profanity is acceptable\n\n" +
+                    "2. VAGUE/INSUFFICIENT REPORTS:\n" +
+                    "   - Description is extremely vague or lacks any specific details about what actually happened\n" +
+                    "   - Single word descriptions or test submissions (e.g., 'test', 'hi', 'hello', 'broken', 'problem')\n" +
+                    "   - Generic phrases without context like 'something happened', 'issue here', 'help', 'fix this'\n" +
+                    "   - No clear incident described - reader cannot understand what occurred\n" +
+                    "   - Missing ALL key information (no indication of what happened, no action described)\n" +
+                    "   - Note: Short but specific reports are OK (e.g., 'Broken window in GLE 202' is acceptable)\n\n" +
+                    "3. HARASSMENT/THREATS:\n" +
+                    "   - Harassment, slurs, demeaning stereotypes, targeted insults, threats\n" +
+                    "   - Rudeness/abuse without a legitimate incident description\n" +
+                    "   - Disparagement/shaming/defamation directed at any university office without constructive intent\n" +
+                    "   - The university offices include: " + (officeNames == null || officeNames.isEmpty() ? "[]" : officeNames.toString()) + "\n" +
+                    "   - Calls to harm, doxx, or publicize staff\n\n" +
+                    "ALLOW when:\n" +
+                    "- Text is professional, neutral, factual, and safety-focused\n" +
+                    "- Description provides specific details about what happened (even if brief)\n" +
+                    "- Clearly describes an actual incident that can be investigated\n" +
+                    "- No profanity or inappropriate language\n" +
+                    "- Language is appropriate for a professional university environment\n\n" +
+                    "Inputs to analyze:\n" +
+                    "- IncidentType: '" + safe(incidentType) + "'\n" +
+                    "- Description: '" + safe(description) + "'\n\n" +
+                    "(Location and tags are provided for context only, do not use for moderation):\n" +
+                    "- Location: '" + safe(enhancedLocation) + "'\n" +
+                    "- Tags: " + (tags == null ? "[]" : tags.toString()) + "\n\n" +
+                    "Return JSON with fields only: decision (ALLOW|BLOCK), confidence (0-1), reasons (array of short phrases such as 'profanity', 'vague-description', 'insufficient-details', 'harassment', 'hate-speech', 'office-disparagement'). No extra text.";
 
             Map<String, Object> part = new HashMap<>();
             part.put("text", prompt);

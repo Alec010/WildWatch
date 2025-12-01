@@ -33,7 +33,7 @@ public class SimilarityService {
     }
 
     // Tunable parameters
-    private static final double SIMILARITY_THRESHOLD = 0.60; // 60% tag overlap required for similarity
+    private static final double SIMILARITY_THRESHOLD = 0.50; // 50% tag overlap required for similarity
     private static final int MAX_RESULTS_DEFAULT = 3;
 
     public static class SimilarIncident {
@@ -53,7 +53,7 @@ public class SimilarityService {
      * Tag-based similarity using Jaccard similarity on all 20 tags.
      * Compares submitted incident tags with in-progress and resolved incidents' tags
      * (In Progress, Resolved only - excludes Pending, Verified, Closed, Dismissed).
-     * Uses 60% threshold (0.60) for Jaccard similarity.
+     * Uses 50% threshold (0.50) for Jaccard similarity.
      * 
      * @param submittedTags All 20 generated tags from the new incident
      * @param maxResults Maximum number of similar incidents to return
@@ -103,7 +103,7 @@ public class SimilarityService {
             double similarity = union.isEmpty() ? 0.0 
                 : (double) intersection.size() / union.size();
             
-            // 60% threshold (0.60)
+            // 50% threshold (0.50)
             if (similarity >= SIMILARITY_THRESHOLD) {
                 SimilarIncident si = buildSimilarIncidentFromIncident(candidate, similarity);
                 results.add(si);

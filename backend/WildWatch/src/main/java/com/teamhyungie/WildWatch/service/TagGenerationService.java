@@ -159,7 +159,7 @@ public class TagGenerationService {
             Pattern plusCodePattern = Pattern.compile("^[2-9A-Z]{4}\\+[2-9A-Z]{2,3}$");
             Pattern numericOnlyPattern = Pattern.compile("^\\d{4,6}$"); // postal codes like 6000
             Set<String> geoStopwords = new HashSet<>(Arrays.asList(
-                    "philippines", "cebu", "cebu-city"
+                    "philippines", "cebu", "cebu-city", "building"
             ));
 
             List<String> cleanedGenerated = new ArrayList<>();
