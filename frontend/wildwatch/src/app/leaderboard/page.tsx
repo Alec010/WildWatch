@@ -1,407 +1,558 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
+import { useState, useEffect } from "react";
 import {
   Trophy,
-  Medal,
   Star,
   Users,
   Building2,
   Loader2,
-  Crown,
-  Award,
-  ChevronDown,
-  ChevronUp,
   Info,
   Sparkles,
-} from "lucide-react"
-import { API_BASE_URL } from "@/utils/api"
-import { motion, AnimatePresence } from "framer-motion"
-import { RecognitionInfoModal } from "@/components/RecognitionInfoModal"
-import { useUser } from "@/contexts/UserContext"
-import { Sidebar } from "@/components/Sidebar"
-import { OfficeAdminSidebar } from "@/components/OfficeAdminSidebar"
-import { Navbar } from "@/components/Navbar"
-import { OfficeAdminNavbar } from "@/components/OfficeAdminNavbar"
-import { useSidebar } from "@/contexts/SidebarContext"
-import dynamic from "next/dynamic"
-import { RankBadge } from "@/components/RankBadge"
-import type { UserRank } from "@/types/rank"
+  GraduationCap,
+} from "lucide-react";
+import { API_BASE_URL } from "@/utils/api";
+import { motion } from "framer-motion";
+import { RecognitionInfoModal } from "@/components/RecognitionInfoModal";
+import { useUser } from "@/contexts/UserContext";
+import { Sidebar } from "@/components/Sidebar";
+import { OfficeAdminSidebar } from "@/components/OfficeAdminSidebar";
+import { Navbar } from "@/components/Navbar";
+import { OfficeAdminNavbar } from "@/components/OfficeAdminNavbar";
+import { useSidebar } from "@/contexts/SidebarContext";
+import dynamic from "next/dynamic";
+import { RankBadge } from "@/components/RankBadge";
+import type { UserRank } from "@/types/rank";
+import Image from "next/image";
 
 interface LeaderboardEntry {
-  id: number
-  name: string
-  totalRatings: number
-  averageRating: number
-  points: number
-  activeIncidents?: number
-  resolvedIncidents?: number
-  rank?: UserRank
-  goldRanking?: number
+  id: number;
+  name: string;
+  totalRatings?: number;
+  totalIncidents?: number;
+  averageRating: number;
+  points: number;
+  rank?: UserRank;
+  goldRanking?: number;
+}
+
+const palette = {
+  brand: "#8B0000",
+  brandDark: "#650000",
+  gold: "#D4AF37",
+  canvas: "#F8F9FA",
+  card: "#FFFFFF",
+  ink: "#1F2937",
+  inkMuted: "#4B5563",
+  line: "#E5E7EB",
+  success: "#16A34A",
+  infoSoft: "#FDF2F2",
+  chip: "#F3F4F6",
+};
+
+function Chip({ label }: { label: string }) {
+  return (
+    <div className="bg-[#F3F4F6] px-2.5 py-1 rounded-full">
+      <span className="text-xs text-[#4B5563]">{label}</span>
+    </div>
+  );
+}
+
+function StarRating({
+  rating,
+  size = 12,
+  showValue = false,
+}: {
+  rating: number;
+  size?: number;
+  showValue?: boolean;
+}) {
+  const clampedRating = Math.max(0, Math.min(5, rating));
+  const fullStars = Math.floor(clampedRating);
+  const hasHalfStar = clampedRating % 1 >= 0.5;
+
+  return (
+    <div className="flex items-center gap-0.5">
+      {[1, 2, 3, 4, 5].map((star) => {
+        if (star <= fullStars) {
+          return (
+            <Star
+              key={star}
+              className="fill-yellow-400 text-yellow-400"
+              size={size}
+            />
+          );
+        } else if (star === fullStars + 1 && hasHalfStar) {
+          return (
+            <Star
+              key={star}
+              className="fill-yellow-400/50 text-yellow-400"
+              size={size}
+            />
+          );
+        } else {
+          return <Star key={star} className="text-gray-300" size={size} />;
+        }
+      })}
+      {showValue && (
+        <span className="ml-1 text-xs font-medium text-[#6B7280]">
+          {clampedRating.toFixed(1)}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function SegmentedTabs({
+  selected,
+  onSelect,
+}: {
+  selected: number;
+  onSelect: (i: number) => void;
+}) {
+  return (
+    <div className="flex bg-white mx-4 mt-3 rounded-2xl border border-[#E5E7EB] overflow-hidden relative">
+      {/* Sliding indicator */}
+      <div
+        className="absolute top-0 bottom-0 w-1/2 bg-[rgba(212,175,55,0.18)] transition-all duration-300"
+        style={{ left: selected === 0 ? "0%" : "50%" }}
+      />
+      {[
+        { label: "Students", icon: GraduationCap },
+        { label: "Offices", icon: Building2 },
+      ].map((tab, i) => {
+        const Icon = tab.icon;
+        return (
+          <button
+            key={tab.label}
+            onClick={() => onSelect(i)}
+            className="flex-1 py-3 flex items-center justify-center gap-2 relative z-10 transition-colors"
+          >
+            <Icon
+              size={16}
+              className={selected === i ? "text-[#8B0000]" : "text-[#6B7280]"}
+            />
+            <span
+              className={`font-semibold ${
+                selected === i ? "text-[#8B0000]" : "text-[#6B7280]"
+              }`}
+            >
+              {tab.label}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function AccentStripe() {
+  return (
+    <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#D4AF37] rounded-l-xl" />
+  );
+}
+
+function LeaderboardItem({
+  entry,
+  rank,
+  isTopThree,
+  isOffice = false,
+}: {
+  entry: LeaderboardEntry;
+  rank: number;
+  isTopThree: boolean;
+  isOffice?: boolean;
+}) {
+  const color =
+    rank === 1
+      ? "#FFD700"
+      : rank === 2
+      ? "#C0C0C0"
+      : rank === 3
+      ? "#CD7F32"
+      : "#4A5568";
+
+  const borderColor = isTopThree ? color : "transparent";
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2, delay: (rank - 4) * 0.05 }}
+      className={`bg-white rounded-2xl mb-2.5 p-4 shadow-md relative overflow-hidden ${
+        isTopThree ? "border-2" : ""
+      }`}
+      style={{
+        borderColor: isTopThree ? borderColor : "transparent",
+        boxShadow: isTopThree
+          ? "0 6px 12px rgba(0,0,0,0.18)"
+          : "0 3px 6px rgba(0,0,0,0.12)",
+      }}
+    >
+      <AccentStripe />
+      <div className="flex items-center gap-3.5">
+        {/* Rank Number */}
+        <div className="w-11 h-11 rounded-full bg-[#F3F4F6] flex items-center justify-center flex-shrink-0">
+          <span className="font-extrabold text-lg" style={{ color }}>
+            {rank}
+          </span>
+        </div>
+
+        {/* Name and Details */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1.5">
+            <h3 className="font-bold text-base text-[#1F2937] line-clamp-2">
+              {entry.name}
+            </h3>
+            {entry.rank && entry.rank !== "NONE" ? (
+              <RankBadge
+                rank={entry.rank}
+                goldRanking={entry.goldRanking}
+                size="xs"
+                showLabel={false}
+              />
+            ) : null}
+          </div>
+
+          {/* Stats Row with Stars */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {entry.averageRating && entry.averageRating > 0 ? (
+              <>
+                <StarRating
+                  rating={entry.averageRating}
+                  size={12}
+                  showValue={true}
+                />
+                <span className="text-[#9CA3AF] text-xs">•</span>
+              </>
+            ) : null}
+
+            {entry.totalIncidents && entry.totalIncidents > 0 ? (
+              <>
+                <span className="text-xs text-[#4B5563]">
+                  {entry.totalIncidents} reports
+                </span>
+                <span className="text-[#9CA3AF] text-xs">•</span>
+              </>
+            ) : null}
+
+            <Chip label={`${entry.points || 0} pts`} />
+          </div>
+        </div>
+
+        {/* Points Badge */}
+        <div className="bg-[#8B0000] px-3 py-2 rounded-2xl flex-shrink-0">
+          <span className="text-white font-extrabold text-xs">
+            {entry.points || 0}
+          </span>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function LeaderboardPodium({
+  entries,
+  type,
+}: {
+  entries: LeaderboardEntry[];
+  type: "students" | "offices";
+}) {
+  // Ensure we have 3 entries (fill with empty if needed)
+  const podiumEntries = [
+    entries[0] || { name: "", points: 0, averageRating: 0 },
+    entries[1] || { name: "", points: 0, averageRating: 0 },
+    entries[2] || { name: "", points: 0, averageRating: 0 },
+  ];
+
+  const getPodiumData = (index: number) => {
+    const isEmpty = !podiumEntries[index]?.name;
+
+    if (type === "offices") {
+      switch (index) {
+        case 0: // 1st Place
+          return {
+            height: 100,
+            width: 140,
+            gradient: "from-[#FFD700] to-[#FFA500]",
+            trophyImage: "/trophies/gold_office.png",
+            rankColor: "#FFD700",
+          };
+        case 1: // 2nd Place
+          return {
+            height: 80,
+            width: 125,
+            gradient: "from-[#C0C0C0] to-[#A0A0A0]",
+            trophyImage: "/trophies/silver_office.png",
+            rankColor: "#C0C0C0",
+          };
+        case 2: // 3rd Place
+          return {
+            height: 80,
+            width: 125,
+            gradient: "from-[#CD7F32] to-[#A0522D]",
+            trophyImage: "/trophies/bronze_office.png",
+            rankColor: "#CD7F32",
+          };
+        default:
+          return {
+            height: 80,
+            width: 125,
+            gradient: "from-gray-400 to-gray-500",
+            trophyImage: null,
+            rankColor: "#4A5568",
+          };
+      }
+    } else {
+      // Students
+      switch (index) {
+        case 0: // 1st Place
+          return {
+            height: 100,
+            width: 140,
+            gradient: "from-[#FFD700] to-[#FFA500]",
+            trophyImage: "/trophies/gold_student.png",
+            rankColor: "#FFD700",
+          };
+        case 1: // 2nd Place
+          return {
+            height: 80,
+            width: 125,
+            gradient: "from-[#C0C0C0] to-[#A0A0A0]",
+            trophyImage: "/trophies/silver_student.png",
+            rankColor: "#C0C0C0",
+          };
+        case 2: // 3rd Place
+          return {
+            height: 80,
+            width: 125,
+            gradient: "from-[#CD7F32] to-[#A0522D]",
+            trophyImage: "/trophies/bronze_student.png",
+            rankColor: "#CD7F32",
+          };
+        default:
+          return {
+            height: 80,
+            width: 125,
+            gradient: "from-gray-400 to-gray-500",
+            trophyImage: null,
+            rankColor: "#4A5568",
+          };
+      }
+    }
+  };
+
+  const PodiumCard = ({
+    entry,
+    index,
+  }: {
+    entry: LeaderboardEntry;
+    index: number;
+  }) => {
+    const podiumData = getPodiumData(index);
+    const isEmpty = !entry.name;
+
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 50 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: index * 0.2, type: "spring", stiffness: 100 }}
+        className="relative flex flex-col items-center"
+        style={{ zIndex: index === 0 ? 30 : index === 1 ? 20 : 10 }}
+      >
+        {/* Trophy Image */}
+        <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-40 h-40 flex items-center justify-center z-20">
+          {isEmpty ? (
+            <div className="w-32 h-32 rounded-full bg-gray-200 flex items-center justify-center">
+              <Trophy className="w-16 h-16 text-gray-400" />
+            </div>
+          ) : (
+            <Image
+              src={podiumData.trophyImage!}
+              alt={`${index + 1} place trophy`}
+              width={160}
+              height={160}
+              className="object-contain"
+            />
+          )}
+        </div>
+
+        {/* Podium Stage */}
+        <div
+          className={`bg-gradient-to-b ${podiumData.gradient} rounded-t-2xl flex flex-col items-center justify-center relative overflow-visible shadow-lg`}
+          style={{
+            height: `${podiumData.height}px`,
+            width: `${podiumData.width}px`,
+          }}
+        >
+          {/* Name and Points */}
+          {!isEmpty && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-white font-bold text-center px-2 pt-8">
+              <div className="text-sm mb-1 line-clamp-1">{entry.name}</div>
+              <div className="text-lg">{entry.points} pts</div>
+              {entry.rank && entry.rank !== "NONE" && (
+                <div className="mt-1">
+                  <RankBadge
+                    rank={entry.rank}
+                    goldRanking={entry.goldRanking}
+                    size="xs"
+                    showLabel={false}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </motion.div>
+    );
+  };
+
+  return (
+    <div className="mt-6 mb-6">
+      <div className="pt-28 pb-2 overflow-visible">
+        <div className="flex justify-center items-end gap-4 px-4 overflow-visible">
+          {/* 2nd Place - Left */}
+          <PodiumCard entry={podiumEntries[1]} index={1} />
+
+          {/* 1st Place - Center */}
+          <PodiumCard entry={podiumEntries[0]} index={0} />
+
+          {/* 3rd Place - Right */}
+          <PodiumCard entry={podiumEntries[2]} index={2} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PlaceholderCard({ rank }: { rank: number }) {
+  return (
+    <div className="bg-[#F9FAFB] rounded-xl mb-2.5 p-4 flex items-center gap-3 border border-[#E5E7EB] opacity-55">
+      <div className="w-[42px] h-[42px] rounded-full bg-[#E5E7EB] flex items-center justify-center flex-shrink-0">
+        <span className="font-extrabold text-sm text-[#6B7280]">#{rank}</span>
+      </div>
+      <div className="flex-1">
+        <h3 className="font-bold text-sm text-[#6B7280] italic">
+          Your name could be here!
+        </h3>
+        <p className="text-xs text-[#9CA3AF] mt-1">
+          Compete to claim this spot
+        </p>
+      </div>
+      <div className="bg-[#E5E7EB] px-3 py-1.5 rounded-2xl flex-shrink-0">
+        <span className="text-[#6B7280] font-bold text-xs">? pts</span>
+      </div>
+    </div>
+  );
 }
 
 export default function LeaderboardPage() {
-  const { isLoading, userRole } = useUser()
-  const { collapsed } = useSidebar()
-  const [activeTab, setActiveTab] = useState<"students" | "offices">("students")
-  const [topStudents, setTopStudents] = useState<LeaderboardEntry[]>([])
-  const [topOffices, setTopOffices] = useState<LeaderboardEntry[]>([])
-  const [loading, setLoading] = useState(true)
-  const [showInfoModal, setShowInfoModal] = useState(false)
-  const [expandedSection, setExpandedSection] = useState<"top3" | "others" | null>(null)
+  const { isLoading, userRole } = useUser();
+  const { collapsed } = useSidebar();
+  const [selectedTab, setSelectedTab] = useState(0);
+  const [topStudents, setTopStudents] = useState<LeaderboardEntry[]>([]);
+  const [topOffices, setTopOffices] = useState<LeaderboardEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showInfoModal, setShowInfoModal] = useState(false);
 
   useEffect(() => {
     const fetchLeaderboardData = async () => {
-      setLoading(true)
+      setLoading(true);
       try {
-        const token = typeof document !== 'undefined' 
-          ? document.cookie
-              .split('; ')
-              .find((row) => row.startsWith('token='))
-              ?.split('=')[1]
-          : null
+        const token =
+          typeof document !== "undefined"
+            ? document.cookie
+                .split("; ")
+                .find((row) => row.startsWith("token="))
+                ?.split("=")[1]
+            : null;
 
         if (!token) {
-          console.error("No authentication token found")
-          return
+          console.error("No authentication token found");
+          return;
         }
 
         const [studentsRes, officesRes] = await Promise.all([
           fetch(`${API_BASE_URL}/api/ratings/leaderboard/reporters/top`, {
             headers: {
-              "Authorization": `Bearer ${token}`,
+              Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
             },
           }),
           fetch(`${API_BASE_URL}/api/ratings/leaderboard/offices/top`, {
             headers: {
-              "Authorization": `Bearer ${token}`,
+              Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
             },
           }),
-        ])
+        ]);
 
-          if (studentsRes.ok && officesRes.ok) {
-          const [studentsData, officesData] = await Promise.all([studentsRes.json(), officesRes.json()])
-          
-          console.log("🔍 Raw students data:", studentsData)
-          console.log("🔍 Raw offices data:", officesData)
-          
-          // Process student data to ensure rank information is available
-          const processedStudents = studentsData.map((student: LeaderboardEntry) => {
-            // Calculate Gold ranking for Gold rank users
-            if (student.rank === 'GOLD') {
-              // Find position among Gold users
-              const goldPosition = studentsData
-                .filter((s: LeaderboardEntry) => s.rank === 'GOLD')
-                .sort((a: LeaderboardEntry, b: LeaderboardEntry) => b.points - a.points)
-                .findIndex((s: LeaderboardEntry) => s.id === student.id) + 1;
-              
-              // Only set goldRanking if in top 10
-              if (goldPosition <= 10) {
-                student.goldRanking = goldPosition;
-              }
-            }
-            return student;
-          });
-          
-          // Process office data to ensure rank information is available
-          const processedOffices = officesData.map((office: LeaderboardEntry) => {
-            // Calculate Gold ranking for Gold rank offices
-            if (office.rank === 'GOLD') {
-              // Find position among Gold offices
-              const goldPosition = officesData
-                .filter((o: LeaderboardEntry) => o.rank === 'GOLD')
-                .sort((a: LeaderboardEntry, b: LeaderboardEntry) => b.points - a.points)
-                .findIndex((o: LeaderboardEntry) => o.id === office.id) + 1;
-              
-              // Only set goldRanking if in top 10
-              if (goldPosition <= 10) {
-                office.goldRanking = goldPosition;
-              }
-            }
-            return office;
-          });
-          
-          setTopStudents(processedStudents)
-          setTopOffices(processedOffices)
+        if (studentsRes.ok && officesRes.ok) {
+          const [studentsData, officesData] = await Promise.all([
+            studentsRes.json(),
+            officesRes.json(),
+          ]);
 
-          // Trigger confetti when data loads - only on client side
-          if (typeof window !== 'undefined') {
-            setTimeout(() => {
-              triggerConfetti()
-            }, 500)
-          }
+          // Process student data
+          const processedStudents = studentsData.map(
+            (student: LeaderboardEntry) => {
+              if (student.rank === "GOLD") {
+                const goldPosition =
+                  studentsData
+                    .filter((s: LeaderboardEntry) => s.rank === "GOLD")
+                    .sort(
+                      (a: LeaderboardEntry, b: LeaderboardEntry) =>
+                        b.points - a.points
+                    )
+                    .findIndex((s: LeaderboardEntry) => s.id === student.id) +
+                  1;
+
+                if (goldPosition <= 10) {
+                  student.goldRanking = goldPosition;
+                }
+              }
+              return student;
+            }
+          );
+
+          // Process office data
+          const processedOffices = officesData.map(
+            (office: LeaderboardEntry) => {
+              if (office.rank === "GOLD") {
+                const goldPosition =
+                  officesData
+                    .filter((o: LeaderboardEntry) => o.rank === "GOLD")
+                    .sort(
+                      (a: LeaderboardEntry, b: LeaderboardEntry) =>
+                        b.points - a.points
+                    )
+                    .findIndex((o: LeaderboardEntry) => o.id === office.id) + 1;
+
+                if (goldPosition <= 10) {
+                  office.goldRanking = goldPosition;
+                }
+              }
+              return office;
+            }
+          );
+
+          setTopStudents(processedStudents);
+          setTopOffices(processedOffices);
         }
       } catch (error) {
-        console.error("Error fetching leaderboard data:", error)
+        console.error("Error fetching leaderboard data:", error);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    fetchLeaderboardData()
-  }, [])
+    fetchLeaderboardData();
+  }, []);
 
-  // Create a separate component for confetti to avoid SSR issues
-const ConfettiTrigger = dynamic(() => import('@/components/ConfettiTrigger'), { ssr: false })
-
-const triggerConfetti = () => {
-    // We'll use a custom event to trigger confetti
-    if (typeof window !== 'undefined') {
-      const event = new CustomEvent('trigger-confetti')
-      window.dispatchEvent(event)
-    }
-  }
-
-  const getMedalColor = (index: number) => {
-    switch (index) {
-      case 0:
-        return "text-yellow-500"
-      case 1:
-        return "text-gray-400"
-      case 2:
-        return "text-amber-600"
-      default:
-        return "text-gray-300"
-    }
-  }
-
-  const getMedalIcon = (index: number) => {
-    switch (index) {
-      case 0:
-        return <Crown className="w-6 h-6" />
-      case 1:
-        return <Trophy className="w-6 h-6" />
-      case 2:
-        return <Medal className="w-6 h-6" />
-      default:
-        return <Star className="w-6 h-6" />
-    }
-  }
-
-  const getStageHeight = (index: number) => {
-    switch (index) {
-      case 0:
-        return "h-32"
-      case 1:
-        return "h-24"
-      case 2:
-        return "h-16"
-      default:
-        return "h-0"
-    }
-  }
-
-  const getStageColor = (index: number) => {
-    switch (index) {
-      case 0:
-        return "from-yellow-400 to-yellow-500"
-      case 1:
-        return "from-gray-300 to-gray-400"
-      case 2:
-        return "from-amber-500 to-amber-600"
-      default:
-        return "from-gray-200 to-gray-300"
-    }
-  }
-
-  const getStagePosition = (index: number) => {
-    switch (index) {
-      case 0:
-        return "left-1/2 -translate-x-1/2"
-      case 1:
-        return "left-1/4 -translate-x-1/2"
-      case 2:
-        return "left-3/4 -translate-x-1/2"
-      default:
-        return ""
-    }
-  }
-
-  const getStageWidth = (index: number) => {
-    switch (index) {
-      case 0:
-        return "w-40"
-      case 1:
-        return "w-36"
-      case 2:
-        return "w-36"
-      default:
-        return "w-0"
-    }
-  }
-
-  const LeaderboardCard = ({ entry, index }: { entry: LeaderboardEntry; index: number }) => {
-    // Clamp averageRating to 5.0 max, 0.0 min
-    const safeAvg = Math.max(0, Math.min(5, entry.averageRating))
-    const isTop3 = index < 3
-
-    if (isTop3) {
-      return (
-        <motion.div
-          initial={{ opacity: 0, y: 50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: index * 0.2, type: "spring", stiffness: 100 }}
-          className={`absolute ${getStagePosition(index)} bottom-0 flex flex-col items-center`}
-        >
-          <div className={`relative ${index === 0 ? "z-30" : index === 1 ? "z-20" : "z-10"}`}>
-            <div className="absolute -top-16 left-1/2 transform -translate-x-1/2 flex flex-col items-center">
-              <div
-                className={`w-20 h-20 rounded-full bg-gradient-to-br from-white to-gray-100 border-4 ${
-                  index === 0 ? "border-yellow-400" : index === 1 ? "border-gray-300" : "border-amber-500"
-                } shadow-lg flex items-center justify-center overflow-hidden`}
-              >
-                {entry.name.includes("http") ? (
-                  <img
-                    src={entry.name || "/placeholder.svg"}
-                    alt={`Rank ${index + 1}`}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="text-2xl font-bold text-[#8B0000]">
-                    {entry.name
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")}
-                  </div>
-                )}
-              </div>
-              <div className="mt-2 flex flex-col items-center">
-                <div className="flex items-center gap-1">
-                  <div className={`${getMedalColor(index)}`}>{getMedalIcon(index)}</div>
-                  <span
-                    className={`text-lg font-bold ${
-                      index === 0 ? "text-yellow-500" : index === 1 ? "text-gray-500" : "text-amber-600"
-                    }`}
-                  >
-                    #{index + 1}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1 justify-center">
-                  <h3 className="font-bold text-gray-800 text-center max-w-[120px] truncate">{entry.name}</h3>
-                  {entry.rank && (
-                    <RankBadge 
-                      rank={entry.rank} 
-                      goldRanking={entry.goldRanking}
-                      size="xs"
-                      showLabel={false}
-                      animate={false}
-                    />
-                  )}
-                </div>
-                <div className="flex items-center mt-1">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <Star
-                      key={star}
-                      className={`w-3 h-3 ${
-                        star <= Math.round(safeAvg) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
-                      }`}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div
-              className={`${getStageWidth(index)} ${getStageHeight(index)} rounded-t-lg bg-gradient-to-b ${getStageColor(index)} shadow-lg flex items-center justify-center relative overflow-hidden`}
-            >
-              {/* Add overlay text for name and points */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-white font-bold text-center px-2">
-                <div className="text-sm mb-1">{entry.name}</div>
-                <div className="text-lg">{entry.points} pts</div>
-              </div>
-              {index === 0 && (
-                <div className="absolute inset-0 opacity-30">
-                  <div className="absolute top-0 left-0 w-full h-full bg-[url('/abstract-sparkles.png')] bg-repeat-space opacity-20"></div>
-                </div>
-              )}
-            </div>
-          </div>
-        </motion.div>
-      )
-    }
-
-    return (
-      <motion.div
-        initial={{ opacity: 0, x: -20 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ delay: index * 0.05 }}
-        className="bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden"
-      >
-        <div className="flex items-center gap-4 p-4 relative">
-          <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-[#8B0000] to-[#DAA520]"></div>
-          <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center shadow-inner">
-            <span className="text-lg font-bold text-gray-700">#{index + 1}</span>
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-gray-800 truncate">{entry.name}</h3>
-              {entry.rank && (
-                <RankBadge 
-                  rank={entry.rank} 
-                  goldRanking={entry.goldRanking}
-                  size="xs"
-                  showLabel={false}
-                  animate={false}
-                />
-              )}
-            </div>
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-              <span>
-                {entry.totalRatings} {activeTab === "students" ? "reports" : "ratings"}
-              </span>
-            <span>•</span>
-              <div className="flex items-center">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <Star
-                    key={star}
-                    className={`w-3 h-3 ${
-                      star <= Math.round(safeAvg) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
-                    }`}
-                  />
-                ))}
-                <span className="ml-1 font-medium">{safeAvg.toFixed(1)}</span>
-            </div>
-          </div>
-        </div>
-        <div className="flex-shrink-0">
-            <div className="bg-gradient-to-r from-[#8B0000] to-[#6B0000] text-white px-3 py-1 rounded-full text-sm font-medium shadow">
-            {entry.points} pts
-            </div>
-          </div>
-        </div>
-      </motion.div>
-    )
-  }
-
-  // Helper to fill up to 10 slots with placeholders
-  const getLeaderboardDisplay = (entries: LeaderboardEntry[]) => {
-    const filled = [...entries] as (LeaderboardEntry | null)[]
-    while (filled.length < 10) {
-      filled.push(null)
-    }
-    return filled
-  }
-
-  const PlaceholderCard = ({ index }: { index: number }) => (
-    <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg shadow p-4 flex items-center gap-4 relative overflow-hidden">
-      <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-gray-300 to-gray-200"></div>
-      <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
-        <span className="text-lg font-bold text-gray-400">#{index + 1}</span>
-      </div>
-      <div className="flex-1">
-        <h3 className="font-semibold text-gray-400">
-          {activeTab === "students" ? "Your name could be here!" : "Your office could be here!"}
-        </h3>
-        <div className="flex items-center gap-2 text-sm text-gray-300">
-          <span>Compete to claim this spot</span>
-        </div>
-      </div>
-      <div className="flex-shrink-0">
-        <div className="bg-gray-200 text-gray-500 px-3 py-1 rounded-full text-sm font-medium">? pts</div>
-      </div>
-    </div>
-  )
+  const ConfettiTrigger = dynamic(
+    () => import("@/components/ConfettiTrigger"),
+    { ssr: false }
+  );
 
   if (isLoading) {
     return (
@@ -414,204 +565,163 @@ const triggerConfetti = () => {
               <div className="absolute inset-2 rounded-full border-r-2 border-l-2 border-[#DAA520] animate-spin animation-delay-150"></div>
               <div className="absolute inset-4 rounded-full border-t-2 border-b-2 border-[#8B0000] animate-spin animation-delay-300"></div>
             </div>
-            <p className="mt-6 text-gray-600 font-medium">Loading leaderboard...</p>
+            <p className="mt-6 text-gray-600 font-medium">
+              Loading leaderboard...
+            </p>
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   const getContentMargin = () => {
-    if (userRole === 'OFFICE_ADMIN') {
-      return collapsed ? 'ml-20' : 'ml-72'
+    if (userRole === "OFFICE_ADMIN") {
+      return collapsed ? "ml-20" : "ml-72";
     }
-    return collapsed ? 'ml-18' : 'ml-64'
-  }
-  
+    return collapsed ? "ml-18" : "ml-64";
+  };
+
+  const list = selectedTab === 0 ? topStudents : topOffices;
 
   return (
-    <div className="min-h-screen bg-[#f5f5f5]">
-      {/* Include the confetti component */}
+    <div className="min-h-screen bg-[#F8F9FA]">
       <ConfettiTrigger />
-      {userRole === 'OFFICE_ADMIN' ? <OfficeAdminSidebar /> : <Sidebar />}
+      {userRole === "OFFICE_ADMIN" ? <OfficeAdminSidebar /> : <Sidebar />}
       <div className={`transition-all duration-300 ${getContentMargin()}`}>
-        {userRole === 'OFFICE_ADMIN' ? (
-          <OfficeAdminNavbar 
-            title="Office Leaderboard" 
-            subtitle="Celebrating our top contributors and offices"
+        {userRole === "OFFICE_ADMIN" ? (
+          <OfficeAdminNavbar
+            title="Office Leaderboard"
+            subtitle="See who's leading in incident reporting"
             showSearch={false}
           />
         ) : (
-          <Navbar 
-            title="Leaderboard" 
-            subtitle="Celebrating our top contributors and offices"
+          <Navbar
+            title="Leaderboard"
+            subtitle="See who's leading in incident reporting"
             showSearch={false}
             showNewIncident={false}
           />
         )}
-      <div className="pt-24 px-6 pb-10 ">
-        <div className="mb-8  rounded-xl shadow-lg overflow-hidden">
-            {/* Header with animated gradient */}
-            <div className="relative mb-12 overflow-hidden rounded-xl bg-gradient-to-r from-[#8B0000] to-[#6B0000] p-8 shadow-lg">
-              <div className="absolute -top-24 -right-24 w-64 h-64 bg-gradient-to-br from-[#DAA520]/30 to-transparent rounded-full blur-2xl"></div>
-              <div className="absolute -bottom-16 -left-16 w-48 h-48 bg-gradient-to-br from-[#DAA520]/20 to-transparent rounded-full blur-xl"></div>
 
-              <div className="relative flex items-center justify-between">
-                <div>
-                  <h1 className="text-3xl font-bold text-white flex items-center">
-                    <Trophy className="w-8 h-8 mr-3" />
-                    Recognition Leaderboard
-                  </h1>
-                  <p className="mt-2 text-white/80 max-w-xl">
-                    Celebrating excellence in our community. Points are awarded based on quality reports and exceptional
-                    service.
-                  </p>
-          </div>
-          <button
-            onClick={() => setShowInfoModal(true)}
-                  className="bg-white/10 hover:bg-white/20 transition-colors p-3 rounded-full"
-            aria-label="Show recognition info"
-          >
-                  <Info className="w-6 h-6 text-white" />
-          </button>
-              </div>
+        {/* Decorative elements */}
+        <div className="pointer-events-none fixed right-[-40px] top-[-20px] opacity-[0.08] z-0"></div>
+        <div className="pointer-events-none fixed left-[-30px] bottom-[-10px] opacity-[0.06] z-0">
+          <Sparkles size={200} className="text-[#D4AF37]" />
         </div>
 
-        {/* Tabs */}
-            <div className="flex gap-4 mb-8">
-          <button
-            onClick={() => setActiveTab("students")}
-                className={`flex items-center gap-2 px-6 py-3 rounded-lg transition-all duration-300 ${
-              activeTab === "students"
-                    ? "bg-gradient-to-r from-[#8B0000] to-[#6B0000] text-white shadow-md transform scale-105"
-                : "bg-white text-gray-600 hover:bg-gray-50"
-            }`}
-          >
-            <Users className="w-5 h-5" />
-                <span className="font-medium">Top Students</span>
-          </button>
-          <button
-            onClick={() => setActiveTab("offices")}
-                className={`flex items-center gap-2 px-6 py-3 rounded-lg transition-all duration-300 ${
-              activeTab === "offices"
-                    ? "bg-gradient-to-r from-[#8B0000] to-[#6B0000] text-white shadow-md transform scale-105"
-                : "bg-white text-gray-600 hover:bg-gray-50"
-            }`}
-          >
-            <Building2 className="w-5 h-5" />
-                <span className="font-medium">Top Offices</span>
-              </button>
-            </div>
+        <div className="pt-6 pb-8 relative z-10 top-20">
+          {/* Tabs */}
+          <SegmentedTabs selected={selectedTab} onSelect={setSelectedTab} />
 
-            {/* Top 3 Podium Section */}
-            <div className="mb-12">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-[#8B0000] flex items-center">
-                  <Award className="mr-2 h-6 w-6" />
-                  Top 3 Champions
-                </h2>
-              </div>
+          <div className="px-4 mt-4">
+            {/* Podium */}
+            {list.length > 0 && (
+              <LeaderboardPodium
+                entries={list.slice(0, 3)}
+                type={selectedTab === 0 ? "students" : "offices"}
+              />
+            )}
 
-              <div className="relative bg-gradient-to-b from-white to-gray-50 rounded-xl p-6 shadow-md overflow-hidden">
-                <div className="absolute inset-0 bg-[url('/abstract-geometric-flow.png')] opacity-5"></div>
-
-                {/* Decorative elements */}
-                <div className="absolute top-1/2 left-1/4 w-12 h-12 rounded-full bg-[#8B0000]/5"></div>
-                <div className="absolute top-1/3 right-1/4 w-16 h-16 rounded-full bg-[#DAA520]/5"></div>
-
-                <div className="relative h-[180px] -mb-6">
-                  {loading ? (
-                    <div className="flex items-center justify-center h-full">
-                      <Loader2 className="w-8 h-8 text-[#8B0000] animate-spin" />
-                    </div>
-                  ) : (
-                    <>
-                      {activeTab === "students"
-                        ? topStudents
-                            .slice(0, 3)
-                            .map((student, index) => (
-                              <LeaderboardCard key={student.id} entry={student} index={index} />
-                            ))
-                        : topOffices
-                            .slice(0, 3)
-                            .map((office, index) => <LeaderboardCard key={office.id} entry={office} index={index} />)}
-                    </>
-                  )}
+            {/* Leaderboard Rankings Section (4-10) */}
+            <div className="mt-4.5">
+              <div className="flex items-center mb-3">
+                <div className="w-[26px] h-[26px] rounded-full bg-[#8B0000] flex items-center justify-center mr-2">
+                  <Users size={15} className="text-white" />
                 </div>
-              </div>
-            </div>
-
-            {/* Leaderboard List */}
-            <div className="mb-8">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-[#8B0000] flex items-center">
-                  <Users className="mr-2 h-6 w-6" />
+                <h2 className="text-base font-extrabold text-[#8B0000]">
                   Leaderboard Rankings
                 </h2>
               </div>
 
-              <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-md overflow-hidden">
-                <div className="space-y-3">
-                  {loading ? (
-                    <div className="flex items-center justify-center py-12">
-                      <Loader2 className="w-8 h-8 text-[#8B0000] animate-spin" />
-                    </div>
-                  ) : (
-                    <>
-                      {activeTab === "students"
-                        ? getLeaderboardDisplay(topStudents)
-                            .slice(3)
-                            .map((student, index) =>
-                              student ? (
-                                <LeaderboardCard key={student.id} entry={student} index={index + 3} />
-                              ) : (
-                                <PlaceholderCard key={`placeholder-student-${index}`} index={index + 3} />
-                              ),
-                            )
-                        : getLeaderboardDisplay(topOffices)
-                            .slice(3)
-                            .map((office, index) =>
-                              office ? (
-                                <LeaderboardCard key={office.id} entry={office} index={index + 3} />
-                              ) : (
-                                <PlaceholderCard key={`placeholder-office-${index}`} index={index + 3} />
-                              ),
-                            )}
-                    </>
-                  )}
+              {loading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-8 h-8 text-[#8B0000] animate-spin" />
                 </div>
-              </div>
+              ) : (
+                <>
+                  {(() => {
+                    const START_RANK = 4;
+                    const MAX_RANK = 10;
+                    const totalSlots = MAX_RANK - START_RANK + 1;
+                    const actualCount = Math.max(
+                      0,
+                      Math.min(Math.max(list.length - 3, 0), totalSlots)
+                    );
+                    const placeholders = totalSlots - actualCount;
+
+                    return (
+                      <>
+                        {actualCount > 0
+                          ? list
+                              .slice(3, 3 + actualCount)
+                              .map((entry, idx) => (
+                                <LeaderboardItem
+                                  key={entry.id}
+                                  entry={entry}
+                                  rank={START_RANK + idx}
+                                  isTopThree={false}
+                                  isOffice={selectedTab === 1}
+                                />
+                              ))
+                          : null}
+
+                        {Array.from({ length: placeholders }).map((_, i) => (
+                          <PlaceholderCard
+                            key={`placeholder-${START_RANK + actualCount + i}`}
+                            rank={START_RANK + actualCount + i}
+                          />
+                        ))}
+                      </>
+                    );
+                  })()}
+                </>
+              )}
             </div>
 
-            {/* Info Card */}
-            <div className="bg-gradient-to-r from-[#DAA520]/10 to-[#8B0000]/10 rounded-xl p-6 shadow-sm">
+            {/* Empty State */}
+            {list.length === 0 && !loading && (
+              <div className="bg-white rounded-xl p-6 flex flex-col items-center mt-2">
+                <Trophy size={32} className="text-[#9CA3AF]" />
+                <p className="text-[#6B7280] mt-2 text-center">
+                  No leaderboard data available
+                </p>
+              </div>
+            )}
+
+            {/* How to Earn Recognition Section */}
+            <div className="bg-[#FDF2F2] rounded-xl p-4 mt-6 mb-6 border border-[#FECACA]">
               <div className="flex items-start gap-4">
-                <div className="bg-gradient-to-br from-[#DAA520] to-[#8B0000] p-3 rounded-full shadow-md">
-                  <Sparkles className="h-6 w-6 text-white" />
+                <div className="w-12 h-12 rounded-full bg-[#8B0000] flex items-center justify-center flex-shrink-0">
+                  <Sparkles size={24} className="text-white" />
                 </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-[#8B0000] mb-2">How to Earn Recognition</h3>
-                  <p className="text-gray-700">
-                    Points are awarded based on the quality and quantity of your contributions. Submit detailed reports,
-                    provide helpful information, and maintain high ratings to climb the leaderboard!
+                <div className="flex-1">
+                  <h3 className="text-lg font-extrabold text-[#8B0000] mb-2">
+                    How to Earn Recognition
+                  </h3>
+                  <p className="text-sm text-[#4B5563] leading-5 mb-3">
+                    Points are awarded based on the quality and quantity of your
+                    contributions. Submit detailed reports, provide helpful
+                    information, and maintain high ratings to climb the
+                    leaderboard!
                   </p>
                   <button
                     onClick={() => setShowInfoModal(true)}
-                    className="mt-3 text-[#8B0000] font-medium flex items-center hover:underline"
+                    className="text-sm font-bold text-[#8B0000] flex items-center hover:underline"
                   >
                     Learn more about the recognition system
-                    <ChevronDown className="ml-1 h-4 w-4" />
                   </button>
                 </div>
               </div>
             </div>
+          </div>
         </div>
       </div>
-    </div>
 
-      <RecognitionInfoModal isOpen={showInfoModal} onClose={() => setShowInfoModal(false)} />
+      <RecognitionInfoModal
+        isOpen={showInfoModal}
+        onClose={() => setShowInfoModal(false)}
+      />
 
-      {/* Add custom styles for animation delays */}
       <style jsx global>{`
         .animation-delay-150 {
           animation-delay: 150ms;
@@ -621,5 +731,5 @@ const triggerConfetti = () => {
         }
       `}</style>
     </div>
-  )
-} 
+  );
+}
