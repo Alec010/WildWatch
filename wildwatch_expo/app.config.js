@@ -50,16 +50,13 @@ module.exports = function() {
         },
         edgeToEdgeEnabled: true,
         permissions: [
-          'INTERNET',
-          'ACCESS_NETWORK_STATE',
           'CAMERA',
-          // Storage permissions for Android 12 and below
-          'READ_EXTERNAL_STORAGE',
-          'WRITE_EXTERNAL_STORAGE',
           // Media permissions for Android 13+ (API 33+)
           'READ_MEDIA_IMAGES',
           'READ_MEDIA_VIDEO',
-          // Location permissions (foreground only)
+          // Storage permissions for Android 12 and below (for backward compatibility)
+          'READ_EXTERNAL_STORAGE',
+          // Location permissions
           'ACCESS_FINE_LOCATION',
           'ACCESS_COARSE_LOCATION'
         ],
@@ -96,7 +93,7 @@ module.exports = function() {
       extra: {
         router: {},
         eas: {
-          projectId: '86220201-cf3e-4e5f-9bdc-73be52b8075c'
+          projectId: 'caa0082a-c5b9-40b8-a537-d58e57bf8b4c'
         }
       }
     }

@@ -32,16 +32,12 @@
       },
       "edgeToEdgeEnabled": true,
       "permissions": [
-        "INTERNET",
-        "ACCESS_NETWORK_STATE",
         "CAMERA",
-        "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE",
         "READ_MEDIA_IMAGES",
         "READ_MEDIA_VIDEO",
+        "READ_EXTERNAL_STORAGE",
         "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION",
-        "ACCESS_BACKGROUND_LOCATION"
+        "ACCESS_COARSE_LOCATION"
       ],
       "blockedPermissions": []
     },
@@ -74,7 +70,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "86220201-cf3e-4e5f-9bdc-73be52b8075c"
+        "projectId": "caa0082a-c5b9-40b8-a537-d58e57bf8b4c"
       }
     }
   }
