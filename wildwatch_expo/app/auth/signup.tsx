@@ -146,7 +146,7 @@ export default function SignupScreen() {
   const getRawContactNumber = (formattedNumber: string) =>
     formattedNumber.replace(/\s/g, "");
 
-  const keyboardBehavior = Platform.OS === "ios" ? "padding" : "height";
+  const keyboardBehavior = Platform.OS === "ios" ? "padding" : undefined;
   const keyboardVerticalOffset = Platform.OS === "ios" ? insets.top : 0;
 
   return (
@@ -156,6 +156,7 @@ export default function SignupScreen() {
         style={{ flex: 1 }}
         behavior={keyboardBehavior as any}
         keyboardVerticalOffset={keyboardVerticalOffset}
+        enabled={Platform.OS === "ios"}
       >
         {/* Top gradient with centered logo */}
         <View style={styles.top}>

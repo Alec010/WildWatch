@@ -25,15 +25,16 @@ export default function OAuth2Callback() {
           const result = await microsoftOAuthService.exchangeCodeForTokens(code as string);
           
           if (result.token) {
-            // Save token
-            await storage.setToken(result.token);
+            // ⚠️ SECURITY FIX: Do NOT store token yet!
+            // Only store after ALL validation passes
             
             // Check if we have user data in the response
             if (result.user) {
               const user = result.user;
               
-              // Store user data temporarily for the registration flow
+              // Store user data AND token temporarily for the registration flow
               await AsyncStorage.setItem('oauthUserData', JSON.stringify(user));
+              await AsyncStorage.setItem('pendingOAuthToken', result.token);
               
               // STEP 1: Check if terms are accepted (for all OAuth users)
               if (!user.termsAccepted) {
@@ -54,12 +55,16 @@ export default function OAuth2Callback() {
                 }
               }
               
-              // All registration steps completed
-              // Clear OAuth user data as it's no longer needed
+              // All registration steps completed - NOW it's safe to store the token
+              await storage.setToken(result.token);
+              
+              // Clear OAuth temporary data as it's no longer needed
               await AsyncStorage.removeItem('oauthUserData');
+              await AsyncStorage.removeItem('pendingOAuthToken');
               router.replace('/(tabs)');
             } else {
-              // If no user data, try to fetch profile to check status
+              // If no user data, store token and try to fetch profile to check status
+              await storage.setToken(result.token);
               try {
                 const { authAPI } = await import('../../../src/features/auth/api/auth_api');
                 await authAPI.getProfile();

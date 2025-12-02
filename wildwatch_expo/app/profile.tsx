@@ -975,12 +975,9 @@ export default function ProfileScreen() {
       {
         text: "Logout",
         onPress: async () => {
-          // Clear all form data and authentication data
-          await Promise.all([
-            storage.removeToken(),
-            storage.clearAllFormData(),
-            storage.clearChatMessages(),
-          ]);
+          // ✅ Use comprehensive cleanup to clear ALL session data
+          console.log('🧹 Logging out - clearing all session data');
+          await storage.clearAllUserData();
           router.replace("/auth/login" as never);
         },
         style: "destructive",

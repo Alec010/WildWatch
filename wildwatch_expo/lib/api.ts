@@ -28,9 +28,10 @@ api.interceptors.request.use(async (request: InternalAxiosRequestConfig) => {
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError<any>) => {
-    // Handle 401 Unauthorized
+    // Handle 401 Unauthorized - Clear ALL session data
     if (error.response?.status === 401) {
-      await storage.removeToken();
+      console.log('🔒 Unauthorized (401) - clearing all session data');
+      await storage.clearAllUserData();
     }
 
     // Enhance error message based on error type

@@ -25,6 +25,7 @@
         "foregroundImage": "./assets/images/logos/WildWatch_Logo.png",
         "backgroundColor": "#000000"
       },
+      "softwareKeyboardLayoutMode": "pan",
       "edgeToEdgeEnabled": true,
       "permissions": [
         "android.permission.INTERNET",
@@ -43,7 +44,7 @@
       ],
       "config": {
         "googleMaps": {
-          "apiKey": "YOUR_GOOGLE_MAPS_API_KEY"
+          "apiKey": "AIzaSyCsi0OD0XYvyaoQYKDK5IZ30VeWbTwu-_Y"
         }
       }
     },

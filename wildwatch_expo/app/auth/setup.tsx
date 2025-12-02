@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authAPI } from '../../src/features/auth/api/auth_api';
+import { storage } from '../../lib/storage';
 import Colors from '../../constants/Colors';
 
 const COLORS = {
@@ -35,12 +36,61 @@ export default function SetupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingSetup, setIsCheckingSetup] = useState(true);
   const [errors, setErrors] = useState<{
     contactNumber?: string;
     password?: string;
     confirmPassword?: string;
   }>({});
   const [serverError, setServerError] = useState<string | null>(null);
+
+  // ✅ Check if user has already completed setup on mount
+  useEffect(() => {
+    checkExistingSetup();
+  }, []);
+
+  const checkExistingSetup = async () => {
+    setIsCheckingSetup(true);
+    try {
+      const pendingToken = await AsyncStorage.getItem('pendingOAuthToken');
+      if (pendingToken) {
+        // Temporarily store token so API can use it for profile check
+        await storage.setToken(pendingToken);
+        
+        // Try to fetch profile to check if setup is already done
+        const profile = await authAPI.getProfile();
+        
+        const isMicrosoftOAuth = profile.authProvider === 'microsoft' || profile.authProvider === 'microsoft_mobile';
+        
+        if (isMicrosoftOAuth) {
+          const contactNeedsSetup = !profile.contactNumber || 
+                                   profile.contactNumber === 'Not provided' || 
+                                   profile.contactNumber === '+639000000000';
+          const passwordNeedsSetup = profile.passwordNeedsSetup !== undefined 
+                                   ? profile.passwordNeedsSetup 
+                                   : !profile.password;
+          
+          // ✅ Account already set up - token already stored, clean up temp data
+          if (!contactNeedsSetup && !passwordNeedsSetup) {
+            console.log('Account already set up, proceeding to app');
+            await AsyncStorage.removeItem('pendingOAuthToken');
+            await AsyncStorage.removeItem('oauthUserData');
+            router.replace('/(tabs)');
+            return;
+          } else {
+            // Setup still needed - remove the temporarily stored token
+            await storage.removeToken();
+          }
+        }
+      }
+    } catch (error) {
+      console.log('Could not check existing setup, continuing with form');
+      // Remove temporarily stored token on error
+      await storage.removeToken();
+    } finally {
+      setIsCheckingSetup(false);
+    }
+  };
 
   const formatContactNumber = (value: string) => {
     // Remove all non-digits
@@ -134,6 +184,30 @@ export default function SetupPage() {
     return Object.keys(newErrors).length === 0;
   };
 
+  // ✅ Handle user canceling setup
+  const handleCancelSetup = async () => {
+    Alert.alert(
+      'Cancel Setup?',
+      'Canceling will log you out. You\'ll need to complete setup next time you log in.',
+      [
+        {
+          text: 'Continue Setup',
+          style: 'cancel',
+        },
+        {
+          text: 'Cancel & Logout',
+          style: 'destructive',
+          onPress: async () => {
+            // Clean up ALL session data
+            console.log('🧹 User cancelled setup - clearing all data');
+            await storage.clearAllUserData();
+            router.replace('/auth/login');
+          },
+        },
+      ]
+    );
+  };
+
   const handleSubmit = async () => {
     if (!validateForm()) {
       return;
@@ -143,10 +217,54 @@ export default function SetupPage() {
     setServerError(null);
     try {
       const rawContact = getRawContactNumber(contactNumber);
+      
+      // ✅ Check if setup was already completed (race condition protection)
+      // First, temporarily store pending token so API can use it
+      const checkToken = await AsyncStorage.getItem('pendingOAuthToken');
+      if (checkToken) {
+        await storage.setToken(checkToken);
+      }
+      
+      try {
+        const profile = await authAPI.getProfile();
+        const isMicrosoftOAuth = profile.authProvider === 'microsoft' || profile.authProvider === 'microsoft_mobile';
+        
+        if (isMicrosoftOAuth) {
+          const contactAlreadySet = profile.contactNumber && 
+                                   profile.contactNumber !== 'Not provided' && 
+                                   profile.contactNumber !== '+639000000000';
+          const passwordAlreadySet = profile.passwordNeedsSetup === false || profile.password;
+          
+          if (contactAlreadySet && passwordAlreadySet) {
+            // ✅ Setup already complete, token already stored, clean up temp data
+            console.log('Setup already complete, skipping redundant call');
+            await AsyncStorage.removeItem('oauthUserData');
+            await AsyncStorage.removeItem('pendingOAuthToken');
+            router.replace('/(tabs)');
+            return;
+          } else {
+            // Setup still needed, remove temporarily stored token
+            await storage.removeToken();
+          }
+        }
+      } catch (e) {
+        // If profile check fails, remove temp token and continue with setup
+        console.log('Could not check existing setup, continuing');
+        await storage.removeToken();
+      }
+      
+      // Proceed with setup
       await authAPI.setupOAuthUser(rawContact, password);
 
-      // Clear OAuth user data
+      // ✅ SECURITY FIX: Setup successful - NOW store the pending token
+      const pendingToken = await AsyncStorage.getItem('pendingOAuthToken');
+      if (pendingToken) {
+        await storage.setToken(pendingToken);
+      }
+
+      // Clear OAuth temporary data
       await AsyncStorage.removeItem('oauthUserData');
+      await AsyncStorage.removeItem('pendingOAuthToken');
 
       Alert.alert(
         'Setup Complete',
@@ -157,6 +275,9 @@ export default function SetupPage() {
       console.error('Setup error:', error);
       const errorMessage = error?.response?.data?.message || error?.message || 'Failed to complete setup. Please try again.';
       setServerError(errorMessage);
+      
+      // ⚠️ Do NOT store token if setup fails!
+      // Token should only be stored after successful setup
     } finally {
       setIsLoading(false);
     }
@@ -207,7 +328,7 @@ export default function SetupPage() {
     }
   };
 
-  const keyboardBehavior = Platform.OS === 'ios' ? 'padding' : 'height';
+  const keyboardBehavior = Platform.OS === 'ios' ? 'padding' : undefined;
   const keyboardVerticalOffset = Platform.OS === 'ios' ? insets.top : 0;
 
   // Password validation indicators
@@ -231,6 +352,7 @@ export default function SetupPage() {
         style={{ flex: 1 }}
         behavior={keyboardBehavior as any}
         keyboardVerticalOffset={keyboardVerticalOffset}
+        enabled={Platform.OS === 'ios'}
       >
         {/* Top section with gradient and logo */}
         <View style={styles.top}>
@@ -502,15 +624,17 @@ export default function SetupPage() {
             {/* Submit Button */}
             <Pressable
               onPress={handleSubmit}
-              disabled={isLoading}
-              style={[styles.submitButton, isLoading && styles.submitButtonDisabled]}
+              disabled={isLoading || isCheckingSetup}
+              style={[styles.submitButton, (isLoading || isCheckingSetup) && styles.submitButtonDisabled]}
               accessibilityRole="button"
               accessibilityLabel="Complete Setup"
             >
-              {isLoading ? (
+              {isLoading || isCheckingSetup ? (
                 <View style={styles.loadingContainer}>
                   <ActivityIndicator color="white" size="small" />
-                  <Text style={styles.submitButtonText}>Setting up...</Text>
+                  <Text style={styles.submitButtonText}>
+                    {isCheckingSetup ? 'Checking...' : 'Setting up...'}
+                  </Text>
                 </View>
               ) : (
                 <View style={styles.buttonContent}>
@@ -518,6 +642,17 @@ export default function SetupPage() {
                   <Ionicons name="arrow-forward" size={20} color="white" style={{ marginLeft: 8 }} />
                 </View>
               )}
+            </Pressable>
+
+            {/* Cancel Button */}
+            <Pressable
+              onPress={handleCancelSetup}
+              disabled={isLoading}
+              style={styles.cancelButton}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel Setup"
+            >
+              <Text style={styles.cancelButtonText}>Cancel & Logout</Text>
             </Pressable>
 
             {/* Footer Note */}
@@ -756,6 +891,24 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  cancelButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: '#DC2626',
+    borderRadius: 8,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+    marginHorizontal: 24,
+  },
+  cancelButtonText: {
+    color: '#DC2626',
+    fontSize: 16,
+    fontWeight: '600',
     letterSpacing: 0.3,
   },
   footerNote: {

@@ -138,7 +138,7 @@ export default function LoginScreen() {
     }
   };
 
-  const keyboardBehavior = Platform.OS === "ios" ? "padding" : "height";
+  const keyboardBehavior = Platform.OS === "ios" ? "padding" : undefined;
   const keyboardVerticalOffset = Platform.OS === "ios" ? insets.top : 0;
 
   return (
@@ -148,6 +148,7 @@ export default function LoginScreen() {
         style={{ flex: 1 }}
         behavior={keyboardBehavior as any}
         keyboardVerticalOffset={keyboardVerticalOffset}
+        enabled={Platform.OS === "ios"}
       >
         {/* Top (flex) Gradient with centered logo */}
         <View style={styles.top}>

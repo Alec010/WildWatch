@@ -109,10 +109,72 @@ export default function TermsPage() {
     setExpandedSection(expandedSection === index ? null : index);
   };
 
+  // ✅ Handle user canceling/declining terms
+  const handleCancelTerms = async () => {
+    Alert.alert(
+      'Decline Terms?',
+      'You must accept the Terms and Conditions to use WildWatch. Declining will log you out and clear your registration data.',
+      [
+        {
+          text: 'Continue Reading',
+          style: 'cancel',
+        },
+        {
+          text: 'Decline & Logout',
+          style: 'destructive',
+          onPress: async () => {
+            // Clean up ALL session data
+            console.log('🧹 User declined terms - clearing all data');
+            await storage.clearAllUserData();
+            router.replace('/auth/login');
+          },
+        },
+      ]
+    );
+  };
+
   const handleAcceptTerms = async () => {
     setIsLoading(true);
     setError(null);
     try {
+      // ✅ First check if terms are already accepted (prevent redundant calls)
+      let pendingToken = await AsyncStorage.getItem('pendingOAuthToken');
+      if (pendingToken) {
+        try {
+          const profile = await authAPI.getProfile();
+          if (profile.termsAccepted) {
+            // Terms already accepted, skip and go to next step
+            console.log('Terms already accepted, proceeding to next step');
+            const isMicrosoftOAuth = profile.authProvider === 'microsoft' || profile.authProvider === 'microsoft_mobile';
+            
+            if (isMicrosoftOAuth) {
+              const contactNeedsSetup = !profile.contactNumber || 
+                                       profile.contactNumber === 'Not provided' || 
+                                       profile.contactNumber === '+639000000000';
+              const passwordNeedsSetup = profile.passwordNeedsSetup !== undefined 
+                                       ? profile.passwordNeedsSetup 
+                                       : !profile.password;
+              
+              if (contactNeedsSetup || passwordNeedsSetup) {
+                router.replace('/auth/setup');
+                return;
+              }
+            }
+            
+            // All setup complete, store token and proceed
+            await storage.setToken(pendingToken);
+            await AsyncStorage.removeItem('pendingOAuthToken');
+            await AsyncStorage.removeItem('oauthUserData');
+            router.replace('/(tabs)');
+            return;
+          }
+        } catch (e) {
+          // If profile fetch fails, continue with normal flow
+          console.log('Could not check existing terms status, continuing with acceptance');
+        }
+      }
+
+      // Accept terms
       await authAPI.acceptTerms();
 
       // Update stored OAuth data if applicable
@@ -125,11 +187,17 @@ export default function TermsPage() {
         }
       }
 
-      // Always check if setup is needed after accepting terms
-      // This ensures OAuth users complete the setup flow
-      const token = await storage.getToken();
-      if (token) {
+      // ✅ SECURITY FIX: Check for pending OAuth token (not yet officially stored)
+      // OAuth tokens are only stored after ALL setup is complete
+      pendingToken = await AsyncStorage.getItem('pendingOAuthToken');
+      
+      // ⚠️ CRITICAL: Only use pendingToken during OAuth flow!
+      // Do NOT fallback to stored token - that could be from a different account!
+      if (pendingToken) {
         try {
+          // Temporarily store pendingToken so API client can use it
+          await storage.setToken(pendingToken);
+          
           const profile = await authAPI.getProfile();
           
           // Check if this is a Microsoft OAuth user that needs setup
@@ -145,19 +213,26 @@ export default function TermsPage() {
                                      : !profile.password;
             
             if (contactNeedsSetup || passwordNeedsSetup) {
+              // ⚠️ Remove token before going to setup (it was temporarily stored for profile check)
+              await storage.removeToken();
               router.replace('/auth/setup');
               return;
             }
           }
+          
+          // ✅ Setup complete - token already stored, just clean up temp data
+          await AsyncStorage.removeItem('pendingOAuthToken');
+          await AsyncStorage.removeItem('oauthUserData');
         } catch (e) {
-          // If we can't fetch profile, but this is an OAuth user, still go to setup
+          // If we can't fetch profile, remove the temp token and go to setup
+          await storage.removeToken();
           if (isOAuthUser) {
             router.replace('/auth/setup');
             return;
           }
         }
       } else if (isOAuthUser) {
-        // If no token but OAuth user, still go to setup
+        // If no pending token but OAuth user, go to setup
         router.replace('/auth/setup');
         return;
       }
@@ -307,6 +382,8 @@ export default function TermsPage() {
                 By clicking "Accept Terms", you acknowledge that you have read and agree to be bound by these Terms
                 and Conditions.
               </Text>
+              
+              {/* Accept Button */}
               <Pressable
                 style={[styles.acceptButton, isLoading && styles.acceptButtonDisabled]}
                 onPress={handleAcceptTerms}
@@ -325,6 +402,17 @@ export default function TermsPage() {
                     <Text style={styles.buttonText}>Accept Terms</Text>
                   </View>
                 )}
+              </Pressable>
+
+              {/* Decline Button */}
+              <Pressable
+                style={styles.declineButton}
+                onPress={handleCancelTerms}
+                disabled={isLoading}
+                accessibilityRole="button"
+                accessibilityLabel="Decline Terms"
+              >
+                <Text style={styles.declineButtonText}>Decline & Logout</Text>
               </Pressable>
             </View>
 
@@ -601,6 +689,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+  },
+  declineButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: '#DC2626',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 12,
+  },
+  declineButtonText: {
+    color: '#DC2626',
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: 0.5,
   },
   footer: {
     backgroundColor: 'white',

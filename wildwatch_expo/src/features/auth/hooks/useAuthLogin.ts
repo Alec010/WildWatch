@@ -29,16 +29,23 @@ export const useAuthLogin = () => {
     setIsLoading(true);
     setError(null);
     try {
+      // ⚠️ CRITICAL: Clear ALL user session data before starting new OAuth flow
+      // This prevents mixing tokens/data from different accounts
+      console.log('🧹 Clearing all previous session data...');
+      await storage.clearAllUserData();
+      
       const result = await microsoftOAuthService.signInWithMicrosoft();
       if (result?.token) {
-        await storage.setToken(result.token);
+        // ⚠️ SECURITY FIX: Do NOT store token yet!
+        // Only store after ALL validation passes
         
         // Check if we have user data in the response to determine routing
         if (result.user) {
           const user = result.user;
           
-          // Store user data temporarily for the registration flow
+          // Store user data AND token temporarily for the registration flow
           await AsyncStorage.setItem('oauthUserData', JSON.stringify(user));
+          await AsyncStorage.setItem('pendingOAuthToken', result.token);
           
           // STEP 1: Check if terms are accepted (for all OAuth users)
           if (!user.termsAccepted) {
@@ -59,18 +66,25 @@ export const useAuthLogin = () => {
             }
           }
           
-          // All registration steps completed
-          // Clear OAuth user data as it's no longer needed
+          // All registration steps completed - NOW it's safe to store the token
+          await storage.setToken(result.token);
+          
+          // Clear OAuth temporary data as it's no longer needed
           await AsyncStorage.removeItem('oauthUserData');
+          await AsyncStorage.removeItem('pendingOAuthToken');
           router.replace('/(tabs)');
         } else {
-          // If no user data, navigate to dashboard (will handle auth requirements there)
+          // If no user data, store token and navigate to dashboard
+          await storage.setToken(result.token);
           router.replace('/(tabs)');
         }
         return;
       }
       throw new Error('No token received from Microsoft. Please try again.');
     } catch (e: any) {
+      // Clean up any pending tokens on error
+      await AsyncStorage.removeItem('pendingOAuthToken');
+      
       // Provide more specific error messages for Microsoft OAuth
       let message: string;
       
