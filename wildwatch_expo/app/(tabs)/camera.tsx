@@ -1,5 +1,5 @@
 // app/(tabs)/camera.tsx
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import {
   Platform,
   ScrollView,
   useWindowDimensions,
+  Linking,
 } from "react-native";
 import {
   SafeAreaView,
@@ -119,84 +120,180 @@ export default function CameraScreen() {
 
   useFocusEffect(
     React.useCallback(() => {
-      console.log("Camera screen useFocusEffect triggered:", {
-        isReturningFromLocation,
-        currentImageCount: capturedImages.length,
-        imagesRefCount: imagesRef.current.length,
-      });
+      let isMounted = true;
 
-      // Mark that user is at camera (flow step 1)
-      storage.setReportFlowStep(1);
-
-      if (!isReturningFromLocation) {
-        // Load images from storage if they exist
-        const loadStoredImages = async () => {
+      const loadData = async () => {
+        try {
+          // Mark that user is at camera (flow step 1)
           try {
-            const storedFiles = await storage.getEvidenceFiles();
-            console.log("Loaded stored images from storage:", storedFiles);
-            if (storedFiles && storedFiles.length > 0) {
-              // If there are existing images, go directly to images captured state
-              setCapturedImages(storedFiles);
-              imagesRef.current = storedFiles;
-              setShowFallback(false);
-              setHasInitialized(true);
-              setIsLoading(false);
-              console.log(
-                "Set camera to images captured state with",
-                storedFiles.length,
-                "images"
-              );
-            } else {
-              // No images, initialize camera
-              setCapturedImages([]);
-              imagesRef.current = [];
-              setShowFallback(true);
-              setHasInitialized(false);
-              initializeCamera();
-              console.log("No stored images, initializing camera");
-            }
-          } catch (error) {
-            console.error("Error loading stored images:", error);
-            setCapturedImages([]);
-            imagesRef.current = [];
-            setShowFallback(true);
-            setHasInitialized(false);
-            initializeCamera();
+            await storage.setReportFlowStep(1);
+          } catch (stepError) {
+            console.error("Error setting report flow step:", stepError);
           }
-        };
 
-        loadStoredImages();
-      } else {
-        // Returning from location, use preserved state
-        console.log(
-          "Returning from location, using preserved state with",
-          imagesRef.current.length,
-          "images"
-        );
-        setCapturedImages(imagesRef.current);
-        setShowFallback(imagesRef.current.length === 0);
-        setHasInitialized(true);
-        setIsLoading(false);
-      }
-    }, [isReturningFromLocation])
+          // Re-check permissions when screen comes into focus
+          // This handles the case where user enabled permissions in settings
+          const recheckPermissions = async () => {
+            try {
+              const [cameraStatus, mediaStatus] = await Promise.all([
+                ImagePicker.getCameraPermissionsAsync().catch(() => ({
+                  status: "undetermined",
+                })),
+                ImagePicker.getMediaLibraryPermissionsAsync().catch(() => ({
+                  status: "undetermined",
+                })),
+              ]);
+
+              console.log(
+                "Permission status on focus - Camera:",
+                cameraStatus.status,
+                "Media:",
+                mediaStatus.status
+              );
+
+              // If camera permission was just granted (e.g., from settings), update state
+              if (
+                cameraStatus.status === "granted" &&
+                cameraPermission === false
+              ) {
+                console.log(
+                  "Camera permission now granted (likely from settings), updating state"
+                );
+                setCameraPermission(true);
+                // If we're showing fallback and permission is now granted, we can open camera
+                if (showFallback && capturedImages.length === 0) {
+                  // Don't auto-open, let user tap the button
+                }
+              }
+            } catch (error) {
+              console.error("Error rechecking permissions on focus:", error);
+            }
+          };
+
+          if (!isReturningFromLocation) {
+            // Load images from storage if they exist
+            const loadStoredImages = async () => {
+              try {
+                // Re-check permissions first (in case user enabled them in settings)
+                await recheckPermissions();
+
+                const storedFiles = await storage.getEvidenceFiles();
+                console.log("Loaded stored images from storage:", storedFiles);
+                if (storedFiles && storedFiles.length > 0) {
+                  // If there are existing images, go directly to images captured state
+                  setCapturedImages(storedFiles);
+                  imagesRef.current = storedFiles;
+                  setShowFallback(false);
+                  setHasInitialized(true);
+                  setIsLoading(false);
+                  console.log(
+                    "Set camera to images captured state with",
+                    storedFiles.length,
+                    "images"
+                  );
+                } else {
+                  // No images, initialize camera
+                  setCapturedImages([]);
+                  imagesRef.current = [];
+                  setShowFallback(true);
+                  setHasInitialized(false);
+                  initializeCamera();
+                  console.log("No stored images, initializing camera");
+                }
+              } catch (error) {
+                console.error("Error loading stored images:", error);
+                setCapturedImages([]);
+                imagesRef.current = [];
+                setShowFallback(true);
+                setHasInitialized(false);
+                initializeCamera();
+              }
+            };
+
+            loadStoredImages();
+          } else {
+            // Returning from location, use preserved state
+            console.log(
+              "Returning from location, using preserved state with",
+              imagesRef.current.length,
+              "images"
+            );
+            setCapturedImages(imagesRef.current);
+            setShowFallback(imagesRef.current.length === 0);
+            setHasInitialized(true);
+            setIsLoading(false);
+          }
+        } catch (error) {
+          console.error("Error in camera focus effect:", error);
+        }
+      };
+
+      loadData();
+      return () => {
+        isMounted = false;
+      };
+    }, [
+      isReturningFromLocation,
+      cameraPermission,
+      showFallback,
+      capturedImages.length,
+    ])
   );
+
+  useEffect(() => {
+    // Verify ImagePicker is available
+    if (
+      !ImagePicker ||
+      typeof ImagePicker.getCameraPermissionsAsync !== "function"
+    ) {
+      console.error("ImagePicker module not available");
+      Alert.alert(
+        "Error",
+        "Camera module is not available. Please restart the app.",
+        [{ text: "OK" }]
+      );
+    }
+  }, []);
 
   const initializeCamera = async () => {
     try {
       setIsLoading(true);
       setShowFallback(false);
 
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== "granted") {
+      // Don't auto-request camera permission on load - only check status
+      // This prevents permission dialog conflicts when user wants to use gallery
+      try {
+        const { status } = await ImagePicker.getCameraPermissionsAsync();
+        console.log("Camera permission status on init:", status);
+
+        if (status === "granted") {
+          setCameraPermission(true);
+          try {
+            await openCamera({ origin: "initial", skipPermissionCheck: true });
+          } catch (cameraError: any) {
+            console.error(
+              "Error opening camera after permission check:",
+              cameraError
+            );
+            // If camera fails to open, show fallback
+            setCameraPermission(false);
+            setShowFallback(capturedImages.length === 0);
+          }
+        } else {
+          // Permission not granted - show fallback UI
+          // User can request permission when they actually want to use camera
+          console.log("Camera permission not granted, showing fallback UI");
+          setCameraPermission(false);
+          setShowFallback(capturedImages.length === 0);
+        }
+      } catch (permissionError: any) {
+        console.error("Error checking camera permission:", permissionError);
+        // If we can't check permission, assume it's not granted and show fallback
         setCameraPermission(false);
         setShowFallback(capturedImages.length === 0);
-        setIsLoading(false);
-        setHasInitialized(true);
-        return;
       }
 
-      setCameraPermission(true);
-      await openCamera({ origin: "initial", skipPermissionCheck: true });
+      setIsLoading(false);
       setHasInitialized(true);
     } catch (error) {
       console.error("Error initializing camera:", error);
@@ -207,17 +304,122 @@ export default function CameraScreen() {
   };
 
   const requestPermissions = async (): Promise<boolean> => {
-    const { status: cameraStatus } =
-      await ImagePicker.requestCameraPermissionsAsync();
-    if (cameraStatus !== "granted") {
+    try {
+      console.log("Requesting camera permissions...");
+
+      // First check current permission status
+      let currentStatus = "undetermined";
+      try {
+        const statusCheck = await ImagePicker.getCameraPermissionsAsync();
+        currentStatus = statusCheck.status;
+        console.log("Current camera permission status:", currentStatus);
+      } catch (checkError: any) {
+        console.error("Error checking camera permission status:", checkError);
+        // Continue to request permission even if check fails
+      }
+
+      // If already granted, return true immediately
+      if (currentStatus === "granted") {
+        console.log("Camera permission already granted");
+        return true;
+      }
+
+      // Request permission
+      console.log("Requesting camera permission...");
+      let cameraStatus = "undetermined";
+      let canAskAgain = true;
+
+      try {
+        const result = await ImagePicker.requestCameraPermissionsAsync();
+        cameraStatus = result.status;
+        canAskAgain = result.canAskAgain ?? true;
+        console.log(
+          "Camera permission request result:",
+          cameraStatus,
+          "canAskAgain:",
+          canAskAgain
+        );
+      } catch (requestError: any) {
+        console.error("Error during camera permission request:", requestError);
+        Alert.alert(
+          "Permission Error",
+          "Failed to request camera permission. Please try again or enable it in settings.",
+          [
+            { text: "OK" },
+            {
+              text: "Open Settings",
+              onPress: () => {
+                if (Platform.OS === "ios") {
+                  Linking.openURL("app-settings:");
+                } else {
+                  Linking.openSettings();
+                }
+              },
+            },
+          ]
+        );
+        return false;
+      }
+
+      if (cameraStatus !== "granted") {
+        // Check if permission was denied permanently
+        try {
+          const finalCheck = await ImagePicker.getCameraPermissionsAsync();
+          canAskAgain = finalCheck.canAskAgain ?? false;
+        } catch (err) {
+          console.error("Error checking final permission status:", err);
+        }
+
+        Alert.alert(
+          "Camera Permission Required",
+          cameraStatus === "denied" && !canAskAgain
+            ? "Camera permission is required to take photos. Please enable it in your device settings."
+            : "Camera permissions are required to take photos.",
+          [
+            { text: "OK" },
+            ...(cameraStatus === "denied" && !canAskAgain
+              ? [
+                  {
+                    text: "Open Settings",
+                    onPress: () => {
+                      if (Platform.OS === "ios") {
+                        Linking.openURL("app-settings:");
+                      } else {
+                        Linking.openSettings();
+                      }
+                    },
+                  },
+                ]
+              : []),
+          ]
+        );
+        return false;
+      }
+
+      console.log("Camera permission granted successfully");
+      return true;
+    } catch (error: any) {
+      console.error("Unexpected error requesting camera permissions:", error);
       Alert.alert(
-        "Permissions Required",
-        "Camera permissions are required to take photos.",
-        [{ text: "OK" }]
+        "Permission Error",
+        error?.message ||
+          "Failed to request camera permissions. Please try again or enable it in settings.",
+        [
+          { text: "OK" },
+          {
+            text: "Open Settings",
+            onPress: () => {
+              if (Platform.OS === "ios") {
+                Linking.openURL("app-settings:");
+              } else {
+                Linking.openSettings();
+              }
+            },
+          },
+        ]
       );
       return false;
     }
-    return true;
   };
 
   const openCamera = async ({
@@ -231,18 +433,129 @@ export default function CameraScreen() {
       if (origin === "initial") setIsLoading(false);
 
       if (!skipPermissionCheck) {
-        const hasPermission = await requestPermissions();
-        if (!hasPermission) {
-          if (origin === "initial") setShowFallback(true);
+        try {
+          const hasPermission = await requestPermissions();
+          if (!hasPermission) {
+            console.log("Camera permission not granted, showing fallback");
+            if (origin === "initial") setShowFallback(true);
+            setIsLoading(false);
+            setHasInitialized(true);
+            return;
+          }
+
+          // Double-check permission before launching camera
+          const { status } = await ImagePicker.getCameraPermissionsAsync();
+          if (status !== "granted") {
+            console.log("Camera permission check failed, status:", status);
+            Alert.alert(
+              "Permission Denied",
+              "Camera permission is required. Please enable it in settings.",
+              [
+                { text: "OK" },
+                {
+                  text: "Open Settings",
+                  onPress: () => {
+                    if (Platform.OS === "ios") {
+                      Linking.openURL("app-settings:");
+                    } else {
+                      Linking.openSettings();
+                    }
+                  },
+                },
+              ]
+            );
+            if (origin === "initial") {
+              setShowFallback(capturedImages.length === 0);
+            }
+            setIsLoading(false);
+            setHasInitialized(true);
+            return;
+          }
+        } catch (permissionError: any) {
+          console.error(
+            "Error during camera permission check:",
+            permissionError
+          );
+          Alert.alert(
+            "Permission Error",
+            "Failed to check camera permissions. Please try again or enable it in settings.",
+            [
+              { text: "OK" },
+              {
+                text: "Open Settings",
+                onPress: () => {
+                  if (Platform.OS === "ios") {
+                    Linking.openURL("app-settings:");
+                  } else {
+                    Linking.openSettings();
+                  }
+                },
+              },
+            ]
+          );
+          if (origin === "initial") {
+            setShowFallback(capturedImages.length === 0);
+          }
+          setIsLoading(false);
+          setHasInitialized(true);
           return;
         }
       }
 
-      const res = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: false,
-        quality: 0.8,
-      });
+      // Launch camera with error handling
+      let res;
+      try {
+        res = await ImagePicker.launchCameraAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: false,
+          quality: 0.8,
+        });
+      } catch (cameraError: any) {
+        console.error("Error launching camera:", cameraError);
+        // Check if it's a permission error
+        if (
+          cameraError?.message?.toLowerCase().includes("permission") ||
+          cameraError?.code === "E_PERMISSION_MISSING"
+        ) {
+          Alert.alert(
+            "Permission Required",
+            "Camera permission is required to take photos. Please enable it in settings.",
+            [
+              { text: "OK" },
+              {
+                text: "Open Settings",
+                onPress: () => {
+                  if (Platform.OS === "ios") {
+                    Linking.openURL("app-settings:");
+                  } else {
+                    Linking.openSettings();
+                  }
+                },
+              },
+            ]
+          );
+        } else {
+          Alert.alert("Error", "Failed to open camera. Please try again.", [
+            { text: "OK" },
+          ]);
+        }
+        if (origin === "initial") {
+          setShowFallback(capturedImages.length === 0);
+        }
+        setIsLoading(false);
+        setHasInitialized(true);
+        return;
+      }
+
+      if (!res) {
+        console.error("Camera returned null/undefined result");
+        if (origin === "initial") {
+          setShowFallback(capturedImages.length === 0);
+        }
+        setIsLoading(false);
+        setHasInitialized(true);
+        return;
+      }
 
       if (res.canceled) {
         // Stay in current view if user cancels from "add" origin
@@ -267,18 +580,25 @@ export default function CameraScreen() {
         setCapturedImages((prev) => {
           const newImages = [...prev, newFile];
           imagesRef.current = newImages;
-          // Update storage
+          // Update storage with error handling
           console.log("Saving captured image to storage:", newImages);
-          storage.setEvidenceFiles(newImages);
+          storage.setEvidenceFiles(newImages).catch((error) => {
+            console.error("Error saving image to storage:", error);
+          });
           return newImages;
         });
         setShowFallback(false);
       }
 
       setHasInitialized(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error taking photo:", error);
-      Alert.alert("Error", "Failed to open camera. Please try again.");
+      Alert.alert(
+        "Error",
+        error?.message ||
+          "Failed to open camera. Please check your camera permissions and try again.",
+        [{ text: "OK" }]
+      );
       if (origin === "initial") {
         setShowFallback(capturedImages.length === 0);
       }
@@ -289,53 +609,424 @@ export default function CameraScreen() {
 
   const pickImageFromGallery = async () => {
     try {
-      const res = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsMultipleSelection: true,
-        allowsEditing: false,
-        quality: 0.8,
-      });
+      console.log("pickImageFromGallery called");
 
-      if (res.canceled) return;
+      // Verify ImagePicker is available
+      if (
+        !ImagePicker ||
+        typeof ImagePicker.getMediaLibraryPermissionsAsync !== "function"
+      ) {
+        console.error(
+          "ImagePicker is not available or not properly initialized"
+        );
+        Alert.alert(
+          "Error",
+          "Image picker is not available. Please restart the app.",
+          [{ text: "OK" }]
+        );
+        return;
+      }
 
-      const newFiles: EvidenceFile[] = res.assets.map((asset) => ({
-        uri: asset.uri,
-        name:
-          asset.fileName ??
-          asset.uri.split("/").pop() ??
-          `image_${Date.now()}.jpg`,
-        type: asset.type || "image/jpeg",
-        size: asset.fileSize ?? 0,
-      }));
-      setCapturedImages((prev) => {
-        const newImages = [...prev, ...newFiles];
-        imagesRef.current = newImages;
-        // Update storage
-        console.log("Saving selected images to storage:", newImages);
-        storage.setEvidenceFiles(newImages);
-        return newImages;
-      });
-      setShowFallback(false);
-      setHasInitialized(true);
-    } catch (error) {
-      console.error("Error picking image:", error);
-      Alert.alert("Error", "Failed to pick image. Please try again.");
+      // On Android, check if camera permission was recently requested to avoid dialog conflicts
+      // Android 13+ uses granular permissions and can't show multiple permission dialogs at once
+      if (Platform.OS === "android") {
+        try {
+          const cameraStatus = await ImagePicker.getCameraPermissionsAsync();
+          console.log(
+            "Camera permission status before gallery request:",
+            cameraStatus.status
+          );
+          // If camera permission is undetermined (just requested) or denied (user just dismissed),
+          // wait longer to ensure any camera permission dialog has fully closed
+          // Android needs more time between permission requests to avoid conflicts
+          if (
+            cameraStatus.status === "undetermined" ||
+            cameraStatus.status === "denied"
+          ) {
+            console.log(
+              "Waiting for camera permission dialog to fully close..."
+            );
+            // Increased delay to 2 seconds for Android to ensure dialog is fully dismissed
+            await new Promise((resolve) => setTimeout(resolve, 2000));
+          }
+        } catch (err) {
+          // Ignore camera permission check errors, continue with media library request
+          console.log("Could not check camera permission status:", err);
+          // Still wait a bit on Android to be safe
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+        }
+      }
+
+      // Request media library permissions with retry logic for Android
+      let currentStatus = "undetermined";
+      let mediaStatus = "undetermined";
+      let canAskAgain = true;
+      let retryCount = 0;
+      const maxRetries = Platform.OS === "android" ? 2 : 1;
+
+      try {
+        console.log("Checking media library permission status...");
+        const statusCheck = await ImagePicker.getMediaLibraryPermissionsAsync();
+        currentStatus = statusCheck.status;
+        console.log("Media library permission status:", currentStatus);
+      } catch (checkError: any) {
+        console.error("Error checking media library permission:", checkError);
+        Alert.alert(
+          "Permission Error",
+          "Unable to check photo library permission. Please try again or enable it in settings.",
+          [
+            { text: "OK" },
+            {
+              text: "Open Settings",
+              onPress: () => {
+                if (Platform.OS === "ios") {
+                  Linking.openURL("app-settings:");
+                } else {
+                  Linking.openSettings();
+                }
+              },
+            },
+          ]
+        );
+        return;
+      }
+
+      if (currentStatus !== "granted") {
+        while (retryCount < maxRetries && mediaStatus !== "granted") {
+          try {
+            console.log(
+              `Requesting media library permission (attempt ${
+                retryCount + 1
+              })...`
+            );
+            try {
+              const result =
+                await ImagePicker.requestMediaLibraryPermissionsAsync();
+              if (!result) {
+                console.error("Permission request returned null/undefined");
+                throw new Error(
+                  "Permission request failed - no result returned"
+                );
+              }
+              mediaStatus = result.status;
+              canAskAgain = result.canAskAgain ?? true;
+              console.log(
+                `Media library permission request result: ${mediaStatus}, canAskAgain: ${canAskAgain}`
+              );
+            } catch (requestErr: any) {
+              console.error(
+                `Error in permission request attempt ${retryCount + 1}:`,
+                requestErr
+              );
+              // If this is the first attempt and it fails, it might be a system issue
+              if (retryCount === 0) {
+                // Wait a bit longer before retrying
+                await new Promise((resolve) => setTimeout(resolve, 2000));
+              }
+              throw requestErr; // Re-throw to be caught by outer catch
+            }
+
+            // If permission was granted, break out of retry loop
+            if (mediaStatus === "granted") {
+              break;
+            }
+
+            // If we can't ask again (permanently denied), don't retry
+            if (!canAskAgain) {
+              break;
+            }
+
+            // On Android, if permission is still undetermined after request, wait and retry
+            // This can happen if another permission dialog was showing
+            if (
+              Platform.OS === "android" &&
+              mediaStatus === "undetermined" &&
+              retryCount < maxRetries - 1
+            ) {
+              console.log(
+                "Media library permission request may have been interrupted, retrying..."
+              );
+              // Longer delay on retry to ensure any other dialogs are closed
+              await new Promise((resolve) => setTimeout(resolve, 2000));
+              retryCount++;
+            } else {
+              break;
+            }
+          } catch (requestError: any) {
+            console.error(
+              "Error requesting media library permission (attempt " +
+                (retryCount + 1) +
+                "):",
+              requestError
+            );
+            if (retryCount < maxRetries - 1) {
+              await new Promise((resolve) => setTimeout(resolve, 1500));
+              retryCount++;
+            } else {
+              // Final retry failed, show error
+              Alert.alert(
+                "Permission Error",
+                "Failed to request photo library permission. Please enable it in settings.",
+                [
+                  { text: "OK" },
+                  {
+                    text: "Open Settings",
+                    onPress: () => {
+                      if (Platform.OS === "ios") {
+                        Linking.openURL("app-settings:");
+                      } else {
+                        Linking.openSettings();
+                      }
+                    },
+                  },
+                ]
+              );
+              return;
+            }
+          }
+        }
+
+        if (mediaStatus !== "granted") {
+          // Re-check permission status to get latest canAskAgain value
+          try {
+            const finalCheck =
+              await ImagePicker.getMediaLibraryPermissionsAsync();
+            canAskAgain = finalCheck.canAskAgain ?? false;
+            mediaStatus = finalCheck.status;
+          } catch (err) {
+            console.error("Error checking final permission status:", err);
+          }
+
+          Alert.alert(
+            "Photo Library Permission Required",
+            mediaStatus === "denied" && !canAskAgain
+              ? "Photo library permission is required to select images. Please enable it in your device settings."
+              : "Photo library permissions are required to select images.",
+            [
+              { text: "OK" },
+              ...(mediaStatus === "denied" && !canAskAgain
+                ? [
+                    {
+                      text: "Open Settings",
+                      onPress: () => {
+                        if (Platform.OS === "ios") {
+                          Linking.openURL("app-settings:");
+                        } else {
+                          Linking.openSettings();
+                        }
+                      },
+                    },
+                  ]
+                : []),
+            ]
+          );
+          return;
+        }
+      }
+
+      // Double-check permission before launching picker
+      let finalStatus = "undetermined";
+      try {
+        const finalCheck = await ImagePicker.getMediaLibraryPermissionsAsync();
+        finalStatus = finalCheck.status;
+      } catch (checkError: any) {
+        console.error("Error verifying media library permission:", checkError);
+        Alert.alert(
+          "Permission Error",
+          "Unable to verify photo library permission. Please try again or enable it in settings.",
+          [
+            { text: "OK" },
+            {
+              text: "Open Settings",
+              onPress: () => {
+                if (Platform.OS === "ios") {
+                  Linking.openURL("app-settings:");
+                } else {
+                  Linking.openSettings();
+                }
+              },
+            },
+          ]
+        );
+        return;
+      }
+
+      if (finalStatus !== "granted") {
+        Alert.alert(
+          "Permission Denied",
+          "Photo library permission is required. Please enable it in settings.",
+          [
+            { text: "OK" },
+            {
+              text: "Open Settings",
+              onPress: () => {
+                if (Platform.OS === "ios") {
+                  Linking.openURL("app-settings:");
+                } else {
+                  Linking.openSettings();
+                }
+              },
+            },
+          ]
+        );
+        return;
+      }
+
+      // Launch image picker with error handling
+      let res;
+      try {
+        res = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsMultipleSelection: true,
+          allowsEditing: false,
+          quality: 0.8,
+        });
+      } catch (pickerError: any) {
+        console.error("Error launching image picker:", pickerError);
+        // Check if it's a permission error
+        if (
+          pickerError?.message?.toLowerCase().includes("permission") ||
+          pickerError?.code === "E_PERMISSION_MISSING"
+        ) {
+          Alert.alert(
+            "Permission Required",
+            "Photo library permission is required to select images. Please enable it in settings.",
+            [
+              { text: "OK" },
+              {
+                text: "Open Settings",
+                onPress: () => {
+                  if (Platform.OS === "ios") {
+                    Linking.openURL("app-settings:");
+                  } else {
+                    Linking.openSettings();
+                  }
+                },
+              },
+            ]
+          );
+        } else {
+          Alert.alert(
+            "Error",
+            "Failed to open photo library. Please try again.",
+            [{ text: "OK" }]
+          );
+        }
+        return;
+      }
+
+      if (!res) {
+        console.error("Image picker returned null/undefined result");
+        return;
+      }
+
+      if (res.canceled) {
+        console.log("User canceled image picker");
+        return;
+      }
+
+      if (!res.assets || res.assets.length === 0) {
+        console.log("No images selected");
+        return;
+      }
+
+      // Validate all assets have URIs before processing
+      const validAssets = res.assets.filter((asset) => asset && asset.uri);
+
+      if (validAssets.length === 0) {
+        console.error("No valid images selected");
+        Alert.alert(
+          "Error",
+          "No valid images were selected. Please try again."
+        );
+        return;
+      }
+
+      try {
+        const newFiles: EvidenceFile[] = validAssets.map((asset) => ({
+          uri: asset.uri,
+          name:
+            asset.fileName ??
+            asset.uri.split("/").pop() ??
+            `image_${Date.now()}.jpg`,
+          type: asset.type || "image/jpeg",
+          size: asset.fileSize ?? 0,
+        }));
+
+        setCapturedImages((prev) => {
+          const newImages = [...prev, ...newFiles];
+          imagesRef.current = newImages;
+          // Update storage
+          console.log("Saving selected images to storage:", newImages);
+          storage.setEvidenceFiles(newImages).catch((error) => {
+            console.error("Error saving selected images to storage:", error);
+          });
+          return newImages;
+        });
+        setShowFallback(false);
+        setHasInitialized(true);
+      } catch (fileError: any) {
+        console.error("Error processing selected images:", fileError);
+        Alert.alert(
+          "Error",
+          "Failed to process selected images. Please try again.",
+          [{ text: "OK" }]
+        );
+      }
+    } catch (error: any) {
+      console.error("Unexpected error picking image:", error);
+      // Don't show alert for user cancellation
+      if (
+        error?.message?.toLowerCase().includes("cancel") ||
+        error?.code === "E_PICKER_CANCELLED"
+      ) {
+        console.log("User canceled image selection");
+        return;
+      }
+      Alert.alert(
+        "Error",
+        error?.message ||
+          "Failed to pick image. Please check your photo library permissions and try again.",
+        [
+          { text: "OK" },
+          {
+            text: "Open Settings",
+            onPress: () => {
+              if (Platform.OS === "ios") {
+                Linking.openURL("app-settings:");
+              } else {
+                Linking.openSettings();
+              }
+            },
+          },
+        ]
+      );
     }
   };
 
-  const handleSkipForNow = () =>
-    router.push({
-      pathname: "/(tabs)/location",
-      params: { hasImages: capturedImages.length > 0 ? "true" : "false" },
-    } as any);
+  const handleSkipForNow = async () => {
+    try {
+      await router.push({
+        pathname: "/(tabs)/location",
+        params: { hasImages: capturedImages.length > 0 ? "true" : "false" },
+      } as any);
+    } catch (navError) {
+      console.error("Navigation error:", navError);
+      Alert.alert("Error", "Failed to navigate. Please try again.", [
+        { text: "OK" },
+      ]);
+    }
+  };
 
   const handleRemoveImage = (index: number) => {
     setCapturedImages((prev) => {
       const newImages = prev.filter((_, i) => i !== index);
       imagesRef.current = newImages;
-      // Update storage
+      // Update storage with error handling
       console.log("Removing image from storage:", newImages);
-      storage.setEvidenceFiles(newImages);
+      storage.setEvidenceFiles(newImages).catch((error) => {
+        console.error("Error updating storage after removal:", error);
+      });
       if (newImages.length === 0) {
         setShowFallback(true);
       }
@@ -356,8 +1047,12 @@ export default function CameraScreen() {
           setShowImageModal(false);
           setLoadingImages(new Set());
           setHasInitialized(true);
-          // Clear storage
-          await storage.removeEvidenceFiles();
+          // Clear storage with error handling
+          try {
+            await storage.removeEvidenceFiles();
+          } catch (error) {
+            console.error("Error clearing evidence files:", error);
+          }
         },
       },
     ]);
@@ -378,8 +1073,18 @@ export default function CameraScreen() {
       prev > 0 ? prev - 1 : capturedImages.length - 1
     );
 
-  const handleCameraCardPress = () => {
-    if (showFallback) openCamera({ origin: "initial" });
+  const handleCameraCardPress = async () => {
+    if (showFallback) {
+      try {
+        console.log("Camera card pressed, requesting camera permission...");
+        await openCamera({ origin: "initial" });
+      } catch (error: any) {
+        console.error("Error in handleCameraCardPress:", error);
+        Alert.alert("Error", "Failed to open camera. Please try again.", [
+          { text: "OK" },
+        ]);
+      }
+    }
   };
 
   const headerSubtitleDefault = "Add an incident image or upload from gallery";
@@ -568,16 +1273,16 @@ export default function CameraScreen() {
 
   if (capturedImages.length > 0) {
     const showClearAll = capturedImages.length > 1;
-    
+
     // Calculate actual tab bar height to match the tab layout
     // Tab bar height WITHOUT the safe area insets (those are handled separately)
     const baseTabBarHeight = Platform.OS === "ios" ? 85 : 80;
     const tabBarTopPadding = 12;
     const tabBarVisibleHeight = baseTabBarHeight; // Just the visible tab bar
-    
+
     // Bottom dock should sit just above the tab bar with minimal gap
     const bottomDockHeight = Platform.OS === "ios" ? 72 : 68;
-    
+
     // ScrollView padding should account for both bottom dock and tab bar
     const bottomPad = bottomDockHeight + tabBarVisibleHeight + 16; // Small gap for breathing room
 
@@ -796,26 +1501,69 @@ export default function CameraScreen() {
             <View style={[styles.actionRow, { marginBottom: 0, marginTop: 0 }]}>
               <TouchableOpacity
                 onPress={async () => {
-                  console.log("Saving images to storage:", capturedImages);
+                  try {
+                    console.log("Saving images to storage:", capturedImages);
 
-                  // Save images to storage before navigating
-                  await storage.setEvidenceFiles(capturedImages);
+                    // Validate images before saving
+                    if (!capturedImages || capturedImages.length === 0) {
+                      Alert.alert(
+                        "Error",
+                        "No images to upload. Please capture at least one image."
+                      );
+                      return;
+                    }
 
-                  const navigationParams = {
-                    hasImages: "true",
-                    imageCount: capturedImages.length.toString(),
-                  };
+                    // Save images to storage before navigating with error handling
+                    try {
+                      await storage.setEvidenceFiles(capturedImages);
+                    } catch (storageError: any) {
+                      console.error(
+                        "Error saving images to storage:",
+                        storageError
+                      );
+                      Alert.alert(
+                        "Storage Error",
+                        "Failed to save images. Please try again.",
+                        [{ text: "OK" }]
+                      );
+                      return;
+                    }
 
-                  console.log(
-                    "Navigating to location with params:",
-                    navigationParams
-                  );
+                    const navigationParams = {
+                      hasImages: "true",
+                      imageCount: capturedImages.length.toString(),
+                    };
 
-                  // Navigate to location with images data
-                  router.push({
-                    pathname: "/(tabs)/location",
-                    params: navigationParams,
-                  } as any);
+                    console.log(
+                      "Navigating to location with params:",
+                      navigationParams
+                    );
+
+                    // Navigate to location with images data - wrapped in try-catch
+                    try {
+                      await router.push({
+                        pathname: "/(tabs)/location",
+                        params: navigationParams,
+                      } as any);
+                    } catch (navError: any) {
+                      console.error("Navigation error:", navError);
+                      Alert.alert(
+                        "Navigation Error",
+                        "Failed to navigate. Please try again.",
+                        [{ text: "OK" }]
+                      );
+                    }
+                  } catch (error: any) {
+                    console.error(
+                      "Unexpected error in Upload to Report:",
+                      error
+                    );
+                    Alert.alert(
+                      "Error",
+                      "An unexpected error occurred. Please try again.",
+                      [{ text: "OK" }]
+                    );
+                  }
                 }}
                 style={[styles.btn, styles.btnSuccess, styles.actionFlex]}
                 activeOpacity={0.8}

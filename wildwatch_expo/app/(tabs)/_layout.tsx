@@ -58,24 +58,67 @@ function CustomTabBar({ state, descriptors, navigation }: CustomTabBarProps) {
         // Special styling for Report button (FAB) - smart routing based on flow step
         if (route.name === "report") {
           const handleReportPress = async () => {
-            // Get the current flow step from storage
-            const flowStep = await storage.getReportFlowStep();
+            try {
+              // Get the current flow step from storage with error handling
+              let flowStep = 1; // Default to step 1
+              try {
+                flowStep = await storage.getReportFlowStep();
+                // Validate flowStep is a valid number
+                if (
+                  typeof flowStep !== "number" ||
+                  flowStep < 1 ||
+                  flowStep > 3
+                ) {
+                  console.warn("Invalid flow step, defaulting to 1:", flowStep);
+                  flowStep = 1;
+                }
+              } catch (error) {
+                console.error("Error getting report flow step:", error);
+                // Default to step 1 on error
+                flowStep = 1;
+              }
 
-            console.log("Report tab pressed, routing to flow step:", flowStep);
+              console.log(
+                "Report tab pressed, routing to flow step:",
+                flowStep
+              );
 
-            // Route to the appropriate screen based on where user left off
-            switch (flowStep) {
-              case 1:
+              // Route to the appropriate screen based on where user left off
+              try {
+                switch (flowStep) {
+                  case 1:
+                    navigation.navigate("camera");
+                    break;
+                  case 2:
+                    navigation.navigate("location");
+                    break;
+                  case 3:
+                    navigation.navigate("report");
+                    break;
+                  default:
+                    navigation.navigate("camera"); // Default to camera
+                }
+              } catch (navError: any) {
+                console.error("Navigation error in report tab:", navError);
+                // Fallback: try to navigate to camera as safe default
+                try {
+                  navigation.navigate("camera");
+                } catch (fallbackError) {
+                  console.error(
+                    "Fallback navigation also failed:",
+                    fallbackError
+                  );
+                  // Don't crash - just log the error
+                }
+              }
+            } catch (error: any) {
+              console.error("Unexpected error in handleReportPress:", error);
+              // Try to navigate to camera as last resort
+              try {
                 navigation.navigate("camera");
-                break;
-              case 2:
-                navigation.navigate("location");
-                break;
-              case 3:
-                navigation.navigate("report");
-                break;
-              default:
-                navigation.navigate("camera"); // Default to camera
+              } catch (finalError) {
+                console.error("Final fallback navigation failed:", finalError);
+              }
             }
           };
 

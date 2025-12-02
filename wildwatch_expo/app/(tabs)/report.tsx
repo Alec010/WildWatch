@@ -13,6 +13,7 @@ import {
   StyleSheet,
   StatusBar,
   KeyboardAvoidingView,
+  Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { storage } from "../../lib/storage";
@@ -467,13 +468,33 @@ export default function ReportScreen() {
       const loadEvidenceFiles = async () => {
         try {
           const storedFiles = await storage.getEvidenceFiles();
-          if (storedFiles && storedFiles.length > 0) {
-            // Clear existing and load fresh from storage to ensure latest state
-            clearAllEvidence();
-            addEvidenceFiles(storedFiles);
+          if (
+            storedFiles &&
+            Array.isArray(storedFiles) &&
+            storedFiles.length > 0
+          ) {
+            // Validate file URIs before adding
+            const validFiles = storedFiles.filter(
+              (file) =>
+                file &&
+                file.uri &&
+                typeof file.uri === "string" &&
+                (file.uri.startsWith("file://") ||
+                  file.uri.startsWith("content://") ||
+                  file.uri.startsWith("http"))
+            );
+
+            if (validFiles.length > 0) {
+              // Clear existing and load fresh from storage
+              clearAllEvidence();
+              addEvidenceFiles(validFiles);
+            } else {
+              console.warn("No valid evidence files found in storage");
+            }
           }
         } catch (error) {
           console.error("Error loading evidence files from storage:", error);
+          // Don't crash - just log the error
         }
       };
 
@@ -972,17 +993,31 @@ export default function ReportScreen() {
 
     // Create FormData for multipart request
     const formData = new FormData();
-    formData.append("incidentData", JSON.stringify(incidentData));
+    let incidentDataJson;
+    try {
+      incidentDataJson = JSON.stringify(incidentData);
+    } catch (stringifyError) {
+      console.error("Error stringifying incident data:", stringifyError);
+      throw new Error("Failed to prepare report data. Please try again.");
+    }
+    formData.append("incidentData", incidentDataJson);
 
     // Add evidence files if any
     evidenceFiles.forEach((file, index) => {
       if (file.uri) {
-        // Create a file object from the URI with Android-compatible format
-        const fileInfo = {
-          uri: file.uri,
-          type: file.type || "image/jpeg",
-          name: file.name || `evidence_${index}.jpg`,
-        };
+        // Normalize URI for Android - ensure it's a proper file URI
+        let normalizedUri = file.uri;
+        if (Platform.OS === "android") {
+          // Ensure URI starts with file:// or content://
+          if (
+            !normalizedUri.startsWith("file://") &&
+            !normalizedUri.startsWith("content://")
+          ) {
+            normalizedUri = normalizedUri.startsWith("/")
+              ? `file://${normalizedUri}`
+              : `file:///${normalizedUri}`;
+          }
+        }
 
         // Android-specific file handling
         if (Platform.OS === "android") {
@@ -992,7 +1027,12 @@ export default function ReportScreen() {
             name: file.name || `evidence_${index}.jpg`,
           } as any);
         } else {
-          formData.append("files", fileInfo as any);
+          // iOS/non-Android file handling
+          formData.append("files", {
+            uri: normalizedUri,
+            type: file.type || "image/jpeg",
+            name: file.name || `evidence_${index}.jpg`,
+          } as any);
         }
       }
     });
@@ -1002,33 +1042,69 @@ export default function ReportScreen() {
       Authorization: `Bearer ${token}`,
     };
 
-    // Don't set Content-Type for FormData on Android - let the system handle it
-    if (Platform.OS !== "android") {
-      headers["Content-Type"] = "multipart/form-data";
+    // Don't set Content-Type for FormData - let the system handle it
+    // Setting it manually can break multipart boundaries on Android
+
+    // Create AbortController for timeout
+    const controller = new AbortController();
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+    try {
+      console.log("Submitting report to:", `${config.API.BASE_URL}/incidents`);
+      console.log("Platform:", Platform.OS);
+      console.log("Evidence files count:", evidenceFiles.length);
+
+      timeoutId = setTimeout(() => controller.abort(), config.API.TIMEOUT);
+
+      const response = await fetch(`${config.API.BASE_URL}/incidents`, {
+        method: "POST",
+        headers,
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(
+          `Failed to submit report: ${response.status} - ${errorText}`
+        );
+      }
+
+      const result = await response.json();
+
+      // Hide processing modal and show success modal
+      setShowProcessingModal(false);
+      setSubmissionResult({
+        trackingNumber: result.trackingNumber,
+        assignedOffice: result.assignedOffice,
+      });
+      setShowSuccessModal(true);
+    } catch (error: any) {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+
+      // Handle specific error types
+      if (error.name === "AbortError" || error.message?.includes("timeout")) {
+        throw new Error(
+          "Request timed out. Please check your internet connection and try again."
+        );
+      } else if (
+        error.message?.includes("Network request failed") ||
+        error.message?.includes("Failed to fetch") ||
+        error.message?.includes("network") ||
+        error.message?.includes("ECONNREFUSED") ||
+        error.message?.includes("ENOTFOUND")
+      ) {
+        throw new Error(
+          "Network error. Please check your internet connection and try again. If using Expo Go, ensure you're on the same network as your development server."
+        );
+      } else if (error.message) {
+        throw error;
+      } else {
+        throw new Error("Failed to submit report. Please try again.");
+      }
     }
-
-    const response = await fetch(`${config.API.BASE_URL}/incidents`, {
-      method: "POST",
-      headers,
-      body: formData,
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(
-        `Failed to submit report: ${response.status} - ${errorText}`
-      );
-    }
-
-    const result = await response.json();
-
-    // Hide processing modal and show success modal
-    setShowProcessingModal(false);
-    setSubmissionResult({
-      trackingNumber: result.trackingNumber,
-      assignedOffice: result.assignedOffice,
-    });
-    setShowSuccessModal(true);
   };
 
   const handleSuccessModalClose = async () => {
@@ -1040,13 +1116,27 @@ export default function ReportScreen() {
     setCurrentStep(1);
     setConfirmAccurate(false);
     setConfirmContact(false);
-    setHasClosedHelpDialog(false); // Reset so dialog can appear on next report
+    setHasClosedHelpDialog(false);
 
-    // Clear all persisted data after successful submission
-    await storage.clearAllFormData();
+    // Clear all persisted data after successful submission with error handling
+    try {
+      await storage.clearAllFormData();
+    } catch (error) {
+      console.error("Error clearing form data:", error);
+    }
 
-    // Navigate back to the dashboard
-    router.replace("/(tabs)/dashboard" as never);
+    // Navigate back to the dashboard with error handling
+    try {
+      await router.replace("/(tabs)/dashboard" as never);
+    } catch (navError) {
+      console.error("Navigation error:", navError);
+      // Fallback: try push instead
+      try {
+        await router.push("/(tabs)/dashboard" as never);
+      } catch (pushError) {
+        console.error("Push navigation also failed:", pushError);
+      }
+    }
   };
 
   const handleSubmit = async () => {
@@ -1134,77 +1224,538 @@ export default function ReportScreen() {
     }
   };
 
-  const requestPermissions = async () => {
-    const { status: cameraStatus } =
-      await ImagePicker.requestCameraPermissionsAsync();
+  const requestCameraPermissions = async () => {
+    try {
+      // First check current permission status
+      const { status: currentStatus } =
+        await ImagePicker.getCameraPermissionsAsync();
 
-    if (cameraStatus !== "granted") {
+      // If already granted, return true immediately
+      if (currentStatus === "granted") {
+        return true;
+      }
+
+      // Request permission
+      const { status: cameraStatus } =
+        await ImagePicker.requestCameraPermissionsAsync();
+
+      if (cameraStatus !== "granted") {
+        // Check if permission was denied permanently
+        const { canAskAgain } = await ImagePicker.getCameraPermissionsAsync();
+
+        Alert.alert(
+          "Camera Permission Required",
+          cameraStatus === "denied" && !canAskAgain
+            ? "Camera permission is required to take photos for evidence. Please enable it in your device settings."
+            : "Camera permissions are required to take photos for evidence.",
+          [
+            { text: "OK" },
+            ...(cameraStatus === "denied" && !canAskAgain
+              ? [
+                  {
+                    text: "Open Settings",
+                    onPress: () => {
+                      if (Platform.OS === "ios") {
+                        Linking.openURL("app-settings:");
+                      } else {
+                        Linking.openSettings();
+                      }
+                    },
+                  },
+                ]
+              : []),
+          ]
+        );
+        return false;
+      }
+      return true;
+    } catch (error: any) {
+      console.error("Error requesting camera permissions:", error);
       Alert.alert(
-        "Permissions Required",
-        "Camera permissions are required to upload evidence.",
+        "Permission Error",
+        error?.message ||
+          "Failed to request camera permissions. Please try again or enable it in settings.",
         [{ text: "OK" }]
       );
       return false;
     }
-    return true;
+  };
+
+  const requestMediaLibraryPermissions = async () => {
+    try {
+      // First check current permission status
+      const { status: currentStatus } =
+        await ImagePicker.getMediaLibraryPermissionsAsync();
+
+      // If already granted, return true immediately
+      if (currentStatus === "granted") {
+        return true;
+      }
+
+      // On Android, check if camera permission was recently requested to avoid dialog conflicts
+      // Android 13+ uses granular permissions and can't show multiple permission dialogs at once
+      if (Platform.OS === "android") {
+        try {
+          const cameraStatus = await ImagePicker.getCameraPermissionsAsync();
+          // If camera permission is undetermined (just requested) or denied (user just dismissed),
+          // wait longer to ensure any camera permission dialog has fully closed
+          // Android needs more time between permission requests to avoid conflicts
+          if (
+            cameraStatus.status === "undetermined" ||
+            cameraStatus.status === "denied"
+          ) {
+            console.log(
+              "Waiting for camera permission dialog to fully close..."
+            );
+            // Increased delay to 2 seconds for Android to ensure dialog is fully dismissed
+            await new Promise((resolve) => setTimeout(resolve, 2000));
+          }
+        } catch (err) {
+          // Ignore camera permission check errors, continue with media library request
+          console.log("Could not check camera permission status:", err);
+          // Still wait a bit on Android to be safe
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+        }
+      }
+
+      // Request permission with retry logic for Android
+      let mediaStatus = "undetermined";
+      let canAskAgain = true;
+      let retryCount = 0;
+      const maxRetries = Platform.OS === "android" ? 2 : 1;
+
+      while (retryCount < maxRetries && mediaStatus !== "granted") {
+        try {
+          const result =
+            await ImagePicker.requestMediaLibraryPermissionsAsync();
+          mediaStatus = result.status;
+          canAskAgain = result.canAskAgain ?? true;
+
+          // If permission was granted, break out of retry loop
+          if (mediaStatus === "granted") {
+            return true;
+          }
+
+          // If we can't ask again (permanently denied), don't retry
+          if (!canAskAgain) {
+            break;
+          }
+
+          // On Android, if permission is still undetermined after request, wait and retry
+          // This can happen if another permission dialog was showing
+          if (
+            Platform.OS === "android" &&
+            mediaStatus === "undetermined" &&
+            retryCount < maxRetries - 1
+          ) {
+            console.log(
+              "Media library permission request may have been interrupted, retrying..."
+            );
+            // Longer delay on retry to ensure any other dialogs are closed
+            await new Promise((resolve) => setTimeout(resolve, 2000));
+            retryCount++;
+          } else {
+            break;
+          }
+        } catch (requestError: any) {
+          console.error(
+            "Error requesting media library permission (attempt " +
+              (retryCount + 1) +
+              "):",
+            requestError
+          );
+          if (retryCount < maxRetries - 1) {
+            // Longer delay on retry to ensure any other dialogs are closed
+            await new Promise((resolve) => setTimeout(resolve, 2000));
+            retryCount++;
+          } else {
+            throw requestError;
+          }
+        }
+      }
+
+      // Permission was not granted - show appropriate message
+      if (mediaStatus !== "granted") {
+        // Re-check permission status to get latest canAskAgain value
+        try {
+          const finalCheck =
+            await ImagePicker.getMediaLibraryPermissionsAsync();
+          canAskAgain = finalCheck.canAskAgain ?? false;
+        } catch (err) {
+          console.error("Error checking final permission status:", err);
+        }
+
+        Alert.alert(
+          "Photo Library Permission Required",
+          mediaStatus === "denied" && !canAskAgain
+            ? "Photo library permission is required to upload evidence images. Please enable it in your device settings."
+            : "Photo library permissions are required to upload evidence images.",
+          [
+            { text: "OK" },
+            ...(mediaStatus === "denied" && !canAskAgain
+              ? [
+                  {
+                    text: "Open Settings",
+                    onPress: () => {
+                      if (Platform.OS === "ios") {
+                        Linking.openURL("app-settings:");
+                      } else {
+                        Linking.openSettings();
+                      }
+                    },
+                  },
+                ]
+              : []),
+          ]
+        );
+        return false;
+      }
+
+      return true;
+    } catch (error: any) {
+      console.error("Error requesting media library permissions:", error);
+      Alert.alert(
+        "Permission Error",
+        error?.message ||
+          "Failed to request photo library permissions. Please try again or enable it in settings.",
+        [
+          { text: "OK" },
+          {
+            text: "Open Settings",
+            onPress: () => {
+              if (Platform.OS === "ios") {
+                Linking.openURL("app-settings:");
+              } else {
+                Linking.openSettings();
+              }
+            },
+          },
+        ]
+      );
+      return false;
+    }
   };
 
   const takePhoto = async () => {
-    const hasPermission = await requestPermissions();
-    if (!hasPermission) return;
-
     try {
-      const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 0.8,
-      });
-
-      if (!result.canceled && result.assets && result.assets[0]) {
-        const asset = result.assets[0];
-        const fileName = `photo_${Date.now()}.jpg`;
-
-        addEvidenceFiles([
-          {
-            uri: asset.uri,
-            name: fileName,
-            type: "image/jpeg",
-            size: asset.fileSize || 0,
-          },
-        ]);
+      const hasPermission = await requestCameraPermissions();
+      if (!hasPermission) {
+        // Permission denied - gracefully return without crashing
+        console.log("Camera permission denied, cannot take photo");
+        return;
       }
-    } catch (error) {
-      console.error("Error taking photo:", error);
-      Alert.alert("Error", "Failed to take photo. Please try again.");
+
+      // Double-check permission before launching camera
+      let status = "undetermined";
+      try {
+        const permissionCheck = await ImagePicker.getCameraPermissionsAsync();
+        status = permissionCheck.status;
+      } catch (permissionError: any) {
+        console.error("Error checking camera permission:", permissionError);
+        Alert.alert(
+          "Permission Error",
+          "Unable to verify camera permission. Please try again or enable it in settings.",
+          [
+            { text: "OK" },
+            {
+              text: "Open Settings",
+              onPress: () => {
+                if (Platform.OS === "ios") {
+                  Linking.openURL("app-settings:");
+                } else {
+                  Linking.openSettings();
+                }
+              },
+            },
+          ]
+        );
+        return;
+      }
+
+      if (status !== "granted") {
+        Alert.alert(
+          "Permission Denied",
+          "Camera permission is required. Please enable it in settings.",
+          [
+            { text: "OK" },
+            {
+              text: "Open Settings",
+              onPress: () => {
+                if (Platform.OS === "ios") {
+                  Linking.openURL("app-settings:");
+                } else {
+                  Linking.openSettings();
+                }
+              },
+            },
+          ]
+        );
+        return;
+      }
+
+      // Launch camera with error handling
+      let result;
+      try {
+        result = await ImagePicker.launchCameraAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          aspect: [4, 3],
+          quality: 0.8,
+        });
+      } catch (cameraError: any) {
+        console.error("Error launching camera:", cameraError);
+        // Check if it's a permission error
+        if (
+          cameraError?.message?.toLowerCase().includes("permission") ||
+          cameraError?.code === "E_PERMISSION_MISSING"
+        ) {
+          Alert.alert(
+            "Permission Required",
+            "Camera permission is required to take photos. Please enable it in settings.",
+            [
+              { text: "OK" },
+              {
+                text: "Open Settings",
+                onPress: () => {
+                  if (Platform.OS === "ios") {
+                    Linking.openURL("app-settings:");
+                  } else {
+                    Linking.openSettings();
+                  }
+                },
+              },
+            ]
+          );
+        } else {
+          Alert.alert("Error", "Failed to open camera. Please try again.", [
+            { text: "OK" },
+          ]);
+        }
+        return;
+      }
+
+      if (!result) {
+        console.error("Camera returned null/undefined result");
+        return;
+      }
+
+      if (
+        !result.canceled &&
+        result.assets &&
+        result.assets.length > 0 &&
+        result.assets[0]
+      ) {
+        const asset = result.assets[0];
+
+        // Validate asset has required properties
+        if (!asset.uri) {
+          console.error("Camera result missing URI");
+          Alert.alert("Error", "Failed to capture image. Please try again.");
+          return;
+        }
+
+        try {
+          const fileName = `photo_${Date.now()}.jpg`;
+
+          addEvidenceFiles([
+            {
+              uri: asset.uri,
+              name: fileName,
+              type: "image/jpeg",
+              size: asset.fileSize || 0,
+            },
+          ]);
+        } catch (fileError: any) {
+          console.error("Error processing captured image:", fileError);
+          Alert.alert(
+            "Error",
+            "Failed to process captured image. Please try again.",
+            [{ text: "OK" }]
+          );
+        }
+      } else if (result.canceled) {
+        // User canceled - this is fine, just return
+        console.log("User canceled camera");
+      }
+    } catch (error: any) {
+      console.error("Unexpected error taking photo:", error);
+      // Don't show alert for user cancellation or expected errors
+      if (
+        error?.message?.toLowerCase().includes("cancel") ||
+        error?.code === "E_PICKER_CANCELLED"
+      ) {
+        console.log("User canceled camera");
+        return;
+      }
+      Alert.alert(
+        "Error",
+        error?.message ||
+          "Failed to take photo. Please check your camera permissions and try again.",
+        [{ text: "OK" }]
+      );
     }
   };
 
   const pickImages = async () => {
-    const hasPermission = await requestPermissions();
-    if (!hasPermission) return;
-
     try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsMultipleSelection: true,
-        allowsEditing: false,
-        quality: 0.8,
-      });
-
-      if (!result.canceled && result.assets) {
-        const newFiles = result.assets.map((asset) => ({
-          uri: asset.uri,
-          name: asset.fileName || `image_${Date.now()}.jpg`,
-          type: asset.type || "image/jpeg",
-          size: asset.fileSize || 0,
-        }));
-
-        addEvidenceFiles(newFiles);
+      // Request media library permissions BEFORE opening picker
+      const hasPermission = await requestMediaLibraryPermissions();
+      if (!hasPermission) {
+        // Permission denied - gracefully return without crashing
+        console.log("Media library permission denied, cannot pick images");
+        return;
       }
-    } catch (error) {
-      console.error("Error picking images:", error);
-      Alert.alert("Error", "Failed to pick images. Please try again.");
+
+      // Double-check permission before launching picker
+      let status = "undetermined";
+      try {
+        const permissionCheck =
+          await ImagePicker.getMediaLibraryPermissionsAsync();
+        status = permissionCheck.status;
+      } catch (permissionError: any) {
+        console.error(
+          "Error checking media library permission:",
+          permissionError
+        );
+        Alert.alert(
+          "Permission Error",
+          "Unable to verify photo library permission. Please try again or enable it in settings.",
+          [
+            { text: "OK" },
+            {
+              text: "Open Settings",
+              onPress: () => {
+                if (Platform.OS === "ios") {
+                  Linking.openURL("app-settings:");
+                } else {
+                  Linking.openSettings();
+                }
+              },
+            },
+          ]
+        );
+        return;
+      }
+
+      if (status !== "granted") {
+        Alert.alert(
+          "Permission Denied",
+          "Photo library permission is required. Please enable it in settings.",
+          [
+            { text: "OK" },
+            {
+              text: "Open Settings",
+              onPress: () => {
+                if (Platform.OS === "ios") {
+                  Linking.openURL("app-settings:");
+                } else {
+                  Linking.openSettings();
+                }
+              },
+            },
+          ]
+        );
+        return;
+      }
+
+      // Launch image picker with error handling
+      let result;
+      try {
+        result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsMultipleSelection: true,
+          allowsEditing: false,
+          quality: 0.8,
+        });
+      } catch (pickerError: any) {
+        console.error("Error launching image picker:", pickerError);
+        // Check if it's a permission error
+        if (
+          pickerError?.message?.toLowerCase().includes("permission") ||
+          pickerError?.code === "E_PERMISSION_MISSING"
+        ) {
+          Alert.alert(
+            "Permission Required",
+            "Photo library permission is required to select images. Please enable it in settings.",
+            [
+              { text: "OK" },
+              {
+                text: "Open Settings",
+                onPress: () => {
+                  if (Platform.OS === "ios") {
+                    Linking.openURL("app-settings:");
+                  } else {
+                    Linking.openSettings();
+                  }
+                },
+              },
+            ]
+          );
+        } else {
+          Alert.alert(
+            "Error",
+            "Failed to open photo library. Please try again.",
+            [{ text: "OK" }]
+          );
+        }
+        return;
+      }
+
+      if (!result) {
+        console.error("Image picker returned null/undefined result");
+        return;
+      }
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        // Validate all assets have URIs before processing
+        const validAssets = result.assets.filter((asset) => asset && asset.uri);
+
+        if (validAssets.length === 0) {
+          console.error("No valid images selected");
+          Alert.alert(
+            "Error",
+            "No valid images were selected. Please try again."
+          );
+          return;
+        }
+
+        try {
+          const newFiles = validAssets.map((asset, index) => ({
+            uri: asset.uri,
+            name: asset.fileName || `image_${Date.now()}_${index}.jpg`,
+            type: asset.type || "image/jpeg",
+            size: asset.fileSize || 0,
+          }));
+
+          addEvidenceFiles(newFiles);
+        } catch (fileError: any) {
+          console.error("Error processing selected images:", fileError);
+          Alert.alert(
+            "Error",
+            "Failed to process selected images. Please try again.",
+            [{ text: "OK" }]
+          );
+        }
+      } else if (result.canceled) {
+        // User canceled - this is fine, just return
+        console.log("User canceled image picker");
+      }
+    } catch (error: any) {
+      console.error("Unexpected error picking images:", error);
+      // Don't show alert for user cancellation or expected errors
+      if (
+        error?.message?.toLowerCase().includes("cancel") ||
+        error?.code === "E_PICKER_CANCELLED"
+      ) {
+        console.log("User canceled image selection");
+        return;
+      }
+      Alert.alert(
+        "Error",
+        error?.message ||
+          "Failed to pick images. Please check your photo library permissions and try again.",
+        [{ text: "OK" }]
+      );
     }
   };
 
@@ -1797,11 +2348,20 @@ export default function ReportScreen() {
                     {/* Generate Tags Button - Always visible */}
                     <TouchableOpacity
                       onPress={generateTags}
-                      disabled={isGeneratingTags || !form.description.trim() || !form.latitude || !form.longitude}
+                      disabled={
+                        isGeneratingTags ||
+                        !form.description.trim() ||
+                        !form.latitude ||
+                        !form.longitude
+                      }
                       style={{
-                        backgroundColor: (isGeneratingTags || !form.description.trim() || !form.latitude || !form.longitude)
-                          ? "#E5E7EB"
-                          : "#8B0000",
+                        backgroundColor:
+                          isGeneratingTags ||
+                          !form.description.trim() ||
+                          !form.latitude ||
+                          !form.longitude
+                            ? "#E5E7EB"
+                            : "#8B0000",
                         borderRadius: 12,
                         paddingVertical: 16,
                         paddingHorizontal: 20,
@@ -1809,9 +2369,21 @@ export default function ReportScreen() {
                         justifyContent: "center",
                         flexDirection: "row",
                         marginBottom: 16,
-                        shadowColor: (isGeneratingTags || !form.description.trim() || !form.latitude || !form.longitude) ? "#000" : "#8B0000",
+                        shadowColor:
+                          isGeneratingTags ||
+                          !form.description.trim() ||
+                          !form.latitude ||
+                          !form.longitude
+                            ? "#000"
+                            : "#8B0000",
                         shadowOffset: { width: 0, height: 2 },
-                        shadowOpacity: (isGeneratingTags || !form.description.trim() || !form.latitude || !form.longitude) ? 0.1 : 0.2,
+                        shadowOpacity:
+                          isGeneratingTags ||
+                          !form.description.trim() ||
+                          !form.latitude ||
+                          !form.longitude
+                            ? 0.1
+                            : 0.2,
                         shadowRadius: 4,
                         elevation: 3,
                       }}
@@ -1832,11 +2404,7 @@ export default function ReportScreen() {
                         </>
                       ) : (
                         <>
-                          <Ionicons
-                            name="sparkles"
-                            size={22}
-                            color="#FFFFFF"
-                          />
+                          <Ionicons name="sparkles" size={22} color="#FFFFFF" />
                           <Text
                             style={{
                               color: "#FFFFFF",

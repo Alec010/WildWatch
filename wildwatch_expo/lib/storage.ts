@@ -82,9 +82,40 @@ export const storage = {
   // Save evidence files
   setEvidenceFiles: async (files: any[]) => {
     try {
-      await AsyncStorage.setItem(EVIDENCE_FILES_KEY, JSON.stringify(files));
-    } catch (error) {
+      // Validate files array
+      if (!Array.isArray(files)) {
+        console.error('setEvidenceFiles: files must be an array');
+        return;
+      }
+
+      // Filter out invalid files and limit size
+      const validFiles = files
+        .filter(file => file && file.uri && typeof file.uri === 'string')
+        .slice(0, 20); // Limit to 20 files to prevent storage issues
+
+      // Check total size (rough estimate)
+      const jsonString = JSON.stringify(validFiles);
+      if (jsonString.length > 5 * 1024 * 1024) { // 5MB limit
+        console.error('Evidence files too large, truncating');
+        // Keep only first 10 files
+        const truncated = validFiles.slice(0, 10);
+        await AsyncStorage.setItem(EVIDENCE_FILES_KEY, JSON.stringify(truncated));
+      } else {
+        await AsyncStorage.setItem(EVIDENCE_FILES_KEY, jsonString);
+      }
+    } catch (error: any) {
       console.error('Error saving evidence files:', error);
+      // If storage is full or other error, try to clear old data
+      if (error?.message?.includes('quota') || error?.message?.includes('size')) {
+        try {
+          await AsyncStorage.removeItem(EVIDENCE_FILES_KEY);
+          // Try saving again with fewer files
+          const limitedFiles = files.slice(0, 5);
+          await AsyncStorage.setItem(EVIDENCE_FILES_KEY, JSON.stringify(limitedFiles));
+        } catch (retryError) {
+          console.error('Failed to save even with limited files:', retryError);
+        }
+      }
     }
   },
 
@@ -92,7 +123,23 @@ export const storage = {
   getEvidenceFiles: async (): Promise<any[]> => {
     try {
       const files = await AsyncStorage.getItem(EVIDENCE_FILES_KEY);
-      return files ? JSON.parse(files) : [];
+      if (!files) return [];
+
+      try {
+        const parsed = JSON.parse(files);
+        // Validate it's an array
+        if (!Array.isArray(parsed)) {
+          console.error('Evidence files is not an array, clearing corrupted data');
+          await AsyncStorage.removeItem(EVIDENCE_FILES_KEY);
+          return [];
+        }
+        // Validate each file has required properties
+        return parsed.filter(file => file && file.uri);
+      } catch (parseError) {
+        console.error('Error parsing evidence files, clearing corrupted data:', parseError);
+        await AsyncStorage.removeItem(EVIDENCE_FILES_KEY);
+        return [];
+      }
     } catch (error) {
       console.error('Error getting evidence files:', error);
       return [];

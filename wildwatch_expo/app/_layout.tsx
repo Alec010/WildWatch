@@ -7,7 +7,7 @@ import {
 import { useFonts } from "expo-font";
 import { Stack, usePathname, router } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import "react-native-reanimated";
 
 import { useColorScheme } from "@/components/useColorScheme";
@@ -58,8 +58,50 @@ function RootLayoutNav() {
   const [hasCheckedAuth, setHasCheckedAuth] = useState<boolean>(false);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
 
+  // Add refs to prevent infinite loops and race conditions
+  const isNavigatingRef = useRef<boolean>(false);
+  const lastPathnameRef = useRef<string | null>(null);
+  const checkAuthInProgressRef = useRef<boolean>(false);
+
   useEffect(() => {
+    // Prevent infinite loops by checking if pathname actually changed
+    if (lastPathnameRef.current === pathname && hasCheckedAuth) {
+      return;
+    }
+
+    // Prevent concurrent auth checks
+    if (checkAuthInProgressRef.current) {
+      return;
+    }
+
+    // Prevent navigation if already navigating
+    if (isNavigatingRef.current) {
+      return;
+    }
+
     const checkAuth = async () => {
+      checkAuthInProgressRef.current = true;
+      lastPathnameRef.current = pathname;
+
+      // Safe navigation helper - moved outside if/else blocks
+      const safeNavigate = async (route: string) => {
+        if (isNavigatingRef.current) return;
+        if (pathname === route || pathname?.startsWith(route)) return;
+
+        try {
+          isNavigatingRef.current = true;
+          await router.replace(route as never);
+        } catch (navError: any) {
+          console.error(`Navigation error to ${route}:`, navError);
+          // Don't crash - just log the error
+        } finally {
+          // Reset after a delay to allow navigation to complete
+          setTimeout(() => {
+            isNavigatingRef.current = false;
+          }, 500);
+        }
+      };
+
       try {
         const token = await storage.getToken();
         const authed = Boolean(token);
@@ -67,56 +109,93 @@ function RootLayoutNav() {
 
         if (authed) {
           // Check if terms are accepted by fetching user profile
-          const userProfile = await authAPI.getProfile();
-          const termsAccepted = userProfile.termsAccepted;
+          let userProfile;
+          let termsAccepted = false;
 
-          if (!termsAccepted && !pathname?.startsWith("/auth/terms") && !pathname?.startsWith("/auth/setup")) {
-            router.replace("/auth/terms");
-          } else if (pathname?.startsWith("/auth") && termsAccepted && !pathname?.startsWith("/auth/setup")) {
+          try {
+            userProfile = await authAPI.getProfile();
+            termsAccepted = userProfile?.termsAccepted ?? false;
+          } catch (profileError: any) {
+            console.error("Error fetching profile:", profileError);
+            // If profile fetch fails with 401, user is not authenticated
+            if (profileError?.response?.status === 401) {
+              await storage.removeToken();
+              setIsAuthenticated(false);
+              if (pathname?.startsWith("/(tabs)")) {
+                await safeNavigate("/auth/login");
+              }
+              return;
+            }
+            // For other errors, assume terms not accepted to be safe
+            termsAccepted = false;
+          }
+
+          // Remove the safeNavigate definition from here (line 122-138)
+
+          if (
+            !termsAccepted &&
+            !pathname?.startsWith("/auth/terms") &&
+            !pathname?.startsWith("/auth/setup")
+          ) {
+            await safeNavigate("/auth/terms");
+          } else if (
+            pathname?.startsWith("/auth") &&
+            termsAccepted &&
+            !pathname?.startsWith("/auth/setup")
+          ) {
             // Check if user needs setup before redirecting to tabs
-            // Only redirect if not already on setup page
             try {
-              const isMicrosoftOAuth = userProfile.authProvider === 'microsoft' || userProfile.authProvider === 'microsoft_mobile';
-              const needsSetup = isMicrosoftOAuth && 
-                                (userProfile.contactNumber === '+639000000000' || 
-                                 userProfile.contactNumber === 'Not provided' || 
-                                 userProfile.contactNumber === null ||
-                                 !userProfile.password);
-              
+              const isMicrosoftOAuth =
+                userProfile?.authProvider === "microsoft" ||
+                userProfile?.authProvider === "microsoft_mobile";
+              const needsSetup =
+                isMicrosoftOAuth &&
+                (userProfile?.contactNumber === "+639000000000" ||
+                  userProfile?.contactNumber === "Not provided" ||
+                  userProfile?.contactNumber === null ||
+                  !userProfile?.password);
+
               if (needsSetup) {
-                // Only redirect to setup if not already there
                 if (!pathname?.startsWith("/auth/setup")) {
-                  router.replace("/auth/setup");
+                  await safeNavigate("/auth/setup");
                 }
               } else {
-                // Only redirect to tabs if not on an auth page that requires completion
-                if (!pathname?.startsWith("/auth/terms") && !pathname?.startsWith("/auth/setup")) {
-                  router.replace("/(tabs)");
+                if (
+                  !pathname?.startsWith("/auth/terms") &&
+                  !pathname?.startsWith("/auth/setup")
+                ) {
+                  await safeNavigate("/(tabs)");
                 }
               }
             } catch (e) {
+              console.error("Error checking setup status:", e);
               // If check fails and we're on an auth page that might need setup, don't redirect
-              if (!pathname?.startsWith("/auth/terms") && !pathname?.startsWith("/auth/setup")) {
-                router.replace("/(tabs)");
+              if (
+                !pathname?.startsWith("/auth/terms") &&
+                !pathname?.startsWith("/auth/setup")
+              ) {
+                await safeNavigate("/(tabs)");
               }
             }
           }
         } else if (pathname?.startsWith("/(tabs)")) {
-          router.replace("/auth/login");
+          await safeNavigate("/auth/login");
         }
-      } catch (error) {
+      } catch (error: any) {
+        console.error("Auth check error:", error);
         // On error, assume not authenticated
         setIsAuthenticated(false);
         if (pathname?.startsWith("/(tabs)")) {
-          router.replace("/auth/login");
+          await safeNavigate("/auth/login");
         }
       } finally {
         setHasCheckedAuth(true);
+        checkAuthInProgressRef.current = false;
       }
     };
 
     checkAuth();
-  }, [pathname]);
+  }, [pathname, hasCheckedAuth]); // Added hasCheckedAuth to dependencies
 
   if (!hasCheckedAuth) {
     return null;

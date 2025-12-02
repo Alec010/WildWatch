@@ -105,32 +105,54 @@ export default function LocationScreen() {
   // Load persisted location data when screen focuses
   useFocusEffect(
     React.useCallback(() => {
-      // Mark that user is at location (flow step 2)
-      storage.setReportFlowStep(2);
+      let isMounted = true;
 
-      const loadPersistedLocation = async () => {
+      const loadData = async () => {
         try {
-          const persistedLocation = await storage.getLocationData();
-          if (persistedLocation) {
-            setSelectedLocation(persistedLocation);
-            setRoom(persistedLocation.room || "");
-            // Update map region to show the persisted location
-            mapRef.current?.animateToRegion(
-              {
-                latitude: persistedLocation.latitude,
-                longitude: persistedLocation.longitude,
-                latitudeDelta: 0.005,
-                longitudeDelta: 0.005,
-              },
-              1000
-            );
+          // Mark that user is at location (flow step 2) with error handling
+          try {
+            await storage.setReportFlowStep(2);
+          } catch (stepError) {
+            console.error("Error setting report flow step:", stepError);
           }
+
+          const loadPersistedLocation = async () => {
+            try {
+              const persistedLocation = await storage.getLocationData();
+              if (isMounted && persistedLocation) {
+                setSelectedLocation(persistedLocation);
+                setRoom(persistedLocation.room || "");
+                // Update map region to show the persisted location
+                try {
+                  mapRef.current?.animateToRegion(
+                    {
+                      latitude: persistedLocation.latitude,
+                      longitude: persistedLocation.longitude,
+                      latitudeDelta: 0.005,
+                      longitudeDelta: 0.005,
+                    },
+                    1000
+                  );
+                } catch (mapError) {
+                  console.error("Error animating map:", mapError);
+                }
+              }
+            } catch (error) {
+              console.error("Error loading persisted location:", error);
+            }
+          };
+
+          await loadPersistedLocation();
         } catch (error) {
-          console.error("Error loading persisted location:", error);
+          console.error("Error in location focus effect:", error);
         }
       };
 
-      loadPersistedLocation();
+      loadData();
+
+      return () => {
+        isMounted = false;
+      };
     }, [])
   );
 
@@ -141,7 +163,10 @@ export default function LocationScreen() {
         ...selectedLocation,
         room: room.trim() || undefined,
       };
-      storage.setLocationData(locationDataWithRoom);
+      // Add error handling
+      storage.setLocationData(locationDataWithRoom).catch((error) => {
+        console.error("Error saving location data:", error);
+      });
     }
   }, [selectedLocation, room]);
 
@@ -302,8 +327,18 @@ export default function LocationScreen() {
 
     console.log("Saving location data:", locationDataWithRoom);
 
-    // Ensure location data is saved to storage before navigation
-    await storage.setLocationData(locationDataWithRoom);
+    // Ensure location data is saved to storage before navigation with error handling
+    try {
+      await storage.setLocationData(locationDataWithRoom);
+    } catch (storageError) {
+      console.error("Error saving location data:", storageError);
+      Alert.alert(
+        "Storage Error",
+        "Failed to save location. Please try again.",
+        [{ text: "OK" }]
+      );
+      return; // Don't navigate if save fails
+    }
 
     const navigationParams = {
       latitude: selectedLocation.latitude?.toString(),
@@ -320,20 +355,38 @@ export default function LocationScreen() {
 
     console.log("Navigating to report with params:", navigationParams);
 
-    router.push({
-      pathname: "/(tabs)/report",
-      params: navigationParams,
-    } as any);
+    // Navigate with error handling
+    try {
+      await router.push({
+        pathname: "/(tabs)/report",
+        params: navigationParams,
+      } as any);
+    } catch (navError: any) {
+      console.error("Navigation error:", navError);
+      Alert.alert("Navigation Error", "Failed to navigate. Please try again.", [
+        { text: "OK" },
+      ]);
+    }
   };
 
-  const handleBackPress = () => {
-    if (hasExistingImages) {
-      router.push({
-        pathname: "/(tabs)/camera",
-        params: { fromLocation: "true" },
-      } as any);
-    } else {
-      router.push("/(tabs)/camera" as any);
+  const handleBackPress = async () => {
+    try {
+      if (hasExistingImages) {
+        await router.push({
+          pathname: "/(tabs)/camera",
+          params: { fromLocation: "true" },
+        } as any);
+      } else {
+        await router.push("/(tabs)/camera" as any);
+      }
+    } catch (navError) {
+      console.error("Navigation error in handleBackPress:", navError);
+      // Fallback: try simple navigation
+      try {
+        await router.push("/(tabs)/camera" as any);
+      } catch (fallbackError) {
+        console.error("Fallback navigation failed:", fallbackError);
+      }
     }
   };
 
@@ -349,7 +402,9 @@ export default function LocationScreen() {
   const renderLocationOverlay = () => {
     if (!selectedLocation) return null;
     const isOutsideCampus = selectedLocation.withinCampus === false;
-    const sanitizedAddress = sanitizeLocation(selectedLocation.formattedAddress);
+    const sanitizedAddress = sanitizeLocation(
+      selectedLocation.formattedAddress
+    );
 
     return (
       <View style={styles.floatingLocationContent} pointerEvents="box-none">
@@ -433,7 +488,7 @@ export default function LocationScreen() {
         <View style={styles.roomInputContainer}>
           <View style={styles.roomInputLabelRow}>
             <Ionicons
-              name="door-open"
+              name="location"
               size={16}
               color={isOutsideCampus ? "#dc2626" : "#16a34a"}
             />
