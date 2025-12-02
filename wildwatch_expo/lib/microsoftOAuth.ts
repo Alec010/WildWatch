@@ -38,9 +38,15 @@ export const microsoftOAuthService = {
         // Exchange the authorization code for tokens
         return await microsoftOAuthService.exchangeCodeForTokens(result.params.code, request.codeVerifier);
       } else if (result.type === 'cancel') {
-        throw new Error('User cancelled OAuth flow');
+        // User intentionally cancelled the OAuth flow
+        throw new Error('User cancelled Microsoft login');
+      } else if (result.type === 'dismiss') {
+        // User dismissed the browser
+        throw new Error('User cancelled Microsoft login');
+      } else if (result.type === 'error') {
+        throw new Error(`Microsoft OAuth error: ${result.error?.message || 'Unknown error'}`);
       } else {
-        throw new Error(`OAuth failed: ${result.type}`);
+        throw new Error(`Microsoft OAuth failed: ${result.type}`);
       }
     } catch (error) {
       throw error;

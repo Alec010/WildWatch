@@ -50,7 +50,17 @@ export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const { isLoading, login, loginWithMicrosoft } = useAuthLogin();
+  const { isLoading, error, login, loginWithMicrosoft, clearError } = useAuthLogin();
+
+  const handleEmailChange = (text: string) => {
+    setEmail(text);
+    if (error) clearError();
+  };
+
+  const handlePasswordChange = (text: string) => {
+    setPassword(text);
+    if (error) clearError();
+  };
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -63,13 +73,68 @@ export default function LoginScreen() {
   };
 
   const handleMicrosoftLogin = async () => {
+    // Clear any existing errors when user attempts Microsoft login
+    if (error) clearError();
+    
     try {
       await loginWithMicrosoft();
     } catch (e: any) {
-      Alert.alert(
-        "Microsoft Login Error",
-        e?.message || "Microsoft login failed. Please try again."
-      );
+      // Check if user cancelled - if so, don't log as error
+      if (e?.message?.includes('cancelled') || e?.message?.includes('User cancelled')) {
+        // User intentionally cancelled, no action needed
+        return;
+      }
+      // For other errors, log for debugging
+      console.error('Microsoft login error:', e);
+    }
+  };
+
+  const getErrorType = (errorMessage: string | null): 'network' | 'server' | 'auth' | 'oauth' | null => {
+    if (!errorMessage) return null;
+    const lowerError = errorMessage.toLowerCase();
+    
+    if (lowerError.includes('microsoft') || lowerError.includes('oauth') || 
+        lowerError.includes('cancelled') || lowerError.includes('no token')) {
+      return 'oauth';
+    }
+    if (lowerError.includes('network') || lowerError.includes('connection') || 
+        lowerError.includes('timeout') || lowerError.includes('fetch')) {
+      return 'network';
+    }
+    if (lowerError.includes('500') || lowerError.includes('server error') || 
+        lowerError.includes('internal server')) {
+      return 'server';
+    }
+    return 'auth';
+  };
+
+  const getErrorIcon = (type: 'network' | 'server' | 'auth' | 'oauth' | null) => {
+    switch (type) {
+      case 'network':
+        return 'cloud-offline-outline';
+      case 'server':
+        return 'server-outline';
+      case 'oauth':
+        return 'logo-microsoft';
+      case 'auth':
+        return 'alert-circle-outline';
+      default:
+        return 'alert-circle-outline';
+    }
+  };
+
+  const getErrorTitle = (type: 'network' | 'server' | 'auth' | 'oauth' | null) => {
+    switch (type) {
+      case 'network':
+        return 'Connection Issue';
+      case 'server':
+        return 'Server Error';
+      case 'oauth':
+        return 'Microsoft Login Issue';
+      case 'auth':
+        return 'Login Failed';
+      default:
+        return 'Error';
     }
   };
 
@@ -149,11 +214,12 @@ export default function LoginScreen() {
                   placeholder="your.name@cit.edu"
                   placeholderTextColor={COLORS.textMuted}
                   value={email}
-                  onChangeText={setEmail}
+                  onChangeText={handleEmailChange}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
                   returnKeyType="next"
+                  editable={!isLoading}
                 />
               </View>
             </View>
@@ -186,11 +252,13 @@ export default function LoginScreen() {
                   placeholder="Enter your password"
                   placeholderTextColor={COLORS.textMuted}
                   value={password}
-                  onChangeText={setPassword}
+                  onChangeText={handlePasswordChange}
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
                   autoCorrect={false}
                   returnKeyType="done"
+                  onSubmitEditing={handleLogin}
+                  editable={!isLoading}
                 />
                 <Pressable
                   onPress={() => setShowPassword((v) => !v)}
@@ -204,6 +272,47 @@ export default function LoginScreen() {
                 </Pressable>
               </View>
             </View>
+
+            {/* Error Message */}
+            {error && (
+              <View
+                style={[
+                  styles.errorContainer,
+                  { width: "100%", maxWidth: contentMaxWidth },
+                ]}
+              >
+                <View style={styles.errorHeader}>
+                  <Ionicons
+                    name={getErrorIcon(getErrorType(error)) as any}
+                    size={20}
+                    color="#DC2626"
+                  />
+                  <Text style={styles.errorTitle}>
+                    {getErrorTitle(getErrorType(error))}
+                  </Text>
+                </View>
+                <Text style={styles.errorMessage}>{error}</Text>
+                {getErrorType(error) === 'network' && (
+                  <Text style={styles.errorHint}>
+                    • Check your internet connection{'\n'}
+                    • Make sure you're connected to WiFi or mobile data
+                  </Text>
+                )}
+                {getErrorType(error) === 'server' && (
+                  <Text style={styles.errorHint}>
+                    • The server is temporarily unavailable{'\n'}
+                    • Please try again in a few moments
+                  </Text>
+                )}
+                {getErrorType(error) === 'oauth' && (
+                  <Text style={styles.errorHint}>
+                    • Make sure you're using a valid Microsoft account{'\n'}
+                    • Check your internet connection{'\n'}
+                    • Try again or use email/password login
+                  </Text>
+                )}
+              </View>
+            )}
 
             {/* Sign In Button */}
             <Pressable
@@ -426,5 +535,37 @@ const styles = StyleSheet.create({
     color: "#6B7280",
     textAlign: "center",
     marginTop: 10,
+  },
+  errorContainer: {
+    marginTop: 14,
+    backgroundColor: "#FEF2F2",
+    borderLeftWidth: 4,
+    borderLeftColor: "#DC2626",
+    borderRadius: 8,
+    padding: 12,
+  },
+  errorHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  errorTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#DC2626",
+    marginLeft: 8,
+  },
+  errorMessage: {
+    fontSize: 13,
+    color: "#991B1B",
+    lineHeight: 18,
+    marginBottom: 4,
+  },
+  errorHint: {
+    fontSize: 12,
+    color: "#B91C1C",
+    lineHeight: 18,
+    marginTop: 6,
+    fontStyle: "italic",
   },
 });

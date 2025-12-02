@@ -233,6 +233,10 @@ export default function ReportScreen() {
   const params = useLocalSearchParams();
   const [token, setToken] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissionError, setSubmissionError] = useState<{
+    type: 'network' | 'server' | 'validation' | 'timeout' | 'unknown';
+    message: string;
+  } | null>(null);
   const [offices, setOffices] = useState<OfficeInfo[]>([]);
   const [loadingOffices, setLoadingOffices] = useState(false);
   const [showOfficeDescription, setShowOfficeDescription] = useState(false);
@@ -1007,28 +1011,79 @@ export default function ReportScreen() {
       headers["Content-Type"] = "multipart/form-data";
     }
 
-    const response = await fetch(`${config.API.BASE_URL}/incidents`, {
-      method: "POST",
-      headers,
-      body: formData,
-    });
+    // Set timeout for the request
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(
-        `Failed to submit report: ${response.status} - ${errorText}`
-      );
+    try {
+      const response = await fetch(`${config.API.BASE_URL}/incidents`, {
+        method: "POST",
+        headers,
+        body: formData,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        
+        // Determine error type based on status code
+        let errorType: 'network' | 'server' | 'validation' | 'timeout' | 'unknown' = 'server';
+        let errorMessage = 'Failed to submit report. Please try again.';
+
+        if (response.status >= 500) {
+          errorType = 'server';
+          errorMessage = 'Server error occurred. The server is temporarily unavailable.';
+        } else if (response.status === 400) {
+          errorType = 'validation';
+          errorMessage = 'Invalid report data. Please check your inputs and try again.';
+        } else if (response.status === 401 || response.status === 403) {
+          errorType = 'validation';
+          errorMessage = 'Authentication failed. Please log in again.';
+        } else if (response.status === 413) {
+          errorType = 'validation';
+          errorMessage = 'Files are too large. Please reduce file sizes and try again.';
+        }
+
+        throw new Error(errorMessage);
+      }
+
+      const result = await response.json();
+
+      // Hide processing modal and show success modal
+      setShowProcessingModal(false);
+      setSubmissionResult({
+        trackingNumber: result.trackingNumber,
+        assignedOffice: result.assignedOffice,
+      });
+      setShowSuccessModal(true);
+    } catch (fetchError: any) {
+      clearTimeout(timeoutId);
+
+      // Handle timeout errors
+      if (fetchError.name === 'AbortError') {
+        const error = {
+          type: 'timeout' as const,
+          message: 'Request timed out. Please check your connection and try again.',
+        };
+        setSubmissionError(error);
+        throw new Error(error.message);
+      }
+
+      // Handle network errors
+      if (fetchError.message?.includes('Network request failed') || 
+          fetchError.message?.includes('Failed to fetch')) {
+        const error = {
+          type: 'network' as const,
+          message: 'Network connection failed. Please check your internet connection.',
+        };
+        setSubmissionError(error);
+        throw new Error(error.message);
+      }
+
+      throw fetchError;
     }
-
-    const result = await response.json();
-
-    // Hide processing modal and show success modal
-    setShowProcessingModal(false);
-    setSubmissionResult({
-      trackingNumber: result.trackingNumber,
-      assignedOffice: result.assignedOffice,
-    });
-    setShowSuccessModal(true);
   };
 
   const handleSuccessModalClose = async () => {
@@ -1073,6 +1128,7 @@ export default function ReportScreen() {
 
     setIsSubmitting(true);
     setShowProcessingModal(true);
+    setSubmissionError(null); // Clear any previous errors
 
     try {
       const incidentData = prepareIncidentData();
@@ -1081,6 +1137,7 @@ export default function ReportScreen() {
       const isContentApproved = await analyzeIncidentContent(incidentData);
       if (!isContentApproved) {
         setIsSubmitting(false);
+        setShowProcessingModal(false);
         return; // Stop submission if content is blocked or similar incidents found
       }
 
@@ -1089,7 +1146,14 @@ export default function ReportScreen() {
     } catch (error: any) {
       console.error("Error submitting report:", error);
       setShowProcessingModal(false);
-      Alert.alert("Error", error.message || "Failed to submit report");
+      
+      // Set structured error for display
+      if (!submissionError) {
+        setSubmissionError({
+          type: 'unknown',
+          message: error.message || "Failed to submit report. Please try again.",
+        });
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -3323,6 +3387,63 @@ export default function ReportScreen() {
                       </Text>
                     </View>
                   </View>
+
+                  {/* Error Banner */}
+                  {submissionError && (
+                    <View style={{ marginTop: 16, marginBottom: 8 }}>
+                      <View style={{
+                        backgroundColor: '#FEF2F2',
+                        borderLeftWidth: 4,
+                        borderLeftColor: '#DC2626',
+                        borderRadius: 8,
+                        padding: 16,
+                      }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                          <Text style={{ fontSize: 16, fontWeight: '700', color: '#DC2626', marginLeft: 8, flex: 1 }}>
+                            {submissionError.type === 'network' ? '🌐 Connection Issue' :
+                             submissionError.type === 'server' ? '🖥️ Server Error' :
+                             submissionError.type === 'timeout' ? '⏱️ Request Timed Out' :
+                             submissionError.type === 'validation' ? '⚠️ Validation Error' :
+                             '❌ Submission Failed'}
+                          </Text>
+                          <Pressable onPress={() => setSubmissionError(null)} style={{ padding: 4 }}>
+                            <Text style={{ fontSize: 18, color: '#991B1B' }}>✕</Text>
+                          </Pressable>
+                        </View>
+                        <Text style={{ fontSize: 14, color: '#991B1B', lineHeight: 20, marginBottom: 8 }}>
+                          {submissionError.message}
+                        </Text>
+                        {submissionError.type === 'network' && (
+                          <Text style={{ fontSize: 13, color: '#B91C1C', lineHeight: 20 }}>
+                            • Check your internet connection{'\n'}
+                            • Make sure you're connected to WiFi or mobile data{'\n'}
+                            • Try moving to an area with better signal
+                          </Text>
+                        )}
+                        {submissionError.type === 'server' && (
+                          <Text style={{ fontSize: 13, color: '#B91C1C', lineHeight: 20 }}>
+                            • The server is temporarily unavailable{'\n'}
+                            • Please try again in a few moments{'\n'}
+                            • If the problem persists, contact support
+                          </Text>
+                        )}
+                        {submissionError.type === 'timeout' && (
+                          <Text style={{ fontSize: 13, color: '#B91C1C', lineHeight: 20 }}>
+                            • The request took too long to complete{'\n'}
+                            • Check your internet connection speed{'\n'}
+                            • Try again with a more stable connection
+                          </Text>
+                        )}
+                        {submissionError.type === 'validation' && (
+                          <Text style={{ fontSize: 13, color: '#B91C1C', lineHeight: 20 }}>
+                            • Check that all required fields are filled{'\n'}
+                            • Ensure file sizes are not too large{'\n'}
+                            • Verify your login session is still active
+                          </Text>
+                        )}
+                      </View>
+                    </View>
+                  )}
 
                   {/* Submit Button */}
                   <FormNavigationButtons

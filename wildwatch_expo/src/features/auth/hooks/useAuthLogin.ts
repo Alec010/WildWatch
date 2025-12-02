@@ -69,9 +69,36 @@ export const useAuthLogin = () => {
         }
         return;
       }
-      throw new Error('No token received from Microsoft OAuth');
+      throw new Error('No token received from Microsoft. Please try again.');
     } catch (e: any) {
-      const message: string = e?.message || 'Microsoft login failed. Please try again.';
+      // Provide more specific error messages for Microsoft OAuth
+      let message: string;
+      
+      // Check for user cancellation (don't show error for intentional cancellation)
+      if (e?.message?.includes('User cancelled') || 
+          e?.message?.includes('user_cancelled') || 
+          e?.message?.toLowerCase().includes('cancelled')) {
+        // User intentionally cancelled - don't set error, just silently return
+        setError(null);
+        return; // Don't throw, just return gracefully
+      } else if (e?.message?.includes('network') || e?.message?.includes('connection')) {
+        message = 'Network error during Microsoft login. Please check your connection and try again.';
+      } else if (e?.message?.includes('timeout')) {
+        message = 'Microsoft login timed out. Please try again.';
+      } else if (e?.message?.includes('No token')) {
+        message = 'Microsoft authentication failed. No access token received. Please try again.';
+      } else if (e?.message?.includes('token exchange failed')) {
+        message = 'Failed to authenticate with Microsoft. Please try again.';
+      } else if (e?.message?.includes('Failed to get user info')) {
+        message = 'Could not retrieve your Microsoft account information. Please try again.';
+      } else if (e?.message?.includes('Backend validation failed')) {
+        message = 'Server could not validate your Microsoft account. Please try again or contact support.';
+      } else if (e?.response?.data?.message) {
+        message = e.response.data.message;
+      } else {
+        message = e?.message || 'Microsoft login failed. Please try again.';
+      }
+      
       setError(message);
       throw e;
     } finally {
@@ -79,7 +106,11 @@ export const useAuthLogin = () => {
     }
   }, []);
 
-  return { isLoading, error, login, loginWithMicrosoft };
+  const clearError = useCallback(() => {
+    setError(null);
+  }, []);
+
+  return { isLoading, error, login, loginWithMicrosoft, clearError };
 };
 
 

@@ -40,6 +40,7 @@ export default function SetupPage() {
     password?: string;
     confirmPassword?: string;
   }>({});
+  const [serverError, setServerError] = useState<string | null>(null);
 
   const formatContactNumber = (value: string) => {
     // Remove all non-digits
@@ -71,6 +72,30 @@ export default function SetupPage() {
     }
 
     return formattedValue;
+  };
+
+  const handleContactNumberChange = (value: string) => {
+    setContactNumber(formatContactNumber(value));
+    if (serverError) clearServerError();
+    if (errors.contactNumber) {
+      setErrors({ ...errors, contactNumber: undefined });
+    }
+  };
+
+  const handlePasswordChange = (value: string) => {
+    setPassword(value);
+    if (serverError) clearServerError();
+    if (errors.password) {
+      setErrors({ ...errors, password: undefined });
+    }
+  };
+
+  const handleConfirmPasswordChange = (value: string) => {
+    setConfirmPassword(value);
+    if (serverError) clearServerError();
+    if (errors.confirmPassword) {
+      setErrors({ ...errors, confirmPassword: undefined });
+    }
   };
 
   const getRawContactNumber = (formattedNumber: string) =>
@@ -115,6 +140,7 @@ export default function SetupPage() {
     }
 
     setIsLoading(true);
+    setServerError(null);
     try {
       const rawContact = getRawContactNumber(contactNumber);
       await authAPI.setupOAuthUser(rawContact, password);
@@ -129,12 +155,55 @@ export default function SetupPage() {
       );
     } catch (error: any) {
       console.error('Setup error:', error);
-      Alert.alert(
-        'Setup Failed',
-        error?.response?.data?.message || error?.message || 'Failed to complete setup. Please try again.'
-      );
+      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to complete setup. Please try again.';
+      setServerError(errorMessage);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const clearServerError = () => {
+    setServerError(null);
+  };
+
+  const getErrorType = (errorMessage: string | null): 'network' | 'server' | 'validation' | null => {
+    if (!errorMessage) return null;
+    const lowerError = errorMessage.toLowerCase();
+    
+    if (lowerError.includes('network') || lowerError.includes('connection') || 
+        lowerError.includes('timeout') || lowerError.includes('fetch')) {
+      return 'network';
+    }
+    if (lowerError.includes('500') || lowerError.includes('server error') || 
+        lowerError.includes('internal server')) {
+      return 'server';
+    }
+    return 'validation';
+  };
+
+  const getErrorIcon = (type: 'network' | 'server' | 'validation' | null) => {
+    switch (type) {
+      case 'network':
+        return 'cloud-offline-outline';
+      case 'server':
+        return 'server-outline';
+      case 'validation':
+        return 'alert-circle-outline';
+      default:
+        return 'alert-circle-outline';
+    }
+  };
+
+  const getErrorTitle = (type: 'network' | 'server' | 'validation' | null) => {
+    switch (type) {
+      case 'network':
+        return 'Connection Issue';
+      case 'server':
+        return 'Server Error';
+      case 'validation':
+        return 'Setup Failed';
+      default:
+        return 'Error';
     }
   };
 
@@ -210,6 +279,35 @@ export default function SetupPage() {
               </Text>
             </View>
 
+            {/* Server Error Message */}
+            {serverError && (
+              <View style={styles.serverErrorContainer}>
+                <View style={styles.errorHeader}>
+                  <Ionicons
+                    name={getErrorIcon(getErrorType(serverError)) as any}
+                    size={20}
+                    color="#DC2626"
+                  />
+                  <Text style={styles.errorTitle}>
+                    {getErrorTitle(getErrorType(serverError))}
+                  </Text>
+                </View>
+                <Text style={styles.serverErrorMessage}>{serverError}</Text>
+                {getErrorType(serverError) === 'network' && (
+                  <Text style={styles.errorHint}>
+                    • Check your internet connection{'\n'}
+                    • Make sure you're connected to WiFi or mobile data
+                  </Text>
+                )}
+                {getErrorType(serverError) === 'server' && (
+                  <Text style={styles.errorHint}>
+                    • The server is temporarily unavailable{'\n'}
+                    • Please try again in a few moments
+                  </Text>
+                )}
+              </View>
+            )}
+
           {/* Contact Number */}
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Contact Number *</Text>
@@ -225,7 +323,7 @@ export default function SetupPage() {
                 placeholder="+63 9## ### ####"
                 placeholderTextColor={COLORS.textMuted}
                 value={contactNumber}
-                onChangeText={(text) => setContactNumber(formatContactNumber(text))}
+                onChangeText={handleContactNumberChange}
                 keyboardType="phone-pad"
                 editable={!isLoading}
               />
@@ -250,12 +348,7 @@ export default function SetupPage() {
                 placeholder="Create a secure password"
                 placeholderTextColor={COLORS.textMuted}
                 value={password}
-                onChangeText={(text) => {
-                  setPassword(text);
-                  if (errors.password) {
-                    setErrors({ ...errors, password: undefined });
-                  }
-                }}
+                onChangeText={handlePasswordChange}
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
                 editable={!isLoading}
@@ -375,12 +468,7 @@ export default function SetupPage() {
                 placeholder="Confirm your password"
                 placeholderTextColor={COLORS.textMuted}
                 value={confirmPassword}
-                onChangeText={(text) => {
-                  setConfirmPassword(text);
-                  if (errors.confirmPassword) {
-                    setErrors({ ...errors, confirmPassword: undefined });
-                  }
-                }}
+                onChangeText={handleConfirmPasswordChange}
                 secureTextEntry={!showConfirmPassword}
                 autoCapitalize="none"
                 editable={!isLoading}
@@ -681,6 +769,39 @@ const styles = StyleSheet.create({
   footerLink: {
     color: Colors.maroon,
     fontWeight: '600',
+  },
+  serverErrorContainer: {
+    marginHorizontal: 24,
+    marginTop: 16,
+    backgroundColor: '#FEF2F2',
+    borderLeftWidth: 4,
+    borderLeftColor: '#DC2626',
+    borderRadius: 8,
+    padding: 12,
+  },
+  errorHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  errorTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#DC2626',
+    marginLeft: 8,
+  },
+  serverErrorMessage: {
+    fontSize: 13,
+    color: '#991B1B',
+    lineHeight: 18,
+    marginBottom: 4,
+  },
+  errorHint: {
+    fontSize: 12,
+    color: '#B91C1C',
+    lineHeight: 18,
+    marginTop: 6,
+    fontStyle: 'italic',
   },
 });
 
