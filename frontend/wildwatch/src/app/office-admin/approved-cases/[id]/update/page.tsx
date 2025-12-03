@@ -64,7 +64,12 @@ import { useSidebar } from "@/contexts/SidebarContext";
 import { motion } from "framer-motion";
 import { Inter } from "next/font/google";
 import { Checkbox } from "@/components/ui/checkbox";
-import { formatDateOnly, parseUTCDate, formatDateWithYear } from "@/utils/dateUtils"
+import {
+  formatDateOnly,
+  parseUTCDate,
+  formatDateWithYear,
+} from "@/utils/dateUtils";
+import { PageLoader } from "@/components/PageLoader";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -99,10 +104,10 @@ function getEstimatedResolution(
 
 function formatDate(dateString: string) {
   try {
-    if (!dateString) return 'Invalid date'
-    return formatDateOnly(dateString)
+    if (!dateString) return "Invalid date";
+    return formatDateOnly(dateString);
   } catch (error) {
-    return 'Invalid date'
+    return "Invalid date";
   }
 }
 
@@ -322,7 +327,7 @@ export default function UpdateVerifiedCasePage() {
   }, [incident]);
 
   const formatDateTime = (dateString: string) => {
-    const date = parseUTCDate(dateString)
+    const date = parseUTCDate(dateString);
     return date.toLocaleString("en-US", {
       month: "short",
       day: "numeric",
@@ -644,23 +649,18 @@ export default function UpdateVerifiedCasePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9]">
+      <div className="flex-1 flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9]">
         <OfficeAdminSidebar />
-        <div
-          className={`flex-1 flex items-center justify-center transition-all duration-300 ${
-            collapsed ? "ml-[5rem]" : "ml-64"
-          }`}
-        >
-          <div className="text-center">
-            <div className="relative w-20 h-20 mx-auto">
-              <div className="absolute inset-0 rounded-full border-t-2 border-b-2 border-[#8B0000] animate-spin"></div>
-              <div className="absolute inset-2 rounded-full border-r-2 border-l-2 border-[#DAA520] animate-spin animation-delay-150"></div>
-              <div className="absolute inset-4 rounded-full border-t-2 border-b-2 border-[#8B0000] animate-spin animation-delay-300"></div>
-            </div>
-            <p className="mt-6 text-gray-600 font-medium">
-              Loading case details...
-            </p>
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          <div className="sticky top-0 z-30 flex-shrink-0">
+            <OfficeAdminNavbar
+              title="Update Case"
+              subtitle="Manage and update incident case details"
+              showSearch={false}
+              showQuickActions={true}
+            />
           </div>
+          <PageLoader pageTitle="case details" />
         </div>
       </div>
     );
@@ -668,32 +668,49 @@ export default function UpdateVerifiedCasePage() {
 
   if (error || !incident) {
     return (
-      <div className="min-h-screen flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9]">
+      <div className="flex-1 flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9]">
         <OfficeAdminSidebar />
-        <div
-          className={`flex-1 p-8 transition-all duration-300 ${
-            collapsed ? "ml-[5rem]" : "ml-64"
-          }`}
-        >
-          <div className="max-w-7xl mx-auto">
-            <div className="bg-red-50 border border-red-200 rounded-lg p-6 shadow-sm">
-              <div className="flex items-start gap-4">
-                <div className="bg-red-100 p-3 rounded-full">
-                  <AlertTriangle className="h-6 w-6 text-red-600" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-red-800 mb-2">
-                    Error Loading Case
-                  </h3>
-                  <p className="text-red-700">
-                    {error || "Incident not found"}
-                  </p>
-                  <Button
-                    className="mt-4 bg-[#8B0000] hover:bg-[#6B0000] text-white"
-                    onClick={() => router.push("/office-admin/approved-cases")}
-                  >
-                    <ChevronLeft className="mr-2 h-4 w-4" /> Return to Case List
-                  </Button>
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          <div className="sticky top-0 z-30 flex-shrink-0">
+            <OfficeAdminNavbar
+              title="Update Case"
+              subtitle="Manage and update incident case details"
+              showSearch={false}
+              showQuickActions={true}
+            />
+          </div>
+          <div className="flex-1 overflow-y-auto overflow-x-hidden bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9] pt-16">
+            <div
+              className={`px-3 sm:px-4 md:px-6 py-6 sm:py-8 md:py-10 ${
+                collapsed
+                  ? "max-w-[calc(100vw-5rem-2rem)]"
+                  : "max-w-[calc(100vw-16rem-2rem)]"
+              } mx-auto w-full`}
+            >
+              <div className="w-full max-w-full">
+                <div className="bg-red-50 border border-red-200 rounded-lg p-6 shadow-sm">
+                  <div className="flex items-start gap-4">
+                    <div className="bg-red-100 p-3 rounded-full">
+                      <AlertTriangle className="h-6 w-6 text-red-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-red-800 mb-2">
+                        Error Loading Case
+                      </h3>
+                      <p className="text-red-700">
+                        {error || "Incident not found"}
+                      </p>
+                      <Button
+                        className="mt-4 bg-[#8B0000] hover:bg-[#6B0000] text-white"
+                        onClick={() =>
+                          router.push("/office-admin/approved-cases")
+                        }
+                      >
+                        <ChevronLeft className="mr-2 h-4 w-4" /> Return to Case
+                        List
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -740,571 +757,585 @@ export default function UpdateVerifiedCasePage() {
   return (
     <>
       <div
-        className={`min-h-screen flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9] ${inter.className}`}
+        className={`flex-1 flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9] overflow-x-hidden ${inter.className}`}
       >
         <OfficeAdminSidebar />
-        <OfficeAdminNavbar
-          title="Update Case"
-          subtitle="Manage and update incident case details"
-          showSearch={false}
-          showQuickActions={true}
-        />
-
-        <div
-          className={`flex-1 overflow-auto transition-all duration-300 ${
-            collapsed ? "ml-[5rem]" : "ml-64"
-          } pt-24`}
-        >
-          <div
-            className={`p-6 -mt-3 mx-8 ${
-              collapsed ? "max-w-[95vw]" : "max-w-[calc(100vw-8rem)]"
-            }`}
-          >
-            {/* Breadcrumb and Header */}
-            <div className="mb-6">
-              <div className="flex items-center text-sm text-gray-500 mb-4">
-                <Link
-                  href="/office-admin/approved-cases"
-                  className="hover:text-[#8B0000] transition-colors font-medium"
-                >
-                  Verified Case Tracker
-                </Link>
-                <ChevronRight className="h-4 w-4 mx-2" />
-                <span>Update Case</span>
-              </div>
-
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h1 className="text-2xl font-bold text-[#8B0000]">
-                      Case #{incident.trackingNumber}
-                    </h1>
-                    <Badge
-                      className={`${getStatusColor(incident.status)} border`}
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          <div className="sticky top-0 z-30 flex-shrink-0">
+            <OfficeAdminNavbar
+              title="Update Case"
+              subtitle="Manage and update incident case details"
+              showSearch={false}
+              showQuickActions={true}
+            />
+          </div>
+          <div className="flex-1 overflow-y-auto overflow-x-hidden bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9] pt-16">
+            <div
+              className={`px-3 sm:px-4 md:px-6 py-6 sm:py-8 md:py-10 ${
+                collapsed
+                  ? "max-w-[calc(100vw-5rem-2rem)]"
+                  : "max-w-[calc(100vw-16rem-2rem)]"
+              } mx-auto w-full`}
+            >
+              <div className="w-full max-w-full">
+                {/* Breadcrumb and Header */}
+                <div className="mb-6">
+                  <div className="flex items-center text-sm text-gray-500 mb-4">
+                    <Link
+                      href="/office-admin/approved-cases"
+                      className="hover:text-[#8B0000] transition-colors font-medium"
                     >
-                      {incident.status}
-                    </Badge>
+                      Verified Case Tracker
+                    </Link>
+                    <ChevronRight className="h-4 w-4 mx-2" />
+                    <span>Update Case</span>
                   </div>
-                  <div className="flex items-center gap-2 mt-2">
-                    <Badge
-                      variant="outline"
-                      className="bg-[#8B0000]/5 text-[#8B0000] border-[#DAA520]/30"
-                    >
-                      {incident.incidentType}
-                    </Badge>
-                    <Badge
-                      className={`${getPriorityColor(
-                        incident.priorityLevel
-                      )} border`}
-                    >
-                      {incident.priorityLevel} Priority
-                    </Badge>
-                    {incident.isIncident === false && (
-                      <Badge
-                        variant="outline"
-                        className="bg-purple-50 text-purple-700 border-purple-300"
-                      >
-                        Tagged as Concern
-                      </Badge>
-                    )}
-                  </div>
-                </div>
 
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    className="border-[#DAA520]/30 text-[#8B0000] hover:bg-[#8B0000] hover:text-white"
-                    onClick={() => setShowTransferModal(true)}
-                  >
-                    <ArrowRightLeft className="h-4 w-4 mr-2" />
-                    Transfer Case
-                  </Button>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          onClick={() => setIsResolveDialogOpen(true)}
-                          disabled={
-                            incident.status === "Resolved" ||
-                            incident.status === "Dismissed" ||
-                            isSending
-                          }
-                          className="bg-green-600 hover:bg-green-700 text-white"
-                          size="sm"
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h1 className="text-2xl font-bold text-[#8B0000]">
+                          Case #{incident.trackingNumber}
+                        </h1>
+                        <Badge
+                          className={`${getStatusColor(
+                            incident.status
+                          )} border`}
                         >
-                          <CheckCircle2 className="h-4 w-4 mr-2" />
-                          <span className="hidden sm:inline">
-                            Mark as Resolved
-                          </span>
-                          <span className="sm:hidden">Resolve</span>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        Mark this case as resolved
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          onClick={() => setIsCloseDialogOpen(true)}
-                          disabled={
-                            incident.status === "Dismissed" || isSending
-                          }
-                          variant="destructive"
-                          size="sm"
-                        >
-                          <XCircle className="h-4 w-4 mr-2" />
-                          <span className="hidden sm:inline">Resolve Case</span>
-                          <span className="sm:hidden">Resolve</span>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        Resolve and dismiss this case
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 space-y-6">
-                {/* Incident Summary */}
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden"
-                >
-                  <div className="p-4 border-b border-[#DAA520]/20">
-                    <div className="flex items-center gap-2">
-                      <div className="bg-[#8B0000]/10 p-2 rounded-lg">
-                        <FileText className="h-5 w-5 text-[#8B0000]" />
+                          {incident.status}
+                        </Badge>
                       </div>
-                      <h2 className="text-lg font-semibold text-[#8B0000]">
-                        Incident Summary
-                      </h2>
-                    </div>
-                  </div>
-                  <div className="p-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-4">
-                        <div>
-                          <h3 className="text-sm font-medium text-gray-500 mb-1 flex items-center">
-                            <div className="bg-[#8B0000]/10 p-1 rounded mr-2">
-                              <Calendar className="h-4 w-4 text-[#8B0000]" />
-                            </div>
-                            Date & Time
-                          </h3>
-                          <p className="text-sm font-medium text-[#8B0000]">
-                            {formatDate(incident.dateOfIncident)} at{" "}
-                            {incident.timeOfIncident}
-                          </p>
-                        </div>
-
-                        <div>
-                          <h3 className="text-sm font-medium text-gray-500 mb-1 flex items-center">
-                            <div className="bg-[#8B0000]/10 p-1 rounded mr-2">
-                              <Clock className="h-4 w-4 text-[#8B0000]" />
-                            </div>
-                            Est. Resolution
-                            {incident.estimatedResolutionDate && (
-                              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 ml-2">
-                                Extended
-                              </span>
-                            )}
-                          </h3>
-                          <p className="text-sm font-medium text-[#8B0000]">
-                            {incident.submittedAt
-                              ? formatDate(
-                                  getEstimatedResolution(
-                                    incident.submittedAt,
-                                    incident.priorityLevel,
-                                    incident.estimatedResolutionDate
-                                  ).toISOString()
-                                )
-                              : "Not available"}
-                          </p>
-                          {incident.resolutionExtendedBy && (
-                            <p className="text-xs text-gray-500 mt-1">
-                              Extended by {incident.resolutionExtendedBy}
-                            </p>
-                          )}
-                        </div>
-
-                        <div>
-                          <h3 className="text-sm font-medium text-gray-500 mb-1 flex items-center">
-                            <div className="bg-[#8B0000]/10 p-1 rounded mr-2">
-                              <MapPin className="h-4 w-4 text-[#8B0000]" />
-                            </div>
-                            Location
-                          </h3>
-                          <p className="text-sm font-medium text-[#8B0000]">
-                            {incident.location}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-500 mb-1">
-                          Description
-                        </h3>
-                        <div className="bg-[#8B0000]/5 p-3 rounded-md border border-[#DAA520]/20 text-sm whitespace-pre-wrap max-h-[150px] overflow-y-auto">
-                          {incident.description}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-
-                {/* Send Update to Reporter */}
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: 0.1 }}
-                  className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden"
-                >
-                  <div className="p-4 border-b border-[#DAA520]/20">
-                    <div className="flex items-center gap-2">
-                      <div className="bg-[#8B0000]/10 p-2 rounded-lg">
-                        <Clock className="h-5 w-5 text-[#8B0000]" />
-                      </div>
-                      <h2 className="text-lg font-semibold text-[#8B0000]">
-                        Send Update to Reporter
-                      </h2>
-                    </div>
-                  </div>
-                  <div className="p-6 space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-[#8B0000]">
-                          Updated By
-                        </label>
-                        <Input
-                          value={updatedBy}
-                          disabled
-                          className="bg-[#8B0000]/5 border-[#DAA520]/20"
-                          placeholder="Office name"
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-[#8B0000]">
-                          Status
-                        </label>
-                        <Input
-                          value={incident.status || "In Progress"}
-                          disabled
-                          className="bg-[#8B0000]/5 border-[#DAA520]/20"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-[#8B0000]">
-                          Priority
-                        </label>
-                        <Select
-                          value={priorityLevel}
-                          onValueChange={(value) =>
-                            setPriorityLevel(value as "HIGH" | "MEDIUM" | "LOW")
-                          }
-                        >
-                          <SelectTrigger className="border-[#DAA520]/20 focus:ring-[#8B0000]/20 focus:border-[#8B0000]">
-                            <SelectValue placeholder="Select priority" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem
-                              value="HIGH"
-                              className="text-red-600 font-medium"
-                            >
-                              High Priority
-                            </SelectItem>
-                            <SelectItem
-                              value="MEDIUM"
-                              className="text-orange-600 font-medium"
-                            >
-                              Medium Priority
-                            </SelectItem>
-                            <SelectItem
-                              value="LOW"
-                              className="text-green-600 font-medium"
-                            >
-                              Low Priority
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-[#8B0000]">
-                          Visibility
-                        </label>
-                        <Button
-                          type="button"
+                      <div className="flex items-center gap-2 mt-2">
+                        <Badge
                           variant="outline"
-                          onClick={() =>
-                            setIsVisibleToReporter(!isVisibleToReporter)
-                          }
-                          className={`w-full justify-start border-[#DAA520]/20 ${
-                            isVisibleToReporter
-                              ? "bg-green-50 text-green-700 hover:bg-green-100 border-green-200"
-                              : "bg-red-50 text-red-700 hover:bg-red-100 border-red-200"
-                          }`}
+                          className="bg-[#8B0000]/5 text-[#8B0000] border-[#DAA520]/30"
                         >
-                          {isVisibleToReporter ? (
-                            <>
-                              <Eye className="h-4 w-4 mr-2" />
-                              Visible to reporter
-                            </>
-                          ) : (
-                            <>
-                              <EyeOff className="h-4 w-4 mr-2" />
-                              Not visible to reporter
-                            </>
-                          )}
-                        </Button>
+                          {incident.incidentType}
+                        </Badge>
+                        <Badge
+                          className={`${getPriorityColor(
+                            incident.priorityLevel
+                          )} border`}
+                        >
+                          {incident.priorityLevel} Priority
+                        </Badge>
+                        {incident.isIncident === false && (
+                          <Badge
+                            variant="outline"
+                            className="bg-purple-50 text-purple-700 border-purple-300"
+                          >
+                            Tagged as Concern
+                          </Badge>
+                        )}
                       </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-[#8B0000] flex items-center justify-between">
-                        <span>Update Message</span>
-                        <span
-                          className={`text-xs ${
-                            updateMessage.length > 255
-                              ? "text-red-600 font-semibold"
-                              : "text-gray-500"
-                          }`}
-                        >
-                          {updateMessage.length}/255
-                        </span>
-                      </label>
-                      <Textarea
-                        value={updateMessage}
-                        onChange={(e) => setUpdateMessage(e.target.value)}
-                        placeholder="Provide an update on the incident investigation..."
-                        maxLength={255}
-                        className="min-h-[120px] resize-none border-[#DAA520]/20 focus:ring-[#8B0000]/20 focus:border-[#8B0000]"
-                      />
-                    </div>
-
-                    <div className="flex justify-between items-center pt-2">
+                    <div className="flex gap-2">
                       <Button
                         variant="outline"
-                        onClick={() => setShowExtendModal(true)}
-                        disabled={isSending}
-                        className="border-blue-600 text-blue-600 hover:bg-blue-50 flex items-center gap-2"
+                        className="border-[#DAA520]/30 text-[#8B0000] hover:bg-[#8B0000] hover:text-white"
+                        onClick={() => setShowTransferModal(true)}
                       >
-                        <CalendarPlus className="h-4 w-4" />
-                        Extend Resolution
+                        <ArrowRightLeft className="h-4 w-4 mr-2" />
+                        Transfer Case
                       </Button>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              onClick={() => setIsResolveDialogOpen(true)}
+                              disabled={
+                                incident.status === "Resolved" ||
+                                incident.status === "Dismissed" ||
+                                isSending
+                              }
+                              className="bg-green-600 hover:bg-green-700 text-white"
+                              size="sm"
+                            >
+                              <CheckCircle2 className="h-4 w-4 mr-2" />
+                              <span className="hidden sm:inline">
+                                Mark as Resolved
+                              </span>
+                              <span className="sm:hidden">Resolve</span>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            Mark this case as resolved
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
 
-                      <div className="flex gap-3">
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            setUpdateMessage("");
-                            // Keep updatedBy populated with office name
-                            setIsVisibleToReporter(true);
-                            if (incident) {
-                              setPriorityLevel(incident.priorityLevel);
-                            }
-                          }}
-                          disabled={isSending}
-                          className="border-[#DAA520]/30 text-[#8B0000] hover:bg-[#8B0000]/5"
-                        >
-                          Reset
-                        </Button>
-                        <Button
-                          onClick={handleSendUpdate}
-                          disabled={
-                            !updateMessage.trim() ||
-                            !updatedBy.trim() ||
-                            isSending
-                          }
-                          className="bg-[#8B0000] hover:bg-[#6B0000] text-white"
-                        >
-                          {isSending ? (
-                            <>
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                              Sending...
-                            </>
-                          ) : (
-                            "Save Changes"
-                          )}
-                        </Button>
-                      </div>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              onClick={() => setIsCloseDialogOpen(true)}
+                              disabled={
+                                incident.status === "Dismissed" || isSending
+                              }
+                              variant="destructive"
+                              size="sm"
+                            >
+                              <XCircle className="h-4 w-4 mr-2" />
+                              <span className="hidden sm:inline">
+                                Resolve Case
+                              </span>
+                              <span className="sm:hidden">Resolve</span>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            Resolve and dismiss this case
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </div>
                   </div>
-                </motion.div>
-              </div>
+                </div>
 
-              <div className="space-y-6">
-                {/* Reporter Information */}
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: 0.2 }}
-                  className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden"
-                >
-                  <div className="p-4 border-b border-[#DAA520]/20">
-                    <div className="flex items-center gap-2">
-                      <div className="bg-[#8B0000]/10 p-2 rounded-lg">
-                        <User className="h-5 w-5 text-[#8B0000]" />
-                      </div>
-                      <h2 className="text-lg font-semibold text-[#8B0000]">
-                        Reporter Information
-                      </h2>
-                    </div>
-                  </div>
-                  <div className="p-0">
-                    <div className="divide-y divide-[#DAA520]/20">
-                      <div className="px-6 py-3 flex items-center">
-                        <div className="bg-[#8B0000]/10 p-2 rounded-lg mr-3">
-                          <User className="h-4 w-4 text-[#8B0000]" />
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-500">Name</p>
-                          <p className="text-sm font-medium text-[#8B0000]">
-                            {incident.submittedByFullName}
-                          </p>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <div className="lg:col-span-2 space-y-6">
+                    {/* Incident Summary */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden"
+                    >
+                      <div className="p-4 border-b border-[#DAA520]/20">
+                        <div className="flex items-center gap-2">
+                          <div className="bg-[#8B0000]/10 p-2 rounded-lg">
+                            <FileText className="h-5 w-5 text-[#8B0000]" />
+                          </div>
+                          <h2 className="text-lg font-semibold text-[#8B0000]">
+                            Incident Summary
+                          </h2>
                         </div>
                       </div>
-                      <div className="px-6 py-3 flex items-center">
-                        <div className="bg-[#8B0000]/10 p-2 rounded-lg mr-3">
-                          <Mail className="h-4 w-4 text-[#8B0000]" />
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-500">Email</p>
-                          <p className="text-sm font-medium text-[#8B0000]">
-                            {incident.submittedByEmail}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="px-6 py-3 flex items-center">
-                        <div className="bg-[#8B0000]/10 p-2 rounded-lg mr-3">
-                          <Phone className="h-4 w-4 text-[#8B0000]" />
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-500">Phone</p>
-                          <p className="text-sm font-medium text-[#8B0000]">
-                            {incident.submittedByPhone || "Not provided"}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="px-6 py-3 flex items-center">
-                        <div className="bg-[#8B0000]/10 p-2 rounded-lg mr-3">
-                          <Briefcase className="h-4 w-4 text-[#8B0000]" />
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-500">Role</p>
-                          <p className="text-sm font-medium text-[#8B0000]">
-                            {incident.submittedByRole || "Student"}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="px-6 py-3 flex items-center">
-                        <div className="bg-[#8B0000]/10 p-2 rounded-lg mr-3">
-                          <Tag className="h-4 w-4 text-[#8B0000]" />
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-500">ID Number</p>
-                          <p className="text-sm font-medium text-[#8B0000]">
-                            {incident.submittedByIdNumber || "Not provided"}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-
-                {/* Update History */}
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: 0.3 }}
-                  className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden"
-                >
-                  <div className="p-4 border-b border-[#DAA520]/20">
-                    <div className="flex items-center gap-2">
-                      <div className="bg-[#8B0000]/10 p-2 rounded-lg">
-                        <Clock className="h-5 w-5 text-[#8B0000]" />
-                      </div>
-                      <h2 className="text-lg font-semibold text-[#8B0000]">
-                        Update History
-                      </h2>
-                    </div>
-                  </div>
-                  <div className="p-0 max-h-[500px] overflow-y-auto">
-                    {updates.length === 0 ? (
-                      <div className="p-6 text-center">
-                        <div className="w-16 h-16 bg-[#8B0000]/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <Clock className="h-8 w-8 text-[#8B0000]" />
-                        </div>
-                        <p className="text-sm text-gray-500">No updates yet</p>
-                      </div>
-                    ) : (
-                      <div className="divide-y divide-[#DAA520]/20">
-                        {updates.map((update, index) => (
-                          <motion.div
-                            key={update.id}
-                            className="p-4"
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.2, delay: index * 0.05 }}
-                          >
-                            <div className="flex items-start gap-3">
-                              <div className="h-8 w-8 rounded-full bg-[#8B0000]/10 flex items-center justify-center flex-shrink-0">
-                                <User className="h-4 w-4 text-[#8B0000]" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
-                                  <p className="text-sm font-medium text-[#8B0000]">
-                                    {update.updatedByName ||
-                                      update.updatedByFullName}
-                                  </p>
-                                  <p className="text-xs text-gray-500">
-                                    {formatDateTime(update.updatedAt)}
-                                  </p>
+                      <div className="p-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-4">
+                            <div>
+                              <h3 className="text-sm font-medium text-gray-500 mb-1 flex items-center">
+                                <div className="bg-[#8B0000]/10 p-1 rounded mr-2">
+                                  <Calendar className="h-4 w-4 text-[#8B0000]" />
                                 </div>
-                                <div className="mt-2 text-sm text-gray-700 whitespace-pre-wrap bg-[#8B0000]/5 p-3 rounded-md border border-[#DAA520]/20">
-                                  {update.message}
-                                </div>
-                                <div className="mt-2">
-                                  <Badge
-                                    variant="outline"
-                                    className={`text-xs ${
-                                      update.visibleToReporter
-                                        ? "bg-green-50 text-green-600 border-green-200"
-                                        : "bg-red-50 text-red-600 border-red-200"
-                                    }`}
-                                  >
-                                    {update.visibleToReporter ? (
-                                      <>
-                                        <Eye className="inline-block h-3 w-3 mr-1" />
-                                        Visible to reporter
-                                      </>
-                                    ) : (
-                                      <>
-                                        <EyeOff className="inline-block h-3 w-3 mr-1" />
-                                        Not visible to reporter
-                                      </>
-                                    )}
-                                  </Badge>
-                                </div>
-                              </div>
+                                Date & Time
+                              </h3>
+                              <p className="text-sm font-medium text-[#8B0000]">
+                                {formatDate(incident.dateOfIncident)} at{" "}
+                                {incident.timeOfIncident}
+                              </p>
                             </div>
-                          </motion.div>
-                        ))}
+
+                            <div>
+                              <h3 className="text-sm font-medium text-gray-500 mb-1 flex items-center">
+                                <div className="bg-[#8B0000]/10 p-1 rounded mr-2">
+                                  <Clock className="h-4 w-4 text-[#8B0000]" />
+                                </div>
+                                Est. Resolution
+                                {incident.estimatedResolutionDate && (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 ml-2">
+                                    Extended
+                                  </span>
+                                )}
+                              </h3>
+                              <p className="text-sm font-medium text-[#8B0000]">
+                                {incident.submittedAt
+                                  ? formatDate(
+                                      getEstimatedResolution(
+                                        incident.submittedAt,
+                                        incident.priorityLevel,
+                                        incident.estimatedResolutionDate
+                                      ).toISOString()
+                                    )
+                                  : "Not available"}
+                              </p>
+                              {incident.resolutionExtendedBy && (
+                                <p className="text-xs text-gray-500 mt-1">
+                                  Extended by {incident.resolutionExtendedBy}
+                                </p>
+                              )}
+                            </div>
+
+                            <div>
+                              <h3 className="text-sm font-medium text-gray-500 mb-1 flex items-center">
+                                <div className="bg-[#8B0000]/10 p-1 rounded mr-2">
+                                  <MapPin className="h-4 w-4 text-[#8B0000]" />
+                                </div>
+                                Location
+                              </h3>
+                              <p className="text-sm font-medium text-[#8B0000]">
+                                {incident.location}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div>
+                            <h3 className="text-sm font-medium text-gray-500 mb-1">
+                              Description
+                            </h3>
+                            <div className="bg-[#8B0000]/5 p-3 rounded-md border border-[#DAA520]/20 text-sm whitespace-pre-wrap max-h-[150px] overflow-y-auto">
+                              {incident.description}
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    )}
+                    </motion.div>
+
+                    {/* Send Update to Reporter */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, delay: 0.1 }}
+                      className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden"
+                    >
+                      <div className="p-4 border-b border-[#DAA520]/20">
+                        <div className="flex items-center gap-2">
+                          <div className="bg-[#8B0000]/10 p-2 rounded-lg">
+                            <Clock className="h-5 w-5 text-[#8B0000]" />
+                          </div>
+                          <h2 className="text-lg font-semibold text-[#8B0000]">
+                            Send Update to Reporter
+                          </h2>
+                        </div>
+                      </div>
+                      <div className="p-6 space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium text-[#8B0000]">
+                              Updated By
+                            </label>
+                            <Input
+                              value={updatedBy}
+                              disabled
+                              className="bg-[#8B0000]/5 border-[#DAA520]/20"
+                              placeholder="Office name"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium text-[#8B0000]">
+                              Status
+                            </label>
+                            <Input
+                              value={incident.status || "In Progress"}
+                              disabled
+                              className="bg-[#8B0000]/5 border-[#DAA520]/20"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium text-[#8B0000]">
+                              Priority
+                            </label>
+                            <Select
+                              value={priorityLevel}
+                              onValueChange={(value) =>
+                                setPriorityLevel(
+                                  value as "HIGH" | "MEDIUM" | "LOW"
+                                )
+                              }
+                            >
+                              <SelectTrigger className="border-[#DAA520]/20 focus:ring-[#8B0000]/20 focus:border-[#8B0000]">
+                                <SelectValue placeholder="Select priority" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem
+                                  value="HIGH"
+                                  className="text-red-600 font-medium"
+                                >
+                                  High Priority
+                                </SelectItem>
+                                <SelectItem
+                                  value="MEDIUM"
+                                  className="text-orange-600 font-medium"
+                                >
+                                  Medium Priority
+                                </SelectItem>
+                                <SelectItem
+                                  value="LOW"
+                                  className="text-green-600 font-medium"
+                                >
+                                  Low Priority
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium text-[#8B0000]">
+                              Visibility
+                            </label>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() =>
+                                setIsVisibleToReporter(!isVisibleToReporter)
+                              }
+                              className={`w-full justify-start border-[#DAA520]/20 ${
+                                isVisibleToReporter
+                                  ? "bg-green-50 text-green-700 hover:bg-green-100 border-green-200"
+                                  : "bg-red-50 text-red-700 hover:bg-red-100 border-red-200"
+                              }`}
+                            >
+                              {isVisibleToReporter ? (
+                                <>
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  Visible to reporter
+                                </>
+                              ) : (
+                                <>
+                                  <EyeOff className="h-4 w-4 mr-2" />
+                                  Not visible to reporter
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-[#8B0000] flex items-center justify-between">
+                            <span>Update Message</span>
+                            <span
+                              className={`text-xs ${
+                                updateMessage.length > 255
+                                  ? "text-red-600 font-semibold"
+                                  : "text-gray-500"
+                              }`}
+                            >
+                              {updateMessage.length}/255
+                            </span>
+                          </label>
+                          <Textarea
+                            value={updateMessage}
+                            onChange={(e) => setUpdateMessage(e.target.value)}
+                            placeholder="Provide an update on the incident investigation..."
+                            maxLength={255}
+                            className="min-h-[120px] resize-none border-[#DAA520]/20 focus:ring-[#8B0000]/20 focus:border-[#8B0000]"
+                          />
+                        </div>
+
+                        <div className="flex justify-between items-center pt-2">
+                          <Button
+                            variant="outline"
+                            onClick={() => setShowExtendModal(true)}
+                            disabled={isSending}
+                            className="border-blue-600 text-blue-600 hover:bg-blue-50 flex items-center gap-2"
+                          >
+                            <CalendarPlus className="h-4 w-4" />
+                            Extend Resolution
+                          </Button>
+
+                          <div className="flex gap-3">
+                            <Button
+                              variant="outline"
+                              onClick={() => {
+                                setUpdateMessage("");
+                                // Keep updatedBy populated with office name
+                                setIsVisibleToReporter(true);
+                                if (incident) {
+                                  setPriorityLevel(incident.priorityLevel);
+                                }
+                              }}
+                              disabled={isSending}
+                              className="border-[#DAA520]/30 text-[#8B0000] hover:bg-[#8B0000]/5"
+                            >
+                              Reset
+                            </Button>
+                            <Button
+                              onClick={handleSendUpdate}
+                              disabled={
+                                !updateMessage.trim() ||
+                                !updatedBy.trim() ||
+                                isSending
+                              }
+                              className="bg-[#8B0000] hover:bg-[#6B0000] text-white"
+                            >
+                              {isSending ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  Sending...
+                                </>
+                              ) : (
+                                "Save Changes"
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
                   </div>
-                </motion.div>
+
+                  <div className="space-y-6">
+                    {/* Reporter Information */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, delay: 0.2 }}
+                      className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden"
+                    >
+                      <div className="p-4 border-b border-[#DAA520]/20">
+                        <div className="flex items-center gap-2">
+                          <div className="bg-[#8B0000]/10 p-2 rounded-lg">
+                            <User className="h-5 w-5 text-[#8B0000]" />
+                          </div>
+                          <h2 className="text-lg font-semibold text-[#8B0000]">
+                            Reporter Information
+                          </h2>
+                        </div>
+                      </div>
+                      <div className="p-0">
+                        <div className="divide-y divide-[#DAA520]/20">
+                          <div className="px-6 py-3 flex items-center">
+                            <div className="bg-[#8B0000]/10 p-2 rounded-lg mr-3">
+                              <User className="h-4 w-4 text-[#8B0000]" />
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500">Name</p>
+                              <p className="text-sm font-medium text-[#8B0000]">
+                                {incident.submittedByFullName}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="px-6 py-3 flex items-center">
+                            <div className="bg-[#8B0000]/10 p-2 rounded-lg mr-3">
+                              <Mail className="h-4 w-4 text-[#8B0000]" />
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500">Email</p>
+                              <p className="text-sm font-medium text-[#8B0000]">
+                                {incident.submittedByEmail}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="px-6 py-3 flex items-center">
+                            <div className="bg-[#8B0000]/10 p-2 rounded-lg mr-3">
+                              <Phone className="h-4 w-4 text-[#8B0000]" />
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500">Phone</p>
+                              <p className="text-sm font-medium text-[#8B0000]">
+                                {incident.submittedByPhone || "Not provided"}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="px-6 py-3 flex items-center">
+                            <div className="bg-[#8B0000]/10 p-2 rounded-lg mr-3">
+                              <Briefcase className="h-4 w-4 text-[#8B0000]" />
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500">Role</p>
+                              <p className="text-sm font-medium text-[#8B0000]">
+                                {incident.submittedByRole || "Student"}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="px-6 py-3 flex items-center">
+                            <div className="bg-[#8B0000]/10 p-2 rounded-lg mr-3">
+                              <Tag className="h-4 w-4 text-[#8B0000]" />
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500">ID Number</p>
+                              <p className="text-sm font-medium text-[#8B0000]">
+                                {incident.submittedByIdNumber || "Not provided"}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+
+                    {/* Update History */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, delay: 0.3 }}
+                      className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden"
+                    >
+                      <div className="p-4 border-b border-[#DAA520]/20">
+                        <div className="flex items-center gap-2">
+                          <div className="bg-[#8B0000]/10 p-2 rounded-lg">
+                            <Clock className="h-5 w-5 text-[#8B0000]" />
+                          </div>
+                          <h2 className="text-lg font-semibold text-[#8B0000]">
+                            Update History
+                          </h2>
+                        </div>
+                      </div>
+                      <div className="p-0 max-h-[500px] overflow-y-auto">
+                        {updates.length === 0 ? (
+                          <div className="p-6 text-center">
+                            <div className="w-16 h-16 bg-[#8B0000]/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                              <Clock className="h-8 w-8 text-[#8B0000]" />
+                            </div>
+                            <p className="text-sm text-gray-500">
+                              No updates yet
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="divide-y divide-[#DAA520]/20">
+                            {updates.map((update, index) => (
+                              <motion.div
+                                key={update.id}
+                                className="p-4"
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{
+                                  duration: 0.2,
+                                  delay: index * 0.05,
+                                }}
+                              >
+                                <div className="flex items-start gap-3">
+                                  <div className="h-8 w-8 rounded-full bg-[#8B0000]/10 flex items-center justify-center flex-shrink-0">
+                                    <User className="h-4 w-4 text-[#8B0000]" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                                      <p className="text-sm font-medium text-[#8B0000]">
+                                        {update.updatedByName ||
+                                          update.updatedByFullName}
+                                      </p>
+                                      <p className="text-xs text-gray-500">
+                                        {formatDateTime(update.updatedAt)}
+                                      </p>
+                                    </div>
+                                    <div className="mt-2 text-sm text-gray-700 whitespace-pre-wrap bg-[#8B0000]/5 p-3 rounded-md border border-[#DAA520]/20">
+                                      {update.message}
+                                    </div>
+                                    <div className="mt-2">
+                                      <Badge
+                                        variant="outline"
+                                        className={`text-xs ${
+                                          update.visibleToReporter
+                                            ? "bg-green-50 text-green-600 border-green-200"
+                                            : "bg-red-50 text-red-600 border-red-200"
+                                        }`}
+                                      >
+                                        {update.visibleToReporter ? (
+                                          <>
+                                            <Eye className="inline-block h-3 w-3 mr-1" />
+                                            Visible to reporter
+                                          </>
+                                        ) : (
+                                          <>
+                                            <EyeOff className="inline-block h-3 w-3 mr-1" />
+                                            Not visible to reporter
+                                          </>
+                                        )}
+                                      </Badge>
+                                    </div>
+                                  </div>
+                                </div>
+                              </motion.div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

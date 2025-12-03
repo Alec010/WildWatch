@@ -345,7 +345,7 @@ export function OfficeAdminSidebar() {
 
       {/* Sidebar Container */}
       <div
-        className={`sticky top-0 left-0 h-screen z-40 bg-gradient-to-b from-[#800000] to-[#5a0000] text-white flex flex-col shadow-xl overflow-hidden flex-shrink-0 ${
+        className={`sticky top-0 left-0 h-screen z-40 bg-gradient-to-b from-[#800000] to-[#5a0000] text-white flex flex-col shadow-xl overflow-hidden flex-shrink-0 max-w-full ${
           isMobile
             ? mobileOpen
               ? "fixed left-0"
@@ -354,7 +354,7 @@ export function OfficeAdminSidebar() {
             ? "w-20"
             : "w-64"
         }`}
-        style={{ willChange: "width" }}
+        style={{ maxWidth: "100vw" }}
       >
         {/* Decorative Elements */}
         <div className="absolute top-0 right-0 w-32 h-32 bg-[#D4AF37]/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl"></div>
@@ -363,7 +363,7 @@ export function OfficeAdminSidebar() {
 
         {/* Logo Section */}
         <div
-          className={`px-4 pt-2 pb-2 ${
+          className={`px-4 pt-2 pb-2 max-w-full overflow-hidden ${
             collapsed && !isMobile ? "flex justify-center" : "px-6"
           }`}
         >
@@ -396,10 +396,10 @@ export function OfficeAdminSidebar() {
           className={`flex-1 flex flex-col ${
             collapsed && !isMobile ? "px-4" : "px-4"
           } ${
-            collapsed && !isMobile ? "pt-4" : "pt-18"
-          } pb-4 overflow-y-auto hide-scrollbar`}
+            collapsed && !isMobile ? "pt-12" : "pt-18"
+          } pb-4 overflow-y-auto overflow-x-hidden hide-scrollbar min-w-0`}
         >
-          <div className="space-y-2">
+          <div className="space-y-2 w-full max-w-full">
             {navItems.map((item) => {
               const isActive =
                 pathname === item.href ||
@@ -416,7 +416,11 @@ export function OfficeAdminSidebar() {
                         ? "bg-[#D4AF37]/20 text-[#D4AF37]"
                         : "hover:bg-white/10 text-white/90"
                     }`}
-                    style={{ minHeight: "44px", transition: "none" }}
+                    style={{
+                      minHeight: "44px",
+                      transition: "none",
+                      transform: "none",
+                    }}
                   >
                     {/* Active indicator */}
                     {isActive && (
@@ -437,7 +441,7 @@ export function OfficeAdminSidebar() {
                             ? "bg-[#D4AF37]/20 text-[#D4AF37]"
                             : "text-white/90"
                         } rounded-md p-1 flex items-center justify-center h-8`}
-                        style={{ transition: "none" }}
+                        style={{ transition: "none", transform: "none" }}
                       >
                         {item.icon}
                       </div>
@@ -446,7 +450,11 @@ export function OfficeAdminSidebar() {
                           className={`${
                             isActive ? "font-medium" : ""
                           } whitespace-nowrap`}
-                          style={{ transition: "none", fontSize: "inherit" }}
+                          style={{
+                            transition: "none",
+                            fontSize: "inherit",
+                            transform: "none",
+                          }}
                         >
                           {item.label}
                         </span>
@@ -462,7 +470,7 @@ export function OfficeAdminSidebar() {
                     {collapsed && !isMobile && (
                       <div
                         className="absolute left-full ml-2 px-2 py-1 bg-[#800000] text-white text-xs rounded opacity-0 group-hover:opacity-100 whitespace-nowrap z-50 pointer-events-none"
-                        style={{ transition: "none" }}
+                        style={{ transition: "none", transform: "none" }}
                       >
                         {item.label}
                       </div>
@@ -476,7 +484,7 @@ export function OfficeAdminSidebar() {
 
         {/* User Profile Section */}
         <div
-          className={`mt-auto border-t border-[#D4AF37]/20 ${
+          className={`mt-auto border-t border-[#D4AF37]/20 max-w-full overflow-hidden ${
             collapsed && !isMobile ? "p-4" : "p-4"
           }`}
         >
@@ -488,7 +496,7 @@ export function OfficeAdminSidebar() {
                   style={{ flexShrink: 0 }}
                 ></div>
               ) : user ? (
-                <Link href="/profile" className="group relative">
+                <Link href="office-admin/profile" className="group relative">
                   <div
                     className="w-10 h-10 rounded-full bg-[#D4AF37]/20 text-[#D4AF37] flex items-center justify-center font-medium"
                     style={{ flexShrink: 0 }}
@@ -554,7 +562,7 @@ export function OfficeAdminSidebar() {
           ) : (
             <div className="flex items-center justify-between">
               <Link
-                href="/profile"
+                href="/office-admin/profile"
                 className="flex items-center space-x-3 group"
                 style={{ transition: "none" }}
               >

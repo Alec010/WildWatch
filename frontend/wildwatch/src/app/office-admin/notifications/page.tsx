@@ -3,14 +3,15 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { OfficeAdminSidebar } from "@/components/OfficeAdminSidebar";
-import { Navbar } from "@/components/Navbar";
-import { CustomLoader } from "@/components/ui/custom-loader";
+import { OfficeAdminNavbar } from "@/components/OfficeAdminNavbar";
+import { PageLoader } from "@/components/PageLoader";
 import {
   Bell,
   CheckCircle,
   ChevronRight,
   BellOff,
   AlertTriangle,
+  AlertCircle,
   Info,
   Shield,
   TrendingUp,
@@ -23,9 +24,9 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { API_BASE_URL } from "@/utils/api";
-import { useSidebar } from "@/contexts/SidebarContext";
 import { Inter } from "next/font/google";
 import { parseUTCDate } from "@/utils/dateUtils";
+import { Button } from "@/components/ui/button";
 
 interface ActivityLog {
   id: string;
@@ -46,11 +47,6 @@ export default function OfficeAdminNotificationsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-  const { collapsed } = useSidebar();
-
-  const getContentMargin = () => {
-    return collapsed ? "ml-20" : "ml-72";
-  };
 
   useEffect(() => {
     const fetchLogs = async () => {
@@ -298,25 +294,22 @@ export default function OfficeAdminNotificationsPage() {
   if (loading) {
     return (
       <div
-        className={`min-h-screen flex bg-gradient-to-br from-[#fafafa] via-white to-[#f8f9fa] ${inter.className}`}
+        className={`flex-1 flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9] ${inter.className}`}
       >
         <OfficeAdminSidebar />
-        <div
-          className={`flex-1 relative transition-all duration-300 ${getContentMargin()}`}
-        >
-          <Navbar
-            title="Admin Notifications"
-            subtitle="Loading administrative notifications..."
-            showSearch={false}
-            showNewIncident={false}
-          />
-          <div className="pt-24">
-            <CustomLoader
-              title="Loading admin notifications..."
-              subtitle="Fetching system and incident updates"
-              contentOnly
+
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          {/* Navbar */}
+          <div className="sticky top-0 z-30 flex-shrink-0">
+            <OfficeAdminNavbar
+              title="Admin Notifications"
+              subtitle="Loading administrative notifications..."
             />
           </div>
+
+          {/* PageLoader - fills the remaining space below Navbar */}
+          <PageLoader pageTitle="notifications" />
         </div>
       </div>
     );
@@ -325,36 +318,42 @@ export default function OfficeAdminNotificationsPage() {
   if (error) {
     return (
       <div
-        className={`min-h-screen flex bg-gradient-to-br from-[#fafafa] via-white to-[#f8f9fa] ${inter.className}`}
+        className={`flex-1 flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9] ${inter.className}`}
       >
         <OfficeAdminSidebar />
-        <div
-          className={`flex-1 transition-all duration-300 ${getContentMargin()}`}
-        >
-          <Navbar
-            title="Admin Notifications"
-            subtitle="Error loading notifications"
-            showSearch={false}
-            showNewIncident={false}
-          />
-          <div className="pt-24 px-6 pb-10">
-            <div className="max-w-4xl mx-auto">
-              <div className="bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-2xl p-8 shadow-xl">
-                <div className="flex items-center gap-6">
-                  <div className="p-4 bg-red-500 rounded-full shadow-lg">
-                    <AlertTriangle className="h-8 w-8 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="text-red-800 font-bold text-xl mb-2">
-                      Unable to Load Notifications
-                    </h3>
-                    <p className="text-red-700 text-lg">{error}</p>
-                    <button
-                      onClick={() => window.location.reload()}
-                      className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                    >
-                      Try Again
-                    </button>
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          {/* Navbar */}
+          <div className="sticky top-0 z-30 flex-shrink-0">
+            <OfficeAdminNavbar
+              title="Admin Notifications"
+              subtitle="Error loading notifications"
+            />
+          </div>
+
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-y-auto bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9]">
+            <div className="px-6 py-10">
+              <div className="max-w-7xl mx-auto">
+                <div className="bg-red-50 border border-red-200 rounded-lg p-6 shadow-sm">
+                  <div className="flex items-start gap-4">
+                    <div className="bg-red-100 p-3 rounded-full">
+                      <AlertTriangle className="h-6 w-6 text-red-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-red-800 mb-2">
+                        Unable to Load Notifications
+                      </h3>
+                      <p className="text-red-700">{error}</p>
+                      <Button
+                        className="mt-4 bg-[#8B0000] hover:bg-[#6B0000] text-white"
+                        onClick={() =>
+                          typeof window !== "undefined" &&
+                          window.location.reload()
+                        }
+                      >
+                        <AlertCircle className="mr-2 h-4 w-4" /> Try Again
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -367,154 +366,159 @@ export default function OfficeAdminNotificationsPage() {
 
   return (
     <div
-      className={`min-h-screen flex bg-gradient-to-br from-[#fafafa] via-white to-[#f8f9fa] ${inter.className}`}
+      className={`flex-1 flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9] ${inter.className}`}
     >
       <OfficeAdminSidebar />
 
-      <div
-        className={`flex-1 transition-all duration-300 ${getContentMargin()}`}
-      >
-        <Navbar
-          title="Admin Notifications"
-          subtitle={`${
-            unreadCount > 0
-              ? `${unreadCount} unread notifications`
-              : "All administrative updates reviewed"
-          }`}
-          showSearch={false}
-          showNewIncident={false}
-        />
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* Navbar */}
+        <div className="sticky top-0 z-30 flex-shrink-0">
+          <OfficeAdminNavbar
+            title="Admin Notifications"
+            subtitle={`${
+              unreadCount > 0
+                ? `${unreadCount} unread notifications`
+                : "All administrative updates reviewed"
+            }`}
+          />
+        </div>
 
-        <div className="pt-24 px-4 pb-6">
-          {/* Notifications Content */}
-          <div className="max-w-[60vw] mx-auto mt-4">
-            {logs.length === 0 ? (
-              <div className="text-center py-20">
-                <div className="max-w-lg mx-auto">
-                  <div className="w-32 h-32 bg-gradient-to-br from-slate-100 to-slate-200 rounded-full flex items-center justify-center mx-auto mb-8 shadow-lg">
-                    <BellOff className="h-16 w-16 text-slate-400" />
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9]">
+          <div className="px-6 py-10 mt-20">
+            {/* Notifications Content */}
+            <div className="max-w-7xl mx-auto">
+              {logs.length === 0 ? (
+                <div className="text-center py-20">
+                  <div className="max-w-lg mx-auto">
+                    <div className="w-32 h-32 bg-gradient-to-br from-slate-100 to-slate-200 rounded-full flex items-center justify-center mx-auto mb-8 shadow-lg">
+                      <BellOff className="h-16 w-16 text-slate-400" />
+                    </div>
+                    <h3 className="text-3xl font-bold text-slate-800 mb-4">
+                      All Caught Up!
+                    </h3>
+                    <p className="text-slate-600 text-lg leading-relaxed">
+                      You don't have any notifications at the moment.
+                      <br />
+                      We'll notify you when there's new activity or updates.
+                    </p>
                   </div>
-                  <h3 className="text-3xl font-bold text-slate-800 mb-4">
-                    All Caught Up!
-                  </h3>
-                  <p className="text-slate-600 text-lg leading-relaxed">
-                    You don't have any notifications at the moment.
-                    <br />
-                    We'll notify you when there's new activity or updates.
-                  </p>
                 </div>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {logs.map((log, index) => {
-                  const colors = getNotificationColor(
-                    log.activityType,
-                    log.isRead
-                  );
-                  return (
-                    <Card
-                      key={log.id}
-                      className={cn(
-                        "transition-all duration-300 hover:shadow-xl cursor-pointer group border-l-4 overflow-hidden",
-                        colors.bg,
-                        colors.border,
-                        colors.accent,
-                        log.isRead ? "opacity-75" : "opacity-100"
-                      )}
-                      onClick={() => handleLogClick(log)}
-                      style={{
-                        animationName: "fadeInUp",
-                        animationDuration: "0.6s",
-                        animationTimingFunction: "ease-out",
-                        animationFillMode: "forwards",
-                        animationDelay: `${index * 100}ms`,
-                      }}
-                    >
-                      <div className="p-4">
-                        <div className="flex items-start gap-3">
-                          {/* Notification Icon */}
-                          <div
-                            className={cn(
-                              "p-2 rounded-lg shadow-md transition-all duration-300 group-hover:scale-110",
-                              colors.iconBg,
-                              "text-white"
-                            )}
-                          >
-                            {getNotificationIcon(log.activityType)}
-                          </div>
-
-                          {/* Notification Content */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex justify-between items-start mb-1">
-                              <h3
-                                className={cn(
-                                  "font-bold text-base",
-                                  log.isRead
-                                    ? "text-slate-700"
-                                    : "text-slate-900"
-                                )}
-                              >
-                                {formatActivityType(log.activityType)}
-                              </h3>
-                              <div className="flex items-center gap-2 ml-4">
-                                {!log.isRead && (
-                                  <div className="w-2 h-2 bg-[#800000] rounded-full animate-pulse shadow-lg"></div>
-                                )}
-                                <div className="flex items-center gap-1 text-slate-500 text-xs bg-white/50 px-2 py-0.5 rounded-lg">
-                                  <Calendar className="h-3 w-3" />
-                                  <span className="whitespace-nowrap">
-                                    {formatDate(log.createdAt)}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-
-                            <p
+              ) : (
+                <div className="space-y-4">
+                  {logs.map((log, index) => {
+                    const colors = getNotificationColor(
+                      log.activityType,
+                      log.isRead
+                    );
+                    return (
+                      <Card
+                        key={log.id}
+                        className={cn(
+                          "transition-all duration-300 hover:shadow-xl cursor-pointer group border-l-4 overflow-hidden",
+                          colors.bg,
+                          colors.border,
+                          colors.accent,
+                          log.isRead ? "opacity-75" : "opacity-100"
+                        )}
+                        onClick={() => handleLogClick(log)}
+                        style={{
+                          animationName: "fadeInUp",
+                          animationDuration: "0.6s",
+                          animationTimingFunction: "ease-out",
+                          animationFillMode: "forwards",
+                          animationDelay: `${index * 100}ms`,
+                        }}
+                      >
+                        <div className="p-4">
+                          <div className="flex items-start gap-3">
+                            {/* Notification Icon */}
+                            <div
                               className={cn(
-                                "text-sm leading-relaxed mb-2",
-                                log.isRead ? "text-slate-600" : "text-slate-800"
+                                "p-2 rounded-lg shadow-md transition-all duration-300 group-hover:scale-110",
+                                colors.iconBg,
+                                "text-white"
                               )}
                             >
-                              {log.description}
-                            </p>
+                              {getNotificationIcon(log.activityType)}
+                            </div>
 
-                            {/* Action Area */}
-                            {log.incident && log.incident.id && (
-                              <div className="flex items-center justify-between pt-2 border-t border-white/50">
-                                <div className="flex items-center gap-2 text-xs text-slate-600">
-                                  <FileText className="h-3 w-3" />
-                                  <span>
-                                    Incident #{log.incident.id.slice(-6)}
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-2 text-[#800000] font-semibold text-sm group-hover:text-[#600000] transition-colors">
-                                  <span>View Details</span>
-                                  <ChevronRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
+                            {/* Notification Content */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex justify-between items-start mb-1">
+                                <h3
+                                  className={cn(
+                                    "font-bold text-base",
+                                    log.isRead
+                                      ? "text-slate-700"
+                                      : "text-slate-900"
+                                  )}
+                                >
+                                  {formatActivityType(log.activityType)}
+                                </h3>
+                                <div className="flex items-center gap-2 ml-4">
+                                  {!log.isRead && (
+                                    <div className="w-2 h-2 bg-[#800000] rounded-full animate-pulse shadow-lg"></div>
+                                  )}
+                                  <div className="flex items-center gap-1 text-slate-500 text-xs bg-white/50 px-2 py-0.5 rounded-lg">
+                                    <Calendar className="h-3 w-3" />
+                                    <span className="whitespace-nowrap">
+                                      {formatDate(log.createdAt)}
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
-                            )}
-                          </div>
 
-                          {/* Read Status Indicator */}
-                          <div className="flex flex-col items-center gap-2">
-                            {log.isRead ? (
-                              <CheckCircle className="h-4 w-4 text-green-500" />
-                            ) : (
-                              <div className="h-4 w-4 rounded-full bg-[#800000] flex items-center justify-center shadow-lg">
-                                <div className="h-2 w-2 rounded-full bg-white animate-pulse" />
-                              </div>
-                            )}
+                              <p
+                                className={cn(
+                                  "text-sm leading-relaxed mb-2",
+                                  log.isRead
+                                    ? "text-slate-600"
+                                    : "text-slate-800"
+                                )}
+                              >
+                                {log.description}
+                              </p>
+
+                              {/* Action Area */}
+                              {log.incident && log.incident.id && (
+                                <div className="flex items-center justify-between pt-2 border-t border-white/50">
+                                  <div className="flex items-center gap-2 text-xs text-slate-600">
+                                    <FileText className="h-3 w-3" />
+                                    <span>
+                                      Incident #{log.incident.id.slice(-6)}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2 text-[#800000] font-semibold text-sm group-hover:text-[#600000] transition-colors">
+                                    <span>View Details</span>
+                                    <ChevronRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Read Status Indicator */}
+                            <div className="flex flex-col items-center gap-2">
+                              {log.isRead ? (
+                                <CheckCircle className="h-4 w-4 text-green-500" />
+                              ) : (
+                                <div className="h-4 w-4 rounded-full bg-[#800000] flex items-center justify-center shadow-lg">
+                                  <div className="h-2 w-2 rounded-full bg-white animate-pulse" />
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      {/* Hover Effect Overlay */}
-                      <div className="absolute inset-0 bg-gradient-to-r from-[#800000]/5 to-[#D4AF37]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
+                        {/* Hover Effect Overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-r from-[#800000]/5 to-[#D4AF37]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

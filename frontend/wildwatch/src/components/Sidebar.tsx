@@ -391,7 +391,7 @@ export function Sidebar() {
 
       {/* Sidebar Container */}
       <div
-        className={`sticky top-0 left-0 h-screen z-40 bg-gradient-to-b from-[#800000] to-[#5a0000] text-white flex flex-col shadow-xl overflow-hidden flex-shrink-0 ${
+        className={`sticky top-0 left-0 h-screen z-40 bg-gradient-to-b from-[#800000] to-[#5a0000] text-white flex flex-col shadow-xl overflow-hidden flex-shrink-0 max-w-full ${
           isMobile
             ? mobileOpen
               ? "fixed left-0"
@@ -400,11 +400,11 @@ export function Sidebar() {
             ? "w-20"
             : "w-64"
         }`}
-        style={{ willChange: "width" }}
+        style={{ willChange: "width", maxWidth: "100vw" }}
       >
         {/* Logo Section */}
         <div
-          className={`p-2 ${
+          className={`p-2 max-w-full overflow-hidden ${
             collapsed && !isMobile ? "flex justify-center" : "px-4"
           }`}
         >
@@ -433,9 +433,9 @@ export function Sidebar() {
         <nav
           className={`flex-1 ${collapsed && !isMobile ? "px-4" : "px-4"} ${
             collapsed && !isMobile ? "pt-4" : "pt-18"
-          } pb-4 overflow-y-auto hide-scrollbar`}
+          } pb-4 overflow-y-auto overflow-x-hidden hide-scrollbar min-w-0`}
         >
-          <div className="space-y-2 w-full">
+          <div className="space-y-2 w-full max-w-full">
             {navItems.map((item) => {
               const isActive =
                 pathname === item.href ||
@@ -512,7 +512,7 @@ export function Sidebar() {
 
         {/* User Profile Section */}
         <div
-          className={`mt-auto border-t border-[#D4AF37]/20 ${
+          className={`mt-auto border-t border-[#D4AF37]/20 max-w-full overflow-hidden ${
             collapsed && !isMobile ? "p-4 pb-2" : "p-4"
           }`}
         >

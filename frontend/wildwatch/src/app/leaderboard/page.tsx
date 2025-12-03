@@ -680,7 +680,11 @@ export default function LeaderboardPage() {
         </div>
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9]">
+        <div
+          className={`flex-1 overflow-y-auto bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9] ${
+            userRole === "OFFICE_ADMIN" ? "mt-16" : ""
+          }`}
+        >
           <div className="px-6 py-10 relative z-10">
             {/* Decorative elements */}
             <div className="pointer-events-none fixed right-[-40px] top-[-20px] opacity-[0.08] z-0"></div>
@@ -692,7 +696,7 @@ export default function LeaderboardPage() {
               {/* Tabs */}
               <SegmentedTabs selected={selectedTab} onSelect={setSelectedTab} />
 
-              <div className="px-4 mt-4">
+              <div className="px-4 mt-18">
                 {/* Podium */}
                 {list.length > 0 && (
                   <LeaderboardPodium
