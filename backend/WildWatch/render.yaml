@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: wildwatch-backend
+    env: java
+    buildCommand: ./mvnw clean package -DskipTests
+    startCommand: TZ=Asia/Singapore java -jar target/WildWatch-0.0.1-SNAPSHOT.jar
+    envVars:
+      - key: TZ
+        value: Asia/Singapore
+      - key: DB_URL
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: MS_CLIENT_ID
+        sync: false
+      - key: MS_CLIENT_SECRET
+        sync: false
+      - key: MS_TENANT_ID
+        sync: false
+      - key: MS_REDIRECT_URI
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false 
