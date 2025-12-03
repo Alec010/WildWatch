@@ -8,6 +8,8 @@ import TokenInitializer from "@/components/TokenInitializer";
 import { AppLoader } from "@/components/AppLoader";
 import { MobileAppDownload } from "@/components/MobileAppDownload";
 import { Toaster } from "sonner";
+import LayoutWrapper from "@/components/LayoutWrapper";
+import ImagePreloader from "@/components/ImagePreloader";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -21,7 +23,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "WildWatch",
-  description: "Official incident reporting system for Cebu Institute of Technology - University",
+  description:
+    "Official incident reporting system for Cebu Institute of Technology - University",
   icons: {
     icon: "/logo2.png",
     shortcut: "/logo2.png",
@@ -35,19 +38,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="overflow-hidden h-full">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased overflow-hidden h-full max-w-full`}
       >
+        <ImagePreloader />
         <SidebarProvider>
           <UserProvider>
             <AppLoader>
               <TokenInitializer />
-              {children}
+              <LayoutWrapper>{children}</LayoutWrapper>
               <ClientChatbot />
               <MobileAppDownload />
-              <Toaster 
-                position="top-right" 
+              <Toaster
+                position="top-right"
                 richColors
                 toastOptions={{
                   classNames: {

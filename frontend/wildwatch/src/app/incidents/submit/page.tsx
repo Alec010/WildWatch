@@ -38,9 +38,9 @@ import { Badge } from "@/components/ui/badge";
 import LocationPicker from "@/components/LocationPicker";
 import { LocationData } from "@/utils/locationService";
 import { motion, AnimatePresence } from "framer-motion";
-import { useSidebar } from "@/contexts/SidebarContext";
 import { Navbar } from "@/components/Navbar";
 import { toast } from "sonner";
+import { PageLoader } from "@/components/PageLoader";
 import {
   Dialog,
   DialogContent,
@@ -52,7 +52,6 @@ import {
 
 export default function IncidentSubmissionPage() {
   const router = useRouter();
-  const { collapsed } = useSidebar();
   const [formData, setFormData] = useState({
     incidentType: "",
     dateOfIncident: "",
@@ -192,7 +191,6 @@ export default function IncidentSubmissionPage() {
     if (isClearing) {
       // User is starting to select a new location
       setIsSelectingLocation(true);
-      console.log("Location selection started - validation disabled");
 
       // Clear location error immediately when user starts selecting
       if (formErrors.location) {
@@ -205,7 +203,6 @@ export default function IncidentSubmissionPage() {
     } else {
       // User has completed location selection
       setIsSelectingLocation(false);
-      console.log("Location selection completed - validation enabled");
     }
 
     setFormData((prev) => ({
@@ -372,7 +369,7 @@ export default function IncidentSubmissionPage() {
 
       // Store all generated tags (20 tags)
       setTags(allGeneratedTags);
-      
+
       // Store all 20 tags in formData for submission
       setFormData((prev) => ({ ...prev, allTags: allGeneratedTags }));
 
@@ -444,579 +441,590 @@ export default function IncidentSubmissionPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex bg-[#f8f8f8]">
+      <div className="flex-1 flex bg-[#f8f8f8]">
         <Sidebar />
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <div className="relative">
-              <div className="absolute inset-0 rounded-full bg-gradient-to-r from-[#800000] to-[#D4AF37] opacity-30 blur-lg animate-pulse"></div>
-              <div className="relative animate-spin rounded-full h-16 w-16 border-4 border-[#D4AF37] border-t-transparent"></div>
-            </div>
-            <p className="mt-6 text-gray-600 font-medium">Loading form...</p>
+
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          {/* Navbar */}
+          <div className="sticky top-0 z-30 flex-shrink-0">
+            <Navbar
+              title="Report an Incident"
+              subtitle="Submit details about a security incident or concern"
+              showSearch={false}
+            />
           </div>
+
+          {/* PageLoader - fills the remaining space below Navbar */}
+          <PageLoader pageTitle="incident form" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex bg-[#f8f8f8]">
+    <div className="flex-1 flex bg-[#f8f8f8]">
       <Sidebar />
 
-      {/* Main Content */}
-      <div
-        className={`flex-1 transition-all duration-300 ${
-          collapsed ? "ml-20" : "ml-64"
-        }`}
-      >
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Navbar */}
-        <Navbar
-          title="Report an Incident"
-          subtitle="Submit details about a security incident or concern"
-          showSearch={false}
-        />
+        <div className="sticky top-0 z-30 flex-shrink-0">
+          <Navbar
+            title="Report an Incident"
+            subtitle="Submit details about a security incident or concern"
+            showSearch={false}
+          />
+        </div>
 
-        {/* Content */}
-        <div className="pt-24 px-6 pb-10">
-          {/* Progress Indicator */}
-          <div className="mb-8 bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-            <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-6">
-              <div className="flex-shrink-0">
-                <div className="w-16 h-16 rounded-full bg-[#800000]/10 flex items-center justify-center">
-                  <AlertTriangle className="h-8 w-8 text-[#800000]" />
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto bg-[#f8f8f8]">
+          <div className="px-6 py-10">
+            {/* Progress Indicator */}
+            <div className="mb-8 bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+              <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-6">
+                <div className="flex-shrink-0">
+                  <div className="w-16 h-16 rounded-full bg-[#800000]/10 flex items-center justify-center">
+                    <AlertTriangle className="h-8 w-8 text-[#800000]" />
+                  </div>
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold text-[#800000] mb-1">
+                    Report an Incident
+                  </h1>
+                  <p className="text-gray-600">
+                    Complete the form below to report a security incident. Your
+                    report helps keep our campus safe.
+                  </p>
+                </div>
+                <div className="md:ml-auto flex-shrink-0 bg-[#800000]/5 rounded-full px-4 py-2 flex items-center">
+                  <div className="mr-2 text-sm font-medium text-[#800000]">
+                    Completion:
+                  </div>
+                  <div className="w-24 h-2.5 bg-gray-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-[#800000] rounded-full transition-all duration-500"
+                      style={{ width: `${getCompletionPercentage()}%` }}
+                    ></div>
+                  </div>
+                  <div className="ml-2 text-sm font-medium text-[#800000]">
+                    {getCompletionPercentage()}%
+                  </div>
                 </div>
               </div>
-              <div>
-                <h1 className="text-2xl font-bold text-[#800000] mb-1">
-                  Report an Incident
-                </h1>
-                <p className="text-gray-600">
-                  Complete the form below to report a security incident. Your
-                  report helps keep our campus safe.
-                </p>
-              </div>
-              <div className="md:ml-auto flex-shrink-0 bg-[#800000]/5 rounded-full px-4 py-2 flex items-center">
-                <div className="mr-2 text-sm font-medium text-[#800000]">
-                  Completion:
+
+              <div className="relative">
+                <div className="absolute top-0 left-0 w-full h-2 bg-gray-200 rounded-full">
+                  <div className="h-full w-1/3 bg-[#800000] rounded-full"></div>
                 </div>
-                <div className="w-24 h-2.5 bg-gray-200 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-[#800000] rounded-full transition-all duration-500"
-                    style={{ width: `${getCompletionPercentage()}%` }}
-                  ></div>
-                </div>
-                <div className="ml-2 text-sm font-medium text-[#800000]">
-                  {getCompletionPercentage()}%
+
+                <div className="pt-8 grid grid-cols-3 gap-4">
+                  <div className="flex flex-col items-center">
+                    <div className="bg-[#800000] text-white rounded-full w-10 h-10 flex items-center justify-center text-sm font-medium mb-2">
+                      1
+                    </div>
+                    <span className="text-sm font-medium text-[#800000]">
+                      Incident Details
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col items-center opacity-50">
+                    <div className="bg-gray-300 text-gray-600 rounded-full w-10 h-10 flex items-center justify-center text-sm font-medium mb-2">
+                      2
+                    </div>
+                    <span className="text-sm text-gray-600">
+                      Evidence & Witnesses
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col items-center opacity-50">
+                    <div className="bg-gray-300 text-gray-600 rounded-full w-10 h-10 flex items-center justify-center text-sm font-medium mb-2">
+                      3
+                    </div>
+                    <span className="text-sm text-gray-600">
+                      Review & Submit
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div className="relative">
-              <div className="absolute top-0 left-0 w-full h-2 bg-gray-200 rounded-full">
-                <div className="h-full w-1/3 bg-[#800000] rounded-full"></div>
-              </div>
-
-              <div className="pt-8 grid grid-cols-3 gap-4">
-                <div className="flex flex-col items-center">
-                  <div className="bg-[#800000] text-white rounded-full w-10 h-10 flex items-center justify-center text-sm font-medium mb-2">
-                    1
+            {/* Important Note Card */}
+            <div className="mb-8">
+              <Card className="bg-[#FFF8E1] rounded-xl shadow-sm border border-[#D4AF37]/30 overflow-hidden">
+                <div className="p-6">
+                  <div className="flex items-start gap-3">
+                    <div className="bg-[#D4AF37]/20 p-2 rounded-full">
+                      <AlertTriangle className="h-5 w-5 text-[#D4AF37]" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-800 mb-1">
+                        Important Note
+                      </h3>
+                      <p className="text-xs text-gray-600">
+                        In case of an emergency or immediate danger, please
+                        contact Campus Security directly at{" "}
+                        <span className="font-medium text-[#800000]">
+                          +1 (555) 123-4567
+                        </span>{" "}
+                        or call{" "}
+                        <span className="font-medium text-[#800000]">911</span>.
+                      </p>
+                    </div>
                   </div>
-                  <span className="text-sm font-medium text-[#800000]">
-                    Incident Details
-                  </span>
                 </div>
-
-                <div className="flex flex-col items-center opacity-50">
-                  <div className="bg-gray-300 text-gray-600 rounded-full w-10 h-10 flex items-center justify-center text-sm font-medium mb-2">
-                    2
-                  </div>
-                  <span className="text-sm text-gray-600">
-                    Evidence & Witnesses
-                  </span>
-                </div>
-
-                <div className="flex flex-col items-center opacity-50">
-                  <div className="bg-gray-300 text-gray-600 rounded-full w-10 h-10 flex items-center justify-center text-sm font-medium mb-2">
-                    3
-                  </div>
-                  <span className="text-sm text-gray-600">Review & Submit</span>
-                </div>
-              </div>
+              </Card>
             </div>
-          </div>
 
-          {/* Important Note Card */}
-          <div className="mb-8">
-            <Card className="bg-[#FFF8E1] rounded-xl shadow-sm border border-[#D4AF37]/30 overflow-hidden">
-              <div className="p-6">
-                <div className="flex items-start gap-3">
-                  <div className="bg-[#D4AF37]/20 p-2 rounded-full">
-                    <AlertTriangle className="h-5 w-5 text-[#D4AF37]" />
+            {/* Form and Help Side by Side */}
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr,320px] gap-6">
+              {/* Incident Form */}
+              <div className="space-y-6">
+                <Card className="bg-white shadow-sm border-0 rounded-xl overflow-hidden">
+                  <div className="border-b border-gray-100">
+                    <div className="flex items-center gap-2 p-6">
+                      <FileText className="text-[#800000] h-5 w-5" />
+                      <h2 className="text-lg font-semibold text-gray-800">
+                        Incident Information
+                      </h2>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-800 mb-1">
-                      Important Note
-                    </h3>
-                    <p className="text-xs text-gray-600">
-                      In case of an emergency or immediate danger, please
-                      contact Campus Security directly at{" "}
-                      <span className="font-medium text-[#800000]">
-                        +1 (555) 123-4567
-                      </span>{" "}
-                      or call{" "}
-                      <span className="font-medium text-[#800000]">911</span>.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </Card>
-          </div>
 
-          {/* Form and Help Side by Side */}
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr,320px] gap-6">
-            {/* Incident Form */}
-            <div className="space-y-6">
-              <Card className="bg-white shadow-sm border-0 rounded-xl overflow-hidden">
-                <div className="border-b border-gray-100">
-                  <div className="flex items-center gap-2 p-6">
-                    <FileText className="text-[#800000] h-5 w-5" />
-                    <h2 className="text-lg font-semibold text-gray-800">
-                      Incident Information
-                    </h2>
-                  </div>
-                </div>
+                  <form
+                    id="incident-form"
+                    onSubmit={handleSubmit}
+                    className="p-6 space-y-6"
+                  >
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label
+                          htmlFor="incidentType"
+                          className="text-sm font-medium flex items-center"
+                        >
+                          Incident Title{" "}
+                          <span className="text-[#800000] ml-1">*</span>
+                          <div className="flex items-center ml-1.5">
+                            <HelpCircle className="h-3.5 w-3.5 text-gray-400" />
+                            <span className="text-xs text-gray-500 ml-1.5">
+                              Provide a brief, descriptive title that summarizes
+                              the incident (e.g., "Broken Monitor in Computer
+                              Lab", "Theft of Personal Belongings").
+                            </span>
+                          </div>
+                        </Label>
+                        <div className="relative">
+                          <AlertTriangle className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#800000]/70" />
+                          <Input
+                            id="incidentType"
+                            name="incidentType"
+                            placeholder="E.g., Broken Monitor in Computer Lab, Theft of Personal Belongings"
+                            value={formData.incidentType}
+                            onChange={handleInputChange}
+                            className={`pl-10 border-gray-200 focus:border-[#800000] focus:ring-[#800000]/20 rounded-lg ${
+                              formErrors.incidentType
+                                ? "border-red-300 focus:border-red-500 focus:ring-red-200"
+                                : ""
+                            }`}
+                          />
+                        </div>
+                        {formErrors.incidentType && (
+                          <p className="text-red-500 text-xs mt-1 flex items-center">
+                            <AlertCircle className="h-3 w-3 mr-1" />
+                            {formErrors.incidentType}
+                          </p>
+                        )}
+                      </div>
 
-                <form
-                  id="incident-form"
-                  onSubmit={handleSubmit}
-                  className="p-6 space-y-6"
-                >
-                  <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label
+                            htmlFor="dateOfIncident"
+                            className="text-sm font-medium flex items-center"
+                          >
+                            Date of Incident{" "}
+                            <span className="text-[#800000] ml-1">*</span>
+                          </Label>
+                          <div className="space-y-2">
+                            <div className="relative">
+                              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#800000]/70" />
+                              <Input
+                                id="dateOfIncident"
+                                type="date"
+                                name="dateOfIncident"
+                                value={formData.dateOfIncident}
+                                onChange={handleInputChange}
+                                max={getLocalDateString()}
+                                className={`pl-10 border-gray-200 focus:border-[#800000] focus:ring-[#800000]/20 rounded-lg ${
+                                  formErrors.dateOfIncident
+                                    ? "border-red-300 focus:border-red-500 focus:ring-red-200"
+                                    : ""
+                                }`}
+                              />
+                            </div>
+                            <Button
+                              type="button"
+                              onClick={handleUseCurrentDate}
+                              variant="outline"
+                              size="sm"
+                              className="w-full border-[#800000]/30 text-[#800000] hover:bg-[#800000] hover:text-white flex items-center gap-2"
+                            >
+                              <Clock className="h-3 w-3" />
+                              Use Current Date
+                            </Button>
+                          </div>
+                          {formErrors.dateOfIncident && (
+                            <p className="text-red-500 text-xs mt-1 flex items-center">
+                              <AlertCircle className="h-3 w-3 mr-1" />
+                              {formErrors.dateOfIncident}
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label
+                            htmlFor="timeOfIncident"
+                            className="text-sm font-medium flex items-center"
+                          >
+                            Time of Incident{" "}
+                            <span className="text-[#800000] ml-1">*</span>
+                          </Label>
+                          <div className="space-y-2">
+                            <div className="relative">
+                              <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#800000]/70" />
+                              <Input
+                                id="timeOfIncident"
+                                type="time"
+                                name="timeOfIncident"
+                                value={formData.timeOfIncident}
+                                onChange={handleInputChange}
+                                className={`pl-10 border-gray-200 focus:border-[#800000] focus:ring-[#800000]/20 rounded-lg ${
+                                  formErrors.timeOfIncident
+                                    ? "border-red-300 focus:border-red-500 focus:ring-red-200"
+                                    : ""
+                                }`}
+                              />
+                            </div>
+                            <Button
+                              type="button"
+                              onClick={handleUseCurrentTime}
+                              variant="outline"
+                              size="sm"
+                              className="w-full border-[#800000]/30 text-[#800000] hover:bg-[#800000] hover:text-white flex items-center gap-2"
+                            >
+                              <Clock className="h-3 w-3" />
+                              Use Current Time
+                            </Button>
+                          </div>
+                          {formErrors.timeOfIncident && (
+                            <p className="text-red-500 text-xs mt-1 flex items-center">
+                              <AlertCircle className="h-3 w-3 mr-1" />
+                              {formErrors.timeOfIncident}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <LocationPicker
+                        onLocationSelect={handleLocationSelect}
+                        initialLocation={
+                          formData.latitude && formData.longitude
+                            ? {
+                                latitude: formData.latitude,
+                                longitude: formData.longitude,
+                                formattedAddress: formData.formattedAddress,
+                                building: formData.building,
+                                buildingName: formData.buildingName,
+                                buildingCode: formData.buildingCode,
+                                room: formData.room,
+                              }
+                            : undefined
+                        }
+                        required={true}
+                        className="space-y-2"
+                      />
+                      {formErrors.location && (
+                        <p className="text-red-500 text-xs mt-1 flex items-center">
+                          <AlertCircle className="h-3 w-3 mr-1" />
+                          {formErrors.location}
+                        </p>
+                      )}
+                    </div>
+                  </form>
+                </Card>
+
+                <Card className="bg-white shadow-sm border-0 rounded-xl overflow-hidden">
+                  <div className="border-b border-gray-100">
+                    <div className="flex items-center gap-2 p-6">
+                      <FileText className="text-[#800000] h-5 w-5" />
+                      <h2 className="text-lg font-semibold text-gray-800">
+                        Incident Description
+                      </h2>
+                    </div>
+                  </div>
+
+                  <div className="p-6 space-y-4">
                     <div className="space-y-2">
                       <Label
-                        htmlFor="incidentType"
+                        htmlFor="description"
                         className="text-sm font-medium flex items-center"
                       >
-                        Incident Title{" "}
+                        Description{" "}
                         <span className="text-[#800000] ml-1">*</span>
                         <div className="flex items-center ml-1.5">
                           <HelpCircle className="h-3.5 w-3.5 text-gray-400" />
                           <span className="text-xs text-gray-500 ml-1.5">
-                            Provide a brief, descriptive title that summarizes the incident (e.g., "Broken Monitor in Computer Lab", "Theft of Personal Belongings").
+                            Provide a detailed account of what happened,
+                            including any relevant context
                           </span>
                         </div>
                       </Label>
-                      <div className="relative">
-                        <AlertTriangle className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#800000]/70" />
-                        <Input
-                          id="incidentType"
-                          name="incidentType"
-                          placeholder="E.g., Broken Monitor in Computer Lab, Theft of Personal Belongings"
-                          value={formData.incidentType}
-                          onChange={handleInputChange}
-                          className={`pl-10 border-gray-200 focus:border-[#800000] focus:ring-[#800000]/20 rounded-lg ${
-                            formErrors.incidentType
-                              ? "border-red-300 focus:border-red-500 focus:ring-red-200"
-                              : ""
-                          }`}
-                        />
-                      </div>
-                      {formErrors.incidentType && (
-                        <p className="text-red-500 text-xs mt-1 flex items-center">
-                          <AlertCircle className="h-3 w-3 mr-1" />
-                          {formErrors.incidentType}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label
-                          htmlFor="dateOfIncident"
-                          className="text-sm font-medium flex items-center"
-                        >
-                          Date of Incident{" "}
-                          <span className="text-[#800000] ml-1">*</span>
-                        </Label>
-                        <div className="space-y-2">
-                          <div className="relative">
-                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#800000]/70" />
-                            <Input
-                              id="dateOfIncident"
-                              type="date"
-                              name="dateOfIncident"
-                              value={formData.dateOfIncident}
-                              onChange={handleInputChange}
-                              max={getLocalDateString()}
-                              className={`pl-10 border-gray-200 focus:border-[#800000] focus:ring-[#800000]/20 rounded-lg ${
-                                formErrors.dateOfIncident
-                                  ? "border-red-300 focus:border-red-500 focus:ring-red-200"
-                                  : ""
-                              }`}
-                            />
-                          </div>
-                          <Button
-                            type="button"
-                            onClick={handleUseCurrentDate}
-                            variant="outline"
-                            size="sm"
-                            className="w-full border-[#800000]/30 text-[#800000] hover:bg-[#800000] hover:text-white flex items-center gap-2"
-                          >
-                            <Clock className="h-3 w-3" />
-                            Use Current Date
-                          </Button>
-                        </div>
-                        {formErrors.dateOfIncident && (
-                          <p className="text-red-500 text-xs mt-1 flex items-center">
-                            <AlertCircle className="h-3 w-3 mr-1" />
-                            {formErrors.dateOfIncident}
-                          </p>
-                        )}
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label
-                          htmlFor="timeOfIncident"
-                          className="text-sm font-medium flex items-center"
-                        >
-                          Time of Incident{" "}
-                          <span className="text-[#800000] ml-1">*</span>
-                        </Label>
-                        <div className="space-y-2">
-                          <div className="relative">
-                            <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#800000]/70" />
-                            <Input
-                              id="timeOfIncident"
-                              type="time"
-                              name="timeOfIncident"
-                              value={formData.timeOfIncident}
-                              onChange={handleInputChange}
-                              className={`pl-10 border-gray-200 focus:border-[#800000] focus:ring-[#800000]/20 rounded-lg ${
-                                formErrors.timeOfIncident
-                                  ? "border-red-300 focus:border-red-500 focus:ring-red-200"
-                                  : ""
-                              }`}
-                            />
-                          </div>
-                          <Button
-                            type="button"
-                            onClick={handleUseCurrentTime}
-                            variant="outline"
-                            size="sm"
-                            className="w-full border-[#800000]/30 text-[#800000] hover:bg-[#800000] hover:text-white flex items-center gap-2"
-                          >
-                            <Clock className="h-3 w-3" />
-                            Use Current Time
-                          </Button>
-                        </div>
-                        {formErrors.timeOfIncident && (
-                          <p className="text-red-500 text-xs mt-1 flex items-center">
-                            <AlertCircle className="h-3 w-3 mr-1" />
-                            {formErrors.timeOfIncident}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    <LocationPicker
-                      onLocationSelect={handleLocationSelect}
-                      initialLocation={
-                        formData.latitude && formData.longitude
-                          ? {
-                              latitude: formData.latitude,
-                              longitude: formData.longitude,
-                              formattedAddress: formData.formattedAddress,
-                              building: formData.building,
-                              buildingName: formData.buildingName,
-                              buildingCode: formData.buildingCode,
-                              room: formData.room,
-                            }
-                          : undefined
-                      }
-                      required={true}
-                      className="space-y-2"
-                    />
-                    {formErrors.location && (
-                      <p className="text-red-500 text-xs mt-1 flex items-center">
-                        <AlertCircle className="h-3 w-3 mr-1" />
-                        {formErrors.location}
-                      </p>
-                    )}
-                  </div>
-                </form>
-              </Card>
-
-              <Card className="bg-white shadow-sm border-0 rounded-xl overflow-hidden">
-                <div className="border-b border-gray-100">
-                  <div className="flex items-center gap-2 p-6">
-                    <FileText className="text-[#800000] h-5 w-5" />
-                    <h2 className="text-lg font-semibold text-gray-800">
-                      Incident Description
-                    </h2>
-                  </div>
-                </div>
-
-                <div className="p-6 space-y-4">
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="description"
-                      className="text-sm font-medium flex items-center"
-                    >
-                      Description <span className="text-[#800000] ml-1">*</span>
-                      <div className="flex items-center ml-1.5">
-                        <HelpCircle className="h-3.5 w-3.5 text-gray-400" />
-                        <span className="text-xs text-gray-500 ml-1.5">
-                          Provide a detailed account of what happened, including
-                          any relevant context
-                        </span>
-                      </div>
-                    </Label>
-                    <Textarea
-                      id="description"
-                      name="description"
-                      placeholder="Describe what happened in detail. Include who was involved, what occurred, and any other relevant information."
-                      value={formData.description}
-                      onChange={handleInputChange}
-                      className={`min-h-[150px] border-gray-200 focus:border-[#800000] focus:ring-[#800000]/20 rounded-lg resize-none ${
-                        formErrors.description
-                          ? "border-red-300 focus:border-red-500 focus:ring-red-200"
-                          : ""
-                      }`}
-                    />
-                    <div className="flex justify-between items-center">
-                      <div
-                        className={`text-xs ${
-                          formData.description.length > 1000
-                            ? "text-red-500"
-                            : "text-gray-500"
-                        }`}
-                      >
-                        {formData.description.length}/1000 characters
-                      </div>
-                      {formErrors.description && (
-                        <p className="text-red-500 text-xs flex items-center">
-                          <AlertCircle className="h-3 w-3 mr-1" />
-                          {formErrors.description}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="pt-4 border-t border-gray-100">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
-                      <Button
-                        type="button"
-                        onClick={handleGenerateTags}
-                        className={`bg-gradient-to-r from-[#800000] to-[#9a0000] hover:from-[#700000] hover:to-[#800000] text-white rounded-full px-4 py-2 h-10 flex items-center gap-2 ${
-                          tagsLoading ||
-                          !formData.description ||
-                          !formData.location
-                            ? "opacity-70 cursor-not-allowed"
+                      <Textarea
+                        id="description"
+                        name="description"
+                        placeholder="Describe what happened in detail. Include who was involved, what occurred, and any other relevant information."
+                        value={formData.description}
+                        onChange={handleInputChange}
+                        className={`min-h-[150px] border-gray-200 focus:border-[#800000] focus:ring-[#800000]/20 rounded-lg resize-none ${
+                          formErrors.description
+                            ? "border-red-300 focus:border-red-500 focus:ring-red-200"
                             : ""
                         }`}
-                        disabled={
-                          tagsLoading ||
-                          !formData.description ||
-                          !formData.location
-                        }
-                      >
-                        {tagsLoading ? (
-                          <>
-                            <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
-                            <span>Generating Tags...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Sparkles className="h-4 w-4" />
-                            <span>Generate Tags with AI</span>
-                          </>
+                      />
+                      <div className="flex justify-between items-center">
+                        <div
+                          className={`text-xs ${
+                            formData.description.length > 1000
+                              ? "text-red-500"
+                              : "text-gray-500"
+                          }`}
+                        >
+                          {formData.description.length}/1000 characters
+                        </div>
+                        {formErrors.description && (
+                          <p className="text-red-500 text-xs flex items-center">
+                            <AlertCircle className="h-3 w-3 mr-1" />
+                            {formErrors.description}
+                          </p>
                         )}
-                      </Button>
-
-                      <div className="flex items-center gap-1 text-sm text-gray-500">
-                        <Info className="h-4 w-4 text-[#800000]/70" />
-                        <span>
-                          AI generated tags. You can remove up to 2 tags
-                          (minimum 3 required)
-                        </span>
                       </div>
+                    </div>
+
+                    <div className="pt-4 border-t border-gray-100">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
+                        <Button
+                          type="button"
+                          onClick={handleGenerateTags}
+                          className={`bg-gradient-to-r from-[#800000] to-[#9a0000] hover:from-[#700000] hover:to-[#800000] text-white rounded-full px-4 py-2 h-10 flex items-center gap-2 ${
+                            tagsLoading ||
+                            !formData.description ||
+                            !formData.location
+                              ? "opacity-70 cursor-not-allowed"
+                              : ""
+                          }`}
+                          disabled={
+                            tagsLoading ||
+                            !formData.description ||
+                            !formData.location
+                          }
+                        >
+                          {tagsLoading ? (
+                            <>
+                              <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                              <span>Generating Tags...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="h-4 w-4" />
+                              <span>Generate Tags with AI</span>
+                            </>
+                          )}
+                        </Button>
+
+                        <div className="flex items-center gap-1 text-sm text-gray-500">
+                          <Info className="h-4 w-4 text-[#800000]/70" />
+                          <span>
+                            AI generated tags. You can remove up to 2 tags
+                            (minimum 3 required)
+                          </span>
+                        </div>
+                      </div>
+
+                      <AnimatePresence>
+                        {isGeneratingTags && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.3 }}
+                            className="mb-4"
+                          >
+                            <div className="bg-[#800000]/5 rounded-lg p-4 border border-[#800000]/10">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Sparkles className="h-4 w-4 text-[#800000]" />
+                                <p className="text-sm font-medium text-[#800000]">
+                                  AI is analyzing your description...
+                                </p>
+                              </div>
+                              <div className="flex gap-2 flex-wrap">
+                                {Array.from({ length: 5 }).map((_, i) => (
+                                  <div
+                                    key={i}
+                                    className="h-6 w-20 bg-gray-200 rounded-full animate-pulse"
+                                  ></div>
+                                ))}
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+
+                      {tagsError && (
+                        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 flex items-center gap-2">
+                          <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                          <span>{tagsError}</span>
+                        </div>
+                      )}
+
+                      {selectedTags.length > 0 && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.3 }}
+                          className="mb-4"
+                        >
+                          <div className="bg-[#800000]/5 rounded-lg p-4 border border-[#800000]/10">
+                            <div className="flex items-center gap-2 mb-3">
+                              <Tag className="h-4 w-4 text-[#800000]" />
+                              <p className="text-sm font-medium text-[#800000]">
+                                Selected Tags
+                              </p>
+                              <span className="text-xs text-gray-500">
+                                ({selectedTags.length}/5)
+                              </span>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              {selectedTags.map((tag) => (
+                                <Badge
+                                  key={tag}
+                                  variant="default"
+                                  className="cursor-pointer select-none transition-all duration-200 px-3 py-1 text-sm bg-[#800000] hover:bg-[#600000] text-white group"
+                                  onClick={() => handleTagClick(tag)}
+                                >
+                                  {tag}
+                                  <X className="ml-1 h-3 w-3 opacity-60 group-hover:opacity-100 transition-opacity" />
+                                </Badge>
+                              ))}
+                            </div>
+                            <div className="mt-2 text-xs text-gray-500">
+                              Click on a tag to remove it. You must keep at
+                              least 3 tags.
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+
+                      {tagSelectError && (
+                        <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-600 flex items-center gap-2">
+                          <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                          <span>{tagSelectError}</span>
+                        </div>
+                      )}
+
+                      {/* Form Actions */}
+                      <div className="flex justify-between pt-6 border-t border-gray-100 mt-6">
+                        <Button
+                          type="button"
+                          onClick={handleReset}
+                          variant="outline"
+                          className="border-gray-300 text-gray-700 hover:bg-gray-50 rounded-full px-4 flex items-center gap-2"
+                        >
+                          <RotateCcw className="h-4 w-4" />
+                          Reset Form
+                        </Button>
+
+                        <Button
+                          type="submit"
+                          form="incident-form"
+                          className="bg-gradient-to-r from-[#800000] to-[#9a0000] hover:from-[#700000] hover:to-[#800000] text-white rounded-full px-6 flex items-center gap-2"
+                        >
+                          Continue
+                          <ArrowRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+
+              {/* Help Section */}
+              <div className="space-y-6">
+                <Card className="bg-gradient-to-br from-[#800000] to-[#9a0000] text-white rounded-xl shadow-md overflow-hidden border-0">
+                  <div className="p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="flex items-center gap-2 text-lg font-semibold">
+                        <HelpCircle size={20} /> Need Help?
+                      </h2>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-white/80 hover:text-white hover:bg-white/10 h-8 w-8 p-0 rounded-full"
+                        onClick={() => setShowTips(!showTips)}
+                      >
+                        {showTips ? <X size={16} /> : <Info size={16} />}
+                      </Button>
                     </div>
 
                     <AnimatePresence>
-                      {isGeneratingTags && (
+                      {showTips && (
                         <motion.div
                           initial={{ opacity: 0, height: 0 }}
                           animate={{ opacity: 1, height: "auto" }}
                           exit={{ opacity: 0, height: 0 }}
                           transition={{ duration: 0.3 }}
-                          className="mb-4"
                         >
-                          <div className="bg-[#800000]/5 rounded-lg p-4 border border-[#800000]/10">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Sparkles className="h-4 w-4 text-[#800000]" />
-                              <p className="text-sm font-medium text-[#800000]">
-                                AI is analyzing your description...
-                              </p>
-                            </div>
-                            <div className="flex gap-2 flex-wrap">
-                              {Array.from({ length: 5 }).map((_, i) => (
-                                <div
-                                  key={i}
-                                  className="h-6 w-20 bg-gray-200 rounded-full animate-pulse"
-                                ></div>
-                              ))}
+                          <div className="space-y-4">
+                            <div>
+                              <h3 className="text-sm font-medium text-white/90 mb-2">
+                                Reporting Tips
+                              </h3>
+                              <ul className="space-y-3">
+                                {[
+                                  {
+                                    icon: <MapPin size={16} />,
+                                    text: "Be as specific as possible about the location",
+                                  },
+                                  {
+                                    icon: <Clock size={16} />,
+                                    text: "Include time details even if approximate",
+                                  },
+                                  {
+                                    icon: <FileText size={16} />,
+                                    text: "Photos and videos help security respond effectively",
+                                  },
+                                  {
+                                    icon: <AlertTriangle size={16} />,
+                                    text: "Mention any witnesses who can provide additional information",
+                                  },
+                                ].map((tip, index) => (
+                                  <li
+                                    key={index}
+                                    className="flex items-start gap-2 text-sm text-white/80"
+                                  >
+                                    <div className="mt-0.5 bg-white/10 p-1.5 rounded-full">
+                                      {tip.icon}
+                                    </div>
+                                    <span>{tip.text}</span>
+                                  </li>
+                                ))}
+                              </ul>
                             </div>
                           </div>
                         </motion.div>
                       )}
                     </AnimatePresence>
-
-                    {tagsError && (
-                      <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 flex items-center gap-2">
-                        <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                        <span>{tagsError}</span>
-                      </div>
-                    )}
-
-                    {selectedTags.length > 0 && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.3 }}
-                        className="mb-4"
-                      >
-                        <div className="bg-[#800000]/5 rounded-lg p-4 border border-[#800000]/10">
-                          <div className="flex items-center gap-2 mb-3">
-                            <Tag className="h-4 w-4 text-[#800000]" />
-                            <p className="text-sm font-medium text-[#800000]">
-                              Selected Tags
-                            </p>
-                            <span className="text-xs text-gray-500">
-                              ({selectedTags.length}/5)
-                            </span>
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            {selectedTags.map((tag) => (
-                              <Badge
-                                key={tag}
-                                variant="default"
-                                className="cursor-pointer select-none transition-all duration-200 px-3 py-1 text-sm bg-[#800000] hover:bg-[#600000] text-white group"
-                                onClick={() => handleTagClick(tag)}
-                              >
-                                {tag}
-                                <X className="ml-1 h-3 w-3 opacity-60 group-hover:opacity-100 transition-opacity" />
-                              </Badge>
-                            ))}
-                          </div>
-                          <div className="mt-2 text-xs text-gray-500">
-                            Click on a tag to remove it. You must keep at least
-                            3 tags.
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
-
-                    {tagSelectError && (
-                      <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-600 flex items-center gap-2">
-                        <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-                        <span>{tagSelectError}</span>
-                      </div>
-                    )}
-
-                    {/* Form Actions */}
-                    <div className="flex justify-between pt-6 border-t border-gray-100 mt-6">
-                      <Button
-                        type="button"
-                        onClick={handleReset}
-                        variant="outline"
-                        className="border-gray-300 text-gray-700 hover:bg-gray-50 rounded-full px-4 flex items-center gap-2"
-                      >
-                        <RotateCcw className="h-4 w-4" />
-                        Reset Form
-                      </Button>
-
-                      <Button
-                        type="submit"
-                        form="incident-form"
-                        className="bg-gradient-to-r from-[#800000] to-[#9a0000] hover:from-[#700000] hover:to-[#800000] text-white rounded-full px-6 flex items-center gap-2"
-                      >
-                        Continue
-                        <ArrowRight className="h-4 w-4" />
-                      </Button>
-                    </div>
                   </div>
-                </div>
-              </Card>
-            </div>
-
-            {/* Help Section */}
-            <div className="space-y-6">
-              <Card className="bg-gradient-to-br from-[#800000] to-[#9a0000] text-white rounded-xl shadow-md overflow-hidden border-0">
-                <div className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="flex items-center gap-2 text-lg font-semibold">
-                      <HelpCircle size={20} /> Need Help?
-                    </h2>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-white/80 hover:text-white hover:bg-white/10 h-8 w-8 p-0 rounded-full"
-                      onClick={() => setShowTips(!showTips)}
-                    >
-                      {showTips ? <X size={16} /> : <Info size={16} />}
-                    </Button>
-                  </div>
-
-                  <AnimatePresence>
-                    {showTips && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                        transition={{ duration: 0.3 }}
-                      >
-                        <div className="space-y-4">
-                          <div>
-                            <h3 className="text-sm font-medium text-white/90 mb-2">
-                              Reporting Tips
-                            </h3>
-                            <ul className="space-y-3">
-                              {[
-                                {
-                                  icon: <MapPin size={16} />,
-                                  text: "Be as specific as possible about the location",
-                                },
-                                {
-                                  icon: <Clock size={16} />,
-                                  text: "Include time details even if approximate",
-                                },
-                                {
-                                  icon: <FileText size={16} />,
-                                  text: "Photos and videos help security respond effectively",
-                                },
-                                {
-                                  icon: <AlertTriangle size={16} />,
-                                  text: "Mention any witnesses who can provide additional information",
-                                },
-                              ].map((tip, index) => (
-                                <li
-                                  key={index}
-                                  className="flex items-start gap-2 text-sm text-white/80"
-                                >
-                                  <div className="mt-0.5 bg-white/10 p-1.5 rounded-full">
-                                    {tip.icon}
-                                  </div>
-                                  <span>{tip.text}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              </Card>
+                </Card>
+              </div>
             </div>
           </div>
         </div>

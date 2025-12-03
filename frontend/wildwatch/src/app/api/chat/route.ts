@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getBackendUrl } from '@/config';
 
 export async function POST(req: NextRequest) {
   try {
@@ -10,8 +11,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Call the backend chatbot endpoint
-    const apiUrl = process.env.BACKEND_API_URL || 'http://localhost:8080/api/chatbot';
+    // Use the same backend URL configuration as the rest of the app
+    // This defaults to the deployed backend unless NEXT_PUBLIC_USE_LOCAL_BACKEND=true
+    const backendUrl = getBackendUrl();
+    const apiUrl = `${backendUrl}/api/chatbot`;
     console.log('Calling backend API:', apiUrl);
 
     const aiRes = await fetch(apiUrl, {
