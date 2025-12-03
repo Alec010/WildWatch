@@ -12,8 +12,8 @@ import { Textarea } from "@/components/ui/textarea";
 import ClientMultiUserMentionInput from "@/components/ClientMultiUserMentionInput";
 import Image from "next/image";
 import { Sidebar } from "@/components/Sidebar";
-import { useSidebar } from "@/contexts/SidebarContext";
 import { Navbar } from "@/components/Navbar";
+import { PageLoader } from "@/components/PageLoader";
 import { toast } from "sonner";
 import {
   AlertTriangle,
@@ -82,7 +82,6 @@ interface FileInfo {
 
 export default function EvidenceSubmissionPage() {
   const router = useRouter();
-  const { collapsed } = useSidebar();
   const [formData, setFormData] = useState({
     witnesses: [] as WitnessInfo[],
     fileInfos: [] as FileInfo[],
@@ -473,681 +472,694 @@ export default function EvidenceSubmissionPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex bg-[#f8f8f8]">
+      <div className="flex-1 flex bg-[#f8f8f8]">
         <Sidebar />
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <div className="relative">
-              <div className="absolute inset-0 rounded-full bg-gradient-to-r from-[#800000] to-[#D4AF37] opacity-30 blur-lg animate-pulse"></div>
-              <div className="relative animate-spin rounded-full h-16 w-16 border-4 border-[#D4AF37] border-t-transparent"></div>
-            </div>
-            <p className="mt-6 text-gray-600 font-medium">Loading form...</p>
+
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          {/* Navbar */}
+          <div className="sticky top-0 z-30 flex-shrink-0">
+            <Navbar
+              title="Report an Incident"
+              subtitle="Submit evidence and witness information"
+              showSearch={false}
+            />
           </div>
+
+          {/* PageLoader - fills the remaining space below Navbar */}
+          <PageLoader pageTitle="evidence form" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex bg-[#f8f8f8]">
+    <div className="flex-1 flex bg-[#f8f8f8]">
       <Sidebar />
 
-      {/* Main Content */}
-      <div
-        className={`flex-1 transition-all duration-300 ${
-          collapsed ? "ml-20" : "ml-64"
-        }`}
-      >
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Navbar */}
-        <Navbar
-          title="Report an Incident"
-          subtitle="Submit evidence and witness information"
-          showSearch={false}
-        />
+        <div className="sticky top-0 z-30 flex-shrink-0">
+          <Navbar
+            title="Report an Incident"
+            subtitle="Submit evidence and witness information"
+            showSearch={false}
+          />
+        </div>
 
-        {/* Content */}
-        <div className="pt-24 px-6 pb-10">
-          {/* Progress Indicator */}
-          <div className="mb-8 bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-            <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-6">
-              <div className="flex-shrink-0">
-                <div className="w-16 h-16 rounded-full bg-[#800000]/10 flex items-center justify-center">
-                  <Camera className="h-8 w-8 text-[#800000]" />
-                </div>
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-[#800000] mb-1">
-                  Evidence & Witnesses
-                </h1>
-                <p className="text-gray-600">
-                  Upload photos, videos, or documents and provide information
-                  about any witnesses.
-                </p>
-              </div>
-              <div className="md:ml-auto flex-shrink-0 bg-[#800000]/5 rounded-full px-4 py-2 flex items-center">
-                <div className="mr-2 text-sm font-medium text-[#800000]">
-                  Step 2 of 3
-                </div>
-              </div>
-            </div>
-
-            <div className="relative">
-              <div className="absolute top-0 left-0 w-full h-2 bg-gray-200 rounded-full">
-                <div className="h-full w-2/3 bg-[#800000] rounded-full"></div>
-              </div>
-
-              <div className="pt-8 grid grid-cols-3 gap-4">
-                <div className="flex flex-col items-center">
-                  <div className="bg-green-500 text-white rounded-full w-10 h-10 flex items-center justify-center text-sm font-medium mb-2">
-                    <CheckCircle2 className="h-5 w-5" />
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto bg-[#f8f8f8]">
+          <div className="px-6 py-10">
+            {/* Progress Indicator */}
+            <div className="mb-8 bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+              <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-6">
+                <div className="flex-shrink-0">
+                  <div className="w-16 h-16 rounded-full bg-[#800000]/10 flex items-center justify-center">
+                    <Camera className="h-8 w-8 text-[#800000]" />
                   </div>
-                  <span className="text-sm font-medium text-green-600">
-                    Incident Details
-                  </span>
                 </div>
-
-                <div className="flex flex-col items-center">
-                  <div className="bg-[#800000] text-white rounded-full w-10 h-10 flex items-center justify-center text-sm font-medium mb-2">
-                    2
-                  </div>
-                  <span className="text-sm font-medium text-[#800000]">
+                <div>
+                  <h1 className="text-2xl font-bold text-[#800000] mb-1">
                     Evidence & Witnesses
-                  </span>
+                  </h1>
+                  <p className="text-gray-600">
+                    Upload photos, videos, or documents and provide information
+                    about any witnesses.
+                  </p>
+                </div>
+                <div className="md:ml-auto flex-shrink-0 bg-[#800000]/5 rounded-full px-4 py-2 flex items-center">
+                  <div className="mr-2 text-sm font-medium text-[#800000]">
+                    Step 2 of 3
+                  </div>
+                </div>
+              </div>
+
+              <div className="relative">
+                <div className="absolute top-0 left-0 w-full h-2 bg-gray-200 rounded-full">
+                  <div className="h-full w-2/3 bg-[#800000] rounded-full"></div>
                 </div>
 
-                <div className="flex flex-col items-center opacity-50">
-                  <div className="bg-gray-300 text-gray-600 rounded-full w-10 h-10 flex items-center justify-center text-sm font-medium mb-2">
-                    3
+                <div className="pt-8 grid grid-cols-3 gap-4">
+                  <div className="flex flex-col items-center">
+                    <div className="bg-green-500 text-white rounded-full w-10 h-10 flex items-center justify-center text-sm font-medium mb-2">
+                      <CheckCircle2 className="h-5 w-5" />
+                    </div>
+                    <span className="text-sm font-medium text-green-600">
+                      Incident Details
+                    </span>
                   </div>
-                  <span className="text-sm text-gray-600">Review & Submit</span>
+
+                  <div className="flex flex-col items-center">
+                    <div className="bg-[#800000] text-white rounded-full w-10 h-10 flex items-center justify-center text-sm font-medium mb-2">
+                      2
+                    </div>
+                    <span className="text-sm font-medium text-[#800000]">
+                      Evidence & Witnesses
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col items-center opacity-50">
+                    <div className="bg-gray-300 text-gray-600 rounded-full w-10 h-10 flex items-center justify-center text-sm font-medium mb-2">
+                      3
+                    </div>
+                    <span className="text-sm text-gray-600">
+                      Review & Submit
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Important Note Card */}
-          <div className="mb-8">
-            <Card className="bg-[#FFF8E1] rounded-xl shadow-sm border border-[#D4AF37]/30 overflow-hidden">
-              <div className="p-6">
-                <div className="flex items-start gap-3">
-                  <div className="bg-[#D4AF37]/20 p-2 rounded-full">
-                    <Info className="h-5 w-5 text-[#D4AF37]" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-800 mb-1">
-                      Evidence Guidelines
-                    </h3>
-                    <p className="text-xs text-gray-600">
-                      Please provide any evidence that can help in the
-                      investigation. This can include photos, videos, or
-                      documents. You can also add information about witnesses
-                      who saw the incident. At least one piece of evidence
-                      (files or witness information) is required.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </Card>
-          </div>
-
-          {/* Form and Help Side by Side */}
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr,320px] gap-6">
-            {/* Main Form */}
-            <div className="space-y-6">
-              {/* Evidence Upload Section */}
-              <Card className="bg-white shadow-sm border-0 rounded-xl overflow-hidden">
-                <div className="border-b border-gray-100">
-                  <div className="flex items-center gap-2 p-6">
-                    <Camera className="text-[#800000] h-5 w-5" />
-                    <h2 className="text-lg font-semibold text-gray-800">
-                      Evidence Upload
-                    </h2>
-                  </div>
-                </div>
-
+            {/* Important Note Card */}
+            <div className="mb-8">
+              <Card className="bg-[#FFF8E1] rounded-xl shadow-sm border border-[#D4AF37]/30 overflow-hidden">
                 <div className="p-6">
-                  <div
-                    className={`border-2 ${
-                      isDragging
-                        ? "border-[#800000]"
-                        : "border-dashed border-gray-300"
-                    } rounded-xl p-8 text-center transition-all duration-200 ${
-                      isDragging ? "bg-[#800000]/5" : "bg-gray-50"
-                    }`}
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
-                    onDrop={handleDrop}
-                  >
-                    <Input
-                      type="file"
-                      multiple
-                      onChange={handleFileChange}
-                      className="hidden"
-                      id="file-upload"
-                      ref={fileInputRef}
-                      accept="image/*,video/*"
-                    />
-                    <Label
-                      htmlFor="file-upload"
-                      className="cursor-pointer flex flex-col items-center"
-                    >
-                      <div className="mb-4 p-4 bg-[#800000]/10 rounded-full">
-                        <Upload className="h-8 w-8 text-[#800000]" />
-                      </div>
-                      <h3 className="text-lg font-medium text-gray-700 mb-2">
-                        Drag & Drop Files Here
+                  <div className="flex items-start gap-3">
+                    <div className="bg-[#D4AF37]/20 p-2 rounded-full">
+                      <Info className="h-5 w-5 text-[#D4AF37]" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-800 mb-1">
+                        Evidence Guidelines
                       </h3>
-                      <p className="text-gray-500 mb-4">or</p>
-                      <Button
-                        type="button"
-                        className="bg-[#800000] hover:bg-[#800000]/90 text-white rounded-full"
-                        onClick={() => fileInputRef.current?.click()}
-                      >
-                        Browse Files
-                      </Button>
-                      <p className="text-xs text-gray-500 mt-4">
-                        Supports JPG, PNG, MP4 (Max 10MB each)
+                      <p className="text-xs text-gray-600">
+                        Please provide any evidence that can help in the
+                        investigation. This can include photos, videos, or
+                        documents. You can also add information about witnesses
+                        who saw the incident. At least one piece of evidence
+                        (files or witness information) is required.
                       </p>
-                    </Label>
+                    </div>
                   </div>
-
-                  {/* Uploaded Files */}
-                  <AnimatePresence>
-                    {formData.fileInfos.length > 0 && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.3 }}
-                        className="mt-8"
-                      >
-                        <div className="flex items-center justify-between mb-4">
-                          <h3 className="text-base font-medium text-gray-700 flex items-center gap-2">
-                            <FileText className="h-4 w-4 text-[#800000]" />
-                            Uploaded Evidence ({formData.fileInfos.length})
-                          </h3>
-                          {formData.fileInfos.length > 0 && (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className="text-xs h-8 border-gray-200 text-gray-600 hover:text-[#800000] hover:border-[#800000]/20"
-                              onClick={() => {
-                                fileInputRef.current?.click();
-                              }}
-                            >
-                              <Plus className="h-3.5 w-3.5 mr-1" />
-                              Add More
-                            </Button>
-                          )}
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {formData.fileInfos.map((file, index) => (
-                            <motion.div
-                              key={index}
-                              initial={{ opacity: 0, scale: 0.9 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              exit={{ opacity: 0, scale: 0.9 }}
-                              transition={{ duration: 0.2 }}
-                              className="relative group rounded-lg border border-gray-200 overflow-hidden bg-white shadow-sm hover:shadow-md transition-all duration-200"
-                            >
-                              <div className="absolute top-2 right-2 z-10">
-                                <Button
-                                  type="button"
-                                  size="icon"
-                                  variant="destructive"
-                                  onClick={() => handleRemoveFile(index)}
-                                  className="h-7 w-7 rounded-full bg-[#800000]/80 hover:bg-[#800000] text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </div>
-
-                              {file.type.startsWith("image/") ? (
-                                <div className="relative aspect-square">
-                                  <Image
-                                    src={file.data || "/placeholder.svg"}
-                                    alt={file.name}
-                                    fill
-                                    className="object-cover"
-                                  />
-                                </div>
-                              ) : file.type.startsWith("video/") ? (
-                                <div className="relative aspect-video bg-black">
-                                  <video
-                                    src={file.data}
-                                    controls
-                                    className="w-full h-full"
-                                  />
-                                </div>
-                              ) : (
-                                <div className="aspect-square flex items-center justify-center bg-gray-100">
-                                  <FileText className="h-16 w-16 text-gray-400" />
-                                </div>
-                              )}
-
-                              <div className="p-3 border-t border-gray-100">
-                                <div className="flex items-start gap-2">
-                                  {getFileIcon(file.type)}
-                                  <div className="min-w-0 flex-1">
-                                    <p
-                                      className="text-sm font-medium text-gray-700 truncate"
-                                      title={file.name}
-                                    >
-                                      {file.name}
-                                    </p>
-                                    <p className="text-xs text-gray-500">
-                                      {formatFileSize(file.size)}
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
-                            </motion.div>
-                          ))}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
                 </div>
               </Card>
+            </div>
 
-              {/* Witness Section */}
-              <Card className="bg-white shadow-sm border-0 rounded-xl overflow-hidden">
-                <div className="border-b border-gray-100">
-                  <div className="flex items-center justify-between p-6">
-                    <div className="flex items-center gap-2">
-                      <User className="text-[#800000] h-5 w-5" />
+            {/* Form and Help Side by Side */}
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr,320px] gap-6">
+              {/* Main Form */}
+              <div className="space-y-6">
+                {/* Evidence Upload Section */}
+                <Card className="bg-white shadow-sm border-0 rounded-xl overflow-hidden">
+                  <div className="border-b border-gray-100">
+                    <div className="flex items-center gap-2 p-6">
+                      <Camera className="text-[#800000] h-5 w-5" />
                       <h2 className="text-lg font-semibold text-gray-800">
-                        Witness Information
+                        Evidence Upload
                       </h2>
                     </div>
-                    <Button
-                      type="button"
-                      onClick={handleAddWitness}
-                      className="bg-[#800000] hover:bg-[#800000]/90 text-white rounded-full px-4 h-9 flex items-center gap-1.5"
-                    >
-                      <Plus className="h-4 w-4" />
-                      Add Witness
-                    </Button>
                   </div>
-                </div>
 
-                <div className="p-6">
-                  <AnimatePresence>
-                    {formData.witnesses.length > 0 ? (
-                      <div className="space-y-4">
-                        {formData.witnesses.map((witness, index) => (
-                          <motion.div
-                            key={index}
-                            id={`witness-${index}`}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, height: 0, overflow: "hidden" }}
-                            transition={{ duration: 0.3 }}
-                            className="border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm"
-                          >
-                            <div
-                              className="flex items-center justify-between p-4 bg-gray-50 border-b border-gray-200 cursor-pointer"
-                              onClick={() =>
-                                setExpandedWitness(
-                                  expandedWitness === index ? null : index
-                                )
-                              }
-                            >
-                              <div className="flex items-center gap-3">
-                                <div className="bg-[#800000]/10 p-2 rounded-full">
-                                  <User className="h-5 w-5 text-[#800000]" />
+                  <div className="p-6">
+                    <div
+                      className={`border-2 ${
+                        isDragging
+                          ? "border-[#800000]"
+                          : "border-dashed border-gray-300"
+                      } rounded-xl p-8 text-center transition-all duration-200 ${
+                        isDragging ? "bg-[#800000]/5" : "bg-gray-50"
+                      }`}
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
+                    >
+                      <Input
+                        type="file"
+                        multiple
+                        onChange={handleFileChange}
+                        className="hidden"
+                        id="file-upload"
+                        ref={fileInputRef}
+                        accept="image/*,video/*"
+                      />
+                      <Label
+                        htmlFor="file-upload"
+                        className="cursor-pointer flex flex-col items-center"
+                      >
+                        <div className="mb-4 p-4 bg-[#800000]/10 rounded-full">
+                          <Upload className="h-8 w-8 text-[#800000]" />
+                        </div>
+                        <h3 className="text-lg font-medium text-gray-700 mb-2">
+                          Drag & Drop Files Here
+                        </h3>
+                        <p className="text-gray-500 mb-4">or</p>
+                        <Button
+                          type="button"
+                          className="bg-[#800000] hover:bg-[#800000]/90 text-white rounded-full"
+                          onClick={() => fileInputRef.current?.click()}
+                        >
+                          Browse Files
+                        </Button>
+                        <p className="text-xs text-gray-500 mt-4">
+                          Supports JPG, PNG, MP4 (Max 10MB each)
+                        </p>
+                      </Label>
+                    </div>
+
+                    {/* Uploaded Files */}
+                    <AnimatePresence>
+                      {formData.fileInfos.length > 0 && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.3 }}
+                          className="mt-8"
+                        >
+                          <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-base font-medium text-gray-700 flex items-center gap-2">
+                              <FileText className="h-4 w-4 text-[#800000]" />
+                              Uploaded Evidence ({formData.fileInfos.length})
+                            </h3>
+                            {formData.fileInfos.length > 0 && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="text-xs h-8 border-gray-200 text-gray-600 hover:text-[#800000] hover:border-[#800000]/20"
+                                onClick={() => {
+                                  fileInputRef.current?.click();
+                                }}
+                              >
+                                <Plus className="h-3.5 w-3.5 mr-1" />
+                                Add More
+                              </Button>
+                            )}
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {formData.fileInfos.map((file, index) => (
+                              <motion.div
+                                key={index}
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.9 }}
+                                transition={{ duration: 0.2 }}
+                                className="relative group rounded-lg border border-gray-200 overflow-hidden bg-white shadow-sm hover:shadow-md transition-all duration-200"
+                              >
+                                <div className="absolute top-2 right-2 z-10">
+                                  <Button
+                                    type="button"
+                                    size="icon"
+                                    variant="destructive"
+                                    onClick={() => handleRemoveFile(index)}
+                                    className="h-7 w-7 rounded-full bg-[#800000]/80 hover:bg-[#800000] text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
                                 </div>
-                                <div>
-                                  <h3 className="font-medium text-gray-800">
-                                    {witness.name
-                                      ? witness.name
-                                      : `Witness #${index + 1}`}
-                                  </h3>
-                                  {witness.contactInformation && (
-                                    <p className="text-xs text-gray-500">
-                                      {witness.contactInformation}
-                                    </p>
+
+                                {file.type.startsWith("image/") ? (
+                                  <div className="relative aspect-square">
+                                    <Image
+                                      src={file.data || "/placeholder.svg"}
+                                      alt={file.name}
+                                      fill
+                                      className="object-cover"
+                                    />
+                                  </div>
+                                ) : file.type.startsWith("video/") ? (
+                                  <div className="relative aspect-video bg-black">
+                                    <video
+                                      src={file.data}
+                                      controls
+                                      className="w-full h-full"
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="aspect-square flex items-center justify-center bg-gray-100">
+                                    <FileText className="h-16 w-16 text-gray-400" />
+                                  </div>
+                                )}
+
+                                <div className="p-3 border-t border-gray-100">
+                                  <div className="flex items-start gap-2">
+                                    {getFileIcon(file.type)}
+                                    <div className="min-w-0 flex-1">
+                                      <p
+                                        className="text-sm font-medium text-gray-700 truncate"
+                                        title={file.name}
+                                      >
+                                        {file.name}
+                                      </p>
+                                      <p className="text-xs text-gray-500">
+                                        {formatFileSize(file.size)}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              </motion.div>
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </Card>
+
+                {/* Witness Section */}
+                <Card className="bg-white shadow-sm border-0 rounded-xl overflow-hidden">
+                  <div className="border-b border-gray-100">
+                    <div className="flex items-center justify-between p-6">
+                      <div className="flex items-center gap-2">
+                        <User className="text-[#800000] h-5 w-5" />
+                        <h2 className="text-lg font-semibold text-gray-800">
+                          Witness Information
+                        </h2>
+                      </div>
+                      <Button
+                        type="button"
+                        onClick={handleAddWitness}
+                        className="bg-[#800000] hover:bg-[#800000]/90 text-white rounded-full px-4 h-9 flex items-center gap-1.5"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Add Witness
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="p-6">
+                    <AnimatePresence>
+                      {formData.witnesses.length > 0 ? (
+                        <div className="space-y-4">
+                          {formData.witnesses.map((witness, index) => (
+                            <motion.div
+                              key={index}
+                              id={`witness-${index}`}
+                              initial={{ opacity: 0, y: 20 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{
+                                opacity: 0,
+                                height: 0,
+                                overflow: "hidden",
+                              }}
+                              transition={{ duration: 0.3 }}
+                              className="border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm"
+                            >
+                              <div
+                                className="flex items-center justify-between p-4 bg-gray-50 border-b border-gray-200 cursor-pointer"
+                                onClick={() =>
+                                  setExpandedWitness(
+                                    expandedWitness === index ? null : index
+                                  )
+                                }
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className="bg-[#800000]/10 p-2 rounded-full">
+                                    <User className="h-5 w-5 text-[#800000]" />
+                                  </div>
+                                  <div>
+                                    <h3 className="font-medium text-gray-800">
+                                      {witness.name
+                                        ? witness.name
+                                        : `Witness #${index + 1}`}
+                                    </h3>
+                                    {witness.contactInformation && (
+                                      <p className="text-xs text-gray-500">
+                                        {witness.contactInformation}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleRemoveWitness(index);
+                                    }}
+                                    className="h-8 w-8 p-0 text-gray-500 hover:text-[#800000] hover:bg-[#800000]/10 rounded-full"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                  {expandedWitness === index ? (
+                                    <ChevronUp className="h-5 w-5 text-gray-500" />
+                                  ) : (
+                                    <ChevronDown className="h-5 w-5 text-gray-500" />
                                   )}
                                 </div>
                               </div>
-                              <div className="flex items-center gap-2">
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleRemoveWitness(index);
-                                  }}
-                                  className="h-8 w-8 p-0 text-gray-500 hover:text-[#800000] hover:bg-[#800000]/10 rounded-full"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                                {expandedWitness === index ? (
-                                  <ChevronUp className="h-5 w-5 text-gray-500" />
-                                ) : (
-                                  <ChevronDown className="h-5 w-5 text-gray-500" />
+
+                              <AnimatePresence>
+                                {expandedWitness === index && (
+                                  <motion.div
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: "auto" }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    transition={{ duration: 0.2 }}
+                                  >
+                                    <div className="p-4 space-y-4">
+                                      <div className="space-y-2">
+                                        <Label className="text-sm font-medium flex items-center gap-1.5">
+                                          <User className="h-3.5 w-3.5 text-[#800000]/70" />
+                                          Witness
+                                        </Label>
+                                        <ClientMultiUserMentionInput
+                                          selectedUsers={witness.users || []}
+                                          onUsersChange={(users) => {
+                                            // Update witness with selected users
+                                            const updatedWitnesses = [
+                                              ...formData.witnesses,
+                                            ];
+                                            updatedWitnesses[index] = {
+                                              ...updatedWitnesses[index],
+                                              users: users,
+                                              // If there are users, use the user's name and email as default
+                                              name:
+                                                users.length > 0
+                                                  ? users[0].fullName
+                                                  : "",
+                                              contactInformation:
+                                                users.length > 0
+                                                  ? users[0].email
+                                                  : "",
+                                            };
+                                            setFormData((prev) => ({
+                                              ...prev,
+                                              witnesses: updatedWitnesses,
+                                            }));
+                                          }}
+                                          placeholder="Type @ to mention a witness"
+                                          maxUsers={1}
+                                          className="border-gray-200 focus:border-[#800000] focus:ring-[#800000]/20"
+                                        />
+                                      </div>
+
+                                      {witness.users &&
+                                        witness.users.length > 0 && (
+                                          <div className="space-y-2">
+                                            <Label className="text-sm font-medium flex items-center gap-1.5">
+                                              <Phone className="h-3.5 w-3.5 text-[#800000]/70" />
+                                              Contact Information
+                                            </Label>
+                                            <div className="flex items-center p-2 border border-gray-200 rounded-md bg-gray-50">
+                                              <span className="text-gray-600">
+                                                {witness.users[0].email}
+                                              </span>
+                                            </div>
+                                          </div>
+                                        )}
+                                      <div className="space-y-2">
+                                        <Label className="text-sm font-medium flex items-center gap-1.5">
+                                          <PenLine className="h-3.5 w-3.5 text-[#800000]/70" />
+                                          Additional Notes
+                                        </Label>
+                                        <Textarea
+                                          value={witness.additionalNotes}
+                                          onChange={(e) =>
+                                            handleWitnessChange(
+                                              index,
+                                              "additionalNotes",
+                                              e.target.value
+                                            )
+                                          }
+                                          placeholder="Describe what the witness observed"
+                                          className="min-h-[100px] border-gray-200 focus:border-[#800000] focus:ring-[#800000]/20 resize-none"
+                                        />
+                                      </div>
+                                    </div>
+                                  </motion.div>
                                 )}
-                              </div>
+                              </AnimatePresence>
+                            </motion.div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 border border-dashed border-gray-300 rounded-xl bg-gray-50">
+                          <div className="mb-3 bg-[#800000]/10 h-16 w-16 rounded-full flex items-center justify-center mx-auto">
+                            <User className="h-8 w-8 text-[#800000]" />
+                          </div>
+                          <h3 className="text-base font-medium text-gray-700 mb-2">
+                            No Witnesses Added
+                          </h3>
+                          <p className="text-sm text-gray-500 mb-4 max-w-md mx-auto">
+                            If anyone witnessed the incident, add their
+                            information to help with the investigation.
+                          </p>
+                          <Button
+                            type="button"
+                            onClick={handleAddWitness}
+                            className="bg-[#800000] hover:bg-[#800000]/90 text-white rounded-full px-4"
+                          >
+                            <Plus className="h-4 w-4 mr-1.5" />
+                            Add a Witness
+                          </Button>
+                        </div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </Card>
+
+                {/* Navigation Buttons */}
+                <div className="flex justify-between pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => router.push("/incidents/submit")}
+                    className="border-gray-300 text-gray-700 hover:bg-gray-50 rounded-full px-4 flex items-center gap-2"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    Back to Incident Details
+                  </Button>
+
+                  <Button
+                    type="button"
+                    onClick={handleSubmit}
+                    className="bg-gradient-to-r from-[#800000] to-[#9a0000] hover:from-[#700000] hover:to-[#800000] text-white rounded-full px-6 flex items-center gap-2"
+                  >
+                    Continue to Review
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Help Section */}
+              <div className="space-y-6">
+                <Card className="bg-gradient-to-br from-[#800000] to-[#9a0000] text-white rounded-xl shadow-md overflow-hidden border-0">
+                  <div className="p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="flex items-center gap-2 text-lg font-semibold">
+                        <HelpCircle size={20} /> Need Help?
+                      </h2>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-white/80 hover:text-white hover:bg-white/10 h-8 w-8 p-0 rounded-full"
+                        onClick={() => setShowTips(!showTips)}
+                      >
+                        {showTips ? <X size={16} /> : <Info size={16} />}
+                      </Button>
+                    </div>
+
+                    <AnimatePresence>
+                      {showTips && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          <div className="space-y-4">
+                            <div>
+                              <h3 className="text-sm font-medium text-white/90 mb-2">
+                                Evidence Tips
+                              </h3>
+                              <ul className="space-y-3">
+                                {[
+                                  {
+                                    icon: <Camera size={16} />,
+                                    text: "Clear photos help identify details and individuals involved",
+                                  },
+                                  {
+                                    icon: <Video size={16} />,
+                                    text: "Videos can capture the sequence of events more effectively",
+                                  },
+                                  {
+                                    icon: <User size={16} />,
+                                    text: "Include contact information for witnesses when possible",
+                                  },
+                                  {
+                                    icon: <AlertTriangle size={16} />,
+                                    text: "At least one piece of evidence (file or witness) is required",
+                                  },
+                                ].map((tip, index) => (
+                                  <li
+                                    key={index}
+                                    className="flex items-start gap-2 text-sm text-white/80"
+                                  >
+                                    <div className="mt-0.5 bg-white/10 p-1.5 rounded-full">
+                                      {tip.icon}
+                                    </div>
+                                    <span>{tip.text}</span>
+                                  </li>
+                                ))}
+                              </ul>
                             </div>
 
-                            <AnimatePresence>
-                              {expandedWitness === index && (
-                                <motion.div
-                                  initial={{ opacity: 0, height: 0 }}
-                                  animate={{ opacity: 1, height: "auto" }}
-                                  exit={{ opacity: 0, height: 0 }}
-                                  transition={{ duration: 0.2 }}
-                                >
-                                  <div className="p-4 space-y-4">
-                                    <div className="space-y-2">
-                                      <Label className="text-sm font-medium flex items-center gap-1.5">
-                                        <User className="h-3.5 w-3.5 text-[#800000]/70" />
-                                        Witness
-                                      </Label>
-                                      <ClientMultiUserMentionInput
-                                        selectedUsers={witness.users || []}
-                                        onUsersChange={(users) => {
-                                          // Update witness with selected users
-                                          const updatedWitnesses = [
-                                            ...formData.witnesses,
-                                          ];
-                                          updatedWitnesses[index] = {
-                                            ...updatedWitnesses[index],
-                                            users: users,
-                                            // If there are users, use the user's name and email as default
-                                            name:
-                                              users.length > 0
-                                                ? users[0].fullName
-                                                : "",
-                                            contactInformation:
-                                              users.length > 0
-                                                ? users[0].email
-                                                : "",
-                                          };
-                                          setFormData((prev) => ({
-                                            ...prev,
-                                            witnesses: updatedWitnesses,
-                                          }));
-                                        }}
-                                        placeholder="Type @ to mention a witness"
-                                        maxUsers={1}
-                                        className="border-gray-200 focus:border-[#800000] focus:ring-[#800000]/20"
-                                      />
-                                    </div>
+                            <div className="pt-4 border-t border-white/20">
+                              <h3 className="text-sm font-medium text-white/90 mb-2">
+                                What Happens Next?
+                              </h3>
+                              <p className="text-sm text-white/80 mb-2">
+                                After submitting evidence, you'll review all
+                                information before final submission. Your report
+                                will be assigned a tracking number for
+                                follow-up.
+                              </p>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </Card>
 
-                                    {witness.users &&
-                                      witness.users.length > 0 && (
-                                        <div className="space-y-2">
-                                          <Label className="text-sm font-medium flex items-center gap-1.5">
-                                            <Phone className="h-3.5 w-3.5 text-[#800000]/70" />
-                                            Contact Information
-                                          </Label>
-                                          <div className="flex items-center p-2 border border-gray-200 rounded-md bg-gray-50">
-                                            <span className="text-gray-600">
-                                              {witness.users[0].email}
-                                            </span>
-                                          </div>
-                                        </div>
-                                      )}
-                                    <div className="space-y-2">
-                                      <Label className="text-sm font-medium flex items-center gap-1.5">
-                                        <PenLine className="h-3.5 w-3.5 text-[#800000]/70" />
-                                        Additional Notes
-                                      </Label>
-                                      <Textarea
-                                        value={witness.additionalNotes}
-                                        onChange={(e) =>
-                                          handleWitnessChange(
-                                            index,
-                                            "additionalNotes",
-                                            e.target.value
-                                          )
-                                        }
-                                        placeholder="Describe what the witness observed"
-                                        className="min-h-[100px] border-gray-200 focus:border-[#800000] focus:ring-[#800000]/20 resize-none"
-                                      />
-                                    </div>
-                                  </div>
-                                </motion.div>
-                              )}
-                            </AnimatePresence>
-                          </motion.div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8 border border-dashed border-gray-300 rounded-xl bg-gray-50">
-                        <div className="mb-3 bg-[#800000]/10 h-16 w-16 rounded-full flex items-center justify-center mx-auto">
-                          <User className="h-8 w-8 text-[#800000]" />
+                {/* Evidence Summary Card */}
+                <Card className="bg-white shadow-sm border-0 rounded-xl overflow-hidden">
+                  <div className="p-6">
+                    <h3 className="text-base font-medium text-gray-800 mb-4 flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-[#800000]" />
+                      Evidence Summary
+                    </h3>
+
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className="bg-[#800000]/10 p-2 rounded-full">
+                            <Camera className="h-4 w-4 text-[#800000]" />
+                          </div>
+                          <span className="text-sm font-medium">Files</span>
                         </div>
-                        <h3 className="text-base font-medium text-gray-700 mb-2">
-                          No Witnesses Added
-                        </h3>
-                        <p className="text-sm text-gray-500 mb-4 max-w-md mx-auto">
-                          If anyone witnessed the incident, add their
-                          information to help with the investigation.
-                        </p>
-                        <Button
-                          type="button"
-                          onClick={handleAddWitness}
-                          className="bg-[#800000] hover:bg-[#800000]/90 text-white rounded-full px-4"
+                        <span className="text-lg font-bold text-[#800000]">
+                          {formData.fileInfos.length}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className="bg-[#800000]/10 p-2 rounded-full">
+                            <User className="h-4 w-4 text-[#800000]" />
+                          </div>
+                          <span className="text-sm font-medium">Witnesses</span>
+                        </div>
+                        <span className="text-lg font-bold text-[#800000]">
+                          {formData.witnesses.length}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className="bg-[#800000]/10 p-2 rounded-full">
+                            <AlertTriangle className="h-4 w-4 text-[#800000]" />
+                          </div>
+                          <span className="text-sm font-medium">Status</span>
+                        </div>
+                        <span
+                          className={`text-sm font-medium px-2.5 py-1 rounded-full ${
+                            formData.fileInfos.length > 0 ||
+                            formData.witnesses.length > 0
+                              ? "bg-green-100 text-green-800"
+                              : "bg-amber-100 text-amber-800"
+                          }`}
                         >
-                          <Plus className="h-4 w-4 mr-1.5" />
-                          Add a Witness
-                        </Button>
-                      </div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              </Card>
-
-              {/* Navigation Buttons */}
-              <div className="flex justify-between pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => router.push("/incidents/submit")}
-                  className="border-gray-300 text-gray-700 hover:bg-gray-50 rounded-full px-4 flex items-center gap-2"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  Back to Incident Details
-                </Button>
-
-                <Button
-                  type="button"
-                  onClick={handleSubmit}
-                  className="bg-gradient-to-r from-[#800000] to-[#9a0000] hover:from-[#700000] hover:to-[#800000] text-white rounded-full px-6 flex items-center gap-2"
-                >
-                  Continue to Review
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-
-            {/* Help Section */}
-            <div className="space-y-6">
-              <Card className="bg-gradient-to-br from-[#800000] to-[#9a0000] text-white rounded-xl shadow-md overflow-hidden border-0">
-                <div className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="flex items-center gap-2 text-lg font-semibold">
-                      <HelpCircle size={20} /> Need Help?
-                    </h2>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-white/80 hover:text-white hover:bg-white/10 h-8 w-8 p-0 rounded-full"
-                      onClick={() => setShowTips(!showTips)}
-                    >
-                      {showTips ? <X size={16} /> : <Info size={16} />}
-                    </Button>
-                  </div>
-
-                  <AnimatePresence>
-                    {showTips && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                        transition={{ duration: 0.3 }}
-                      >
-                        <div className="space-y-4">
-                          <div>
-                            <h3 className="text-sm font-medium text-white/90 mb-2">
-                              Evidence Tips
-                            </h3>
-                            <ul className="space-y-3">
-                              {[
-                                {
-                                  icon: <Camera size={16} />,
-                                  text: "Clear photos help identify details and individuals involved",
-                                },
-                                {
-                                  icon: <Video size={16} />,
-                                  text: "Videos can capture the sequence of events more effectively",
-                                },
-                                {
-                                  icon: <User size={16} />,
-                                  text: "Include contact information for witnesses when possible",
-                                },
-                                {
-                                  icon: <AlertTriangle size={16} />,
-                                  text: "At least one piece of evidence (file or witness) is required",
-                                },
-                              ].map((tip, index) => (
-                                <li
-                                  key={index}
-                                  className="flex items-start gap-2 text-sm text-white/80"
-                                >
-                                  <div className="mt-0.5 bg-white/10 p-1.5 rounded-full">
-                                    {tip.icon}
-                                  </div>
-                                  <span>{tip.text}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-
-                          <div className="pt-4 border-t border-white/20">
-                            <h3 className="text-sm font-medium text-white/90 mb-2">
-                              What Happens Next?
-                            </h3>
-                            <p className="text-sm text-white/80 mb-2">
-                              After submitting evidence, you'll review all
-                              information before final submission. Your report
-                              will be assigned a tracking number for follow-up.
-                            </p>
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              </Card>
-
-              {/* Evidence Summary Card */}
-              <Card className="bg-white shadow-sm border-0 rounded-xl overflow-hidden">
-                <div className="p-6">
-                  <h3 className="text-base font-medium text-gray-800 mb-4 flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-[#800000]" />
-                    Evidence Summary
-                  </h3>
-
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="bg-[#800000]/10 p-2 rounded-full">
-                          <Camera className="h-4 w-4 text-[#800000]" />
-                        </div>
-                        <span className="text-sm font-medium">Files</span>
-                      </div>
-                      <span className="text-lg font-bold text-[#800000]">
-                        {formData.fileInfos.length}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="bg-[#800000]/10 p-2 rounded-full">
-                          <User className="h-4 w-4 text-[#800000]" />
-                        </div>
-                        <span className="text-sm font-medium">Witnesses</span>
-                      </div>
-                      <span className="text-lg font-bold text-[#800000]">
-                        {formData.witnesses.length}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="bg-[#800000]/10 p-2 rounded-full">
-                          <AlertTriangle className="h-4 w-4 text-[#800000]" />
-                        </div>
-                        <span className="text-sm font-medium">Status</span>
-                      </div>
-                      <span
-                        className={`text-sm font-medium px-2.5 py-1 rounded-full ${
-                          formData.fileInfos.length > 0 ||
+                          {formData.fileInfos.length > 0 ||
                           formData.witnesses.length > 0
-                            ? "bg-green-100 text-green-800"
-                            : "bg-amber-100 text-amber-800"
-                        }`}
-                      >
-                        {formData.fileInfos.length > 0 ||
-                        formData.witnesses.length > 0
-                          ? "Ready to Continue"
-                          : "Evidence Required"}
-                      </span>
+                            ? "Ready to Continue"
+                            : "Evidence Required"}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </Card>
+                </Card>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>
-              {fileToDelete !== null ? "Remove File" : "Remove Witness"}
-            </DialogTitle>
-            <DialogDescription>
-              {fileToDelete !== null
-                ? "Are you sure you want to remove this file? This action cannot be undone."
-                : "Are you sure you want to remove this witness? This action cannot be undone."}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="flex gap-2 sm:gap-0">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setFileToDelete(null);
-                setWitnessToDelete(null);
-                setShowDeleteDialog(false);
-              }}
-              className="border-gray-300 text-gray-700 hover:bg-gray-50"
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                if (fileToDelete !== null) {
-                  confirmDeleteFile();
-                } else if (witnessToDelete !== null) {
-                  confirmDeleteWitness();
-                }
-              }}
-              className="bg-[#800000] hover:bg-[#600000] text-white"
-            >
-              Remove
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>
+                {fileToDelete !== null ? "Remove File" : "Remove Witness"}
+              </DialogTitle>
+              <DialogDescription>
+                {fileToDelete !== null
+                  ? "Are you sure you want to remove this file? This action cannot be undone."
+                  : "Are you sure you want to remove this witness? This action cannot be undone."}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="flex gap-2 sm:gap-0">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setFileToDelete(null);
+                  setWitnessToDelete(null);
+                  setShowDeleteDialog(false);
+                }}
+                className="border-gray-300 text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  if (fileToDelete !== null) {
+                    confirmDeleteFile();
+                  } else if (witnessToDelete !== null) {
+                    confirmDeleteWitness();
+                  }
+                }}
+                className="bg-[#800000] hover:bg-[#600000] text-white"
+              >
+                Remove
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
     </div>
   );
 }

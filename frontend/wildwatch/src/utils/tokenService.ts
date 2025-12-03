@@ -115,7 +115,6 @@ class TokenService {
 
     // Only schedule if token has more than 5 minutes left
     if (refreshTime > 0) {
-      console.log(`Token refresh scheduled in ${Math.round(refreshTime / 1000 / 60)} minutes`);
       this.refreshTimer = setTimeout(() => {
         this.refreshToken();
       }, refreshTime);
@@ -133,11 +132,8 @@ class TokenService {
 
     const currentToken = this.getToken();
     if (!currentToken) {
-      console.log('No token to refresh');
       return null;
     }
-
-    console.log('Refreshing token...');
 
     this.refreshPromise = this.performTokenRefresh(currentToken);
     
@@ -174,15 +170,17 @@ class TokenService {
       // Update token in cookies and schedule next refresh
       this.setToken(newToken);
       
-      console.log('Token refreshed successfully');
       return newToken;
     } catch (error) {
       console.error('Token refresh failed:', error);
-      // If refresh fails, clean up
+      // If refresh fails, clean up all storage
       this.removeToken();
       
-      // Only redirect on client side
+      // Clear all storage on authentication failure
       if (typeof window !== 'undefined') {
+        import('./storageCleanup').then(({ clearAllStorage }) => {
+          clearAllStorage();
+        });
         window.location.href = '/login';
       }
       
@@ -207,7 +205,6 @@ class TokenService {
 
     // If token is expired or expiring soon, refresh it
     if (this.isTokenExpiringSoon(tokenInfo)) {
-      console.log('Token expiring soon, refreshing...');
       try {
         return await this.refreshToken();
       } catch (error) {

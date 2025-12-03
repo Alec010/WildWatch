@@ -1,5 +1,6 @@
 import { getBackendUrl } from '@/config';
 import tokenService from './tokenService';
+import Cookies from 'js-cookie';
 
 interface ApiOptions extends RequestInit {
   skipAuth?: boolean;
@@ -14,7 +15,7 @@ async function apiClient(endpoint: string, options: ApiOptions = {}): Promise<Re
 
   // Get headers from options or create new object
   const headers = new Headers(fetchOptions.headers);
-  
+
   // Add authentication header if not skipped
   if (!skipAuth) {
     const token = await tokenService.getValidToken();
@@ -35,23 +36,40 @@ async function apiClient(endpoint: string, options: ApiOptions = {}): Promise<Re
 
   // Handle 401 responses (token expired/invalid)
   if (response.status === 401 && !skipAuth) {
-    console.log('Received 401, attempting token refresh...');
-    
     try {
       // Try to refresh token
       const newToken = await tokenService.refreshToken();
-      
+
       if (newToken) {
         // Retry request with new token
         headers.set('Authorization', `Bearer ${newToken}`);
-        return fetch(url, {
+        const retryResponse = await fetch(url, {
           ...fetchOptions,
           headers,
         });
+
+        // If retry still returns 401, clear all storage and redirect to login
+        if (retryResponse.status === 401) {
+          const { clearAllStorage } = await import('./storageCleanup');
+          clearAllStorage();
+          tokenService.removeToken();
+          if (typeof window !== 'undefined') {
+            window.location.href = '/login';
+          }
+          throw new Error('Authentication failed');
+        }
+
+        return retryResponse;
       }
     } catch (error) {
       console.error('Token refresh failed during API call:', error);
-      // Token service will handle redirect to login
+      // Clear all storage and redirect to login
+      if (typeof window !== 'undefined' && Cookies.get('token')) {
+        const { clearAllStorage } = await import('./storageCleanup');
+        clearAllStorage();
+        tokenService.removeToken();
+        window.location.href = '/login';
+      }
       throw new Error('Authentication failed');
     }
   }
@@ -95,7 +113,7 @@ export const api = {
     // Convert the date string to ISO format for LocalDateTime parsing
     const date = new Date(newEstimatedDate);
     const isoDateTime = date.toISOString();
-    
+
     const response = await fetch(`${getBackendUrl()}/api/incidents/${incidentId}/extend-resolution`, {
       method: 'POST',
       headers: {
@@ -178,7 +196,7 @@ export const api = {
 
     return response.json();
   },
-  
+
   // Bulletin upvote methods
   toggleBulletinUpvote: async (bulletinId: string) => {
     const response = await fetch(`${getBackendUrl()}/api/office-bulletins/${bulletinId}/upvote`, {
@@ -195,7 +213,7 @@ export const api = {
 
     return response.json();
   },
-  
+
   getBulletinUpvoteStatus: async (bulletinId: string) => {
     const response = await fetch(`${getBackendUrl()}/api/office-bulletins/${bulletinId}/upvote-status`, {
       method: 'GET',
@@ -211,7 +229,7 @@ export const api = {
 
     return response.json();
   },
-  
+
   getBulletinUpvoteCount: async (bulletinId: string) => {
     const response = await fetch(`${getBackendUrl()}/api/office-bulletins/${bulletinId}/upvote-count`, {
       method: 'GET',
@@ -227,7 +245,7 @@ export const api = {
 
     return response.json();
   },
-  
+
   // Notification methods
   getNotifications: async () => {
     const response = await fetch(`${getBackendUrl()}/api/notifications`, {
@@ -244,7 +262,7 @@ export const api = {
 
     return response.json();
   },
-  
+
   getUnreadNotificationCount: async () => {
     const response = await fetch(`${getBackendUrl()}/api/notifications/count`, {
       method: 'GET',
@@ -260,7 +278,7 @@ export const api = {
 
     return response.json();
   },
-  
+
   markNotificationAsRead: async (notificationId: string) => {
     const response = await fetch(`${getBackendUrl()}/api/notifications/${notificationId}/read`, {
       method: 'POST',
@@ -276,7 +294,7 @@ export const api = {
 
     return true;
   },
-  
+
   markAllNotificationsAsRead: async () => {
     const response = await fetch(`${getBackendUrl()}/api/notifications/read-all`, {
       method: 'POST',
@@ -292,7 +310,7 @@ export const api = {
 
     return true;
   },
-  
+
   // Activity Log methods (existing notification system)
   getActivityLogs: async (page = 0, size = 10) => {
     const response = await fetch(`${getBackendUrl()}/api/activity-logs?page=${page}&size=${size}`, {
@@ -310,7 +328,7 @@ export const api = {
     const data = await response.json();
     return data.content || data; // Return the content array or the data itself
   },
-  
+
   markActivityLogAsRead: async (activityLogId: string) => {
     const response = await fetch(`${getBackendUrl()}/api/activity-logs/${activityLogId}/read`, {
       method: 'PUT',
@@ -326,7 +344,7 @@ export const api = {
 
     return true;
   },
-  
+
   markAllActivityLogsAsRead: async () => {
     const response = await fetch(`${getBackendUrl()}/api/activity-logs/read-all`, {
       method: 'PUT',

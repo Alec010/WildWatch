@@ -11,9 +11,7 @@ interface AuthResponse {
 }
 
 export const checkAuth = async (): Promise<AuthResponse> => {
-  console.log('Starting authentication check...');
   try {
-    console.log('Making request to /api/auth/profile...');
     const response = await fetch(`${API_BASE_URL}/api/auth/profile`, {
       method: 'GET',
       credentials: 'include',
@@ -24,15 +22,11 @@ export const checkAuth = async (): Promise<AuthResponse> => {
       }
     });
 
-    console.log('Profile response status:', response.status);
-
     if (!response.ok) {
-      console.log('Authentication failed - response not OK');
       throw new Error('Not authenticated');
     }
 
     const data = await response.json();
-    console.log('Authentication successful, user data:', data);
     
     return { isAuthenticated: true, user: data };
   } catch (error) {
@@ -64,8 +58,14 @@ export const getCurrentUser = async () => {
 };
 
 export const logout = async () => {
+  // Clear all storage and cookies
+  const { clearAllStorage } = await import('./storageCleanup');
+  clearAllStorage();
+  
+  // Also clear token via tokenService (dispatches events)
   const tokenService = (await import('./tokenService')).default;
   tokenService.removeToken();
+  
   if (typeof window !== 'undefined') {
     window.location.href = '/login';
   }

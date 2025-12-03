@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
 import { Sidebar } from "@/components/Sidebar";
 import { Navbar } from "@/components/Navbar";
-import { useSidebar } from "@/contexts/SidebarContext";
 import {
   Eye,
   Clock,
@@ -33,6 +32,7 @@ import {
   formatDateWithYear,
   parseUTCDate,
 } from "@/utils/dateUtils";
+import { PageLoader } from "@/components/PageLoader";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -50,7 +50,6 @@ interface Incident {
 
 export default function CaseTrackingPage() {
   const router = useRouter();
-  const { collapsed } = useSidebar();
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -211,25 +210,24 @@ export default function CaseTrackingPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9]">
+      <div
+        className={`flex-1 flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9] ${inter.className}`}
+      >
         <Sidebar />
-        <div
-          className={`flex-1 transition-all duration-300 ease-in-out ${
-            collapsed ? "ml-20" : "ml-64"
-          }`}
-        >
-          <div className="flex items-center justify-center h-screen">
-            <div className="text-center">
-              <div className="relative w-20 h-20 mx-auto">
-                <div className="absolute inset-0 rounded-full border-t-2 border-b-2 border-[#8B0000] animate-spin"></div>
-                <div className="absolute inset-2 rounded-full border-r-2 border-l-2 border-[#DAA520] animate-spin animation-delay-150"></div>
-                <div className="absolute inset-4 rounded-full border-t-2 border-b-2 border-[#8B0000] animate-spin animation-delay-300"></div>
-              </div>
-              <p className="mt-6 text-gray-600 font-medium">
-                Loading your cases...
-              </p>
-            </div>
+
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          {/* Navbar */}
+          <div className="sticky top-0 z-30 flex-shrink-0">
+            <Navbar
+              title="Case Tracking"
+              subtitle="Track and manage your security incident reports"
+              onSearch={setSearch}
+            />
           </div>
+
+          {/* PageLoader - fills the remaining space below Navbar */}
+          <PageLoader pageTitle="cases" />
         </div>
       </div>
     );
@@ -237,37 +235,47 @@ export default function CaseTrackingPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9]">
+      <div
+        className={`flex-1 flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9] ${inter.className}`}
+      >
         <Sidebar />
-        <div
-          className={`flex-1 transition-all duration-300 ease-in-out ${
-            collapsed ? "ml-20" : "ml-64"
-          }`}
-        >
-          <div className="p-8">
-            <div className="max-w-5xl mx-auto">
-              <h1 className="text-2xl font-bold text-[#8B0000] mb-4">
-                Case Tracking
-              </h1>
-              <div className="bg-red-50 border border-red-200 text-red-800 p-6 rounded-xl shadow-sm">
-                <div className="flex items-start gap-4">
-                  <div className="bg-red-100 p-3 rounded-full">
-                    <AlertTriangle className="h-6 w-6 text-red-600" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold mb-2">
-                      Error Loading Cases
-                    </h3>
-                    <p>{error}</p>
-                    <Button
-                      className="mt-4 bg-[#8B0000] hover:bg-[#6B0000] text-white"
-                      onClick={() =>
-                        typeof window !== "undefined" &&
-                        window.location.reload()
-                      }
-                    >
-                      <RefreshCw className="mr-2 h-4 w-4" /> Try Again
-                    </Button>
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          {/* Navbar */}
+          <div className="sticky top-0 z-30 flex-shrink-0">
+            <Navbar
+              title="Case Tracking"
+              subtitle="Track and manage your security incident reports"
+              onSearch={setSearch}
+            />
+          </div>
+
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-y-auto bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9]">
+            <div className="px-6 py-10">
+              <div className="max-w-5xl mx-auto">
+                <h1 className="text-2xl font-bold text-[#8B0000] mb-4">
+                  Case Tracking
+                </h1>
+                <div className="bg-red-50 border border-red-200 text-red-800 p-6 rounded-xl shadow-sm">
+                  <div className="flex items-start gap-4">
+                    <div className="bg-red-100 p-3 rounded-full">
+                      <AlertTriangle className="h-6 w-6 text-red-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold mb-2">
+                        Error Loading Cases
+                      </h3>
+                      <p>{error}</p>
+                      <Button
+                        className="mt-4 bg-[#8B0000] hover:bg-[#6B0000] text-white"
+                        onClick={() =>
+                          typeof window !== "undefined" &&
+                          window.location.reload()
+                        }
+                      >
+                        <RefreshCw className="mr-2 h-4 w-4" /> Try Again
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -280,288 +288,284 @@ export default function CaseTrackingPage() {
 
   return (
     <div
-      className={`min-h-screen flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9] ${inter.className}`}
+      className={`flex-1 flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9] ${inter.className}`}
     >
       <Sidebar />
-      <div
-        className={`flex-1 transition-all duration-300 ${
-          collapsed ? "ml-20" : "ml-64"
-        }`}
-      >
-        <Navbar
-          title="Case Tracking"
-          subtitle="Track and manage your security incident reports"
-          onSearch={setSearch}
-        />
-        <div className="pt-32 px-6 pb-10">
-          {/* Dashboard Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-              className="bg-gradient-to-br from-white to-[#fff9f9] p-6 rounded-xl shadow-md border border-[#f0e0e0] relative overflow-hidden"
-            >
-              <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-[#8B0000]/5 to-[#8B0000]/10 rounded-bl-full"></div>
-              <div className="flex items-center gap-4">
-                <div className="bg-gradient-to-br from-[#8B0000] to-[#6B0000] p-3 rounded-lg shadow-md">
-                  <Clock className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <p className="text-gray-600 text-sm font-medium">
-                    Pending Cases
-                  </p>
-                  <h3 className="text-3xl font-bold text-[#8B0000]">
-                    {pendingCount}
-                  </h3>
-                </div>
-              </div>
-              <div className="mt-4 pt-4 border-t border-gray-100">
-                <button
-                  onClick={() => setSelectedStatus("Pending")}
-                  className="text-[#8B0000] text-sm font-medium flex items-center hover:underline"
-                >
-                  View Pending Cases <ArrowUpRight className="ml-1 h-3 w-3" />
-                </button>
-              </div>
-            </motion.div>
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.1 }}
-              className="bg-gradient-to-br from-white to-[#fff9f9] p-6 rounded-xl shadow-md border border-[#f0e0e0] relative overflow-hidden"
-            >
-              <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-[#DAA520]/5 to-[#DAA520]/10 rounded-bl-full"></div>
-              <div className="flex items-center gap-4">
-                <div className="bg-gradient-to-br from-[#DAA520] to-[#B8860B] p-3 rounded-lg shadow-md">
-                  <Activity className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <p className="text-gray-600 text-sm font-medium">
-                    In Progress
-                  </p>
-                  <h3 className="text-3xl font-bold text-[#DAA520]">
-                    {inProgressCount}
-                  </h3>
-                </div>
-              </div>
-              <div className="mt-4 pt-4 border-t border-gray-100">
-                <button
-                  onClick={() => setSelectedStatus("In Progress")}
-                  className="text-[#DAA520] text-sm font-medium flex items-center hover:underline"
-                >
-                  View Active Cases <ArrowUpRight className="ml-1 h-3 w-3" />
-                </button>
-              </div>
-            </motion.div>
-          </div>
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* Navbar */}
+        <div className="sticky top-0 z-30 flex-shrink-0">
+          <Navbar
+            title="Case Tracking"
+            subtitle="Track and manage your security incident reports"
+            onSearch={setSearch}
+          />
+        </div>
 
-          {/* Filters Section */}
-          <div className="bg-white rounded-xl shadow-md p-4 mb-6 border border-gray-100">
-            <div className="flex items-center gap-2 mb-4">
-              <Filter className="h-5 w-5 text-[#8B0000]" />
-              <h3 className="font-medium text-gray-800">Filters</h3>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <h4 className="text-sm font-medium text-gray-600 mb-2">
-                  Status
-                </h4>
-                <div className="flex flex-wrap gap-2">
-                  {["All", "Pending", "In Progress"].map((status) => (
-                    <button
-                      key={status}
-                      onClick={() => setSelectedStatus(status)}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                        selectedStatus === status
-                          ? "bg-[#8B0000] text-white shadow-md"
-                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                      }`}
-                    >
-                      {status}
-                    </button>
-                  ))}
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9]">
+          <div className="px-6 py-10">
+            {/* Dashboard Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+                className="bg-gradient-to-br from-white to-[#fff9f9] p-6 rounded-xl shadow-md border border-[#f0e0e0] relative overflow-hidden"
+              >
+                <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-[#8B0000]/5 to-[#8B0000]/10 rounded-bl-full"></div>
+                <div className="flex items-center gap-4">
+                  <div className="bg-gradient-to-br from-[#8B0000] to-[#6B0000] p-3 rounded-lg shadow-md">
+                    <Clock className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-gray-600 text-sm font-medium">
+                      Pending Cases
+                    </p>
+                    <h3 className="text-3xl font-bold text-[#8B0000]">
+                      {pendingCount}
+                    </h3>
+                  </div>
                 </div>
-              </div>
-
-              <div>
-                <h4 className="text-sm font-medium text-gray-600 mb-2">
-                  Priority
-                </h4>
-                <div className="flex flex-wrap gap-2">
-                  {["All", "HIGH", "MEDIUM", "LOW"].map((priority) => (
-                    <button
-                      key={priority}
-                      onClick={() => setSelectedPriority(priority)}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                        selectedPriority === priority
-                          ? priority === "HIGH"
-                            ? "bg-red-500 text-white shadow-md"
-                            : priority === "MEDIUM"
-                            ? "bg-orange-500 text-white shadow-md"
-                            : priority === "LOW"
-                            ? "bg-green-500 text-white shadow-md"
-                            : "bg-[#8B0000] text-white shadow-md"
-                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                      }`}
-                    >
-                      {priority === "All"
-                        ? priority
-                        : priority.charAt(0) + priority.slice(1).toLowerCase()}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Incident Cards */}
-          <div className="mb-10">
-            <div className="flex items-center justify_between mb-4">
-              <h2 className="text-xl font-bold text-[#8B0000] flex items-center">
-                <Layers className="mr-2 h-5 w-5" />
-                Your Cases
-                <span className="ml-2 text-sm bg-[#8B0000]/10 text-[#8B0000] px-2 py-0.5 rounded-full">
-                  {filteredCases.length}
-                </span>
-              </h2>
-              <div className="text-sm text-gray-500">
-                Showing {filteredCases.length} of {incidents.length} cases
-              </div>
-            </div>
-
-            {filteredCases.length === 0 ? (
-              <div className="bg-white rounded-xl shadow-md p-8 text-center border border-gray-100">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Search className="h-8 w-8 text-gray-400" />
-                </div>
-                <h3 className="text-lg font-medium text_gray-800 mb-2">
-                  No cases found
-                </h3>
-                <p className="text-gray-500 max-w-md mx-auto">
-                  We couldn't find any cases matching your current filters. Try
-                  adjusting your search or filters.
-                </p>
-                <Button
-                  variant="outline"
-                  className="mt-4"
-                  onClick={() => {
-                    setSelectedStatus("All");
-                    setSelectedPriority("All");
-                    setSearch("");
-                  }}
-                >
-                  Clear Filters
-                </Button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 gap-4 overflow-visible">
-                {filteredCases.map((item, index) => (
-                  <motion.div
-                    key={item.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, delay: index * 0.05 }}
-                    className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 border border-gray-100 overflow-visible group"
+                <div className="mt-4 pt-4 border-t border-gray-100">
+                  <button
+                    onClick={() => setSelectedStatus("Pending")}
+                    className="text-[#8B0000] text-sm font-medium flex items-center hover:underline"
                   >
-                    <div className="flex flex-col md:flex-row">
-                      <div
-                        className={`w-full md:w-2 ${
-                          item.status === "Pending"
-                            ? "bg-yellow-500"
-                            : item.status === "In Progress"
-                            ? "bg-blue-500"
-                            : "bg-green-500"
+                    View Pending Cases <ArrowUpRight className="ml-1 h-3 w-3" />
+                  </button>
+                </div>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 0.1 }}
+                className="bg-gradient-to-br from-white to-[#fff9f9] p-6 rounded-xl shadow-md border border-[#f0e0e0] relative overflow-hidden"
+              >
+                <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-[#DAA520]/5 to-[#DAA520]/10 rounded-bl-full"></div>
+                <div className="flex items-center gap-4">
+                  <div className="bg-gradient-to-br from-[#DAA520] to-[#B8860B] p-3 rounded-lg shadow-md">
+                    <Activity className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-gray-600 text-sm font-medium">
+                      In Progress
+                    </p>
+                    <h3 className="text-3xl font-bold text-[#DAA520]">
+                      {inProgressCount}
+                    </h3>
+                  </div>
+                </div>
+                <div className="mt-4 pt-4 border-t border-gray-100">
+                  <button
+                    onClick={() => setSelectedStatus("In Progress")}
+                    className="text-[#DAA520] text-sm font-medium flex items-center hover:underline"
+                  >
+                    View Active Cases <ArrowUpRight className="ml-1 h-3 w-3" />
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+
+            {/* Filters Section */}
+            <div className="bg-white rounded-xl shadow-md p-4 mb-6 border border-gray-100">
+              <div className="flex items-center gap-2 mb-4">
+                <Filter className="h-5 w-5 text-[#8B0000]" />
+                <h3 className="font-medium text-gray-800">Filters</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h4 className="text-sm font-medium text-gray-600 mb-2">
+                    Status
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {["All", "Pending", "In Progress"].map((status) => (
+                      <button
+                        key={status}
+                        onClick={() => setSelectedStatus(status)}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                          selectedStatus === status
+                            ? "bg-[#8B0000] text-white shadow-md"
+                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                         }`}
-                      ></div>
-                      <div className="p-5 flex-1">
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <h3 className="font-semibold text-[#8B0000]">
-                                {item.trackingNumber
-                                  ? item.trackingNumber
-                                  : item.caseNumber
-                                  ? item.caseNumber
-                                  : formatCaseNumber(index)}
-                              </h3>
+                      >
+                        {status}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-medium text-gray-600 mb-2">
+                    Priority
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {["All", "HIGH", "MEDIUM", "LOW"].map((priority) => (
+                      <button
+                        key={priority}
+                        onClick={() => setSelectedPriority(priority)}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                          selectedPriority === priority
+                            ? priority === "HIGH"
+                              ? "bg-red-500 text-white shadow-md"
+                              : priority === "MEDIUM"
+                              ? "bg-orange-500 text-white shadow-md"
+                              : priority === "LOW"
+                              ? "bg-green-500 text-white shadow-md"
+                              : "bg-[#8B0000] text-white shadow-md"
+                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                        }`}
+                      >
+                        {priority === "All"
+                          ? priority
+                          : priority.charAt(0) +
+                            priority.slice(1).toLowerCase()}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Incident Cards */}
+            <div className="mb-10">
+              <div className="flex items-center justify_between mb-4">
+                <h2 className="text-xl font-bold text-[#8B0000] flex items-center">
+                  <Layers className="mr-2 h-5 w-5" />
+                  Your Cases
+                  <span className="ml-2 text-sm bg-[#8B0000]/10 text-[#8B0000] px-2 py-0.5 rounded-full">
+                    {filteredCases.length}
+                  </span>
+                </h2>
+                <div className="text-sm text-gray-500">
+                  Showing {filteredCases.length} of {incidents.length} cases
+                </div>
+              </div>
+
+              {filteredCases.length === 0 ? (
+                <div className="bg-white rounded-xl shadow-md p-8 text-center border border-gray-100">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Search className="h-8 w-8 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-medium text_gray-800 mb-2">
+                    No cases found
+                  </h3>
+                  <p className="text-gray-500 max-w-md mx-auto">
+                    We couldn't find any cases matching your current filters.
+                    Try adjusting your search or filters.
+                  </p>
+                  <Button
+                    variant="outline"
+                    className="mt-4"
+                    onClick={() => {
+                      setSelectedStatus("All");
+                      setSelectedPriority("All");
+                      setSearch("");
+                    }}
+                  >
+                    Clear Filters
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-4 overflow-visible">
+                  {filteredCases.map((item, index) => (
+                    <motion.div
+                      key={item.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, delay: index * 0.05 }}
+                      className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 border border-gray-100 overflow-visible group"
+                    >
+                      <div className="flex flex-col md:flex-row">
+                        <div
+                          className={`w-full md:w-2 ${
+                            item.status === "Pending"
+                              ? "bg-yellow-500"
+                              : item.status === "In Progress"
+                              ? "bg-blue-500"
+                              : "bg-green-500"
+                          }`}
+                        ></div>
+                        <div className="p-5 flex-1">
+                          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div>
                               <div className="flex items-center gap-2">
-                                <span
-                                  className={`px-2 py-0.5 text-xs rounded-full ${
-                                    item.status === "Pending"
-                                      ? "bg-yellow-100 text-yellow-800"
-                                      : item.status === "In Progress"
-                                      ? "bg-blue-100 text-blue-800"
-                                      : "bg-green-100 text-green-800"
-                                  }`}
-                                >
-                                  {item.status}
-                                </span>
-                                {item.estimatedResolutionDate && (
-                                  <div className="relative group">
-                                    <Calendar className="h-4 w-4 text-[#800000] cursor-help transition-all duration-200 group-hover:scale-110 group-hover:text-[#A00000]" />
-                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-3 px-4 py-3 bg-[#8B0000] text-white text-sm rounded-lg shadow-lg opacity-0 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300 whitespace-nowrap z-[9999] pointer-events-none overflow-visible group-hover:animate-in group-hover:slide-in-from-bottom-2 group-hover:fade-in-0">
-                                      <div className="font-medium">
-                                        Est. Resolution
-                                      </div>
-                                      <div className="text-xs text-gray-100 mt-1">
-                                        {formatEstimatedDate(
-                                          item.estimatedResolutionDate
-                                        )}
+                                <h3 className="font-semibold text-[#8B0000]">
+                                  {item.trackingNumber
+                                    ? item.trackingNumber
+                                    : item.caseNumber
+                                    ? item.caseNumber
+                                    : formatCaseNumber(index)}
+                                </h3>
+                                <div className="flex items-center gap-2">
+                                  <span
+                                    className={`px-2 py-0.5 text-xs rounded-full ${
+                                      item.status === "Pending"
+                                        ? "bg-yellow-100 text-yellow-800"
+                                        : item.status === "In Progress"
+                                        ? "bg-blue-100 text-blue-800"
+                                        : "bg-green-100 text-green-800"
+                                    }`}
+                                  >
+                                    {item.status}
+                                  </span>
+                                  {item.estimatedResolutionDate && (
+                                    <div className="relative group">
+                                      <Calendar className="h-4 w-4 text-[#800000] cursor-help transition-all duration-200 group-hover:scale-110 group-hover:text-[#A00000]" />
+                                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-3 px-4 py-3 bg-[#8B0000] text-white text-sm rounded-lg shadow-lg opacity-0 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300 whitespace-nowrap z-[9999] pointer-events-none overflow-visible group-hover:animate-in group-hover:slide-in-from-bottom-2 group-hover:fade-in-0">
+                                        <div className="font-medium">
+                                          Est. Resolution
+                                        </div>
+                                        <div className="text-xs text-gray-100 mt-1">
+                                          {formatEstimatedDate(
+                                            item.estimatedResolutionDate
+                                          )}
+                                        </div>
                                       </div>
                                     </div>
-                                  </div>
-                                )}
+                                  )}
+                                </div>
                               </div>
+                              <h4 className="text-gray-800 font-medium mt-1">
+                                {item.incidentType}
+                              </h4>
                             </div>
-                            <h4 className="text-gray-800 font-medium mt-1">
-                              {item.incidentType}
-                            </h4>
-                          </div>
-                          <div className="flex items-center gap-6 text-sm text-gray-500">
-                            <div className="flex items-center gap-1">
-                              <Calendar className="h-4 w-4" />
-                              <span>{item.dateOfIncident}</span>
+                            <div className="flex items-center gap-6 text-sm text-gray-500">
+                              <div className="flex items-center gap-1">
+                                <Calendar className="h-4 w-4" />
+                                <span>{item.dateOfIncident}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <MapPin className="h-4 w-4" />
+                                <span>{item.location}</span>
+                              </div>
+                              <Button
+                                onClick={() =>
+                                  goToCase(
+                                    item.trackingNumber
+                                      ? item.trackingNumber
+                                      : item.id
+                                  )
+                                }
+                                className="bg-[#8B0000] hover:bg-[#6B0000] text-white shadow-sm"
+                                size="sm"
+                              >
+                                <Eye size={14} className="mr-1" /> View Details
+                              </Button>
                             </div>
-                            <div className="flex items-center gap-1">
-                              <MapPin className="h-4 w-4" />
-                              <span>{item.location}</span>
-                            </div>
-                            <Button
-                              onClick={() =>
-                                goToCase(
-                                  item.trackingNumber
-                                    ? item.trackingNumber
-                                    : item.id
-                                )
-                              }
-                              className="bg-[#8B0000] hover:bg-[#6B0000] text-white shadow-sm"
-                              size="sm"
-                            >
-                              <Eye size={14} className="mr-1" /> View Details
-                            </Button>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            )}
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
-
-      {/* Add custom styles for animation delays */}
-      <style jsx global>{`
-        .animation-delay-150 {
-          animation-delay: 150ms;
-        }
-        .animation-delay-300 {
-          animation-delay: 300ms;
-        }
-      `}</style>
     </div>
   );
 }

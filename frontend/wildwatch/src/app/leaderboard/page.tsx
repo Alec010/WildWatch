@@ -19,15 +19,21 @@ import { Sidebar } from "@/components/Sidebar";
 import { OfficeAdminSidebar } from "@/components/OfficeAdminSidebar";
 import { Navbar } from "@/components/Navbar";
 import { OfficeAdminNavbar } from "@/components/OfficeAdminNavbar";
-import { useSidebar } from "@/contexts/SidebarContext";
 import dynamic from "next/dynamic";
 import { RankBadge } from "@/components/RankBadge";
 import type { UserRank } from "@/types/rank";
 import Image from "next/image";
+import { PageLoader } from "@/components/PageLoader";
+import { Inter } from "next/font/google";
+
+const inter = Inter({ subsets: ["latin"] });
 
 interface LeaderboardEntry {
   id: number;
   name: string;
+  firstName?: string;
+  lastName?: string;
+  userRole?: "REGULAR_USER" | "OFFICE_ADMIN";
   totalRatings?: number;
   totalIncidents?: number;
   averageRating: number;
@@ -352,6 +358,24 @@ function LeaderboardPodium({
     const podiumData = getPodiumData(index);
     const isEmpty = !entry.name;
 
+    // Get full name based on user role
+    const getFullName = () => {
+      if (entry.userRole === "OFFICE_ADMIN") {
+        // For OFFICE_ADMIN, use firstName from API (not the acronym from name field)
+        return entry.firstName || entry.name;
+      } else {
+        // REGULAR_USER - use firstName + lastName
+        if (!entry.firstName && !entry.lastName) {
+          return entry.name; // Fallback to name if firstName/lastName not available
+        }
+        const firstName = entry.firstName || "";
+        const lastName = entry.lastName || "";
+        return `${firstName} ${lastName}`.trim() || entry.name;
+      }
+    };
+
+    const fullName = getFullName();
+
     return (
       <motion.div
         initial={{ opacity: 0, y: 50 }}
@@ -360,20 +384,29 @@ function LeaderboardPodium({
         className="relative flex flex-col items-center"
         style={{ zIndex: index === 0 ? 30 : index === 1 ? 20 : 10 }}
       >
-        {/* Trophy Image */}
+        {/* Trophy Image with Hover Tooltip */}
         <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-40 h-40 flex items-center justify-center z-20">
           {isEmpty ? (
             <div className="w-32 h-32 rounded-full bg-gray-200 flex items-center justify-center">
               <Trophy className="w-16 h-16 text-gray-400" />
             </div>
           ) : (
-            <Image
-              src={podiumData.trophyImage!}
-              alt={`${index + 1} place trophy`}
-              width={160}
-              height={160}
-              className="object-contain"
-            />
+            <div className="relative group">
+              <Image
+                src={podiumData.trophyImage!}
+                alt={`${index + 1} place trophy`}
+                width={160}
+                height={160}
+                className="object-contain cursor-pointer"
+              />
+              {/* Hover Tooltip */}
+              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-3 px-4 py-3 bg-[#8B0000] text-white text-sm rounded-lg shadow-lg opacity-0 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300 whitespace-nowrap z-[9999] pointer-events-none overflow-visible group-hover:animate-in group-hover:slide-in-from-bottom-2 group-hover:fade-in-0">
+                <div className="font-medium">{fullName}</div>
+                <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full">
+                  <div className="w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-[#8B0000]"></div>
+                </div>
+              </div>
+            </div>
           )}
         </div>
 
@@ -390,16 +423,6 @@ function LeaderboardPodium({
             <div className="absolute inset-0 flex flex-col items-center justify-center text-white font-bold text-center px-2 pt-8">
               <div className="text-sm mb-1 line-clamp-1">{entry.name}</div>
               <div className="text-lg">{entry.points} pts</div>
-              {entry.rank && entry.rank !== "NONE" && (
-                <div className="mt-1">
-                  <RankBadge
-                    rank={entry.rank}
-                    goldRanking={entry.goldRanking}
-                    size="xs"
-                    showLabel={false}
-                  />
-                </div>
-              )}
             </div>
           )}
         </div>
@@ -448,7 +471,6 @@ function PlaceholderCard({ rank }: { rank: number }) {
 
 export default function LeaderboardPage() {
   const { isLoading, userRole } = useUser();
-  const { collapsed } = useSidebar();
   const [selectedTab, setSelectedTab] = useState(0);
   const [topStudents, setTopStudents] = useState<LeaderboardEntry[]>([]);
   const [topOffices, setTopOffices] = useState<LeaderboardEntry[]>([]);
@@ -515,9 +537,48 @@ export default function LeaderboardPage() {
             }
           );
 
-          // Process office data
-          const processedOffices = officesData.map(
-            (office: LeaderboardEntry) => {
+          // Process office data and fetch firstName from office_admins table
+          const processedOffices = await Promise.all(
+            officesData.map(async (office: LeaderboardEntry) => {
+              // Fetch office admin details to get firstName from office_admins table
+              try {
+                const officeAdminRes = await fetch(
+                  `${API_BASE_URL}/api/setup/by-office/${office.name}`,
+                  {
+                    headers: {
+                      Authorization: `Bearer ${token}`,
+                      "Content-Type": "application/json",
+                    },
+                  }
+                );
+
+                if (officeAdminRes.ok) {
+                  const officeAdminData = await officeAdminRes.json();
+                  // Set firstName from office_admins table
+                  office.firstName = officeAdminData.firstName;
+                  office.userRole = "OFFICE_ADMIN";
+
+                  // Console log firstName for Offices tab
+                  console.log("Office entry with firstName from API:", {
+                    id: office.id,
+                    name: office.name,
+                    firstName: office.firstName,
+                    lastName: officeAdminData.lastName,
+                    userRole: office.userRole,
+                  });
+                } else {
+                  console.warn(
+                    `Failed to fetch office admin for ${office.name}:`,
+                    officeAdminRes.status
+                  );
+                }
+              } catch (error) {
+                console.error(
+                  `Error fetching office admin for ${office.name}:`,
+                  error
+                );
+              }
+
               if (office.rank === "GOLD") {
                 const goldPosition =
                   officesData
@@ -533,7 +594,7 @@ export default function LeaderboardPage() {
                 }
               }
               return office;
-            }
+            })
           );
 
           setTopStudents(processedStudents);
@@ -556,161 +617,187 @@ export default function LeaderboardPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9]">
+      <div
+        className={`flex-1 flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9] ${inter.className}`}
+      >
         {userRole === "OFFICE_ADMIN" ? <OfficeAdminSidebar /> : <Sidebar />}
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <div className="relative w-20 h-20 mx-auto">
-              <div className="absolute inset-0 rounded-full border-t-2 border-b-2 border-[#8B0000] animate-spin"></div>
-              <div className="absolute inset-2 rounded-full border-r-2 border-l-2 border-[#DAA520] animate-spin animation-delay-150"></div>
-              <div className="absolute inset-4 rounded-full border-t-2 border-b-2 border-[#8B0000] animate-spin animation-delay-300"></div>
-            </div>
-            <p className="mt-6 text-gray-600 font-medium">
-              Loading leaderboard...
-            </p>
+
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          {/* Navbar */}
+          <div className="sticky top-0 z-30 flex-shrink-0">
+            {userRole === "OFFICE_ADMIN" ? (
+              <OfficeAdminNavbar
+                title="Office Leaderboard"
+                subtitle="See who's leading in incident reporting"
+                showSearch={false}
+              />
+            ) : (
+              <Navbar
+                title="Leaderboard"
+                subtitle="See who's leading in incident reporting"
+                showSearch={false}
+                showNewIncident={false}
+              />
+            )}
           </div>
+
+          {/* PageLoader - fills the remaining space below Navbar */}
+          <PageLoader pageTitle="leaderboard" />
         </div>
       </div>
     );
   }
 
-  const getContentMargin = () => {
-    if (userRole === "OFFICE_ADMIN") {
-      return collapsed ? "ml-20" : "ml-72";
-    }
-    return collapsed ? "ml-18" : "ml-64";
-  };
-
   const list = selectedTab === 0 ? topStudents : topOffices;
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA]">
-      <ConfettiTrigger />
+    <div
+      className={`flex-1 flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9] ${inter.className}`}
+    >
+      {/* Confetti only triggers when leaderboard data is successfully loaded */}
+      {!loading && list.length > 0 && <ConfettiTrigger />}
       {userRole === "OFFICE_ADMIN" ? <OfficeAdminSidebar /> : <Sidebar />}
-      <div className={`transition-all duration-300 ${getContentMargin()}`}>
-        {userRole === "OFFICE_ADMIN" ? (
-          <OfficeAdminNavbar
-            title="Office Leaderboard"
-            subtitle="See who's leading in incident reporting"
-            showSearch={false}
-          />
-        ) : (
-          <Navbar
-            title="Leaderboard"
-            subtitle="See who's leading in incident reporting"
-            showSearch={false}
-            showNewIncident={false}
-          />
-        )}
 
-        {/* Decorative elements */}
-        <div className="pointer-events-none fixed right-[-40px] top-[-20px] opacity-[0.08] z-0"></div>
-        <div className="pointer-events-none fixed left-[-30px] bottom-[-10px] opacity-[0.06] z-0">
-          <Sparkles size={200} className="text-[#D4AF37]" />
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* Navbar */}
+        <div className="sticky top-0 z-30 flex-shrink-0">
+          {userRole === "OFFICE_ADMIN" ? (
+            <OfficeAdminNavbar
+              title="Office Leaderboard"
+              subtitle="See who's leading in incident reporting"
+              showSearch={false}
+            />
+          ) : (
+            <Navbar
+              title="Leaderboard"
+              subtitle="See who's leading in incident reporting"
+              showSearch={false}
+              showNewIncident={false}
+            />
+          )}
         </div>
 
-        <div className="pt-6 pb-8 relative z-10 top-20">
-          {/* Tabs */}
-          <SegmentedTabs selected={selectedTab} onSelect={setSelectedTab} />
-
-          <div className="px-4 mt-4">
-            {/* Podium */}
-            {list.length > 0 && (
-              <LeaderboardPodium
-                entries={list.slice(0, 3)}
-                type={selectedTab === 0 ? "students" : "offices"}
-              />
-            )}
-
-            {/* Leaderboard Rankings Section (4-10) */}
-            <div className="mt-4.5">
-              <div className="flex items-center mb-3">
-                <div className="w-[26px] h-[26px] rounded-full bg-[#8B0000] flex items-center justify-center mr-2">
-                  <Users size={15} className="text-white" />
-                </div>
-                <h2 className="text-base font-extrabold text-[#8B0000]">
-                  Leaderboard Rankings
-                </h2>
-              </div>
-
-              {loading ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="w-8 h-8 text-[#8B0000] animate-spin" />
-                </div>
-              ) : (
-                <>
-                  {(() => {
-                    const START_RANK = 4;
-                    const MAX_RANK = 10;
-                    const totalSlots = MAX_RANK - START_RANK + 1;
-                    const actualCount = Math.max(
-                      0,
-                      Math.min(Math.max(list.length - 3, 0), totalSlots)
-                    );
-                    const placeholders = totalSlots - actualCount;
-
-                    return (
-                      <>
-                        {actualCount > 0
-                          ? list
-                              .slice(3, 3 + actualCount)
-                              .map((entry, idx) => (
-                                <LeaderboardItem
-                                  key={entry.id}
-                                  entry={entry}
-                                  rank={START_RANK + idx}
-                                  isTopThree={false}
-                                  isOffice={selectedTab === 1}
-                                />
-                              ))
-                          : null}
-
-                        {Array.from({ length: placeholders }).map((_, i) => (
-                          <PlaceholderCard
-                            key={`placeholder-${START_RANK + actualCount + i}`}
-                            rank={START_RANK + actualCount + i}
-                          />
-                        ))}
-                      </>
-                    );
-                  })()}
-                </>
-              )}
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9]">
+          <div className="px-6 py-10 relative z-10">
+            {/* Decorative elements */}
+            <div className="pointer-events-none fixed right-[-40px] top-[-20px] opacity-[0.08] z-0"></div>
+            <div className="pointer-events-none fixed left-[-30px] bottom-[-10px] opacity-[0.06] z-0">
+              <Sparkles size={200} className="text-[#D4AF37]" />
             </div>
 
-            {/* Empty State */}
-            {list.length === 0 && !loading && (
-              <div className="bg-white rounded-xl p-6 flex flex-col items-center mt-2">
-                <Trophy size={32} className="text-[#9CA3AF]" />
-                <p className="text-[#6B7280] mt-2 text-center">
-                  No leaderboard data available
-                </p>
-              </div>
-            )}
+            <div className="pb-8">
+              {/* Tabs */}
+              <SegmentedTabs selected={selectedTab} onSelect={setSelectedTab} />
 
-            {/* How to Earn Recognition Section */}
-            <div className="bg-[#FDF2F2] rounded-xl p-4 mt-6 mb-6 border border-[#FECACA]">
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-full bg-[#8B0000] flex items-center justify-center flex-shrink-0">
-                  <Sparkles size={24} className="text-white" />
+              <div className="px-4 mt-4">
+                {/* Podium */}
+                {list.length > 0 && (
+                  <LeaderboardPodium
+                    entries={list.slice(0, 3)}
+                    type={selectedTab === 0 ? "students" : "offices"}
+                  />
+                )}
+
+                {/* Leaderboard Rankings Section (4-10) */}
+                <div className="mt-4.5">
+                  <div className="flex items-center mb-3">
+                    <div className="w-[26px] h-[26px] rounded-full bg-[#8B0000] flex items-center justify-center mr-2">
+                      <Users size={15} className="text-white" />
+                    </div>
+                    <h2 className="text-base font-extrabold text-[#8B0000]">
+                      Leaderboard Rankings
+                    </h2>
+                  </div>
+
+                  {loading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="w-8 h-8 text-[#8B0000] animate-spin" />
+                    </div>
+                  ) : (
+                    <>
+                      {(() => {
+                        const START_RANK = 4;
+                        const MAX_RANK = 10;
+                        const totalSlots = MAX_RANK - START_RANK + 1;
+                        const actualCount = Math.max(
+                          0,
+                          Math.min(Math.max(list.length - 3, 0), totalSlots)
+                        );
+                        const placeholders = totalSlots - actualCount;
+
+                        return (
+                          <>
+                            {actualCount > 0
+                              ? list
+                                  .slice(3, 3 + actualCount)
+                                  .map((entry, idx) => (
+                                    <LeaderboardItem
+                                      key={entry.id}
+                                      entry={entry}
+                                      rank={START_RANK + idx}
+                                      isTopThree={false}
+                                      isOffice={selectedTab === 1}
+                                    />
+                                  ))
+                              : null}
+
+                            {Array.from({ length: placeholders }).map(
+                              (_, i) => (
+                                <PlaceholderCard
+                                  key={`placeholder-${
+                                    START_RANK + actualCount + i
+                                  }`}
+                                  rank={START_RANK + actualCount + i}
+                                />
+                              )
+                            )}
+                          </>
+                        );
+                      })()}
+                    </>
+                  )}
                 </div>
-                <div className="flex-1">
-                  <h3 className="text-lg font-extrabold text-[#8B0000] mb-2">
-                    How to Earn Recognition
-                  </h3>
-                  <p className="text-sm text-[#4B5563] leading-5 mb-3">
-                    Points are awarded based on the quality and quantity of your
-                    contributions. Submit detailed reports, provide helpful
-                    information, and maintain high ratings to climb the
-                    leaderboard!
-                  </p>
-                  <button
-                    onClick={() => setShowInfoModal(true)}
-                    className="text-sm font-bold text-[#8B0000] flex items-center hover:underline"
-                  >
-                    Learn more about the recognition system
-                  </button>
-                </div>
+
+                {/* Empty State */}
+                {list.length === 0 && !loading && (
+                  <div className="bg-white rounded-xl p-6 flex flex-col items-center mt-2">
+                    <Trophy size={32} className="text-[#9CA3AF]" />
+                    <p className="text-[#6B7280] mt-2 text-center">
+                      No leaderboard data available
+                    </p>
+                  </div>
+                )}
+
+                {/* How to Earn Recognition Section - Only show when data is successfully loaded */}
+                {!loading && list.length > 0 && (
+                  <div className="bg-[#FDF2F2] rounded-xl p-4 mt-6 mb-6 border border-[#FECACA]">
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 rounded-full bg-[#8B0000] flex items-center justify-center flex-shrink-0">
+                        <Sparkles size={24} className="text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-extrabold text-[#8B0000] mb-2">
+                          How to Earn Recognition
+                        </h3>
+                        <p className="text-sm text-[#4B5563] leading-5 mb-3">
+                          Points are awarded based on the quality and quantity
+                          of your contributions. Submit detailed reports,
+                          provide helpful information, and maintain high ratings
+                          to climb the leaderboard!
+                        </p>
+                        <button
+                          onClick={() => setShowInfoModal(true)}
+                          className="text-sm font-bold text-[#8B0000] flex items-center hover:underline"
+                        >
+                          Learn more about the recognition system
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
