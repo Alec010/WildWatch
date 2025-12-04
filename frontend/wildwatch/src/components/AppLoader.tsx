@@ -35,6 +35,12 @@ export function AppLoader({ children }: AppLoaderProps) {
     (page) => pathname === page || pathname.startsWith(page + "/")
   );
 
+  // Pages that handle their own loading state (with sidebar/navbar visible)
+  const pagesWithOwnLoader = ["/office-admin/pdf-preview"];
+  const hasOwnLoader = pagesWithOwnLoader.some((page) =>
+    pathname?.startsWith(page)
+  );
+
   // Redirect unauthenticated users to login when accessing protected pages
   useEffect(() => {
     if (!mounted) return;
@@ -55,6 +61,14 @@ export function AppLoader({ children }: AppLoaderProps) {
     }
   }, [mounted, isLoading, userRole, isPublicPage, pathname, router]);
 
+  // Don't show AppLoader's loading screen for pages that have their own loader
+  // This allows those pages to show sidebar/navbar during loading
+  // If we're on a page with its own loader, always render children (let page handle loading)
+  if (hasOwnLoader) {
+    return <>{children}</>;
+  }
+
+  // Show AppLoader's loading screen only for pages without their own loader
   if (!mounted || (isLoading && !isPublicPage)) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9] flex items-center justify-center">

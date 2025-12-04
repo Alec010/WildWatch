@@ -24,15 +24,29 @@ import {
 import { useRouter } from "next/navigation";
 import { API_BASE_URL } from "@/utils/api";
 import { generatePDF } from "@/components/GeneralFormatOfPDF";
-import { TSGPDFModal } from "@/components/format/TSG";
+import { preparePDFPreviewData } from "@/components/format/TSG";
 import { motion } from "framer-motion";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { Inter } from "next/font/google";
 import { formatDateOnly, parseUTCDate } from "@/utils/dateUtils";
 import { PageLoader } from "@/components/PageLoader";
 import userProfileService from "@/utils/userProfileService";
+import { toast } from "sonner";
+import {
+  formatLocationForTable,
+  formatLocationString,
+} from "@/utils/locationFormatter";
 
 const inter = Inter({ subsets: ["latin"] });
+
+interface Evidence {
+  id: string;
+  fileUrl: string;
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+  uploadedAt: string;
+}
 
 interface Incident {
   id: string;
@@ -49,9 +63,22 @@ interface Incident {
   description?: string;
   submittedByEmail?: string;
   submittedByPhone?: string;
-  evidence?: any[];
+  resolutionNotes?: string; // Add this field
+  evidence?: Evidence[]; // Change from any[] to Evidence[]
   witnesses?: any[];
   updates?: any[];
+  // Allow for alternative field names that might come from API
+  administrativeNotes?: string;
+  verificationNotes?: string;
+  // Location data fields (optional, for enhanced formatting)
+  formattedAddress?: string;
+  buildingName?: string;
+  buildingCode?: string;
+  room?: string;
+  building?: {
+    fullName?: string;
+    code?: string;
+  };
 }
 
 export default function OfficeAdminIncidentHistoryPage() {
@@ -64,10 +91,7 @@ export default function OfficeAdminIncidentHistoryPage() {
   const [isDownloading, setIsDownloading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [tsgModalOpen, setTSGModalOpen] = useState(false);
-  const [selectedIncident, setSelectedIncident] = useState<Incident | null>(
-    null
-  );
+  const [isFetchingDetails, setIsFetchingDetails] = useState(false);
   const { collapsed } = useSidebar();
 
   const incidentsPerPage = 5;
@@ -173,9 +197,54 @@ export default function OfficeAdminIncidentHistoryPage() {
 
     switch (pdfFormat) {
       case "tsg":
-        // Open TSG modal for user input
-        setSelectedIncident(incident);
-        setTSGModalOpen(true);
+        try {
+          setIsFetchingDetails(true);
+          // Fetch full incident details including resolutionNotes
+          const token = document.cookie
+            .split("; ")
+            .find((row) => row.startsWith("token="))
+            ?.split("=")[1];
+
+          if (!token) {
+            throw new Error("No authentication token found");
+          }
+
+          const response = await fetch(
+            `${API_BASE_URL}/api/incidents/track/${incident.trackingNumber}`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+            }
+          );
+
+          if (!response.ok) {
+            throw new Error(
+              `Failed to fetch full incident details: ${response.status}`
+            );
+          }
+
+          const fullIncidentData = await response.json();
+          console.log("Full incident data fetched for PDF:", fullIncidentData);
+
+          // Prepare data for PDF preview page
+          preparePDFPreviewData(fullIncidentData);
+
+          // Use Next.js router for client-side navigation (no full page reload)
+          // This prevents AppLoader from showing "Initializing..." screen
+          router.push(
+            `/office-admin/pdf-preview/${fullIncidentData.trackingNumber}`
+          );
+        } catch (error) {
+          console.error("Error fetching full incident details:", error);
+          toast.error("Failed to load incident details", {
+            description:
+              "Could not fetch complete incident data. Please try again.",
+          });
+        } finally {
+          setIsFetchingDetails(false);
+        }
         break;
 
       case "default":
@@ -246,7 +315,23 @@ export default function OfficeAdminIncidentHistoryPage() {
           />
         </div>
 
-        {/* Loading Modal */}
+        {/* Loading Modal for fetching details */}
+        {isFetchingDetails && (
+          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center">
+            <div className="bg-white rounded-lg p-6 shadow-xl flex flex-col items-center gap-4">
+              <div className="relative w-16 h-16 mx-auto">
+                <div className="absolute inset-0 rounded-full border-t-2 border-b-2 border-[#8B0000] animate-spin"></div>
+                <div className="absolute inset-2 rounded-full border-r-2 border-l-2 border-[#DAA520] animate-spin animation-delay-150"></div>
+                <div className="absolute inset-4 rounded-full border-t-2 border-b-2 border-[#8B0000] animate-spin animation-delay-300"></div>
+              </div>
+              <p className="text-gray-700 font-medium">
+                Loading incident details...
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Loading Modal for PDF generation */}
         {isDownloading && (
           <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center">
             <div className="bg-white rounded-lg p-6 shadow-xl flex flex-col items-center gap-4">
@@ -619,7 +704,7 @@ export default function OfficeAdminIncidentHistoryPage() {
                               <td className="px-3 py-3 whitespace-nowrap">
                                 <div className="flex items-center text-sm text-gray-700">
                                   <MapPin className="h-4 w-4 text-gray-400 mr-2" />
-                                  {incident.location}
+                                  {formatLocationForTable(incident)}
                                 </div>
                               </td>
                               <td className="px-3 py-3 whitespace-nowrap">
@@ -765,16 +850,6 @@ export default function OfficeAdminIncidentHistoryPage() {
       </div>
 
       {/* TSG PDF Modal */}
-      {selectedIncident && (
-        <TSGPDFModal
-          incident={selectedIncident}
-          isOpen={tsgModalOpen}
-          onClose={() => {
-            setTSGModalOpen(false);
-            setSelectedIncident(null);
-          }}
-        />
-      )}
 
       {/* Add custom styles for animation delays */}
       <style jsx global>{`
