@@ -18,8 +18,9 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { storage } from "../../lib/storage";
 import { api } from "../../lib/api";
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import axios from "axios";
+import RNFetchBlob from "react-native-blob-util";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
@@ -982,7 +983,8 @@ export default function ReportScreen() {
     };
   };
 
-  // Actual submission function - Using axios API for proper FormData handling
+  // Actual submission function - Using fetch API for proper FormData handling in production builds
+  // Note: fetch handles FormData better than axios in React Native production builds (APK)
   const doSubmit = async () => {
     if (!token) {
       Alert.alert("Error", "You must be logged in to report an incident");
@@ -1001,32 +1003,6 @@ export default function ReportScreen() {
     
     const incidentData = prepareIncidentData();
 
-    // Create FormData for multipart request
-    const formData = new FormData();
-    formData.append("incidentData", JSON.stringify(incidentData));
-
-    // Add evidence files if any - React Native requires specific format
-    evidenceFiles.forEach((file, index) => {
-      if (file.uri) {
-        console.log(`📎 [SUBMISSION] Adding file ${index + 1}/${evidenceFiles.length}:`, {
-          name: file.name,
-          size: file.size,
-          type: file.type,
-          uri: file.uri
-        });
-        
-        // For React Native, files must be appended with this exact format
-        // The 'as any' cast is required because TypeScript doesn't recognize RN's FormData format
-        const fileToUpload: any = {
-          uri: file.uri,
-          type: file.type || "image/jpeg",
-          name: file.name || `evidence_${index}.jpg`,
-        };
-        
-        formData.append("files", fileToUpload);
-      }
-    });
-
     // Set timeout constant - INCREASED to 3 minutes for image uploads + AI processing
     const SUBMISSION_TIMEOUT = 180000; // 3 minutes (180 seconds)
 
@@ -1038,85 +1014,158 @@ export default function ReportScreen() {
       
       // Use proper FormData as expected by the backend
       console.log("📤 [SUBMISSION] Creating FormData request...");
+      console.log("📋 [SUBMISSION] Platform:", Platform.OS, "Version:", Platform.Version);
 
-      // Create FormData as expected by Spring Boot backend
-      const formData = new FormData();
-      formData.append('incidentData', JSON.stringify(incidentData));
+      console.log("🚀 [SUBMISSION] Preparing files for upload via react-native-blob-util...");
 
-      // Add files to FormData - React Native format
+      // Use react-native-blob-util for reliable file uploads with New Architecture
+      // This library handles FormData and file uploads much better than native FormData
+      const url = `${config.API.BASE_URL}/incidents`;
+      
+      // Prepare files array for RNFetchBlob
+      const filesArray: Array<{ name: string; filename: string; type: string; data: string }> = [];
+      
+      // Verify and prepare files for RNFetchBlob
       for (let i = 0; i < evidenceFiles.length; i++) {
         const file = evidenceFiles[i];
         if (file.uri) {
-          console.log(`📎 [SUBMISSION] Adding file ${i + 1}/${evidenceFiles.length}:`, file.name);
+          console.log(`📎 [SUBMISSION] Processing file ${i + 1}/${evidenceFiles.length}:`, file.name);
 
-          // React Native FormData expects this specific format
-          const fileToUpload = {
-            uri: file.uri,
-            type: file.type || "image/jpeg",
-            name: file.name || `evidence_${i}.jpg`,
-          };
+          // Normalize URI for Android production builds
+          let normalizedUri = file.uri;
+          if (Platform.OS === 'android' && !normalizedUri.startsWith('file://') && !normalizedUri.startsWith('http')) {
+            normalizedUri = normalizedUri.startsWith('/') 
+              ? `file://${normalizedUri}` 
+              : `file:///${normalizedUri}`;
+          }
 
-          formData.append('files', fileToUpload as any);
-          console.log(`✅ [SUBMISSION] Added file ${i + 1}: ${fileToUpload.name}`);
+          // Verify file exists and get info
+          let fileInfo: FileSystem.FileInfo | null = null;
+          try {
+            fileInfo = await FileSystem.getInfoAsync(normalizedUri);
+            if (!fileInfo.exists && normalizedUri !== file.uri) {
+              // Try original URI
+              fileInfo = await FileSystem.getInfoAsync(file.uri);
+              if (fileInfo.exists) {
+                normalizedUri = file.uri;
+                console.log(`✅ [SUBMISSION] Using original URI: ${file.uri}`);
+              }
+            }
+            if (fileInfo && fileInfo.exists) {
+              console.log(`✅ [SUBMISSION] File verified: ${file.name} (${(fileInfo.size || 0) / 1024}KB)`);
+            } else {
+              throw new Error(`File not found: ${file.name}`);
+            }
+          } catch (fileError: any) {
+            console.error(`❌ [SUBMISSION] File verification failed:`, fileError.message);
+            throw new Error(`Cannot access file ${file.name}: ${fileError.message}`);
+          }
+
+          // RNFetchBlob needs the file path without file:// prefix
+          // Handle both file:// and file:/// formats
+          let filePath = normalizedUri;
+          if (filePath.startsWith('file:///')) {
+            // Remove file:/// (three slashes) - common on Android
+            filePath = filePath.replace('file:///', '/');
+          } else if (filePath.startsWith('file://')) {
+            // Remove file:// (two slashes)
+            filePath = filePath.replace('file://', '');
+          }
+          
+          // Ensure path starts with / for absolute paths on Android
+          if (Platform.OS === 'android' && !filePath.startsWith('/') && !filePath.startsWith('content://')) {
+            filePath = '/' + filePath;
+          }
+          
+          filesArray.push({
+            name: 'files',
+            filename: file.name || `evidence_${i}.jpg`,
+            type: file.type || 'image/jpeg',
+            data: RNFetchBlob.wrap(filePath), // RNFetchBlob.wrap handles the file path correctly
+          });
+          
+          console.log(`✅ [SUBMISSION] Added file ${i + 1}: ${file.name} (Path: ${filePath})`);
         }
       }
 
-      console.log("🚀 [SUBMISSION] Sending FormData via axios...");
-
-      // Use axios for reliable FormData handling
-      const uploadResponse = await axios.post(`${config.API.BASE_URL}/incidents`, formData, {
-        headers: {
+      // Use RNFetchBlob.fetch for multipart form data upload
+      const uploadResponse = await RNFetchBlob.fetch(
+        'POST',
+        url,
+        {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'multipart/form-data',
         },
-        timeout: SUBMISSION_TIMEOUT,
-        transformRequest: [(data) => data], // Prevent axios from transforming FormData
-      });
+        [
+          // Add incidentData as form field
+          {
+            name: 'incidentData',
+            data: JSON.stringify(incidentData),
+          },
+          // Add all files
+          ...filesArray,
+        ]
+      );
 
-      // Convert axios response to match our expected format
-      const axiosResponse = {
-        ok: uploadResponse.status >= 200 && uploadResponse.status < 300,
-        status: uploadResponse.status,
-        data: uploadResponse.data,
+      // Parse response
+      let parsedResponseData;
+      const status = uploadResponse.info().status;
+      const responseText = await uploadResponse.text();
+      
+      try {
+        parsedResponseData = JSON.parse(responseText);
+      } catch (e) {
+        // If not JSON, keep as text
+        parsedResponseData = responseText;
+      }
+
+      const result = {
+        status: status,
+        data: parsedResponseData,
+        ok: status >= 200 && status < 300,
       };
 
-      const response = axiosResponse;
-
       const requestDuration = ((Date.now() - startTime) / 1000).toFixed(2);
-      console.log(`✅ [SUBMISSION] Response received in ${requestDuration}s - Status: ${response.status}`);
+      console.log(`✅ [SUBMISSION] Response received in ${requestDuration}s - Status: ${result.status}`);
       
       // Check if request was successful
-      if (!response.ok) {
+      if (!result.ok) {
         const errorObj: any = new Error('Server returned error');
-        errorObj.status = response.status;
-        errorObj.data = response.data;
+        errorObj.status = result.status;
+        errorObj.data = result.data;
         throw errorObj;
       }
       
       setProcessingPhase('finalizing');
 
-      const result = response.data;
+      const responseData = result.data;
       
       console.log("🎉 [SUBMISSION] Report submitted successfully!", {
-        trackingNumber: result.trackingNumber,
-        assignedOffice: result.assignedOffice?.name
+        trackingNumber: responseData.trackingNumber,
+        assignedOffice: responseData.assignedOffice?.name
       });
 
       // Hide processing modal and show success modal
       setShowProcessingModal(false);
       setSubmissionResult({
-        trackingNumber: result.trackingNumber,
-        assignedOffice: result.assignedOffice,
+        trackingNumber: responseData.trackingNumber,
+        assignedOffice: responseData.assignedOffice,
       });
       setShowSuccessModal(true);
     } catch (submitError: any) {
-      console.error("💥 [SUBMISSION] FileSystem upload error:", {
+      console.error("💥 [SUBMISSION] Upload error:", {
         name: submitError.name,
         message: submitError.message,
+        error: submitError,
       });
 
-      // Handle timeout errors
-      if (submitError.message?.includes('timed out')) {
+      // Handle timeout errors (XMLHttpRequest timeout or AbortError)
+      if (
+        submitError.name === 'AbortError' || 
+        submitError.message?.includes('timed out') || 
+        submitError.message?.includes('aborted') ||
+        submitError.message?.includes('timeout')
+      ) {
         console.error("⏰ [SUBMISSION] Request timed out");
         const error = {
           type: 'timeout' as const,
@@ -1128,13 +1177,19 @@ export default function ReportScreen() {
         throw new Error(error.message);
       }
 
-      // Handle network errors
-      if (submitError.message?.includes('Network request failed')) {
+      // Handle network errors (XMLHttpRequest onerror or fetch TypeError)
+      if (
+        submitError.message?.includes('Network request failed') ||
+        submitError.message?.includes('Failed to fetch') ||
+        submitError.message?.includes('NetworkError') ||
+        submitError.message?.includes('Network request') ||
+        (submitError.name === 'TypeError' && submitError.message?.includes('fetch'))
+      ) {
         console.error("🌐 [SUBMISSION] Network connection failed");
         const error = {
           type: 'network' as const,
           message: 'Unable to connect to the server. Please check your internet connection and try again.',
-          technicalDetails: submitError.message,
+          technicalDetails: submitError.message || submitError.name,
         };
         setSubmissionError(error);
         setShowErrorModal(true);
