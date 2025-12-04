@@ -4,6 +4,7 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
+  Pressable,
   TextInput,
   Alert,
   ActivityIndicator,
@@ -16,6 +17,9 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { storage } from "../../lib/storage";
+import { api } from "../../lib/api";
+import * as FileSystem from "expo-file-system";
+import axios from "axios";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
@@ -38,6 +42,7 @@ import BlockedContentModal from "../../components/BlockedContentModal";
 import ProcessingReportModal from "../../components/ProcessingReportModal";
 import SimilarIncidentsModal from "../../components/SimilarIncidentsModal";
 import ReportSuccessModal from "../../components/ReportSuccessModal";
+import ReportErrorModal, { type ErrorType } from "../../components/ReportErrorModal";
 import EmergencyNoteBanner from "../../components/EmergencyNoteBanner";
 import EvidenceGuidelinesBanner from "../../components/EvidenceGuidelinesBanner";
 import { sanitizeLocation } from "../../src/utils/locationUtils";
@@ -233,10 +238,14 @@ export default function ReportScreen() {
   const params = useLocalSearchParams();
   const [token, setToken] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [processingPhase, setProcessingPhase] = useState<'analyzing' | 'uploading' | 'submitting' | 'finalizing'>('analyzing');
   const [submissionError, setSubmissionError] = useState<{
-    type: 'network' | 'server' | 'validation' | 'timeout' | 'unknown';
+    type: ErrorType;
     message: string;
+    statusCode?: number;
+    technicalDetails?: string;
   } | null>(null);
+  const [showErrorModal, setShowErrorModal] = useState(false);
   const [offices, setOffices] = useState<OfficeInfo[]>([]);
   const [loadingOffices, setLoadingOffices] = useState(false);
   const [showOfficeDescription, setShowOfficeDescription] = useState(false);
@@ -789,6 +798,7 @@ export default function ReportScreen() {
     incidentData: any
   ): Promise<boolean> => {
     try {
+      setProcessingPhase('analyzing');
       const analysisRequest: AnalyzeRequest = {
         incidentType: incidentData.incidentType,
         description: incidentData.description,
@@ -800,11 +810,18 @@ export default function ReportScreen() {
         longitude: incidentData.longitude,
       };
 
-      console.log("Starting AI analysis...");
+      console.log("🤖 [AI ANALYSIS] Starting AI content analysis...");
+      const startTime = Date.now();
+      
       const analysis = await incidentAnalysisAPI.analyzeIncident(
         analysisRequest
       );
-      console.log("AI analysis completed:", analysis);
+      
+      const analysisDuration = ((Date.now() - startTime) / 1000).toFixed(2);
+      console.log(`✅ [AI ANALYSIS] AI analysis completed in ${analysisDuration}s`, {
+        decision: analysis.decision,
+        similarIncidentsFound: analysis.similarIncidents?.length || 0
+      });
 
       if (analysis.decision === "BLOCK") {
         setShowProcessingModal(false);
@@ -965,91 +982,125 @@ export default function ReportScreen() {
     };
   };
 
-  // Actual submission function
+  // Actual submission function - Using axios API for proper FormData handling
   const doSubmit = async () => {
     if (!token) {
       Alert.alert("Error", "You must be logged in to report an incident");
       return;
     }
 
+    console.log("🚀 [SUBMISSION] Starting incident submission");
+    console.log("📊 [SUBMISSION] Evidence files count:", evidenceFiles.length);
+    
+    // Set uploading phase if we have files
+    if (evidenceFiles.length > 0) {
+      setProcessingPhase('uploading');
+    } else {
+      setProcessingPhase('submitting');
+    }
+    
     const incidentData = prepareIncidentData();
 
     // Create FormData for multipart request
     const formData = new FormData();
     formData.append("incidentData", JSON.stringify(incidentData));
 
-    // Add evidence files if any
+    // Add evidence files if any - React Native requires specific format
     evidenceFiles.forEach((file, index) => {
       if (file.uri) {
-        // Create a file object from the URI with Android-compatible format
-        const fileInfo = {
+        console.log(`📎 [SUBMISSION] Adding file ${index + 1}/${evidenceFiles.length}:`, {
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          uri: file.uri
+        });
+        
+        // For React Native, files must be appended with this exact format
+        // The 'as any' cast is required because TypeScript doesn't recognize RN's FormData format
+        const fileToUpload: any = {
           uri: file.uri,
           type: file.type || "image/jpeg",
           name: file.name || `evidence_${index}.jpg`,
         };
-
-        // Android-specific file handling
-        if (Platform.OS === "android") {
-          formData.append("files", {
-            uri: file.uri,
-            type: file.type || "image/jpeg",
-            name: file.name || `evidence_${index}.jpg`,
-          } as any);
-        } else {
-          formData.append("files", fileInfo as any);
-        }
+        
+        formData.append("files", fileToUpload);
       }
     });
 
-    // Android-specific headers
-    const headers: any = {
-      Authorization: `Bearer ${token}`,
-    };
-
-    // Don't set Content-Type for FormData on Android - let the system handle it
-    if (Platform.OS !== "android") {
-      headers["Content-Type"] = "multipart/form-data";
-    }
-
-    // Set timeout for the request
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+    // Set timeout constant - INCREASED to 3 minutes for image uploads + AI processing
+    const SUBMISSION_TIMEOUT = 180000; // 3 minutes (180 seconds)
 
     try {
-      const response = await fetch(`${config.API.BASE_URL}/incidents`, {
-        method: "POST",
-        headers,
-        body: formData,
-        signal: controller.signal,
-      });
+      setProcessingPhase('submitting');
+      console.log("🌐 [SUBMISSION] Sending POST request to:", `${config.API.BASE_URL}/incidents`);
+      console.log("📦 [SUBMISSION] Evidence files count:", evidenceFiles.length);
+      const startTime = Date.now();
+      
+      // Use proper FormData as expected by the backend
+      console.log("📤 [SUBMISSION] Creating FormData request...");
 
-      clearTimeout(timeoutId);
+      // Create FormData as expected by Spring Boot backend
+      const formData = new FormData();
+      formData.append('incidentData', JSON.stringify(incidentData));
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        
-        // Determine error type based on status code
-        let errorType: 'network' | 'server' | 'validation' | 'timeout' | 'unknown' = 'server';
-        let errorMessage = 'Failed to submit report. Please try again.';
+      // Add files to FormData - React Native format
+      for (let i = 0; i < evidenceFiles.length; i++) {
+        const file = evidenceFiles[i];
+        if (file.uri) {
+          console.log(`📎 [SUBMISSION] Adding file ${i + 1}/${evidenceFiles.length}:`, file.name);
 
-        if (response.status >= 500) {
-          errorType = 'server';
-          errorMessage = 'Server error occurred. The server is temporarily unavailable.';
-        } else if (response.status === 400) {
-          errorType = 'validation';
-          errorMessage = 'Invalid report data. Please check your inputs and try again.';
-        } else if (response.status === 401 || response.status === 403) {
-          errorType = 'validation';
-          errorMessage = 'Authentication failed. Please log in again.';
-        } else if (response.status === 413) {
-          errorType = 'validation';
-          errorMessage = 'Files are too large. Please reduce file sizes and try again.';
+          // React Native FormData expects this specific format
+          const fileToUpload = {
+            uri: file.uri,
+            type: file.type || "image/jpeg",
+            name: file.name || `evidence_${i}.jpg`,
+          };
+
+          formData.append('files', fileToUpload as any);
+          console.log(`✅ [SUBMISSION] Added file ${i + 1}: ${fileToUpload.name}`);
         }
-
-        throw new Error(errorMessage);
       }
 
-      const result = await response.json();
+      console.log("🚀 [SUBMISSION] Sending FormData via axios...");
+
+      // Use axios for reliable FormData handling
+      const uploadResponse = await axios.post(`${config.API.BASE_URL}/incidents`, formData, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data',
+        },
+        timeout: SUBMISSION_TIMEOUT,
+        transformRequest: [(data) => data], // Prevent axios from transforming FormData
+      });
+
+      // Convert axios response to match our expected format
+      const axiosResponse = {
+        ok: uploadResponse.status >= 200 && uploadResponse.status < 300,
+        status: uploadResponse.status,
+        data: uploadResponse.data,
+      };
+
+      const response = axiosResponse;
+
+      const requestDuration = ((Date.now() - startTime) / 1000).toFixed(2);
+      console.log(`✅ [SUBMISSION] Response received in ${requestDuration}s - Status: ${response.status}`);
+      
+      // Check if request was successful
+      if (!response.ok) {
+        const errorObj: any = new Error('Server returned error');
+        errorObj.status = response.status;
+        errorObj.data = response.data;
+        throw errorObj;
+      }
+      
+      setProcessingPhase('finalizing');
+
+      const result = response.data;
+      
+      console.log("🎉 [SUBMISSION] Report submitted successfully!", {
+        trackingNumber: result.trackingNumber,
+        assignedOffice: result.assignedOffice?.name
+      });
 
       // Hide processing modal and show success modal
       setShowProcessingModal(false);
@@ -1058,31 +1109,98 @@ export default function ReportScreen() {
         assignedOffice: result.assignedOffice,
       });
       setShowSuccessModal(true);
-    } catch (fetchError: any) {
-      clearTimeout(timeoutId);
+    } catch (submitError: any) {
+      console.error("💥 [SUBMISSION] FileSystem upload error:", {
+        name: submitError.name,
+        message: submitError.message,
+      });
 
       // Handle timeout errors
-      if (fetchError.name === 'AbortError') {
+      if (submitError.message?.includes('timed out')) {
+        console.error("⏰ [SUBMISSION] Request timed out");
         const error = {
           type: 'timeout' as const,
-          message: 'Request timed out. Please check your connection and try again.',
+          message: 'The request took too long to complete. This may be due to slow network or large files.',
+          technicalDetails: 'Request timed out after 180 seconds',
         };
         setSubmissionError(error);
+        setShowErrorModal(true);
         throw new Error(error.message);
       }
 
       // Handle network errors
-      if (fetchError.message?.includes('Network request failed') || 
-          fetchError.message?.includes('Failed to fetch')) {
+      if (submitError.message?.includes('Network request failed')) {
+        console.error("🌐 [SUBMISSION] Network connection failed");
         const error = {
           type: 'network' as const,
-          message: 'Network connection failed. Please check your internet connection.',
+          message: 'Unable to connect to the server. Please check your internet connection and try again.',
+          technicalDetails: submitError.message,
         };
         setSubmissionError(error);
+        setShowErrorModal(true);
         throw new Error(error.message);
       }
 
-      throw fetchError;
+      // Handle server errors with response (response.ok === false)
+      // Check if we have a status code from the response
+      const status = submitError.status;
+      if (status) {
+        console.error("❌ [SUBMISSION] Server returned error:", {
+          status: status,
+          data: submitError.data
+        });
+        
+        // Determine error type and message based on status code
+        let errorType: ErrorType = 'server';
+        let errorMessage = 'Failed to submit report. Please try again.';
+        let technicalDetails = `Status: ${status}`;
+
+        if (status >= 500) {
+          errorType = 'server';
+          errorMessage = 'The server encountered an error and could not process your request. Our team has been notified.';
+          if (status === 502 || status === 503) {
+            errorMessage = 'The server is temporarily unavailable. Please try again in a few minutes.';
+          } else if (status === 504) {
+            errorMessage = 'The server took too long to respond. Please try again.';
+          }
+        } else if (status === 400) {
+          errorType = 'validation';
+          errorMessage = 'Invalid report data. Please check that all required fields are filled correctly.';
+        } else if (status === 401) {
+          errorType = 'validation';
+          errorMessage = 'Your session has expired. Please log out and log back in.';
+        } else if (status === 403) {
+          errorType = 'validation';
+          errorMessage = 'You do not have permission to submit reports. Please check your account status.';
+        } else if (status === 413) {
+          errorType = 'validation';
+          errorMessage = 'Your files are too large. Please reduce file sizes to under 5MB each and try again.';
+        } else if (status === 429) {
+          errorType = 'server';
+          errorMessage = 'Too many requests. Please wait a moment before trying again.';
+        }
+
+        // Set error and show modal
+        setSubmissionError({
+          type: errorType,
+          message: errorMessage,
+          statusCode: status,
+          technicalDetails: technicalDetails,
+        });
+        setShowErrorModal(true);
+        
+        throw new Error(errorMessage);
+      }
+
+      // Unknown error
+      const error = {
+        type: 'unknown' as const,
+        message: submitError.message || 'An unexpected error occurred. Please try again.',
+        technicalDetails: `${submitError.name}: ${submitError.message}`,
+      };
+      setSubmissionError(error);
+      setShowErrorModal(true);
+      throw submitError;
     }
   };
 
@@ -1144,15 +1262,17 @@ export default function ReportScreen() {
       // If we reach here, proceed with submission
       await doSubmit();
     } catch (error: any) {
-      console.error("Error submitting report:", error);
+      console.error("❌ [SUBMISSION] Error in handleSubmit:", error);
       setShowProcessingModal(false);
       
-      // Set structured error for display
+      // Set structured error for display if not already set
       if (!submissionError) {
         setSubmissionError({
           type: 'unknown',
           message: error.message || "Failed to submit report. Please try again.",
+          technicalDetails: error.stack?.substring(0, 200),
         });
+        setShowErrorModal(true);
       }
     } finally {
       setIsSubmitting(false);
@@ -1222,21 +1342,42 @@ export default function ReportScreen() {
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [4, 3],
-        quality: 0.8,
+        quality: 0.7, // Reduced from 0.8 to 0.7 for better compression
       });
 
       if (!result.canceled && result.assets && result.assets[0]) {
         const asset = result.assets[0];
         const fileName = `photo_${Date.now()}.jpg`;
-
-        addEvidenceFiles([
-          {
-            uri: asset.uri,
-            name: fileName,
-            type: "image/jpeg",
-            size: asset.fileSize || 0,
-          },
-        ]);
+        const fileSize = asset.fileSize || 0;
+        
+        // Warn if file is larger than 5MB
+        if (fileSize > 5 * 1024 * 1024) {
+          console.warn(`⚠️ [IMAGE] Large file detected: ${(fileSize / (1024 * 1024)).toFixed(2)}MB`);
+          Alert.alert(
+            "Large File",
+            `This photo is ${(fileSize / (1024 * 1024)).toFixed(2)}MB. Large files may take longer to upload. Consider taking a new photo or using a smaller resolution.`,
+            [
+              { text: "Use Anyway", onPress: () => {
+                addEvidenceFiles([{
+                  uri: asset.uri,
+                  name: fileName,
+                  type: "image/jpeg",
+                  size: fileSize,
+                }]);
+              }},
+              { text: "Cancel", style: "cancel" },
+            ]
+          );
+        } else {
+          addEvidenceFiles([
+            {
+              uri: asset.uri,
+              name: fileName,
+              type: "image/jpeg",
+              size: fileSize,
+            },
+          ]);
+        }
       }
     } catch (error) {
       console.error("Error taking photo:", error);
@@ -1253,7 +1394,7 @@ export default function ReportScreen() {
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsMultipleSelection: true,
         allowsEditing: false,
-        quality: 0.8,
+        quality: 0.7, // Reduced from 0.8 to 0.7 for better compression
       });
 
       if (!result.canceled && result.assets) {
@@ -1264,7 +1405,23 @@ export default function ReportScreen() {
           size: asset.fileSize || 0,
         }));
 
-        addEvidenceFiles(newFiles);
+        // Check total size of all files
+        const totalSize = newFiles.reduce((sum, file) => sum + file.size, 0);
+        const totalSizeMB = totalSize / (1024 * 1024);
+        
+        if (totalSizeMB > 20) {
+          console.warn(`⚠️ [IMAGE] Large batch detected: ${totalSizeMB.toFixed(2)}MB total`);
+          Alert.alert(
+            "Large Files",
+            `The selected images total ${totalSizeMB.toFixed(2)}MB. This may take longer to upload. Consider selecting fewer or smaller images.`,
+            [
+              { text: "Use Anyway", onPress: () => addEvidenceFiles(newFiles) },
+              { text: "Cancel", style: "cancel" },
+            ]
+          );
+        } else {
+          addEvidenceFiles(newFiles);
+        }
       }
     } catch (error) {
       console.error("Error picking images:", error);
@@ -4266,7 +4423,32 @@ export default function ReportScreen() {
       />
 
       {/* Processing Report Modal */}
-      <ProcessingReportModal visible={showProcessingModal} />
+      <ProcessingReportModal visible={showProcessingModal} phase={processingPhase} />
+
+      {/* Error Modal */}
+      <ReportErrorModal
+        visible={showErrorModal}
+        error={submissionError}
+        onClose={() => {
+          setShowErrorModal(false);
+          setSubmissionError(null);
+        }}
+        onRetry={async () => {
+          setShowErrorModal(false);
+          setSubmissionError(null);
+          // Retry submission
+          try {
+            setIsSubmitting(true);
+            setShowProcessingModal(true);
+            await doSubmit();
+          } catch (error) {
+            console.error("❌ [RETRY] Error retrying submission:", error);
+            // Error will be caught and modal will show again
+          } finally {
+            setIsSubmitting(false);
+          }
+        }}
+      />
 
       {/* Similar Incidents Modal */}
       <SimilarIncidentsModal

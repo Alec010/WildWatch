@@ -28,7 +28,7 @@ export const config = {
   // Backend API configuration
   API: {
     BASE_URL: API_BASE_URL,
-    TIMEOUT: API_TIMEOUT ? parseInt(API_TIMEOUT) : 30000,
+    TIMEOUT: API_TIMEOUT ? parseInt(API_TIMEOUT) : 180000, // Default: 3 minutes for image uploads
   },
   
   // Microsoft OAuth configuration
