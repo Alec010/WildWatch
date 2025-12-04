@@ -132,6 +132,21 @@ interface Incident {
   estimatedResolutionDate?: string;
 }
 
+// Safely format a backend date string for display
+const formatDateSafe = (dateString: string | null | undefined) => {
+  if (!dateString) return "Not specified";
+  try {
+    const formatted = formatDateOnly(dateString);
+    // Guard against environments that might surface "Invalid Date"
+    if (!formatted || formatted.toLowerCase().includes("invalid")) {
+      return "Not specified";
+    }
+    return formatted;
+  } catch {
+    return "Not specified";
+  }
+};
+
 export default function IncidentDetailsPage() {
   const router = useRouter();
   const params = useParams();
@@ -786,7 +801,7 @@ export default function IncidentDetailsPage() {
                           <div className="flex flex-col items-end">
                             <p className="text-white/80 text-sm">Reported</p>
                             <p className="font-medium">
-                              {formatDateOnly(incident.submittedAt)}
+                              {formatDateSafe(incident.submittedAt)}
                             </p>
                           </div>
                         </div>
@@ -803,7 +818,7 @@ export default function IncidentDetailsPage() {
                               Date of Incident
                             </p>
                             <p className="font-medium">
-                              {formatDateOnly(incident.dateOfIncident)}
+                              {formatDateSafe(incident.dateOfIncident)}
                             </p>
                           </div>
                         </div>
@@ -1271,7 +1286,7 @@ export default function IncidentDetailsPage() {
                               Submission Date
                             </p>
                             <p className="font-medium text-[#8B0000]">
-                              {formatDateOnly(incident.submittedAt)}
+                              {formatDateSafe(incident.submittedAt)}
                             </p>
                           </div>
                         </div>
@@ -1340,7 +1355,7 @@ export default function IncidentDetailsPage() {
                           <span>
                             Verified by {incident.verifiedBy} on{" "}
                             {incident.verifiedAt
-                              ? formatDateOnly(incident.verifiedAt)
+                              ? formatDateSafe(incident.verifiedAt)
                               : "N/A"}
                           </span>
                         </div>

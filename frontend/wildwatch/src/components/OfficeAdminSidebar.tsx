@@ -363,11 +363,13 @@ export function OfficeAdminSidebar() {
 
         {/* Logo Section */}
         <div
-          className={`px-4 pt-2 pb-2 max-w-full overflow-hidden ${
-            collapsed && !isMobile ? "flex justify-center" : "px-6"
+          className={`w-full pt-4 pb-3 ${
+            collapsed && !isMobile
+              ? "flex justify-center px-3"
+              : "flex justify-start px-6"
           }`}
         >
-          <div className="relative">
+          <div className="relative w-full max-w-[180px]">
             <div className="absolute -inset-1 bg-gradient-to-r from-[#D4AF37]/30 to-transparent rounded-lg blur opacity-30"></div>
             <div className="relative">
               {collapsed && !isMobile ? (
@@ -375,7 +377,7 @@ export function OfficeAdminSidebar() {
                   <Shield className="w-6 h-6 text-[#800000]" />
                 </div>
               ) : (
-                <div className="mt-2" style={{ width: 150, height: 50 }}>
+                <div className="mt-2 w-full" style={{ maxWidth: 150 }}>
                   <Image
                     src="/logo2.png"
                     alt="WildWatch Logo"
@@ -383,7 +385,11 @@ export function OfficeAdminSidebar() {
                     height={50}
                     priority
                     unoptimized
-                    style={{ width: "100%", height: "auto", display: "block" }}
+                    style={{
+                      width: "100%",
+                      height: "auto",
+                      display: "block",
+                    }}
                   />
                 </div>
               )}

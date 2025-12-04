@@ -4,16 +4,37 @@
  */
 export function parseUTCDate(dateString: string): Date {
   if (!dateString) {
-    return new Date()
+    return new Date();
   }
-  
+
   // If dateString already has timezone info, use it as-is
-  if (dateString.includes('Z') || dateString.includes('+') || dateString.includes('-', 10)) {
-    return new Date(dateString)
+  if (
+    dateString.includes("Z") ||
+    dateString.includes("+") ||
+    dateString.includes("-", 10)
+  ) {
+    return new Date(dateString);
   }
-  
-  // If no timezone, treat as UTC+8 by appending '+08:00'
-  return new Date(dateString + '+08:00')
+
+  // Normalise common backend formats before applying timezone
+  const trimmed = dateString.trim();
+
+  // Pure date (YYYY-MM-DD) – treat as midnight Asia/Manila
+  const pureDateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  if (pureDateRegex.test(trimmed)) {
+    return new Date(`${trimmed}T00:00:00+08:00`);
+  }
+
+  // Date + time without timezone, allow space or 'T' separator
+  const dateTimeRegex =
+    /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(?::\d{2})?(?:\.\d+)?$/;
+  if (dateTimeRegex.test(trimmed)) {
+    const normalised = trimmed.replace(" ", "T");
+    return new Date(`${normalised}+08:00`);
+  }
+
+  // Fallback: let JS try to parse as-is
+  return new Date(trimmed);
 }
 
 /**
