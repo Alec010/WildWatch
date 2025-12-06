@@ -20,7 +20,6 @@ import { storage } from "../../lib/storage";
 import { api } from "../../lib/api";
 import * as FileSystem from "expo-file-system/legacy";
 import axios from "axios";
-import RNFetchBlob from "react-native-blob-util";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
@@ -43,7 +42,9 @@ import BlockedContentModal from "../../components/BlockedContentModal";
 import ProcessingReportModal from "../../components/ProcessingReportModal";
 import SimilarIncidentsModal from "../../components/SimilarIncidentsModal";
 import ReportSuccessModal from "../../components/ReportSuccessModal";
-import ReportErrorModal, { type ErrorType } from "../../components/ReportErrorModal";
+import ReportErrorModal, {
+  type ErrorType,
+} from "../../components/ReportErrorModal";
 import EmergencyNoteBanner from "../../components/EmergencyNoteBanner";
 import EvidenceGuidelinesBanner from "../../components/EvidenceGuidelinesBanner";
 import { sanitizeLocation } from "../../src/utils/locationUtils";
@@ -239,7 +240,9 @@ export default function ReportScreen() {
   const params = useLocalSearchParams();
   const [token, setToken] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [processingPhase, setProcessingPhase] = useState<'analyzing' | 'uploading' | 'submitting' | 'finalizing'>('analyzing');
+  const [processingPhase, setProcessingPhase] = useState<
+    "analyzing" | "uploading" | "submitting" | "finalizing"
+  >("analyzing");
   const [submissionError, setSubmissionError] = useState<{
     type: ErrorType;
     message: string;
@@ -799,7 +802,7 @@ export default function ReportScreen() {
     incidentData: any
   ): Promise<boolean> => {
     try {
-      setProcessingPhase('analyzing');
+      setProcessingPhase("analyzing");
       const analysisRequest: AnalyzeRequest = {
         incidentType: incidentData.incidentType,
         description: incidentData.description,
@@ -813,16 +816,19 @@ export default function ReportScreen() {
 
       console.log("🤖 [AI ANALYSIS] Starting AI content analysis...");
       const startTime = Date.now();
-      
+
       const analysis = await incidentAnalysisAPI.analyzeIncident(
         analysisRequest
       );
-      
+
       const analysisDuration = ((Date.now() - startTime) / 1000).toFixed(2);
-      console.log(`✅ [AI ANALYSIS] AI analysis completed in ${analysisDuration}s`, {
-        decision: analysis.decision,
-        similarIncidentsFound: analysis.similarIncidents?.length || 0
-      });
+      console.log(
+        `✅ [AI ANALYSIS] AI analysis completed in ${analysisDuration}s`,
+        {
+          decision: analysis.decision,
+          similarIncidentsFound: analysis.similarIncidents?.length || 0,
+        }
+      );
 
       if (analysis.decision === "BLOCK") {
         setShowProcessingModal(false);
@@ -986,163 +992,258 @@ export default function ReportScreen() {
   // Actual submission function - Using fetch API for proper FormData handling in production builds
   // Note: fetch handles FormData better than axios in React Native production builds (APK)
   const doSubmit = async () => {
-    if (!token) {
+    // ✅ FIX: Always get fresh token from storage before submission
+    // This ensures token is available even if state wasn't updated after OAuth
+    const currentToken = await storage.getToken();
+
+    if (!currentToken) {
       Alert.alert("Error", "You must be logged in to report an incident");
       return;
     }
 
     console.log("🚀 [SUBMISSION] Starting incident submission");
     console.log("📊 [SUBMISSION] Evidence files count:", evidenceFiles.length);
-    
+
     // Set uploading phase if we have files
     if (evidenceFiles.length > 0) {
-      setProcessingPhase('uploading');
+      setProcessingPhase("uploading");
     } else {
-      setProcessingPhase('submitting');
+      setProcessingPhase("submitting");
     }
-    
+
     const incidentData = prepareIncidentData();
 
     // Set timeout constant - INCREASED to 3 minutes for image uploads + AI processing
     const SUBMISSION_TIMEOUT = 180000; // 3 minutes (180 seconds)
 
     try {
-      setProcessingPhase('submitting');
-      console.log("🌐 [SUBMISSION] Sending POST request to:", `${config.API.BASE_URL}/incidents`);
-      console.log("📦 [SUBMISSION] Evidence files count:", evidenceFiles.length);
+      setProcessingPhase("submitting");
+      console.log(
+        "🌐 [SUBMISSION] Sending POST request to:",
+        `${config.API.BASE_URL}/incidents`
+      );
+      console.log(
+        "📦 [SUBMISSION] Evidence files count:",
+        evidenceFiles.length
+      );
       const startTime = Date.now();
-      
+
       // Use proper FormData as expected by the backend
       console.log("📤 [SUBMISSION] Creating FormData request...");
-      console.log("📋 [SUBMISSION] Platform:", Platform.OS, "Version:", Platform.Version);
+      console.log(
+        "📋 [SUBMISSION] Platform:",
+        Platform.OS,
+        "Version:",
+        Platform.Version
+      );
 
-      console.log("🚀 [SUBMISSION] Preparing files for upload via react-native-blob-util...");
+      console.log("🚀 [SUBMISSION] Preparing files for upload via FormData...");
 
-      // Use react-native-blob-util for reliable file uploads with New Architecture
-      // This library handles FormData and file uploads much better than native FormData
-      const url = `${config.API.BASE_URL}/incidents`;
-      
-      // Prepare files array for RNFetchBlob
-      const filesArray: Array<{ name: string; filename: string; type: string; data: string }> = [];
-      
-      // Verify and prepare files for RNFetchBlob
+      // ✅ DEBUG: Log the API configuration to verify environment variables are loaded
+      console.log("🔍 [SUBMISSION] API Configuration:", {
+        BASE_URL: config.API.BASE_URL,
+        TIMEOUT: config.API.TIMEOUT,
+        ENV: config.ENV,
+        RAW_ENV: process.env.EXPO_PUBLIC_API_BASE_URL,
+      });
+
+      // Construct the full URL
+      // Note: config.API.BASE_URL should already include /api if set correctly in Expo
+      // Example: https://wildwatch-zgaw.onrender.com/api
+      const endpoint = "/incidents";
+
+      // ✅ FIX: Ensure no double slashes in URL construction
+      const baseUrl = config.API.BASE_URL.endsWith("/")
+        ? config.API.BASE_URL.slice(0, -1)
+        : config.API.BASE_URL;
+      const endpointPath = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+      const url = `${baseUrl}${endpointPath}`;
+
+      console.log("🌐 [SUBMISSION] Full endpoint URL:", url);
+      console.log("🌐 [SUBMISSION] Base URL from config:", config.API.BASE_URL);
+      console.log("🌐 [SUBMISSION] Endpoint path:", endpoint);
+      console.log("🌐 [SUBMISSION] Constructed URL:", url);
+
+      // Validate that BASE_URL is set
+      if (
+        !config.API.BASE_URL ||
+        config.API.BASE_URL === "undefined" ||
+        config.API.BASE_URL.includes("undefined")
+      ) {
+        console.error(
+          "❌ [SUBMISSION] API_BASE_URL is not configured properly!"
+        );
+        console.error(
+          "❌ [SUBMISSION] Raw env value:",
+          process.env.EXPO_PUBLIC_API_BASE_URL
+        );
+        throw new Error(
+          "API_BASE_URL is not configured. Please rebuild your app with environment variables set in Expo."
+        );
+      }
+
+      // Create FormData
+      const formData = new FormData();
+
+      // Add incidentData as form field
+      formData.append("incidentData", JSON.stringify(incidentData));
+
+      // Verify and prepare files for FormData
       for (let i = 0; i < evidenceFiles.length; i++) {
         const file = evidenceFiles[i];
         if (file.uri) {
-          console.log(`📎 [SUBMISSION] Processing file ${i + 1}/${evidenceFiles.length}:`, file.name);
+          console.log(
+            `📎 [SUBMISSION] Processing file ${i + 1}/${evidenceFiles.length}:`,
+            file.name
+          );
 
-          // Normalize URI for Android production builds
+          // Normalize URI for both iOS and Android production builds
+          // iOS: Uses file:// format
+          // Android: Can use file://, content://, or file paths
           let normalizedUri = file.uri;
-          if (Platform.OS === 'android' && !normalizedUri.startsWith('file://') && !normalizedUri.startsWith('http')) {
-            normalizedUri = normalizedUri.startsWith('/') 
-              ? `file://${normalizedUri}` 
+
+          // Handle Android file paths that aren't properly formatted
+          if (Platform.OS === "android") {
+            if (
+              !normalizedUri.startsWith("file://") &&
+              !normalizedUri.startsWith("http") &&
+              !normalizedUri.startsWith("content://") &&
+              !normalizedUri.startsWith("ph://") // Photo library on iOS
+            ) {
+              // Convert relative or absolute paths to file:// URI
+              normalizedUri = normalizedUri.startsWith("/")
+                ? `file://${normalizedUri}`
+                : `file:///${normalizedUri}`;
+            }
+          }
+
+          // iOS typically already has file:// prefix, but ensure it's correct
+          if (
+            Platform.OS === "ios" &&
+            !normalizedUri.startsWith("file://") &&
+            !normalizedUri.startsWith("ph://")
+          ) {
+            normalizedUri = normalizedUri.startsWith("/")
+              ? `file://${normalizedUri}`
               : `file:///${normalizedUri}`;
           }
 
-          // Verify file exists and get info
-          let fileInfo: FileSystem.FileInfo | null = null;
+          // Verify file exists - critical for production builds
+          // In production, file URIs may differ from development
           try {
-            fileInfo = await FileSystem.getInfoAsync(normalizedUri);
+            let fileInfo = await FileSystem.getInfoAsync(normalizedUri);
+
+            // If normalized URI doesn't exist and it's different from original, try original
             if (!fileInfo.exists && normalizedUri !== file.uri) {
-              // Try original URI
-              fileInfo = await FileSystem.getInfoAsync(file.uri);
-              if (fileInfo.exists) {
+              console.log(
+                `⚠️ [SUBMISSION] Normalized URI not found, trying original: ${file.uri}`
+              );
+              const originalInfo = await FileSystem.getInfoAsync(file.uri);
+              if (originalInfo.exists) {
                 normalizedUri = file.uri;
+                fileInfo = originalInfo;
                 console.log(`✅ [SUBMISSION] Using original URI: ${file.uri}`);
               }
             }
-            if (fileInfo && fileInfo.exists) {
-              console.log(`✅ [SUBMISSION] File verified: ${file.name} (${(fileInfo.size || 0) / 1024}KB)`);
-            } else {
-              throw new Error(`File not found: ${file.name}`);
+
+            // Final check - if file still doesn't exist, throw error
+            if (!fileInfo.exists) {
+              throw new Error(
+                `File not found: ${file.name} (URI: ${normalizedUri})`
+              );
             }
+
+            // Log file info for debugging (useful in production)
+            const fileSize = "size" in fileInfo ? fileInfo.size : 0;
+            console.log(
+              `✅ [SUBMISSION] File verified: ${file.name} (${(
+                fileSize / 1024
+              ).toFixed(2)}KB) - URI: ${normalizedUri.substring(0, 50)}...`
+            );
           } catch (fileError: any) {
-            console.error(`❌ [SUBMISSION] File verification failed:`, fileError.message);
-            throw new Error(`Cannot access file ${file.name}: ${fileError.message}`);
+            console.error(
+              `❌ [SUBMISSION] File verification failed for ${file.name}:`,
+              fileError.message
+            );
+            throw new Error(
+              `Cannot access file ${file.name}: ${fileError.message}`
+            );
           }
 
-          // RNFetchBlob needs the file path without file:// prefix
-          // Handle both file:// and file:/// formats
-          let filePath = normalizedUri;
-          if (filePath.startsWith('file:///')) {
-            // Remove file:/// (three slashes) - common on Android
-            filePath = filePath.replace('file:///', '/');
-          } else if (filePath.startsWith('file://')) {
-            // Remove file:// (two slashes)
-            filePath = filePath.replace('file://', '');
+          // Add file to FormData
+          // For React Native, FormData requires an object with uri, type, and name
+          // This format works in both Expo Go and production builds (iOS/Android)
+          const fileObject: any = {
+            uri: normalizedUri,
+            type: file.type || "image/jpeg",
+            name: file.name || `evidence_${i}.jpg`,
+          };
+
+          // Ensure proper file extension for type detection
+          if (!file.type) {
+            const extension = file.name?.split(".").pop()?.toLowerCase();
+            if (extension === "png") {
+              fileObject.type = "image/png";
+            } else if (extension === "jpg" || extension === "jpeg") {
+              fileObject.type = "image/jpeg";
+            } else if (extension === "mp4") {
+              fileObject.type = "video/mp4";
+            } else if (extension === "mov") {
+              fileObject.type = "video/quicktime";
+            }
           }
-          
-          // Ensure path starts with / for absolute paths on Android
-          if (Platform.OS === 'android' && !filePath.startsWith('/') && !filePath.startsWith('content://')) {
-            filePath = '/' + filePath;
-          }
-          
-          filesArray.push({
-            name: 'files',
-            filename: file.name || `evidence_${i}.jpg`,
-            type: file.type || 'image/jpeg',
-            data: RNFetchBlob.wrap(filePath), // RNFetchBlob.wrap handles the file path correctly
-          });
-          
-          console.log(`✅ [SUBMISSION] Added file ${i + 1}: ${file.name} (Path: ${filePath})`);
+
+          formData.append("files", fileObject);
+
+          console.log(
+            `✅ [SUBMISSION] Added file ${i + 1}: ${file.name} (${
+              fileObject.type
+            })`
+          );
         }
       }
 
-      // Use RNFetchBlob.fetch for multipart form data upload
-      const uploadResponse = await RNFetchBlob.fetch(
-        'POST',
-        url,
-        {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data',
+      // Use axios for multipart form data upload
+      // IMPORTANT: Do NOT set Content-Type header manually - axios will set it automatically
+      // with the correct boundary for multipart/form-data. Setting it manually breaks the upload.
+      // Using axios directly (not the api instance) to avoid default JSON Content-Type header
+      const uploadResponse = await axios.post(url, formData, {
+        headers: {
+          Authorization: `Bearer ${currentToken}`, // Use currentToken from storage instead of state
+          // Do NOT set Content-Type - axios will automatically set:
+          // Content-Type: multipart/form-data; boundary=----WebKitFormBoundary...
         },
-        [
-          // Add incidentData as form field
-          {
-            name: 'incidentData',
-            data: JSON.stringify(incidentData),
-          },
-          // Add all files
-          ...filesArray,
-        ]
-      );
-
-      // Parse response
-      let parsedResponseData;
-      const status = uploadResponse.info().status;
-      const responseText = await uploadResponse.text();
-      
-      try {
-        parsedResponseData = JSON.parse(responseText);
-      } catch (e) {
-        // If not JSON, keep as text
-        parsedResponseData = responseText;
-      }
+        timeout: SUBMISSION_TIMEOUT,
+        // In React Native, FormData is handled natively by axios
+        // No transformRequest needed - FormData works directly
+      });
 
       const result = {
-        status: status,
-        data: parsedResponseData,
-        ok: status >= 200 && status < 300,
+        status: uploadResponse.status,
+        data: uploadResponse.data,
+        ok: uploadResponse.status >= 200 && uploadResponse.status < 300,
       };
 
       const requestDuration = ((Date.now() - startTime) / 1000).toFixed(2);
-      console.log(`✅ [SUBMISSION] Response received in ${requestDuration}s - Status: ${result.status}`);
-      
+      console.log(
+        `✅ [SUBMISSION] Response received in ${requestDuration}s - Status: ${result.status}`
+      );
+
       // Check if request was successful
       if (!result.ok) {
-        const errorObj: any = new Error('Server returned error');
+        const errorObj: any = new Error("Server returned error");
         errorObj.status = result.status;
         errorObj.data = result.data;
         throw errorObj;
       }
-      
-      setProcessingPhase('finalizing');
+
+      setProcessingPhase("finalizing");
 
       const responseData = result.data;
-      
+
       console.log("🎉 [SUBMISSION] Report submitted successfully!", {
         trackingNumber: responseData.trackingNumber,
-        assignedOffice: responseData.assignedOffice?.name
+        assignedOffice: responseData.assignedOffice?.name,
       });
 
       // Hide processing modal and show success modal
@@ -1156,83 +1257,128 @@ export default function ReportScreen() {
       console.error("💥 [SUBMISSION] Upload error:", {
         name: submitError.name,
         message: submitError.message,
+        code: submitError.code,
         error: submitError,
       });
 
+      // Handle AxiosError network errors - check code first
+      if (
+        submitError.code === "ERR_NETWORK" ||
+        submitError.code === "ECONNABORTED" ||
+        submitError.code === "ETIMEDOUT" ||
+        submitError.code === "ENOTFOUND" ||
+        submitError.code === "ECONNREFUSED"
+      ) {
+        console.error("🌐 [SUBMISSION] Network connection failed (AxiosError)");
+        const error = {
+          type: "network" as const,
+          message:
+            "Unable to connect to the server. Please check your internet connection and try again.",
+          technicalDetails: `${submitError.code}: ${
+            submitError.message || submitError.name
+          }`,
+        };
+        setSubmissionError(error);
+        setShowErrorModal(true);
+        setIsSubmitting(false);
+        setShowProcessingModal(false);
+        return; // Return early instead of throwing
+      }
+
       // Handle timeout errors (XMLHttpRequest timeout or AbortError)
       if (
-        submitError.name === 'AbortError' || 
-        submitError.message?.includes('timed out') || 
-        submitError.message?.includes('aborted') ||
-        submitError.message?.includes('timeout')
+        submitError.name === "AbortError" ||
+        submitError.message?.includes("timed out") ||
+        submitError.message?.includes("aborted") ||
+        submitError.message?.includes("timeout")
       ) {
         console.error("⏰ [SUBMISSION] Request timed out");
         const error = {
-          type: 'timeout' as const,
-          message: 'The request took too long to complete. This may be due to slow network or large files.',
-          technicalDetails: 'Request timed out after 180 seconds',
+          type: "timeout" as const,
+          message:
+            "The request took too long to complete. This may be due to slow network or large files.",
+          technicalDetails: "Request timed out after 180 seconds",
         };
         setSubmissionError(error);
         setShowErrorModal(true);
-        throw new Error(error.message);
+        setIsSubmitting(false);
+        setShowProcessingModal(false);
+        return;
       }
 
       // Handle network errors (XMLHttpRequest onerror or fetch TypeError)
+      // Also check for AxiosError "Network Error" message
       if (
-        submitError.message?.includes('Network request failed') ||
-        submitError.message?.includes('Failed to fetch') ||
-        submitError.message?.includes('NetworkError') ||
-        submitError.message?.includes('Network request') ||
-        (submitError.name === 'TypeError' && submitError.message?.includes('fetch'))
+        submitError.message?.includes("Network request failed") ||
+        submitError.message?.includes("Failed to fetch") ||
+        submitError.message?.includes("NetworkError") ||
+        submitError.message?.includes("Network request") ||
+        submitError.message?.toLowerCase().includes("network error") ||
+        (submitError.name === "TypeError" &&
+          submitError.message?.includes("fetch")) ||
+        // Check if no response (network error in axios)
+        (!submitError.response && submitError.request)
       ) {
         console.error("🌐 [SUBMISSION] Network connection failed");
         const error = {
-          type: 'network' as const,
-          message: 'Unable to connect to the server. Please check your internet connection and try again.',
-          technicalDetails: submitError.message || submitError.name,
+          type: "network" as const,
+          message:
+            "Unable to connect to the server. Please check your internet connection and try again.",
+          technicalDetails:
+            submitError.message || submitError.name || "Network Error",
         };
         setSubmissionError(error);
         setShowErrorModal(true);
-        throw new Error(error.message);
+        setIsSubmitting(false);
+        setShowProcessingModal(false);
+        return;
       }
 
       // Handle server errors with response (response.ok === false)
       // Check if we have a status code from the response
-      const status = submitError.status;
+      const status = submitError.response?.status || submitError.status;
       if (status) {
         console.error("❌ [SUBMISSION] Server returned error:", {
           status: status,
-          data: submitError.data
+          data: submitError.response?.data || submitError.data,
         });
-        
+
         // Determine error type and message based on status code
-        let errorType: ErrorType = 'server';
-        let errorMessage = 'Failed to submit report. Please try again.';
+        let errorType: ErrorType = "server";
+        let errorMessage = "Failed to submit report. Please try again.";
         let technicalDetails = `Status: ${status}`;
 
         if (status >= 500) {
-          errorType = 'server';
-          errorMessage = 'The server encountered an error and could not process your request. Our team has been notified.';
+          errorType = "server";
+          errorMessage =
+            "The server encountered an error and could not process your request. Our team has been notified.";
           if (status === 502 || status === 503) {
-            errorMessage = 'The server is temporarily unavailable. Please try again in a few minutes.';
+            errorMessage =
+              "The server is temporarily unavailable. Please try again in a few minutes.";
           } else if (status === 504) {
-            errorMessage = 'The server took too long to respond. Please try again.';
+            errorMessage =
+              "The server took too long to respond. Please try again.";
           }
         } else if (status === 400) {
-          errorType = 'validation';
-          errorMessage = 'Invalid report data. Please check that all required fields are filled correctly.';
+          errorType = "validation";
+          errorMessage =
+            "Invalid report data. Please check that all required fields are filled correctly.";
         } else if (status === 401) {
-          errorType = 'validation';
-          errorMessage = 'Your session has expired. Please log out and log back in.';
+          errorType = "validation";
+          errorMessage =
+            "Your session has expired. Please log out and log back in.";
         } else if (status === 403) {
-          errorType = 'validation';
-          errorMessage = 'You do not have permission to submit reports. Please check your account status.';
+          errorType = "validation";
+          errorMessage =
+            "You do not have permission to submit reports. Please check your account status.";
         } else if (status === 413) {
-          errorType = 'validation';
-          errorMessage = 'Your files are too large. Please reduce file sizes to under 5MB each and try again.';
+          errorType = "validation";
+          errorMessage =
+            "Your files are too large. Please reduce file sizes to under 5MB each and try again.";
         } else if (status === 429) {
-          errorType = 'server';
-          errorMessage = 'Too many requests. Please wait a moment before trying again.';
+          errorType = "server";
+          errorMessage =
+            "Too many requests. Please wait a moment before trying again.";
         }
 
         // Set error and show modal
@@ -1243,19 +1389,25 @@ export default function ReportScreen() {
           technicalDetails: technicalDetails,
         });
         setShowErrorModal(true);
-        
-        throw new Error(errorMessage);
+        setIsSubmitting(false);
+        setShowProcessingModal(false);
+        return;
       }
 
-      // Unknown error
+      // Unknown error - but still check for network-related issues
       const error = {
-        type: 'unknown' as const,
-        message: submitError.message || 'An unexpected error occurred. Please try again.',
-        technicalDetails: `${submitError.name}: ${submitError.message}`,
+        type: "unknown" as const,
+        message:
+          submitError.message ||
+          "An unexpected error occurred. Please try again.",
+        technicalDetails: `${submitError.name || "Unknown"}: ${
+          submitError.message || "No error message"
+        }`,
       };
       setSubmissionError(error);
       setShowErrorModal(true);
-      throw submitError;
+      setIsSubmitting(false);
+      setShowProcessingModal(false);
     }
   };
 
@@ -1319,12 +1471,13 @@ export default function ReportScreen() {
     } catch (error: any) {
       console.error("❌ [SUBMISSION] Error in handleSubmit:", error);
       setShowProcessingModal(false);
-      
+
       // Set structured error for display if not already set
       if (!submissionError) {
         setSubmissionError({
-          type: 'unknown',
-          message: error.message || "Failed to submit report. Please try again.",
+          type: "unknown",
+          message:
+            error.message || "Failed to submit report. Please try again.",
           technicalDetails: error.stack?.substring(0, 200),
         });
         setShowErrorModal(true);
@@ -1404,22 +1557,34 @@ export default function ReportScreen() {
         const asset = result.assets[0];
         const fileName = `photo_${Date.now()}.jpg`;
         const fileSize = asset.fileSize || 0;
-        
+
         // Warn if file is larger than 5MB
         if (fileSize > 5 * 1024 * 1024) {
-          console.warn(`⚠️ [IMAGE] Large file detected: ${(fileSize / (1024 * 1024)).toFixed(2)}MB`);
+          console.warn(
+            `⚠️ [IMAGE] Large file detected: ${(
+              fileSize /
+              (1024 * 1024)
+            ).toFixed(2)}MB`
+          );
           Alert.alert(
             "Large File",
-            `This photo is ${(fileSize / (1024 * 1024)).toFixed(2)}MB. Large files may take longer to upload. Consider taking a new photo or using a smaller resolution.`,
+            `This photo is ${(fileSize / (1024 * 1024)).toFixed(
+              2
+            )}MB. Large files may take longer to upload. Consider taking a new photo or using a smaller resolution.`,
             [
-              { text: "Use Anyway", onPress: () => {
-                addEvidenceFiles([{
-                  uri: asset.uri,
-                  name: fileName,
-                  type: "image/jpeg",
-                  size: fileSize,
-                }]);
-              }},
+              {
+                text: "Use Anyway",
+                onPress: () => {
+                  addEvidenceFiles([
+                    {
+                      uri: asset.uri,
+                      name: fileName,
+                      type: "image/jpeg",
+                      size: fileSize,
+                    },
+                  ]);
+                },
+              },
               { text: "Cancel", style: "cancel" },
             ]
           );
@@ -1463,12 +1628,16 @@ export default function ReportScreen() {
         // Check total size of all files
         const totalSize = newFiles.reduce((sum, file) => sum + file.size, 0);
         const totalSizeMB = totalSize / (1024 * 1024);
-        
+
         if (totalSizeMB > 20) {
-          console.warn(`⚠️ [IMAGE] Large batch detected: ${totalSizeMB.toFixed(2)}MB total`);
+          console.warn(
+            `⚠️ [IMAGE] Large batch detected: ${totalSizeMB.toFixed(2)}MB total`
+          );
           Alert.alert(
             "Large Files",
-            `The selected images total ${totalSizeMB.toFixed(2)}MB. This may take longer to upload. Consider selecting fewer or smaller images.`,
+            `The selected images total ${totalSizeMB.toFixed(
+              2
+            )}MB. This may take longer to upload. Consider selecting fewer or smaller images.`,
             [
               { text: "Use Anyway", onPress: () => addEvidenceFiles(newFiles) },
               { text: "Cancel", style: "cancel" },
@@ -1540,35 +1709,23 @@ export default function ReportScreen() {
     setGeneratedTags([]);
 
     try {
-      const response = await fetch(`${config.API.BASE_URL}/tags/generate`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          description: form.description.trim(),
-          incidentType: form.incidentType,
-          location:
-            form.formattedAddress ||
-            form.location ||
-            `${form.latitude}, ${form.longitude}`,
-          formattedAddress: form.formattedAddress,
-          buildingName: form.buildingName,
-          buildingCode: form.buildingCode,
-          latitude: form.latitude,
-          longitude: form.longitude,
-        }),
+      // ✅ FIX: Use configured api instance instead of raw fetch for proper baseURL, timeout, and error handling
+      const endpoint = "/tags/generate";
+      const response = await api.post(endpoint, {
+        description: form.description.trim(),
+        incidentType: form.incidentType,
+        location:
+          form.formattedAddress ||
+          form.location ||
+          `${form.latitude}, ${form.longitude}`,
+        formattedAddress: form.formattedAddress,
+        buildingName: form.buildingName,
+        buildingCode: form.buildingCode,
+        latitude: form.latitude,
+        longitude: form.longitude,
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(
-          `Failed to generate tags: ${response.status} - ${errorText}`
-        );
-      }
-
-      const data = await response.json();
+      const data = response.data;
 
       // Handle response format: allTags (all 20 generated tags) and top5Tags (top 5 scored tags)
       const allGeneratedTags = data.allTags || data.tags || [];
@@ -2073,11 +2230,20 @@ export default function ReportScreen() {
                     {/* Generate Tags Button - Always visible */}
                     <TouchableOpacity
                       onPress={generateTags}
-                      disabled={isGeneratingTags || !form.description.trim() || !form.latitude || !form.longitude}
+                      disabled={
+                        isGeneratingTags ||
+                        !form.description.trim() ||
+                        !form.latitude ||
+                        !form.longitude
+                      }
                       style={{
-                        backgroundColor: (isGeneratingTags || !form.description.trim() || !form.latitude || !form.longitude)
-                          ? "#E5E7EB"
-                          : "#8B0000",
+                        backgroundColor:
+                          isGeneratingTags ||
+                          !form.description.trim() ||
+                          !form.latitude ||
+                          !form.longitude
+                            ? "#E5E7EB"
+                            : "#8B0000",
                         borderRadius: 12,
                         paddingVertical: 16,
                         paddingHorizontal: 20,
@@ -2085,9 +2251,21 @@ export default function ReportScreen() {
                         justifyContent: "center",
                         flexDirection: "row",
                         marginBottom: 16,
-                        shadowColor: (isGeneratingTags || !form.description.trim() || !form.latitude || !form.longitude) ? "#000" : "#8B0000",
+                        shadowColor:
+                          isGeneratingTags ||
+                          !form.description.trim() ||
+                          !form.latitude ||
+                          !form.longitude
+                            ? "#000"
+                            : "#8B0000",
                         shadowOffset: { width: 0, height: 2 },
-                        shadowOpacity: (isGeneratingTags || !form.description.trim() || !form.latitude || !form.longitude) ? 0.1 : 0.2,
+                        shadowOpacity:
+                          isGeneratingTags ||
+                          !form.description.trim() ||
+                          !form.latitude ||
+                          !form.longitude
+                            ? 0.1
+                            : 0.2,
                         shadowRadius: 4,
                         elevation: 3,
                       }}
@@ -2108,11 +2286,7 @@ export default function ReportScreen() {
                         </>
                       ) : (
                         <>
-                          <Ionicons
-                            name="sparkles"
-                            size={22}
-                            color="#FFFFFF"
-                          />
+                          <Ionicons name="sparkles" size={22} color="#FFFFFF" />
                           <Text
                             style={{
                               color: "#FFFFFF",
@@ -3603,54 +3777,110 @@ export default function ReportScreen() {
                   {/* Error Banner */}
                   {submissionError && (
                     <View style={{ marginTop: 16, marginBottom: 8 }}>
-                      <View style={{
-                        backgroundColor: '#FEF2F2',
-                        borderLeftWidth: 4,
-                        borderLeftColor: '#DC2626',
-                        borderRadius: 8,
-                        padding: 16,
-                      }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                          <Text style={{ fontSize: 16, fontWeight: '700', color: '#DC2626', marginLeft: 8, flex: 1 }}>
-                            {submissionError.type === 'network' ? '🌐 Connection Issue' :
-                             submissionError.type === 'server' ? '🖥️ Server Error' :
-                             submissionError.type === 'timeout' ? '⏱️ Request Timed Out' :
-                             submissionError.type === 'validation' ? '⚠️ Validation Error' :
-                             '❌ Submission Failed'}
+                      <View
+                        style={{
+                          backgroundColor: "#FEF2F2",
+                          borderLeftWidth: 4,
+                          borderLeftColor: "#DC2626",
+                          borderRadius: 8,
+                          padding: 16,
+                        }}
+                      >
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            marginBottom: 8,
+                          }}
+                        >
+                          <Text
+                            style={{
+                              fontSize: 16,
+                              fontWeight: "700",
+                              color: "#DC2626",
+                              marginLeft: 8,
+                              flex: 1,
+                            }}
+                          >
+                            {submissionError.type === "network"
+                              ? "🌐 Connection Issue"
+                              : submissionError.type === "server"
+                              ? "🖥️ Server Error"
+                              : submissionError.type === "timeout"
+                              ? "⏱️ Request Timed Out"
+                              : submissionError.type === "validation"
+                              ? "⚠️ Validation Error"
+                              : "❌ Submission Failed"}
                           </Text>
-                          <Pressable onPress={() => setSubmissionError(null)} style={{ padding: 4 }}>
-                            <Text style={{ fontSize: 18, color: '#991B1B' }}>✕</Text>
+                          <Pressable
+                            onPress={() => setSubmissionError(null)}
+                            style={{ padding: 4 }}
+                          >
+                            <Text style={{ fontSize: 18, color: "#991B1B" }}>
+                              ✕
+                            </Text>
                           </Pressable>
                         </View>
-                        <Text style={{ fontSize: 14, color: '#991B1B', lineHeight: 20, marginBottom: 8 }}>
+                        <Text
+                          style={{
+                            fontSize: 14,
+                            color: "#991B1B",
+                            lineHeight: 20,
+                            marginBottom: 8,
+                          }}
+                        >
                           {submissionError.message}
                         </Text>
-                        {submissionError.type === 'network' && (
-                          <Text style={{ fontSize: 13, color: '#B91C1C', lineHeight: 20 }}>
-                            • Check your internet connection{'\n'}
-                            • Make sure you're connected to WiFi or mobile data{'\n'}
-                            • Try moving to an area with better signal
+                        {submissionError.type === "network" && (
+                          <Text
+                            style={{
+                              fontSize: 13,
+                              color: "#B91C1C",
+                              lineHeight: 20,
+                            }}
+                          >
+                            • Check your internet connection{"\n"}• Make sure
+                            you're connected to WiFi or mobile data{"\n"}• Try
+                            moving to an area with better signal
                           </Text>
                         )}
-                        {submissionError.type === 'server' && (
-                          <Text style={{ fontSize: 13, color: '#B91C1C', lineHeight: 20 }}>
-                            • The server is temporarily unavailable{'\n'}
-                            • Please try again in a few moments{'\n'}
-                            • If the problem persists, contact support
+                        {submissionError.type === "server" && (
+                          <Text
+                            style={{
+                              fontSize: 13,
+                              color: "#B91C1C",
+                              lineHeight: 20,
+                            }}
+                          >
+                            • The server is temporarily unavailable{"\n"}•
+                            Please try again in a few moments{"\n"}• If the
+                            problem persists, contact support
                           </Text>
                         )}
-                        {submissionError.type === 'timeout' && (
-                          <Text style={{ fontSize: 13, color: '#B91C1C', lineHeight: 20 }}>
-                            • The request took too long to complete{'\n'}
-                            • Check your internet connection speed{'\n'}
-                            • Try again with a more stable connection
+                        {submissionError.type === "timeout" && (
+                          <Text
+                            style={{
+                              fontSize: 13,
+                              color: "#B91C1C",
+                              lineHeight: 20,
+                            }}
+                          >
+                            • The request took too long to complete{"\n"}• Check
+                            your internet connection speed{"\n"}• Try again with
+                            a more stable connection
                           </Text>
                         )}
-                        {submissionError.type === 'validation' && (
-                          <Text style={{ fontSize: 13, color: '#B91C1C', lineHeight: 20 }}>
-                            • Check that all required fields are filled{'\n'}
-                            • Ensure file sizes are not too large{'\n'}
-                            • Verify your login session is still active
+                        {submissionError.type === "validation" && (
+                          <Text
+                            style={{
+                              fontSize: 13,
+                              color: "#B91C1C",
+                              lineHeight: 20,
+                            }}
+                          >
+                            • Check that all required fields are filled{"\n"}•
+                            Ensure file sizes are not too large{"\n"}• Verify
+                            your login session is still active
                           </Text>
                         )}
                       </View>
@@ -4478,7 +4708,10 @@ export default function ReportScreen() {
       />
 
       {/* Processing Report Modal */}
-      <ProcessingReportModal visible={showProcessingModal} phase={processingPhase} />
+      <ProcessingReportModal
+        visible={showProcessingModal}
+        phase={processingPhase}
+      />
 
       {/* Error Modal */}
       <ReportErrorModal

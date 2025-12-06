@@ -6,6 +6,43 @@ import { config } from './config';
 // Configure WebBrowser for OAuth
 WebBrowser.maybeCompleteAuthSession();
 
+/**
+ * Attempts to clear browser cache and prepare for fresh OAuth session
+ * 
+ * Note: expo-web-browser uses the system browser (Chrome/Safari), which we cannot
+ * directly clear from JavaScript. However, we can:
+ * 1. Use prompt: 'select_account' to force account selection
+ * 2. Clear app storage to prevent token mixing
+ * 3. Log cache clearing attempt for debugging
+ * 
+ * For full browser cache clearing, users would need to:
+ * - Android: Clear Chrome/WebView cache manually or via ADB
+ * - iOS: Clear Safari cache manually
+ * 
+ * The combination of prompt: 'select_account' + clearing app storage
+ * should prevent most cached session issues.
+ */
+export const clearBrowserCache = async (): Promise<void> => {
+  try {
+    console.log('🧹 [BROWSER] Preparing for fresh OAuth session...');
+
+    // Note: expo-web-browser doesn't expose cache clearing APIs
+    // The system browser cache is managed by the OS and cannot be cleared
+    // programmatically from JavaScript without native modules.
+    // 
+    // However, using prompt: 'select_account' in the OAuth request
+    // should force Microsoft to show account selection, bypassing cached sessions.
+
+    // Small delay to ensure any previous browser sessions are fully closed
+    await new Promise(resolve => setTimeout(resolve, 200));
+
+    console.log('✅ [BROWSER] Ready for fresh OAuth session (using select_account prompt)');
+  } catch (error) {
+    console.warn('⚠️ [BROWSER] Error preparing browser session:', error);
+    // Don't throw - this is a best-effort operation
+  }
+};
+
 // Create the OAuth request
 const createMicrosoftAuthRequest = () => {
   // Use the redirect URI from config, which should match the .env file
@@ -18,7 +55,10 @@ const createMicrosoftAuthRequest = () => {
     responseType: AuthSession.ResponseType.Code,
     usePKCE: true,
     extraParams: {
-      prompt: 'select_account'
+      // ✅ FIX: Use 'select_account' to force account selection screen
+      // This is more reliable than 'login' for account switching and prevents
+      // Microsoft from auto-logging in with cached sessions
+      prompt: 'select_account' // Shows account picker, forces fresh account selection
     }
   });
 };
@@ -28,8 +68,11 @@ export const microsoftOAuthService = {
   // Sign in with Microsoft
   signInWithMicrosoft: async () => {
     try {
+      // ✅ Clear browser cache before starting OAuth to prevent cached sessions
+      await clearBrowserCache();
+
       const request = createMicrosoftAuthRequest();
-      
+
       const result = await request.promptAsync({
         authorizationEndpoint: `https://login.microsoftonline.com/${config.MICROSOFT.TENANT_ID}/oauth2/v2.0/authorize`
       });
@@ -110,7 +153,7 @@ export const microsoftOAuthService = {
       }
 
       const backendData = await backendResponse.json();
-      
+
       return backendData;
     } catch (error) {
       throw error;

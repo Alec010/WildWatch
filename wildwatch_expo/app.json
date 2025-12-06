@@ -16,7 +16,10 @@
     "ios": {
       "bundleIdentifier": "com.wildwatch.app",
       "buildNumber": "1",
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.wildwatch.app",
@@ -81,9 +84,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "2bd9b965-6148-4e72-b00a-e284f555858d"
+        "projectId": "3f5e4410-b4d3-4434-a11f-9576f933e982"
       }
     },
-    "owner": "dazzzkun"
+    "owner": "katkatty21"
   }
 }

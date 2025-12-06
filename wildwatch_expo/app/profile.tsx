@@ -23,6 +23,7 @@ import type {
   UserUpdateRequest,
 } from "../src/features/users/models/UserProfileModels";
 import { storage } from "../lib/storage";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { config } from "../lib/config";
 import Colors from "../constants/Colors";
 import { useThemeColor } from "../components/Themed";
@@ -33,7 +34,10 @@ import { BadgePreview, BadgesModal } from "../src/features/badges/components";
 import type { BadgeProgress } from "../src/features/badges/models/BadgeModels";
 import { useRankingSummary } from "../src/features/ranking/hooks";
 import { RankingDashboard } from "../src/features/ranking/components";
-import { RANK_COLORS, RANK_NAMES } from "../src/features/ranking/models/RankingModels";
+import {
+  RANK_COLORS,
+  RANK_NAMES,
+} from "../src/features/ranking/models/RankingModels";
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 
@@ -816,15 +820,25 @@ export default function ProfileScreen() {
   // Badge state
   const [isBadgeModalOpen, setIsBadgeModalOpen] = useState(false);
   const [recentBadges, setRecentBadges] = useState<BadgeProgress[]>([]);
-  
-  // Badge hook
-  const { badgeSummary, isLoading: loadingBadges, error: badgeError, refetch: refetchBadges } = 
-    useBadgeSummary({ userRole: userProfile?.role, autoFetch: !!userProfile });
-  
-  // Ranking hook
-  const { rankingSummary, rankProgress, isLoading: loadingRanking, refetch: refetchRanking } =
-    useRankingSummary({ autoFetch: !!userProfile });
 
+  // Badge hook
+  const {
+    badgeSummary,
+    isLoading: loadingBadges,
+    error: badgeError,
+    refetch: refetchBadges,
+  } = useBadgeSummary({
+    userRole: userProfile?.role,
+    autoFetch: !!userProfile,
+  });
+
+  // Ranking hook
+  const {
+    rankingSummary,
+    rankProgress,
+    isLoading: loadingRanking,
+    refetch: refetchRanking,
+  } = useRankingSummary({ autoFetch: !!userProfile });
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -837,7 +851,6 @@ export default function ProfileScreen() {
     middleInitial: "",
     contactNumber: "",
   });
-
 
   useEffect(() => {
     if (userProfile) {
@@ -858,10 +871,10 @@ export default function ProfileScreen() {
   useEffect(() => {
     if (badgeSummary) {
       const earnedBadges = badgeSummary.badges
-        .filter(badge => badge.currentLevel > 0)
+        .filter((badge) => badge.currentLevel > 0)
         .sort((a, b) => b.currentLevel - a.currentLevel)
         .slice(0, 3);
-      
+
       setRecentBadges(earnedBadges);
     }
   }, [badgeSummary]);
@@ -975,10 +988,44 @@ export default function ProfileScreen() {
       {
         text: "Logout",
         onPress: async () => {
-          // ✅ Use comprehensive cleanup to clear ALL session data
-          console.log('🧹 Logging out - clearing all session data');
-          await storage.clearAllUserData();
-          router.replace("/auth/login" as never);
+          try {
+            // ✅ COMPREHENSIVE CLEANUP: Clear ALL tokens and session data
+            console.log("🧹 [LOGOUT] Starting comprehensive data cleanup...");
+
+            // ✅ FIX: Clear profile state FIRST to prevent UI showing old data
+            setUserProfile(null);
+            // Clear all user data (tokens, OAuth data, form data, chat, etc.)
+            await storage.clearAllUserData();
+
+            // ✅ ADDITIONAL SAFETY: Explicitly remove OAuth-related items
+            // (These should be cleared by clearAllUserData, but adding for extra safety)
+            await Promise.all([
+              AsyncStorage.removeItem("pendingOAuthToken"),
+              AsyncStorage.removeItem("oauthUserData"),
+              AsyncStorage.removeItem("authToken"),
+            ]);
+
+            console.log(
+              "✅ [LOGOUT] All tokens and storage data cleared successfully"
+            );
+
+            // Navigate to login screen
+            router.replace("/auth/login" as never);
+          } catch (error) {
+            console.error("❌ [LOGOUT] Error during cleanup:", error);
+            // Even if cleanup fails, still navigate to login
+            // User will need to log in again anyway
+            Alert.alert(
+              "Logout",
+              "Logged out successfully. Some cached data may remain.",
+              [
+                {
+                  text: "OK",
+                  onPress: () => router.replace("/auth/login" as never),
+                },
+              ]
+            );
+          }
         },
         style: "destructive",
       },
@@ -1318,88 +1365,143 @@ export default function ProfileScreen() {
               </LinearGradient>
             </View>
 
-             {/* Combined Ranking and Badges Section */}
-             <ProfileSection
-               title="Achievements & Recognition"
-               icon="ribbon"
-               iconTint={primaryColor}
-               backgroundColor="white"
-             >
+            {/* Combined Ranking and Badges Section */}
+            <ProfileSection
+              title="Achievements & Recognition"
+              icon="ribbon"
+              iconTint={primaryColor}
+              backgroundColor="white"
+            >
               <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
                 {/* Ranking Section */}
                 <View style={{ marginBottom: 20 }}>
-                  <View style={{ 
-                    flexDirection: 'row', 
-                    alignItems: 'center',
-                    marginBottom: 4,
-                  }}>
-                    <Ionicons name="trending-up" size={16} color={primaryColor} style={{ marginRight: 8 }} />
-                    <Text style={{ fontSize: 14, fontWeight: '600', color: textPrimaryColor }}>Your Ranking</Text>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      marginBottom: 4,
+                    }}
+                  >
+                    <Ionicons
+                      name="trending-up"
+                      size={16}
+                      color={primaryColor}
+                      style={{ marginRight: 8 }}
+                    />
+                    <Text
+                      style={{
+                        fontSize: 14,
+                        fontWeight: "600",
+                        color: textPrimaryColor,
+                      }}
+                    >
+                      Your Ranking
+                    </Text>
                   </View>
 
                   {/* Current Rank Info */}
-                  <View style={{ 
-                    flexDirection: 'row', 
-                    alignItems: 'center', 
-                    marginTop: 12,
-                    marginBottom: 16,
-                    paddingHorizontal: 4,
-                  }}>
-                    <View style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: 18,
-                      backgroundColor: rankProgress ? `${RANK_COLORS[rankProgress.currentRank]}20` : '#F3F4F6',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      marginRight: 12,
-                    }}>
-                      <Ionicons 
-                        name={rankProgress?.currentRank === 'NONE' ? "person-outline" : "medal"} 
-                        size={18} 
-                        color={rankProgress ? RANK_COLORS[rankProgress.currentRank] : '#6B7280'} 
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      marginTop: 12,
+                      marginBottom: 16,
+                      paddingHorizontal: 4,
+                    }}
+                  >
+                    <View
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 18,
+                        backgroundColor: rankProgress
+                          ? `${RANK_COLORS[rankProgress.currentRank]}20`
+                          : "#F3F4F6",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        marginRight: 12,
+                      }}
+                    >
+                      <Ionicons
+                        name={
+                          rankProgress?.currentRank === "NONE"
+                            ? "person-outline"
+                            : "medal"
+                        }
+                        size={18}
+                        color={
+                          rankProgress
+                            ? RANK_COLORS[rankProgress.currentRank]
+                            : "#6B7280"
+                        }
                       />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={{ 
-                        fontSize: 15, 
-                        fontWeight: '600', 
-                        color: rankProgress ? RANK_COLORS[rankProgress.currentRank] : '#374151',
-                        marginBottom: 2,
-                      }}>
-                        {rankProgress?.rankDisplayName || 'Loading...'}
+                      <Text
+                        style={{
+                          fontSize: 15,
+                          fontWeight: "600",
+                          color: rankProgress
+                            ? RANK_COLORS[rankProgress.currentRank]
+                            : "#374151",
+                          marginBottom: 2,
+                        }}
+                      >
+                        {rankProgress?.rankDisplayName || "Loading..."}
                       </Text>
-                      <Text style={{ 
-                        fontSize: 12, 
-                        color: '#6B7280',
-                      }}>
-                        {rankProgress?.currentPoints?.toLocaleString() || '0'} points
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          color: "#6B7280",
+                        }}
+                      >
+                        {rankProgress?.currentPoints?.toLocaleString() || "0"}{" "}
+                        points
                       </Text>
                     </View>
                     {rankProgress?.nextRank && (
-                      <View style={{
-                        backgroundColor: '#F3F4F6',
-                        paddingHorizontal: 8,
-                        paddingVertical: 4,
-                        borderRadius: 16,
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                      }}>
-                        <Text style={{ 
-                          color: '#6B7280', 
-                          marginRight: 4, 
-                          fontSize: 11,
-                        }}>Next Rank</Text>
-                        <View style={{
-                          backgroundColor: RANK_COLORS[rankProgress.nextRank],
-                          paddingHorizontal: 6,
-                          paddingVertical: 2,
-                          borderRadius: 8,
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                        }}>
-                          <Ionicons name="medal" size={12} color="white" style={{ marginRight: 2 }} />
-                          <Text style={{ color: 'white', fontWeight: '600', fontSize: 10 }}>
+                      <View
+                        style={{
+                          backgroundColor: "#F3F4F6",
+                          paddingHorizontal: 8,
+                          paddingVertical: 4,
+                          borderRadius: 16,
+                          flexDirection: "row",
+                          alignItems: "center",
+                        }}
+                      >
+                        <Text
+                          style={{
+                            color: "#6B7280",
+                            marginRight: 4,
+                            fontSize: 11,
+                          }}
+                        >
+                          Next Rank
+                        </Text>
+                        <View
+                          style={{
+                            backgroundColor: RANK_COLORS[rankProgress.nextRank],
+                            paddingHorizontal: 6,
+                            paddingVertical: 2,
+                            borderRadius: 8,
+                            flexDirection: "row",
+                            alignItems: "center",
+                          }}
+                        >
+                          <Ionicons
+                            name="medal"
+                            size={12}
+                            color="white"
+                            style={{ marginRight: 2 }}
+                          />
+                          <Text
+                            style={{
+                              color: "white",
+                              fontWeight: "600",
+                              fontSize: 10,
+                            }}
+                          >
                             {RANK_NAMES[rankProgress.nextRank]}
                           </Text>
                         </View>
@@ -1409,22 +1511,26 @@ export default function ProfileScreen() {
 
                   {/* Progress Bar */}
                   <View style={{ marginBottom: 16, paddingHorizontal: 4 }}>
-                    <View style={{
-                      height: 6,
-                      backgroundColor: '#F3F4F6',
-                      borderRadius: 3,
-                      overflow: 'hidden',
-                      marginBottom: 6,
-                    }}>
+                    <View
+                      style={{
+                        height: 6,
+                        backgroundColor: "#F3F4F6",
+                        borderRadius: 3,
+                        overflow: "hidden",
+                        marginBottom: 6,
+                      }}
+                    >
                       {rankProgress && (
                         <LinearGradient
                           colors={[
                             RANK_COLORS[rankProgress.currentRank],
-                            rankProgress.nextRank ? RANK_COLORS[rankProgress.nextRank] : RANK_COLORS[rankProgress.currentRank]
+                            rankProgress.nextRank
+                              ? RANK_COLORS[rankProgress.nextRank]
+                              : RANK_COLORS[rankProgress.currentRank],
                           ]}
                           style={{
                             width: `${rankProgress.progressPercentage}%`,
-                            height: '100%',
+                            height: "100%",
                             borderRadius: 3,
                           }}
                           start={{ x: 0, y: 0 }}
@@ -1432,194 +1538,298 @@ export default function ProfileScreen() {
                         />
                       )}
                     </View>
-                    <View style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                    }}>
-                      <Text style={{ color: '#6B7280', fontSize: 11 }}>
-                        {rankProgress?.rankDisplayName || 'Unranked'}
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
+                      <Text style={{ color: "#6B7280", fontSize: 11 }}>
+                        {rankProgress?.rankDisplayName || "Unranked"}
                       </Text>
                       {rankProgress?.nextRank && (
-                        <Text style={{ color: '#6B7280', fontSize: 11 }}>
-                          {rankProgress.pointsToNextRank.toLocaleString()} more points to reach {RANK_NAMES[rankProgress.nextRank]}
+                        <Text style={{ color: "#6B7280", fontSize: 11 }}>
+                          {rankProgress.pointsToNextRank.toLocaleString()} more
+                          points to reach {RANK_NAMES[rankProgress.nextRank]}
                         </Text>
                       )}
                     </View>
                   </View>
 
                   {/* Rank Tiers */}
-                  <View style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    backgroundColor: '#F9FAFB',
-                    borderRadius: 10,
-                    padding: 12,
-                    marginHorizontal: 4,
-                  }}>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                      backgroundColor: "#F9FAFB",
+                      borderRadius: 10,
+                      padding: 12,
+                      marginHorizontal: 4,
+                    }}
+                  >
                     {/* Bronze */}
-                    <View style={{ alignItems: 'center', flex: 1 }}>
-                      <View style={{
-                        width: 32,
-                        height: 32,
-                        borderRadius: 16,
-                        backgroundColor: '#FDF2F8',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        marginBottom: 6,
-                      }}>
+                    <View style={{ alignItems: "center", flex: 1 }}>
+                      <View
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: 16,
+                          backgroundColor: "#FDF2F8",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          marginBottom: 6,
+                        }}
+                      >
                         <Ionicons name="medal" size={18} color="#CD7F32" />
                       </View>
-                      <Text style={{ 
-                        color: '#6B7280', 
-                        fontSize: 11, 
-                        marginBottom: 1,
-                      }}>Bronze</Text>
-                      <Text style={{ 
-                        color: '#374151', 
-                        fontWeight: '600', 
-                        fontSize: 12,
-                      }}>100 pts</Text>
+                      <Text
+                        style={{
+                          color: "#6B7280",
+                          fontSize: 11,
+                          marginBottom: 1,
+                        }}
+                      >
+                        Bronze
+                      </Text>
+                      <Text
+                        style={{
+                          color: "#374151",
+                          fontWeight: "600",
+                          fontSize: 12,
+                        }}
+                      >
+                        100 pts
+                      </Text>
                     </View>
 
                     {/* Silver */}
-                    <View style={{ alignItems: 'center', flex: 1 }}>
-                      <View style={{
-                        width: 32,
-                        height: 32,
-                        borderRadius: 16,
-                        backgroundColor: '#F9FAFB',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        marginBottom: 6,
-                      }}>
+                    <View style={{ alignItems: "center", flex: 1 }}>
+                      <View
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: 16,
+                          backgroundColor: "#F9FAFB",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          marginBottom: 6,
+                        }}
+                      >
                         <Ionicons name="medal" size={18} color="#9CA3AF" />
                       </View>
-                      <Text style={{ 
-                        color: '#6B7280', 
-                        fontSize: 11, 
-                        marginBottom: 1,
-                      }}>Silver</Text>
-                      <Text style={{ 
-                        color: '#374151', 
-                        fontWeight: '600', 
-                        fontSize: 12,
-                      }}>200 pts</Text>
+                      <Text
+                        style={{
+                          color: "#6B7280",
+                          fontSize: 11,
+                          marginBottom: 1,
+                        }}
+                      >
+                        Silver
+                      </Text>
+                      <Text
+                        style={{
+                          color: "#374151",
+                          fontWeight: "600",
+                          fontSize: 12,
+                        }}
+                      >
+                        200 pts
+                      </Text>
                     </View>
 
                     {/* Gold */}
-                    <View style={{ alignItems: 'center', flex: 1 }}>
-                      <View style={{
-                        width: 32,
-                        height: 32,
-                        borderRadius: 16,
-                        backgroundColor: '#FFFBEB',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        marginBottom: 6,
-                      }}>
+                    <View style={{ alignItems: "center", flex: 1 }}>
+                      <View
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: 16,
+                          backgroundColor: "#FFFBEB",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          marginBottom: 6,
+                        }}
+                      >
                         <Ionicons name="medal" size={18} color="#FCD34D" />
                       </View>
-                      <Text style={{ 
-                        color: '#6B7280', 
-                        fontSize: 11, 
-                        marginBottom: 1,
-                      }}>Gold</Text>
-                      <Text style={{ 
-                        color: '#374151', 
-                        fontWeight: '600', 
-                        fontSize: 12,
-                      }}>300 pts</Text>
+                      <Text
+                        style={{
+                          color: "#6B7280",
+                          fontSize: 11,
+                          marginBottom: 1,
+                        }}
+                      >
+                        Gold
+                      </Text>
+                      <Text
+                        style={{
+                          color: "#374151",
+                          fontWeight: "600",
+                          fontSize: 12,
+                        }}
+                      >
+                        300 pts
+                      </Text>
                     </View>
                   </View>
                 </View>
 
                 {/* Badges Section */}
                 <View style={{ marginTop: 8 }}>
-                  <View style={{ 
-                    flexDirection: 'row', 
-                    alignItems: 'center',
-                    marginBottom: 12,
-                  }}>
-                    <Ionicons name="trophy" size={16} color={primaryColor} style={{ marginRight: 8 }} />
-                    <Text style={{ fontSize: 14, fontWeight: '600', color: textPrimaryColor }}>Your Badges</Text>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      marginBottom: 12,
+                    }}
+                  >
+                    <Ionicons
+                      name="trophy"
+                      size={16}
+                      color={primaryColor}
+                      style={{ marginRight: 8 }}
+                    />
+                    <Text
+                      style={{
+                        fontSize: 14,
+                        fontWeight: "600",
+                        color: textPrimaryColor,
+                      }}
+                    >
+                      Your Badges
+                    </Text>
                   </View>
 
                   {!loadingBadges && badgeSummary && (
                     <>
                       {recentBadges.length > 0 ? (
-                        <View style={{ 
-                          flexDirection: 'row', 
-                          alignItems: 'center',
-                          paddingHorizontal: 4 
-                        }}>
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            paddingHorizontal: 4,
+                          }}
+                        >
                           <View style={{ marginRight: 10 }}>
-                            <View style={{
-                              width: 36,
-                              height: 36,
-                              borderRadius: 18,
-                              backgroundColor: '#3B82F620',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                            }}>
-                              <Ionicons name="alert-circle" size={24} color="#3B82F6" />
+                            <View
+                              style={{
+                                width: 36,
+                                height: 36,
+                                borderRadius: 18,
+                                backgroundColor: "#3B82F620",
+                                alignItems: "center",
+                                justifyContent: "center",
+                              }}
+                            >
+                              <Ionicons
+                                name="alert-circle"
+                                size={24}
+                                color="#3B82F6"
+                              />
                             </View>
-                            <View style={{
-                              position: 'absolute',
-                              bottom: -3,
-                              right: -3,
-                              backgroundColor: '#3B82F6',
-                              borderRadius: 10,
-                              width: 20,
-                              height: 20,
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              borderWidth: 1.5,
-                              borderColor: 'white',
-                            }}>
-                              <Text style={{ color: 'white', fontSize: 10, fontWeight: 'bold' }}>3</Text>
+                            <View
+                              style={{
+                                position: "absolute",
+                                bottom: -3,
+                                right: -3,
+                                backgroundColor: "#3B82F6",
+                                borderRadius: 10,
+                                width: 20,
+                                height: 20,
+                                alignItems: "center",
+                                justifyContent: "center",
+                                borderWidth: 1.5,
+                                borderColor: "white",
+                              }}
+                            >
+                              <Text
+                                style={{
+                                  color: "white",
+                                  fontSize: 10,
+                                  fontWeight: "bold",
+                                }}
+                              >
+                                3
+                              </Text>
                             </View>
                           </View>
                           <View style={{ flex: 1 }}>
-                            <Text style={{ fontSize: 14, fontWeight: '600', color: '#1F2937', marginBottom: 1 }}>
+                            <Text
+                              style={{
+                                fontSize: 14,
+                                fontWeight: "600",
+                                color: "#1F2937",
+                                marginBottom: 1,
+                              }}
+                            >
                               First Responder
                             </Text>
-                            <Text style={{ fontSize: 12, color: '#6B7280' }}>Level 3</Text>
+                            <Text style={{ fontSize: 12, color: "#6B7280" }}>
+                              Level 3
+                            </Text>
                           </View>
                         </View>
                       ) : (
                         <TouchableOpacity
                           onPress={() => setIsBadgeModalOpen(true)}
                           style={{
-                            backgroundColor: '#FFFBEB',
+                            backgroundColor: "#FFFBEB",
                             borderRadius: 10,
                             padding: 12,
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
+                            flexDirection: "row",
+                            alignItems: "center",
+                            justifyContent: "space-between",
                             marginHorizontal: 4,
                           }}
                         >
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                          <View
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "center",
+                              gap: 10,
+                            }}
+                          >
                             <View
                               style={{
-                                backgroundColor: '#FEF3C7',
+                                backgroundColor: "#FEF3C7",
                                 padding: 8,
                                 borderRadius: 8,
                               }}
                             >
-                              <Ionicons name="trophy-outline" size={18} color="#D97706" />
+                              <Ionicons
+                                name="trophy-outline"
+                                size={18}
+                                color="#D97706"
+                              />
                             </View>
                             <View>
-                              <Text style={{ fontSize: 13, fontWeight: '600', color: '#92400E' }}>
+                              <Text
+                                style={{
+                                  fontSize: 13,
+                                  fontWeight: "600",
+                                  color: "#92400E",
+                                }}
+                              >
                                 View Your Badges
                               </Text>
-                              <Text style={{ fontSize: 11, color: '#92400E', marginTop: 1 }}>
-                                {badgeSummary.totalBadgesAvailable} badges available to earn
+                              <Text
+                                style={{
+                                  fontSize: 11,
+                                  color: "#92400E",
+                                  marginTop: 1,
+                                }}
+                              >
+                                {badgeSummary.totalBadgesAvailable} badges
+                                available to earn
                               </Text>
                             </View>
                           </View>
-                          <Ionicons name="chevron-forward" size={16} color="#D97706" />
+                          <Ionicons
+                            name="chevron-forward"
+                            size={16}
+                            color="#D97706"
+                          />
                         </TouchableOpacity>
                       )}
 
@@ -1627,18 +1837,26 @@ export default function ProfileScreen() {
                       {recentBadges.length > 0 && (
                         <TouchableOpacity
                           style={{
-                            backgroundColor: 'white',
+                            backgroundColor: "white",
                             borderRadius: 8,
                             padding: 8,
-                            alignItems: 'center',
+                            alignItems: "center",
                             marginTop: 12,
                             marginHorizontal: 4,
                             borderWidth: 1,
-                            borderColor: '#F3F4F6',
+                            borderColor: "#F3F4F6",
                           }}
                           onPress={() => setIsBadgeModalOpen(true)}
                         >
-                          <Text style={{ color: '#374151', fontWeight: '500', fontSize: 12 }}>View All</Text>
+                          <Text
+                            style={{
+                              color: "#374151",
+                              fontWeight: "500",
+                              fontSize: 12,
+                            }}
+                          >
+                            View All
+                          </Text>
                         </TouchableOpacity>
                       )}
                     </>
@@ -1646,12 +1864,16 @@ export default function ProfileScreen() {
 
                   {/* Badge Loading State */}
                   {loadingBadges && (
-                    <View style={{
-                      alignItems: 'center',
-                      padding: 16,
-                    }}>
+                    <View
+                      style={{
+                        alignItems: "center",
+                        padding: 16,
+                      }}
+                    >
                       <ActivityIndicator size="small" color="#8B0000" />
-                      <Text style={{ marginTop: 6, fontSize: 11, color: '#6B7280' }}>
+                      <Text
+                        style={{ marginTop: 6, fontSize: 11, color: "#6B7280" }}
+                      >
                         Loading badges...
                       </Text>
                     </View>
@@ -1659,35 +1881,57 @@ export default function ProfileScreen() {
 
                   {/* Badge Error State */}
                   {badgeError && (
-                    <View style={{
-                      backgroundColor: '#FEF2F2',
-                      borderRadius: 10,
-                      padding: 12,
-                      borderWidth: 1,
-                      borderColor: '#FECACA',
-                      marginHorizontal: 4,
-                    }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <View
+                      style={{
+                        backgroundColor: "#FEF2F2",
+                        borderRadius: 10,
+                        padding: 12,
+                        borderWidth: 1,
+                        borderColor: "#FECACA",
+                        marginHorizontal: 4,
+                      }}
+                    >
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          alignItems: "center",
+                          gap: 6,
+                        }}
+                      >
                         <Ionicons name="warning" size={16} color="#DC2626" />
-                        <Text style={{ fontSize: 12, fontWeight: '600', color: '#DC2626' }}>
+                        <Text
+                          style={{
+                            fontSize: 12,
+                            fontWeight: "600",
+                            color: "#DC2626",
+                          }}
+                        >
                           Badge Error
                         </Text>
                       </View>
-                      <Text style={{ fontSize: 11, color: '#DC2626', marginTop: 3 }}>
+                      <Text
+                        style={{ fontSize: 11, color: "#DC2626", marginTop: 3 }}
+                      >
                         {badgeError}
                       </Text>
                       <TouchableOpacity
                         onPress={refetchBadges}
                         style={{
-                          backgroundColor: '#DC2626',
+                          backgroundColor: "#DC2626",
                           paddingHorizontal: 10,
                           paddingVertical: 4,
                           borderRadius: 6,
                           marginTop: 6,
-                          alignSelf: 'flex-start',
+                          alignSelf: "flex-start",
                         }}
                       >
-                        <Text style={{ color: 'white', fontSize: 11, fontWeight: '600' }}>
+                        <Text
+                          style={{
+                            color: "white",
+                            fontSize: 11,
+                            fontWeight: "600",
+                          }}
+                        >
                           Retry
                         </Text>
                       </TouchableOpacity>
@@ -1695,14 +1939,14 @@ export default function ProfileScreen() {
                   )}
                 </View>
               </View>
-             </ProfileSection>
+            </ProfileSection>
 
-               {/* Personal Information Section */}
-               <ProfileSection
-                 title="Personal Information"
-                 icon="person"
-                 iconTint={primaryColor}
-               >
+            {/* Personal Information Section */}
+            <ProfileSection
+              title="Personal Information"
+              icon="person"
+              iconTint={primaryColor}
+            >
               <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
                 <View
                   style={{ flexDirection: "row", gap: 12, marginBottom: 16 }}

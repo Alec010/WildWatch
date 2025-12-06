@@ -5,9 +5,10 @@ import { storage } from './storage';
 export const api = axios.create({
   baseURL: config.API.BASE_URL,
   timeout: config.API.TIMEOUT,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  // Do NOT set default Content-Type - axios will automatically set it:
+  // - JSON objects → 'application/json'
+  // - FormData → 'multipart/form-data; boundary=...'
+  // This ensures compatibility with both Expo Go and production builds
 });
 
 // Attach Authorization header from storage
@@ -17,6 +18,12 @@ api.interceptors.request.use(async (request: InternalAxiosRequestConfig) => {
     if (token) {
       request.headers = request.headers || {};
       request.headers.Authorization = `Bearer ${token}`;
+    }
+    
+    // Set Content-Type for JSON requests only (not FormData)
+    // Axios automatically handles FormData, but we need to set JSON explicitly
+    if (request.data && !(request.data instanceof FormData) && !request.headers['Content-Type']) {
+      request.headers['Content-Type'] = 'application/json';
     }
   } catch (error) {
     // Ignore token errors

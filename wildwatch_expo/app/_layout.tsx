@@ -13,6 +13,7 @@ import "react-native-reanimated";
 import { useColorScheme } from "@/components/useColorScheme";
 import { storage } from "../lib/storage";
 import { authAPI } from "@/src/features/auth/api/auth_api";
+import { clearUserProfileState } from "@/src/features/users/hooks/useUserProfile";
 import GlobalLayout from "../components/GlobalLayout";
 
 export {
@@ -66,23 +67,37 @@ function RootLayoutNav() {
         setIsAuthenticated(authed);
 
         if (authed) {
+          // ✅ FIX: Clear profile state before fetching to prevent showing old account data
+          clearUserProfileState();
+
           // Check if terms are accepted by fetching user profile
           const userProfile = await authAPI.getProfile();
           const termsAccepted = userProfile.termsAccepted;
 
-          if (!termsAccepted && !pathname?.startsWith("/auth/terms") && !pathname?.startsWith("/auth/setup")) {
+          if (
+            !termsAccepted &&
+            !pathname?.startsWith("/auth/terms") &&
+            !pathname?.startsWith("/auth/setup")
+          ) {
             router.replace("/auth/terms");
-          } else if (pathname?.startsWith("/auth") && termsAccepted && !pathname?.startsWith("/auth/setup")) {
+          } else if (
+            pathname?.startsWith("/auth") &&
+            termsAccepted &&
+            !pathname?.startsWith("/auth/setup")
+          ) {
             // Check if user needs setup before redirecting to tabs
             // Only redirect if not already on setup page
             try {
-              const isMicrosoftOAuth = userProfile.authProvider === 'microsoft' || userProfile.authProvider === 'microsoft_mobile';
-              const needsSetup = isMicrosoftOAuth && 
-                                (userProfile.contactNumber === '+639000000000' || 
-                                 userProfile.contactNumber === 'Not provided' || 
-                                 userProfile.contactNumber === null ||
-                                 !userProfile.password);
-              
+              const isMicrosoftOAuth =
+                userProfile.authProvider === "microsoft" ||
+                userProfile.authProvider === "microsoft_mobile";
+              const needsSetup =
+                isMicrosoftOAuth &&
+                (userProfile.contactNumber === "+639000000000" ||
+                  userProfile.contactNumber === "Not provided" ||
+                  userProfile.contactNumber === null ||
+                  !userProfile.password);
+
               if (needsSetup) {
                 // Only redirect to setup if not already there
                 if (!pathname?.startsWith("/auth/setup")) {
@@ -90,13 +105,19 @@ function RootLayoutNav() {
                 }
               } else {
                 // Only redirect to tabs if not on an auth page that requires completion
-                if (!pathname?.startsWith("/auth/terms") && !pathname?.startsWith("/auth/setup")) {
+                if (
+                  !pathname?.startsWith("/auth/terms") &&
+                  !pathname?.startsWith("/auth/setup")
+                ) {
                   router.replace("/(tabs)");
                 }
               }
             } catch (e) {
               // If check fails and we're on an auth page that might need setup, don't redirect
-              if (!pathname?.startsWith("/auth/terms") && !pathname?.startsWith("/auth/setup")) {
+              if (
+                !pathname?.startsWith("/auth/terms") &&
+                !pathname?.startsWith("/auth/setup")
+              ) {
                 router.replace("/(tabs)");
               }
             }
