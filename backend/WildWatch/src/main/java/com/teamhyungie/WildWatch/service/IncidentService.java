@@ -578,6 +578,11 @@ public class IncidentService {
             incident.setIsPrivate(request.getIsPrivate());
         }
 
+        // Allow setting or updating the estimated resolution date when provided
+        if (request.getEstimatedResolutionDate() != null) {
+            incident.setEstimatedResolutionDate(request.getEstimatedResolutionDate());
+        }
+
         // If resolution notes provided and status is resolved/closed, store them on the incident
         if (request.getResolutionNotes() != null && request.getStatus() != null
                 && ("resolved".equalsIgnoreCase(request.getStatus()) || "closed".equalsIgnoreCase(request.getStatus()))) {

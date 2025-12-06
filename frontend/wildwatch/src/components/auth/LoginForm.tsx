@@ -1,42 +1,62 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import Image from "next/image"
-import Link from "next/link"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import * as z from "zod"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Eye, EyeOff, X, Shield, Mail, CheckCircle2, AlertCircle } from "lucide-react"
-import Cookies from "js-cookie"
-import { MicrosoftLogo } from "@/components/icons/MicrosoftLogo"
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { getApiBaseUrl } from "@/utils/api"
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
-import { toast } from "sonner"
-import { handleAuthRedirect } from "@/utils/auth"
-import { CustomLoader } from "@/components/ui/custom-loader"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
+import Link from "next/link";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Eye,
+  EyeOff,
+  X,
+  Shield,
+  Mail,
+  CheckCircle2,
+  AlertCircle,
+} from "lucide-react";
+import { MicrosoftLogo } from "@/components/icons/MicrosoftLogo";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { getApiBaseUrl } from "@/utils/api";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { toast } from "sonner";
+import { handleAuthRedirect } from "@/utils/auth";
+import { CustomLoader } from "@/components/ui/custom-loader";
+import userProfileService from "@/utils/userProfileService";
 
 const formSchema = z.object({
-  email: z.string().email("Invalid email").endsWith("@cit.edu", "Must be a CIT email address"),
+  email: z
+    .string()
+    .email("Invalid email")
+    .endsWith("@cit.edu", "Must be a CIT email address"),
   password: z.string().min(1, "Password is required"),
-})
+});
 
 export function LoginForm() {
-  const [isLoading, setIsLoading] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [showResetModal, setShowResetModal] = useState(false)
-  const [resetEmail, setResetEmail] = useState("")
-  const [resetStatus, setResetStatus] = useState<"idle" | "loading" | "success" | "error">("idle")
-  const [resetMessage, setResetMessage] = useState("")
-  const [showLoader, setShowLoader] = useState(false)
-  const [loadingMessage, setLoadingMessage] = useState("")
-  const router = useRouter()
+  const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetStatus, setResetStatus] = useState<
+    "idle" | "loading" | "success" | "error"
+  >("idle");
+  const [resetMessage, setResetMessage] = useState("");
+  const [showLoader, setShowLoader] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState("");
+  const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -44,12 +64,40 @@ export function LoginForm() {
       email: "",
       password: "",
     },
-  })
+  });
+
+  // Helper function to handle successful login
+  const handleSuccessfulLogin = (userData: any) => {
+    // Save user profile to sessionStorage for sidebar caching (sanitization handled by service)
+    userProfileService.setUserProfile({
+      firstName: userData.firstName || "",
+      lastName: userData.lastName || "",
+      schoolIdNumber: userData.schoolIdNumber || "",
+      email: userData.email || "",
+      role: userData.role || "",
+    });
+
+    const redirectPath = handleAuthRedirect(userData);
+
+    // Navigate and show success toast after navigation starts
+    router.push(redirectPath);
+
+    // Small delay to let navigation start, then show toast
+    setTimeout(() => {
+      toast.success("Login successful!", {
+        description: "Welcome back to WildWatch",
+        icon: <CheckCircle2 className="h-5 w-5 text-green-500" />,
+        className: "bg-white border-green-100 text-green-800",
+        duration: 2000,
+        id: `login-success-${Date.now()}`,
+      });
+    }, 100);
+  };
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
-      setIsLoading(true)
-      setError(null)
+      setIsLoading(true);
+      setError(null);
 
       const response = await fetch(`${getApiBaseUrl()}/api/auth/login`, {
         method: "POST",
@@ -57,132 +105,110 @@ export function LoginForm() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(values),
-      })
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || "Failed to login")
+        throw new Error(data.message || "Failed to login");
       }
 
       // Show loader immediately
-      setShowLoader(true)
-      setLoadingMessage("Preparing your dashboard...")
+      setShowLoader(true);
+      setLoadingMessage("Preparing your dashboard...");
 
       // Store the token using token service (handles automatic refresh)
-      const tokenService = (await import('@/utils/tokenService')).default;
+      const tokenService = (await import("@/utils/tokenService")).default;
       tokenService.setToken(data.token);
 
-      // Wait for token to be properly stored and UserContext to update
-      await new Promise(resolve => setTimeout(resolve, 300));
-
       // Check if user data exists and has required properties
-      if (!data.user || typeof data.user.termsAccepted === 'undefined') {
-        setLoadingMessage("Fetching your profile...")
+      // If user data is missing or termsAccepted is not explicitly true, fetch profile
+      if (!data.user || data.user.termsAccepted === undefined || data.user.termsAccepted === null) {
+        setLoadingMessage("Fetching your profile...");
         // If user data is missing, fetch the user profile
-        const profileResponse = await fetch(`${getApiBaseUrl()}/api/auth/profile`, {
-          headers: {
-            'Authorization': `Bearer ${data.token}`,
-            'Content-Type': 'application/json',
-          },
-        })
+        const profileResponse = await fetch(
+          `${getApiBaseUrl()}/api/auth/profile`,
+          {
+            headers: {
+              Authorization: `Bearer ${data.token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
 
         if (!profileResponse.ok) {
-          throw new Error("Failed to fetch user profile")
+          throw new Error("Failed to fetch user profile");
         }
 
-        const userData = await profileResponse.json()
-        const redirectPath = handleAuthRedirect(userData)
-        
-        // Navigate and show success toast after navigation starts
-        router.push(redirectPath)
-        
-        // Small delay to let navigation start, then show toast
-        setTimeout(() => {
-          toast.success("Login successful!", {
-            description: "Welcome back to WildWatch",
-            icon: <CheckCircle2 className="h-5 w-5 text-green-500" />,
-            className: "bg-white border-green-100 text-green-800",
-            duration: 2000,
-            id: `login-success-${Date.now()}`,
-          })
-        }, 100)
+        const userData = await profileResponse.json();
+        handleSuccessfulLogin(userData);
       } else {
         // Use the user data from login response
-        const redirectPath = handleAuthRedirect(data.user)
-        
-        // Navigate and show success toast after navigation starts
-        router.push(redirectPath)
-        
-        // Small delay to let navigation start, then show toast
-        setTimeout(() => {
-          toast.success("Login successful!", {
-            description: "Welcome back to WildWatch",
-            icon: <CheckCircle2 className="h-5 w-5 text-green-500" />,
-            className: "bg-white border-green-100 text-green-800",
-            duration: 2000,
-            id: `login-success-${Date.now()}`,
-          })
-        }, 100)
+        handleSuccessfulLogin(data.user);
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to login"
-      setError(errorMessage)
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to login";
+      setError(errorMessage);
       toast.error("Login failed", {
         description: errorMessage,
         icon: <AlertCircle className="h-5 w-5 text-red-500" />,
         className: "bg-white border-red-100 text-red-800",
         duration: 5000,
         id: "login-error",
-      })
-      setShowLoader(false)
+      });
+      setShowLoader(false);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 
   const handleResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setResetStatus("loading")
-    setResetMessage("")
+    e.preventDefault();
+    setResetStatus("loading");
+    setResetMessage("");
 
     try {
-      const response = await fetch(`${getApiBaseUrl()}/api/auth/reset-password-request`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email: resetEmail }),
-      })
+      const response = await fetch(
+        `${getApiBaseUrl()}/api/auth/reset-password-request`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email: resetEmail }),
+        }
+      );
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || "Failed to send reset link")
+        throw new Error(data.message || "Failed to send reset link");
       }
 
-      setResetStatus("success")
-      setResetMessage("Password reset link has been sent to your email.")
+      setResetStatus("success");
+      setResetMessage("Password reset link has been sent to your email.");
       toast.success("Reset link sent!", {
         description: "Please check your email for the password reset link",
         icon: <CheckCircle2 className="h-5 w-5 text-green-500" />,
         className: "bg-white border-green-100 text-green-800",
         duration: 5000,
-      })
-      setShowResetModal(false)
+      });
+      setShowResetModal(false);
     } catch (error) {
-      setResetStatus("error")
-      const errorMessage = error instanceof Error ? error.message : "Failed to send reset link"
-      setResetMessage(errorMessage)
+      setResetStatus("error");
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to send reset link";
+      setResetMessage(errorMessage);
       toast.error("Reset failed", {
         id: "reset-failed-error",
         description: errorMessage,
         icon: <AlertCircle className="h-5 w-5 text-red-500" />,
         className: "bg-white border-red-100 text-red-800",
         duration: 5000,
-      })
+      });
     }
-  }
+  };
 
   // Required field label with asterisk
   const RequiredLabel = ({ children }: { children: React.ReactNode }) => (
@@ -190,12 +216,12 @@ export function LoginForm() {
       {children}
       <span className="text-[#800000] ml-0.5">*</span>
     </span>
-  )
+  );
 
   return (
     <>
       {showLoader ? (
-        <CustomLoader 
+        <CustomLoader
           title={loadingMessage}
           subtitle="Please wait while we complete your authentication"
           contentOnly={false}
@@ -212,12 +238,20 @@ export function LoginForm() {
             <Link href="/" className="transition-transform hover:scale-105">
               <div className="relative">
                 <div className="relative bg-background rounded-full p-1">
-                  <Image src="/logo.png" alt="WildWatch Logo" width={150} height={50} priority />
+                  <Image
+                    src="/logo.png"
+                    alt="WildWatch Logo"
+                    width={150}
+                    height={50}
+                    priority
+                  />
                 </div>
               </div>
             </Link>
             <h1 className="text-3xl font-bold text-[#800000]">Sign In</h1>
-            <p className="text-sm text-muted-foreground">Access your WILD WATCH account</p>
+            <p className="text-sm text-muted-foreground">
+              Access your WILD WATCH account
+            </p>
           </div>
 
           <Form {...form}>
@@ -285,7 +319,11 @@ export function LoginForm() {
                           className="absolute right-3 top-1/2 -translate-y-1/2 text-[#800000]/70 hover:text-[#800000] transition-colors"
                           onClick={() => setShowPassword(!showPassword)}
                         >
-                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
                         </button>
                       </div>
                     </FormControl>
@@ -307,7 +345,14 @@ export function LoginForm() {
                       fill="none"
                       viewBox="0 0 24 24"
                     >
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
                       <path
                         className="opacity-75"
                         fill="currentColor"
@@ -338,11 +383,11 @@ export function LoginForm() {
               variant="outline"
               className="w-full flex items-center justify-center gap-2 border-[#D4AF37]/30 hover:bg-[#D4AF37]/10 py-5"
               onClick={() => {
-                if (typeof window !== 'undefined') {
+                if (typeof window !== "undefined") {
                   // Import getBackendUrl dynamically to get the current value
-                  import('@/config').then(({ getBackendUrl }) => {
-                    window.location.href = `${getBackendUrl()}/oauth2/authorization/microsoft`
-                  })
+                  import("@/config").then(({ getBackendUrl }) => {
+                    window.location.href = `${getBackendUrl()}/oauth2/authorization/microsoft`;
+                  });
                 }
               }}
             >
@@ -351,13 +396,17 @@ export function LoginForm() {
             </Button>
 
             <p className="text-xs text-center text-muted-foreground">
-              Note: When signing in with Microsoft, additional credentials may be required after authentication.
+              Note: When signing in with Microsoft, additional credentials may
+              be required after authentication.
             </p>
           </div>
 
           <div className="text-center text-sm pt-4 border-t border-[#D4AF37]/30">
             Don't have an account?{" "}
-            <Link href="/signup" className="text-[#800000] hover:text-[#800000]/80 font-medium transition-colors">
+            <Link
+              href="/signup"
+              className="text-[#800000] hover:text-[#800000]/80 font-medium transition-colors"
+            >
               Create Account
             </Link>
           </div>
@@ -370,7 +419,9 @@ export function LoginForm() {
 
               <div className="p-6">
                 <div className="flex justify-between items-center mb-6">
-                  <DialogTitle className="text-2xl font-bold text-[#800000]">Reset Password</DialogTitle>
+                  <DialogTitle className="text-2xl font-bold text-[#800000]">
+                    Reset Password
+                  </DialogTitle>
                   <button
                     type="button"
                     className="text-[#800000]/70 hover:text-[#800000] transition rounded-full h-8 w-8 inline-flex items-center justify-center"
@@ -383,7 +434,10 @@ export function LoginForm() {
 
                 <form onSubmit={handleResetPassword} className="space-y-6">
                   <div className="space-y-2">
-                    <label htmlFor="reset-email" className="text-sm font-medium text-[#800000]">
+                    <label
+                      htmlFor="reset-email"
+                      className="text-sm font-medium text-[#800000]"
+                    >
                       CIT Email
                     </label>
                     <div className="mt-2 relative">
@@ -465,5 +519,5 @@ export function LoginForm() {
         </div>
       )}
     </>
-  )
+  );
 }

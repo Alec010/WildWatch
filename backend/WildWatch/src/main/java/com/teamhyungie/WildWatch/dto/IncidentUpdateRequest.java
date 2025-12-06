@@ -3,6 +3,8 @@ package com.teamhyungie.WildWatch.dto;
 import com.teamhyungie.WildWatch.model.PriorityLevel;
 import lombok.Data;
 
+import java.time.LocalDateTime;
+
 @Data
 public class IncidentUpdateRequest {
     private String status;
@@ -14,4 +16,6 @@ public class IncidentUpdateRequest {
     private String resolutionNotes;
     private Boolean preferAnonymous;
     private Boolean isPrivate;
+    // Optional – allows office admins to set or update the initial estimated resolution date
+    private LocalDateTime estimatedResolutionDate;
 } 
