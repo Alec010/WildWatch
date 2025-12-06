@@ -85,41 +85,12 @@ function RootLayoutNav() {
             termsAccepted &&
             !pathname?.startsWith("/auth/setup")
           ) {
-            // Check if user needs setup before redirecting to tabs
-            // Only redirect if not already on setup page
-            try {
-              const isMicrosoftOAuth =
-                userProfile.authProvider === "microsoft" ||
-                userProfile.authProvider === "microsoft_mobile";
-              const needsSetup =
-                isMicrosoftOAuth &&
-                (userProfile.contactNumber === "+639000000000" ||
-                  userProfile.contactNumber === "Not provided" ||
-                  userProfile.contactNumber === null ||
-                  !userProfile.password);
-
-              if (needsSetup) {
-                // Only redirect to setup if not already there
-                if (!pathname?.startsWith("/auth/setup")) {
-                  router.replace("/auth/setup");
-                }
-              } else {
-                // Only redirect to tabs if not on an auth page that requires completion
-                if (
-                  !pathname?.startsWith("/auth/terms") &&
-                  !pathname?.startsWith("/auth/setup")
-                ) {
-                  router.replace("/(tabs)");
-                }
-              }
-            } catch (e) {
-              // If check fails and we're on an auth page that might need setup, don't redirect
-              if (
-                !pathname?.startsWith("/auth/terms") &&
-                !pathname?.startsWith("/auth/setup")
-              ) {
-                router.replace("/(tabs)");
-              }
+            // Only redirect to tabs if not on an auth page that requires completion
+            if (
+              !pathname?.startsWith("/auth/terms") &&
+              !pathname?.startsWith("/auth/setup")
+            ) {
+              router.replace("/(tabs)");
             }
           }
         } else if (pathname?.startsWith("/(tabs)")) {

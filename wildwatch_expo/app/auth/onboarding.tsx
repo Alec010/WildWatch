@@ -13,7 +13,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useAuthLogin } from "@/src/features/auth/hooks/useAuthLogin";
 
 const COLORS = {
   maroon: "#8B0000",
@@ -28,18 +27,6 @@ const COLORS = {
 export default function OnboardingScreen() {
   const goSignIn = () => router.push("/auth/login" as never);
   const goSignUp = () => router.push("/auth/signup" as never);
-  const { loginWithMicrosoft } = useAuthLogin();
-
-  const handleMicrosoftLogin = async () => {
-    try {
-      await loginWithMicrosoft();
-    } catch (e: any) {
-      Alert.alert(
-        "Microsoft Login Error",
-        e?.message || "Microsoft login failed. Please try again."
-      );
-    }
-  };
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
@@ -93,26 +80,8 @@ export default function OnboardingScreen() {
           </View>
         </View>
 
-        {/* Bottom Section: Microsoft + Footer */}
+        {/* Bottom Section: Footer */}
         <View style={styles.bottomWrap}>
-          <TouchableOpacity
-            style={styles.msBtn}
-            onPress={handleMicrosoftLogin}
-            accessibilityRole="button"
-            accessibilityLabel="Continue with Microsoft"
-          >
-            <Image
-              source={require("../../assets/images/logos/microsoft_logo.png")}
-              style={{
-                width: 20,
-                height: 20,
-                marginRight: 8,
-                resizeMode: "contain",
-              }}
-            />
-            <Text style={styles.msText}>Continue with Microsoft</Text>
-          </TouchableOpacity>
-
           <View style={styles.footer}>
             <Ionicons name="sparkles-outline" size={14} color={COLORS.gold} />
             <Text style={styles.footerText}> Powered by WildWatch</Text>
@@ -197,24 +166,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     letterSpacing: 0.3,
-  },
-  msBtn: {
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "row",
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.15)",
-    marginBottom: 16,
-    height: 52,
-    width: "100%",
-    maxWidth: MAX_WIDTH,
-  },
-  msText: {
-    color: "#5E5E5E",
-    fontSize: 15,
-    fontWeight: "700",
   },
   bottomWrap: {
     alignItems: "center",

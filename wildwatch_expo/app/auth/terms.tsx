@@ -94,7 +94,6 @@ export default function TermsPage() {
   const insets = useSafeAreaInsets();
   const [expandedSection, setExpandedSection] = useState<number | null>(0);
   const [isLoading, setIsLoading] = useState(false);
-  const [isOAuthUser, setIsOAuthUser] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -104,23 +103,6 @@ export default function TermsPage() {
     ) {
       UIManager.setLayoutAnimationEnabledExperimental(true);
     }
-
-    // Check if this is an OAuth user
-    AsyncStorage.getItem("oauthUserData").then((data) => {
-      setIsOAuthUser(!!data);
-    });
-
-    // ✅ CRITICAL FIX: Load pending token into storage service for API calls
-    // This ensures API calls can authenticate when accepting terms
-    const loadPendingToken = async () => {
-      const pendingToken = await AsyncStorage.getItem("pendingOAuthToken");
-      if (pendingToken) {
-        // Store token in storage service so API calls can authenticate
-        await storage.setToken(pendingToken);
-        console.log("✅ Loaded pending OAuth token into storage service");
-      }
-    };
-    loadPendingToken();
   }, []);
 
   const toggleSection = (index: number) => {
@@ -160,116 +142,25 @@ export default function TermsPage() {
       clearUserProfileState();
 
       // ✅ First check if terms are already accepted (prevent redundant calls)
-      let pendingToken = await AsyncStorage.getItem("pendingOAuthToken");
-      if (pendingToken) {
-        try {
-          const profile = await authAPI.getProfile();
-          if (profile.termsAccepted) {
-            // Terms already accepted, skip and go to next step
-            console.log("Terms already accepted, proceeding to next step");
-            const isMicrosoftOAuth =
-              profile.authProvider === "microsoft" ||
-              profile.authProvider === "microsoft_mobile";
-
-            if (isMicrosoftOAuth) {
-              const contactNeedsSetup =
-                !profile.contactNumber ||
-                profile.contactNumber === "Not provided" ||
-                profile.contactNumber === "+639000000000";
-              const passwordNeedsSetup =
-                profile.passwordNeedsSetup !== undefined
-                  ? profile.passwordNeedsSetup
-                  : !profile.password;
-
-              if (contactNeedsSetup || passwordNeedsSetup) {
-                router.replace("/auth/setup");
-                return;
-              }
-            }
-
-            // All setup complete, store token and proceed
-            await storage.setToken(pendingToken);
-            await AsyncStorage.removeItem("pendingOAuthToken");
-            await AsyncStorage.removeItem("oauthUserData");
-            // ✅ FIX: Clear profile state before navigating to prevent showing old account data
-            clearUserProfileState();
-            router.replace("/(tabs)");
-            return;
-          }
-        } catch (e) {
-          // If profile fetch fails, continue with normal flow
-          console.log(
-            "Could not check existing terms status, continuing with acceptance"
-          );
+      try {
+        const profile = await authAPI.getProfile();
+        if (profile.termsAccepted) {
+          // Terms already accepted, proceed to app
+          console.log("Terms already accepted, proceeding to app");
+          clearUserProfileState();
+          router.replace("/(tabs)");
+          return;
         }
+      } catch (e) {
+        // If profile fetch fails, continue with normal flow
+        console.log(
+          "Could not check existing terms status, continuing with acceptance"
+        );
       }
 
       // Accept terms
       await authAPI.acceptTerms();
 
-      // Update stored OAuth data if applicable
-      if (isOAuthUser) {
-        const oauthData = await AsyncStorage.getItem("oauthUserData");
-        if (oauthData) {
-          const userData = JSON.parse(oauthData);
-          userData.termsAccepted = true;
-          await AsyncStorage.setItem("oauthUserData", JSON.stringify(userData));
-        }
-      }
-
-      // ✅ SECURITY FIX: Check for pending OAuth token (not yet officially stored)
-      // OAuth tokens are only stored after ALL setup is complete
-      pendingToken = await AsyncStorage.getItem("pendingOAuthToken");
-
-      // ⚠️ CRITICAL: Only use pendingToken during OAuth flow!
-      // Do NOT fallback to stored token - that could be from a different account!
-      if (pendingToken) {
-        try {
-          // Temporarily store pendingToken so API client can use it
-          await storage.setToken(pendingToken);
-
-          const profile = await authAPI.getProfile();
-
-          // Check if this is a Microsoft OAuth user that needs setup
-          const isMicrosoftOAuth =
-            profile.authProvider === "microsoft" ||
-            profile.authProvider === "microsoft_mobile";
-
-          if (isMicrosoftOAuth) {
-            const contactNeedsSetup =
-              !profile.contactNumber ||
-              profile.contactNumber === "Not provided" ||
-              profile.contactNumber === "+639000000000";
-            // Check passwordNeedsSetup from backend, or fallback to checking password field
-            const passwordNeedsSetup =
-              profile.passwordNeedsSetup !== undefined
-                ? profile.passwordNeedsSetup
-                : !profile.password;
-
-            if (contactNeedsSetup || passwordNeedsSetup) {
-              // ⚠️ Remove token before going to setup (it was temporarily stored for profile check)
-              await storage.removeToken();
-              router.replace("/auth/setup");
-              return;
-            }
-          }
-
-          // ✅ Setup complete - token already stored, just clean up temp data
-          await AsyncStorage.removeItem("pendingOAuthToken");
-          await AsyncStorage.removeItem("oauthUserData");
-        } catch (e) {
-          // If we can't fetch profile, remove the temp token and go to setup
-          await storage.removeToken();
-          if (isOAuthUser) {
-            router.replace("/auth/setup");
-            return;
-          }
-        }
-      } else if (isOAuthUser) {
-        // If no pending token but OAuth user, go to setup
-        router.replace("/auth/setup");
-        return;
-      }
       // ✅ FIX: Clear profile state before navigating to prevent showing old account data
       clearUserProfileState();
       router.replace("/(tabs)");

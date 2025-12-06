@@ -20,6 +20,7 @@ import { Stack, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useAuthLogin } from "../../src/features/auth/hooks/useAuthLogin";
+import { openMicrosoftOAuth } from "../../lib/webOAuth";
 
 const COLORS = {
   maroon: "#8B0000",
@@ -50,7 +51,7 @@ export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const { isLoading, error, login, loginWithMicrosoft, clearError } = useAuthLogin();
+  const { isLoading, error, login, clearError } = useAuthLogin();
 
   const handleEmailChange = (text: string) => {
     setEmail(text);
@@ -75,66 +76,70 @@ export default function LoginScreen() {
   const handleMicrosoftLogin = async () => {
     // Clear any existing errors when user attempts Microsoft login
     if (error) clearError();
-    
+
     try {
-      await loginWithMicrosoft();
+      await openMicrosoftOAuth();
     } catch (e: any) {
       // Check if user cancelled - if so, don't log as error
-      if (e?.message?.includes('cancelled') || e?.message?.includes('User cancelled')) {
+      if (
+        e?.message?.includes("cancelled") ||
+        e?.message?.includes("User cancelled")
+      ) {
         // User intentionally cancelled, no action needed
         return;
       }
       // For other errors, log for debugging
-      console.error('Microsoft login error:', e);
+      console.error("Microsoft login error:", e);
     }
   };
 
-  const getErrorType = (errorMessage: string | null): 'network' | 'server' | 'auth' | 'oauth' | null => {
+  const getErrorType = (
+    errorMessage: string | null
+  ): "network" | "server" | "auth" | null => {
     if (!errorMessage) return null;
     const lowerError = errorMessage.toLowerCase();
-    
-    if (lowerError.includes('microsoft') || lowerError.includes('oauth') || 
-        lowerError.includes('cancelled') || lowerError.includes('no token')) {
-      return 'oauth';
+
+    if (
+      lowerError.includes("network") ||
+      lowerError.includes("connection") ||
+      lowerError.includes("timeout") ||
+      lowerError.includes("fetch")
+    ) {
+      return "network";
     }
-    if (lowerError.includes('network') || lowerError.includes('connection') || 
-        lowerError.includes('timeout') || lowerError.includes('fetch')) {
-      return 'network';
+    if (
+      lowerError.includes("500") ||
+      lowerError.includes("server error") ||
+      lowerError.includes("internal server")
+    ) {
+      return "server";
     }
-    if (lowerError.includes('500') || lowerError.includes('server error') || 
-        lowerError.includes('internal server')) {
-      return 'server';
-    }
-    return 'auth';
+    return "auth";
   };
 
-  const getErrorIcon = (type: 'network' | 'server' | 'auth' | 'oauth' | null) => {
+  const getErrorIcon = (type: "network" | "server" | "auth" | null) => {
     switch (type) {
-      case 'network':
-        return 'cloud-offline-outline';
-      case 'server':
-        return 'server-outline';
-      case 'oauth':
-        return 'logo-microsoft';
-      case 'auth':
-        return 'alert-circle-outline';
+      case "network":
+        return "cloud-offline-outline";
+      case "server":
+        return "server-outline";
+      case "auth":
+        return "alert-circle-outline";
       default:
-        return 'alert-circle-outline';
+        return "alert-circle-outline";
     }
   };
 
-  const getErrorTitle = (type: 'network' | 'server' | 'auth' | 'oauth' | null) => {
+  const getErrorTitle = (type: "network" | "server" | "auth" | null) => {
     switch (type) {
-      case 'network':
-        return 'Connection Issue';
-      case 'server':
-        return 'Server Error';
-      case 'oauth':
-        return 'Microsoft Login Issue';
-      case 'auth':
-        return 'Login Failed';
+      case "network":
+        return "Connection Issue";
+      case "server":
+        return "Server Error";
+      case "auth":
+        return "Login Failed";
       default:
-        return 'Error';
+        return "Error";
     }
   };
 
@@ -293,23 +298,16 @@ export default function LoginScreen() {
                   </Text>
                 </View>
                 <Text style={styles.errorMessage}>{error}</Text>
-                {getErrorType(error) === 'network' && (
+                {getErrorType(error) === "network" && (
                   <Text style={styles.errorHint}>
-                    • Check your internet connection{'\n'}
-                    • Make sure you're connected to WiFi or mobile data
+                    • Check your internet connection{"\n"}• Make sure you're
+                    connected to WiFi or mobile data
                   </Text>
                 )}
-                {getErrorType(error) === 'server' && (
+                {getErrorType(error) === "server" && (
                   <Text style={styles.errorHint}>
-                    • The server is temporarily unavailable{'\n'}
-                    • Please try again in a few moments
-                  </Text>
-                )}
-                {getErrorType(error) === 'oauth' && (
-                  <Text style={styles.errorHint}>
-                    • Make sure you're using a valid Microsoft account{'\n'}
-                    • Check your internet connection{'\n'}
-                    • Try again or use email/password login
+                    • The server is temporarily unavailable{"\n"}• Please try
+                    again in a few moments
                   </Text>
                 )}
               </View>
@@ -377,8 +375,8 @@ export default function LoginScreen() {
                 { width: "100%", maxWidth: contentMaxWidth },
               ]}
             >
-              Note: When signing in with Microsoft, additional credentials may
-              be required after authentication.
+              Note: When signing in with Microsoft, you will be redirected to
+              your web browser to complete authentication.
             </Text>
 
             {/* Sign Up */}

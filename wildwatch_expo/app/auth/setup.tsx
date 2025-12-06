@@ -50,66 +50,33 @@ export default function SetupPage() {
 
   // ✅ Check if user has already completed setup on mount
   useEffect(() => {
-    // ✅ CRITICAL FIX: Load pending token into storage service for API calls
-    // This ensures API calls can authenticate during setup
-    const loadPendingToken = async () => {
-      const pendingToken = await AsyncStorage.getItem("pendingOAuthToken");
-      if (pendingToken) {
-        // Store token in storage service so API calls can authenticate
-        await storage.setToken(pendingToken);
-        console.log("✅ Loaded pending OAuth token into storage service");
-      }
-    };
-    loadPendingToken();
-
     checkExistingSetup();
   }, []);
 
   const checkExistingSetup = async () => {
     setIsCheckingSetup(true);
     try {
-      const pendingToken = await AsyncStorage.getItem("pendingOAuthToken");
-      if (pendingToken) {
-        // Temporarily store token so API can use it for profile check
-        await storage.setToken(pendingToken);
+      // Try to fetch profile to check if setup is already done
+      const profile = await authAPI.getProfile();
 
-        // Try to fetch profile to check if setup is already done
-        const profile = await authAPI.getProfile();
+      const contactNeedsSetup =
+        !profile.contactNumber ||
+        profile.contactNumber === "Not provided" ||
+        profile.contactNumber === "+639000000000";
+      const passwordNeedsSetup =
+        profile.passwordNeedsSetup !== undefined
+          ? profile.passwordNeedsSetup
+          : !profile.password;
 
-        const isMicrosoftOAuth =
-          profile.authProvider === "microsoft" ||
-          profile.authProvider === "microsoft_mobile";
-
-        if (isMicrosoftOAuth) {
-          const contactNeedsSetup =
-            !profile.contactNumber ||
-            profile.contactNumber === "Not provided" ||
-            profile.contactNumber === "+639000000000";
-          const passwordNeedsSetup =
-            profile.passwordNeedsSetup !== undefined
-              ? profile.passwordNeedsSetup
-              : !profile.password;
-
-          // ✅ Account already set up - token already stored, clean up temp data
-          if (!contactNeedsSetup && !passwordNeedsSetup) {
-            console.log("Account already set up, proceeding to app");
-            await AsyncStorage.removeItem("pendingOAuthToken");
-            await AsyncStorage.removeItem("oauthUserData");
-            // ✅ FIX: Clear profile state before navigating to prevent showing old account data
-            clearUserProfileState();
-            router.replace("/(tabs)");
-            return;
-          } else {
-            // Setup still needed - keep token in storage for API calls during setup
-            // Token will be kept until setup is complete
-            console.log("Setup needed - keeping token for API calls");
-          }
-        }
+      // ✅ Account already set up - proceed to app
+      if (!contactNeedsSetup && !passwordNeedsSetup) {
+        console.log("Account already set up, proceeding to app");
+        clearUserProfileState();
+        router.replace("/(tabs)");
+        return;
       }
     } catch (error) {
       console.log("Could not check existing setup, continuing with form");
-      // Remove temporarily stored token on error
-      await storage.removeToken();
     } finally {
       setIsCheckingSetup(false);
     }
@@ -246,58 +213,30 @@ export default function SetupPage() {
       const rawContact = getRawContactNumber(contactNumber);
 
       // ✅ Check if setup was already completed (race condition protection)
-      // First, temporarily store pending token so API can use it
-      const checkToken = await AsyncStorage.getItem("pendingOAuthToken");
-      if (checkToken) {
-        await storage.setToken(checkToken);
-      }
-
       try {
         const profile = await authAPI.getProfile();
-        const isMicrosoftOAuth =
-          profile.authProvider === "microsoft" ||
-          profile.authProvider === "microsoft_mobile";
 
-        if (isMicrosoftOAuth) {
-          const contactAlreadySet =
-            profile.contactNumber &&
-            profile.contactNumber !== "Not provided" &&
-            profile.contactNumber !== "+639000000000";
-          const passwordAlreadySet =
-            profile.passwordNeedsSetup === false || profile.password;
+        const contactAlreadySet =
+          profile.contactNumber &&
+          profile.contactNumber !== "Not provided" &&
+          profile.contactNumber !== "+639000000000";
+        const passwordAlreadySet =
+          profile.passwordNeedsSetup === false || profile.password;
 
-          if (contactAlreadySet && passwordAlreadySet) {
-            // ✅ Setup already complete, token already stored, clean up temp data
-            console.log("Setup already complete, skipping redundant call");
-            await AsyncStorage.removeItem("oauthUserData");
-            await AsyncStorage.removeItem("pendingOAuthToken");
-            // ✅ FIX: Clear profile state before navigating to prevent showing old account data
-            clearUserProfileState();
-            router.replace("/(tabs)");
-            return;
-          } else {
-            // Setup still needed, remove temporarily stored token
-            await storage.removeToken();
-          }
+        if (contactAlreadySet && passwordAlreadySet) {
+          // ✅ Setup already complete
+          console.log("Setup already complete, skipping redundant call");
+          clearUserProfileState();
+          router.replace("/(tabs)");
+          return;
         }
       } catch (e) {
-        // If profile check fails, remove temp token and continue with setup
+        // If profile check fails, continue with setup
         console.log("Could not check existing setup, continuing");
-        await storage.removeToken();
       }
 
       // Proceed with setup
       await authAPI.setupOAuthUser(rawContact, password);
-
-      // ✅ SECURITY FIX: Setup successful - NOW store the pending token
-      const pendingToken = await AsyncStorage.getItem("pendingOAuthToken");
-      if (pendingToken) {
-        await storage.setToken(pendingToken);
-      }
-
-      // Clear OAuth temporary data
-      await AsyncStorage.removeItem("oauthUserData");
-      await AsyncStorage.removeItem("pendingOAuthToken");
 
       // ✅ FIX: Clear profile state before navigating to prevent showing old account data
       clearUserProfileState();

@@ -23,6 +23,7 @@ import java.util.*;
 
 @Controller
 public class MicrosoftOAuthCallbackController {
+
     private static final Logger logger = LoggerFactory.getLogger(MicrosoftOAuthCallbackController.class);
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -55,10 +56,11 @@ public class MicrosoftOAuthCallbackController {
     public void handleMicrosoftCallback(
             @RequestParam("code") String code,
             @RequestParam("state") String state,
+            jakarta.servlet.http.HttpServletRequest request,
             HttpServletResponse response
     ) throws Exception {
         logger.info("[OAuthCallback] Received Microsoft OAuth callback with state: {}", state);
-        
+
         // 1. Decode state and extract mobile_redirect_uri
         String decodedState = null;
         try {
@@ -67,7 +69,7 @@ public class MicrosoftOAuthCallbackController {
         } catch (Exception e) {
             logger.error("[OAuthCallback] Failed to decode state: {}", e.getMessage());
         }
-        
+
         String mobileRedirectUri = null;
         try {
             if (decodedState != null) {
@@ -89,11 +91,11 @@ public class MicrosoftOAuthCallbackController {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
-        String body = "client_id=" + URLEncoder.encode(clientId, StandardCharsets.UTF_8) +
-                "&client_secret=" + URLEncoder.encode(clientSecret, StandardCharsets.UTF_8) +
-                "&code=" + URLEncoder.encode(code, StandardCharsets.UTF_8) +
-                "&redirect_uri=" + URLEncoder.encode(redirectUri, StandardCharsets.UTF_8) +
-                "&grant_type=authorization_code";
+        String body = "client_id=" + URLEncoder.encode(clientId, StandardCharsets.UTF_8)
+                + "&client_secret=" + URLEncoder.encode(clientSecret, StandardCharsets.UTF_8)
+                + "&code=" + URLEncoder.encode(code, StandardCharsets.UTF_8)
+                + "&redirect_uri=" + URLEncoder.encode(redirectUri, StandardCharsets.UTF_8)
+                + "&grant_type=authorization_code";
 
         HttpEntity<String> request = new HttpEntity<>(body, headers);
         ResponseEntity<String> tokenResponse = restTemplate.exchange(tokenUri, HttpMethod.POST, request, String.class);
@@ -142,8 +144,8 @@ public class MicrosoftOAuthCallbackController {
 
         // 5. Generate JWT
         logger.info("[OAuthCallback] Generating JWT token");
-        org.springframework.security.core.userdetails.UserDetails userDetails =
-                org.springframework.security.core.userdetails.User
+        org.springframework.security.core.userdetails.UserDetails userDetails
+                = org.springframework.security.core.userdetails.User
                         .withUsername(user.getEmail())
                         .password(user.getPassword() != null ? user.getPassword() : "")
                         .authorities(user.getRole().name())
@@ -151,15 +153,28 @@ public class MicrosoftOAuthCallbackController {
         String token = jwtUtil.generateToken(userDetails);
         logger.info("Generated JWT token successfully");
 
-        // 6. Redirect to mobile app or web frontend with token
+        // 6. Detect if request is from mobile device
+        String userAgent = request.getHeader("User-Agent");
+        boolean isMobileDevice = userAgent != null && (userAgent.toLowerCase().contains("android")
+                || userAgent.toLowerCase().contains("iphone")
+                || userAgent.toLowerCase().contains("ipad")
+                || userAgent.toLowerCase().contains("ipod")
+                || userAgent.toLowerCase().contains("blackberry")
+                || userAgent.toLowerCase().contains("windows phone"));
+
+        logger.info("[OAuthCallback] User-Agent: {}, Is Mobile: {}", userAgent, isMobileDevice);
+
+        // 7. Redirect to mobile app or web frontend with token
         String redirectUrl;
         if (mobileRedirectUri != null && !mobileRedirectUri.isEmpty()) {
+            // Mobile app deep link
             redirectUrl = String.format("%s?token=%s&termsAccepted=%s",
                     mobileRedirectUri,
                     URLEncoder.encode(token, StandardCharsets.UTF_8),
                     user.isTermsAccepted());
             logger.info("[OAuthCallback] Redirecting to mobile app URL: {}", redirectUrl);
         } else {
+            // Web frontend - redirect to OAuth2 redirect page which will handle mobile detection
             redirectUrl = String.format("%s/auth/oauth2/redirect?token=%s&termsAccepted=%s",
                     frontendConfig.getActiveUrl(),
                     URLEncoder.encode(token, StandardCharsets.UTF_8),
@@ -169,4 +184,4 @@ public class MicrosoftOAuthCallbackController {
         response.sendRedirect(redirectUrl);
         logger.info("[OAuthCallback] Redirect response sent");
     }
-} 
+}
