@@ -52,15 +52,11 @@ class LocationService {
    */
   async getCurrentLocation(): Promise<{ latitude: number; longitude: number }> {
     return new Promise((resolve, reject) => {
-      console.log('Checking geolocation support...');
-      
       if (!navigator.geolocation) {
         console.error('Geolocation not supported');
         reject(new Error('Geolocation is not supported by this browser.'));
         return;
       }
-
-      console.log('Geolocation supported, requesting position...');
 
       const options = {
         enableHighAccuracy: true,
@@ -70,7 +66,6 @@ class LocationService {
 
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          console.log('Position received:', position.coords);
           resolve({
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
@@ -102,17 +97,9 @@ class LocationService {
    */
   async reverseGeocode(latitude: number, longitude: number): Promise<GeolocationResponse> {
     try {
-      console.log('Starting reverse geocode request...');
-      console.log('Backend URL:', this.baseUrl);
-      
       const requestBody = { latitude, longitude };
-      
-      console.log('Request body:', requestBody);
 
       const response = await api.post('/api/geolocation/reverse-geocode', requestBody);
-
-      console.log('Response status:', response.status);
-      console.log('Response ok:', response.ok);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -121,7 +108,6 @@ class LocationService {
       }
 
       const result = await response.json();
-      console.log('Response data:', result);
       return result;
     } catch (error) {
       console.error('Error in reverse geocoding:', error);

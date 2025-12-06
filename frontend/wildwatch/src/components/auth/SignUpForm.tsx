@@ -1,18 +1,28 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import Image from "next/image"
-import Link from "next/link"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import * as z from "zod"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Eye, EyeOff, X, Shield, User, Mail, Phone, Hash, CheckCircle2, AlertCircle } from "lucide-react"
-import Cookies from "js-cookie"
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
+import Link from "next/link";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Eye,
+  EyeOff,
+  X,
+  Shield,
+  User,
+  Mail,
+  Phone,
+  Hash,
+  CheckCircle2,
+  AlertCircle,
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -21,17 +31,30 @@ import {
   DialogFooter,
   DialogDescription,
   DialogClose,
-} from "@/components/ui/dialog"
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { API_BASE_URL } from "@/utils/api"
-import { toast } from "sonner"
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { getApiBaseUrl } from "@/utils/api";
+import { toast } from "sonner";
+import userProfileService from "@/utils/userProfileService";
 
 const formSchema = z
   .object({
     firstName: z.string().min(1, "First name is required"),
     lastName: z.string().min(1, "Last name is required"),
-    middleInitial: z.string().max(1, "Middle initial should be a single character"),
-    email: z.string().email("Invalid email").endsWith("@cit.edu", "Must be a CIT email address"),
+    middleInitial: z
+      .string()
+      .max(1, "Middle initial should be a single character"),
+    email: z
+      .string()
+      .email("Invalid email")
+      .endsWith("@cit.edu", "Must be a CIT email address"),
     schoolIdNumber: z.string().min(1, "School ID number is required"),
     password: z
       .string()
@@ -39,16 +62,23 @@ const formSchema = z
       .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
       .regex(/[a-z]/, "Password must contain at least one lowercase letter")
       .regex(/[0-9]/, "Password must contain at least one number")
-      .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character"),
+      .regex(
+        /[^A-Za-z0-9]/,
+        "Password must contain at least one special character"
+      ),
     confirmPassword: z.string(),
     contactNumber: z
       .string()
-      .transform(val => val.replace(/\s/g, '')) // Remove spaces before validation
+      .transform((val) => val.replace(/\s/g, "")) // Remove spaces before validation
       .pipe(
-        z.string()
+        z
+          .string()
           .min(11, "Contact number must be at least 11 digits")
           .max(13, "Contact number must not exceed 13 digits")
-          .regex(/^\+?[0-9]+$/, "Contact number must contain only digits and may start with +")
+          .regex(
+            /^\+?[0-9]+$/,
+            "Contact number must contain only digits and may start with +"
+          )
       ),
     acceptTerms: z.boolean().refine((val) => val === true, {
       message: "You must accept the Terms and Conditions to create an account",
@@ -57,17 +87,17 @@ const formSchema = z
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
     path: ["confirmPassword"],
-  })
+  });
 
 export function SignUpForm() {
-  const [isLoading, setIsLoading] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [showTerms, setShowTerms] = useState(false)
-  const [showVerificationModal, setShowVerificationModal] = useState(false)
-  const [countdown, setCountdown] = useState(5)
-  const [isPasswordFocused, setIsPasswordFocused] = useState(false)
-  const router = useRouter()
+  const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [countdown, setCountdown] = useState(5);
+  const [isPasswordFocused, setIsPasswordFocused] = useState(false);
+  const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -82,94 +112,115 @@ export function SignUpForm() {
       contactNumber: "",
       acceptTerms: false,
     },
-  })
+  });
 
   useEffect(() => {
-    let timer: NodeJS.Timeout
+    let timer: NodeJS.Timeout;
     if (showVerificationModal && countdown > 0) {
       timer = setTimeout(() => {
-        setCountdown(countdown - 1)
-      }, 1000)
+        setCountdown(countdown - 1);
+      }, 1000);
     } else if (showVerificationModal && countdown === 0) {
-      router.push("/")
+      router.push("/");
     }
-    return () => clearTimeout(timer)
-  }, [showVerificationModal, countdown, router])
+    return () => clearTimeout(timer);
+  }, [showVerificationModal, countdown, router]);
 
   const formatSchoolId = (value: string) => {
     // Remove all non-digit characters
-    const numbers = value.replace(/\D/g, "")
+    const numbers = value.replace(/\D/g, "");
 
     // Format as XX-XXXX-XXX
-    if (numbers.length <= 2) return numbers
-    if (numbers.length <= 6) return `${numbers.slice(0, 2)}-${numbers.slice(2)}`
-    return `${numbers.slice(0, 2)}-${numbers.slice(2, 6)}-${numbers.slice(6, 9)}`
-  }
+    if (numbers.length <= 2) return numbers;
+    if (numbers.length <= 6)
+      return `${numbers.slice(0, 2)}-${numbers.slice(2)}`;
+    return `${numbers.slice(0, 2)}-${numbers.slice(2, 6)}-${numbers.slice(
+      6,
+      9
+    )}`;
+  };
 
   const formatContactNumber = (value: string) => {
     // Remove all non-digits
-    let inputValue = value.replace(/\D/g, '')
-    
+    let inputValue = value.replace(/\D/g, "");
+
     // Always ensure it starts with +63
-    if (!inputValue.startsWith('639')) {
-      inputValue = '639' + inputValue.replace(/^639/, '')
+    if (!inputValue.startsWith("639")) {
+      inputValue = "639" + inputValue.replace(/^639/, "");
     }
-    
+
     // Format the number as +63### ### ####
-    let formattedValue = '+63'
+    let formattedValue = "+63";
     if (inputValue.length > 2) {
-      const remainingDigits = inputValue.slice(2)
+      const remainingDigits = inputValue.slice(2);
       if (remainingDigits.length > 0) {
-        formattedValue += ' ' + remainingDigits.slice(0, 3)
+        formattedValue += " " + remainingDigits.slice(0, 3);
       }
       if (remainingDigits.length > 3) {
-        formattedValue += ' ' + remainingDigits.slice(3, 6)
+        formattedValue += " " + remainingDigits.slice(3, 6);
       }
       if (remainingDigits.length > 6) {
-        formattedValue += ' ' + remainingDigits.slice(6, 10)
+        formattedValue += " " + remainingDigits.slice(6, 10);
       }
     }
-    
+
     // Limit total length to 15 characters (including spaces and +)
     if (formattedValue.length > 16) {
-      formattedValue = formattedValue.slice(0, 16)
+      formattedValue = formattedValue.slice(0, 16);
     }
-    
-    return formattedValue
-  }
+
+    return formattedValue;
+  };
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
-      setIsLoading(true)
+      setIsLoading(true);
       // Map acceptTerms to termsAccepted for backend
       const payload = {
         ...values,
         termsAccepted: values.acceptTerms,
-      } as any
-      delete payload.acceptTerms
+      } as any;
+      delete payload.acceptTerms;
 
-      const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
+      const response = await fetch(`${getApiBaseUrl()}/api/auth/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),
-      })
+      });
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.message || "Failed to create account")
+        const error = await response.json();
+        throw new Error(error.message || "Failed to create account");
       }
 
-      const data = await response.json()
+      const data = await response.json();
 
-      // Store the token in a cookie with secure and httpOnly flags
-      Cookies.set("token", data.token, {
-        expires: 7, // Expires in 7 days
-        secure: true,
-        sameSite: "strict",
-        path: "/",
-      })
+      // Store the token using token service (handles automatic refresh)
+      const tokenService = (await import("@/utils/tokenService")).default;
+      tokenService.setToken(data.token);
+
+      // If user data is available, save to sessionStorage for sidebar caching
+      if (data.user) {
+        userProfileService.setUserProfile({
+          firstName: data.user.firstName || values.firstName || "",
+          lastName: data.user.lastName || values.lastName || "",
+          schoolIdNumber:
+            data.user.schoolIdNumber || values.schoolIdNumber || "",
+          email: data.user.email || values.email || "",
+          role: data.user.role || "",
+        });
+      } else {
+        // If no user data in response, save from form values
+        userProfileService.setUserProfile({
+          firstName: values.firstName || "",
+          lastName: values.lastName || "",
+          schoolIdNumber: values.schoolIdNumber || "",
+          email: values.email || "",
+          role: "",
+        });
+      }
 
       // Show success toast
       toast.success("Account created successfully!", {
@@ -178,23 +229,24 @@ export function SignUpForm() {
         className: "bg-white border-green-100 text-green-800",
         position: "top-center",
         duration: 3000,
-      })
+      });
 
       // Show verification modal
-      setShowVerificationModal(true)
+      setShowVerificationModal(true);
     } catch (error) {
-      console.error("Registration error:", error)
+      console.error("Registration error:", error);
 
       // Show error toast
       toast.error("Registration failed", {
-        description: error instanceof Error ? error.message : "Failed to create account",
+        description:
+          error instanceof Error ? error.message : "Failed to create account",
         icon: <AlertCircle className="h-5 w-5 text-[#800000]" />,
         className: "bg-white border-[#800000]/10 text-[#800000]",
         position: "top-center",
         duration: 5000,
-      })
+      });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 
@@ -204,7 +256,7 @@ export function SignUpForm() {
       {children}
       <span className="text-[#800000] ml-0.5">*</span>
     </span>
-  )
+  );
 
   return (
     <div className="relative w-full max-w-xl p-8 space-y-6 bg-card rounded-lg shadow-xl border border-[#D4AF37]/20">
@@ -218,12 +270,21 @@ export function SignUpForm() {
         <Link href="/" className="transition-transform hover:scale-105">
           <div className="relative">
             <div className="relative bg-background rounded-full p-1">
-              <Image src="/logo.png" alt="WildWatch Logo" width={150} height={50} priority className="relative" />
+              <Image
+                src="/logo.png"
+                alt="WildWatch Logo"
+                width={150}
+                height={50}
+                priority
+                className="relative"
+              />
             </div>
           </div>
         </Link>
         <h1 className="text-3xl font-bold text-[#800000]">Create Account</h1>
-        <p className="text-sm text-muted-foreground">Join WILD WATCH to report and track campus incidents</p>
+        <p className="text-sm text-muted-foreground">
+          Join WILD WATCH to report and track campus incidents
+        </p>
       </div>
 
       <Form {...form}>
@@ -258,7 +319,9 @@ export function SignUpForm() {
               name="middleInitial"
               render={({ field }) => (
                 <FormItem className="col-span-2">
-                  <FormLabel className="text-[#800000] font-medium">M.I.</FormLabel>
+                  <FormLabel className="text-[#800000] font-medium">
+                    M.I.
+                  </FormLabel>
                   <FormControl>
                     <Input
                       placeholder="M.I."
@@ -317,7 +380,7 @@ export function SignUpForm() {
                   </div>
                 </FormControl>
                 <FormMessage className="font-normal text-red-600" />
-                </FormItem>
+              </FormItem>
             )}
           />
 
@@ -338,14 +401,14 @@ export function SignUpForm() {
                       className="pl-10 border-[#D4AF37]/40 focus-visible:ring-[#D4AF37]/60 transition-all"
                       {...field}
                       onChange={(e) => {
-                        const formattedValue = formatSchoolId(e.target.value)
-                        field.onChange(formattedValue)
+                        const formattedValue = formatSchoolId(e.target.value);
+                        field.onChange(formattedValue);
                       }}
                     />
                   </div>
                 </FormControl>
                 <FormMessage className="font-normal text-red-600" />
-                </FormItem>
+              </FormItem>
             )}
           />
 
@@ -374,7 +437,11 @@ export function SignUpForm() {
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-[#800000]/70 hover:text-[#800000] transition-colors"
                       onClick={() => setShowPassword(!showPassword)}
                     >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
                     </button>
                   </div>
                 </FormControl>
@@ -382,41 +449,91 @@ export function SignUpForm() {
                   <div className="mt-4 grid grid-cols-3 gap-2 text-xs">
                     <div className="flex items-center gap-1">
                       <div
-                        className={`h-3 w-3 rounded-full ${field.value.length >= 8 ? "bg-green-500" : "bg-gray-300"}`}
+                        className={`h-3 w-3 rounded-full ${
+                          field.value.length >= 8
+                            ? "bg-green-500"
+                            : "bg-gray-300"
+                        }`}
                       ></div>
-                      <span className={field.value.length >= 8 ? "text-green-700" : "text-gray-500"}>
+                      <span
+                        className={
+                          field.value.length >= 8
+                            ? "text-green-700"
+                            : "text-gray-500"
+                        }
+                      >
                         8+ characters
                       </span>
                     </div>
                     <div className="flex items-center gap-1">
                       <div
-                        className={`h-3 w-3 rounded-full ${/[A-Z]/.test(field.value) ? "bg-green-500" : "bg-gray-300"}`}
+                        className={`h-3 w-3 rounded-full ${
+                          /[A-Z]/.test(field.value)
+                            ? "bg-green-500"
+                            : "bg-gray-300"
+                        }`}
                       ></div>
-                      <span className={/[A-Z]/.test(field.value) ? "text-green-700" : "text-gray-500"}>
+                      <span
+                        className={
+                          /[A-Z]/.test(field.value)
+                            ? "text-green-700"
+                            : "text-gray-500"
+                        }
+                      >
                         Uppercase letter
                       </span>
                     </div>
                     <div className="flex items-center gap-1">
                       <div
-                        className={`h-3 w-3 rounded-full ${/[a-z]/.test(field.value) ? "bg-green-500" : "bg-gray-300"}`}
+                        className={`h-3 w-3 rounded-full ${
+                          /[a-z]/.test(field.value)
+                            ? "bg-green-500"
+                            : "bg-gray-300"
+                        }`}
                       ></div>
-                      <span className={/[a-z]/.test(field.value) ? "text-green-700" : "text-gray-500"}>
+                      <span
+                        className={
+                          /[a-z]/.test(field.value)
+                            ? "text-green-700"
+                            : "text-gray-500"
+                        }
+                      >
                         Lowercase letter
                       </span>
                     </div>
                     <div className="flex items-center gap-1">
                       <div
-                        className={`h-3 w-3 rounded-full ${/[0-9]/.test(field.value) ? "bg-green-500" : "bg-gray-300"}`}
+                        className={`h-3 w-3 rounded-full ${
+                          /[0-9]/.test(field.value)
+                            ? "bg-green-500"
+                            : "bg-gray-300"
+                        }`}
                       ></div>
-                      <span className={/[0-9]/.test(field.value) ? "text-green-700" : "text-gray-500"}>Number</span>
+                      <span
+                        className={
+                          /[0-9]/.test(field.value)
+                            ? "text-green-700"
+                            : "text-gray-500"
+                        }
+                      >
+                        Number
+                      </span>
                     </div>
                     <div className="flex items-center gap-1">
                       <div
                         className={`h-3 w-3 rounded-full ${
-                          /[^A-Za-z0-9]/.test(field.value) ? "bg-green-500" : "bg-gray-300"
+                          /[^A-Za-z0-9]/.test(field.value)
+                            ? "bg-green-500"
+                            : "bg-gray-300"
                         }`}
                       ></div>
-                      <span className={/[^A-Za-z0-9]/.test(field.value) ? "text-green-700" : "text-gray-500"}>
+                      <span
+                        className={
+                          /[^A-Za-z0-9]/.test(field.value)
+                            ? "text-green-700"
+                            : "text-gray-500"
+                        }
+                      >
                         Special character
                       </span>
                     </div>
@@ -447,14 +564,20 @@ export function SignUpForm() {
                     <button
                       type="button"
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-[#800000]/70 hover:text-[#800000] transition-colors"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      onClick={() =>
+                        setShowConfirmPassword(!showConfirmPassword)
+                      }
                     >
-                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showConfirmPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
                     </button>
                   </div>
                 </FormControl>
                 <FormMessage className="font-normal text-red-600" />
-                </FormItem>
+              </FormItem>
             )}
           />
 
@@ -476,14 +599,16 @@ export function SignUpForm() {
                       className="pl-10 border-[#D4AF37]/40 focus-visible:ring-[#D4AF37]/60 transition-all"
                       {...field}
                       onChange={(e) => {
-                        const formattedValue = formatContactNumber(e.target.value)
-                        field.onChange(formattedValue)
+                        const formattedValue = formatContactNumber(
+                          e.target.value
+                        );
+                        field.onChange(formattedValue);
                       }}
                     />
                   </div>
                 </FormControl>
                 <FormMessage className="font-normal text-red-600" />
-                </FormItem>
+              </FormItem>
             )}
           />
 
@@ -499,10 +624,10 @@ export function SignUpForm() {
                     checked={field.value}
                     onChange={(e) => {
                       if (!field.value) {
-                        setShowTerms(true)
-                        e.preventDefault() // Prevent checking the box
+                        setShowTerms(true);
+                        e.preventDefault(); // Prevent checking the box
                       } else {
-                        field.onChange(e)
+                        field.onChange(e);
                       }
                     }}
                     className="mt-1 h-4 w-4 rounded border-[#D4AF37]/50 text-[#800000] focus:ring-[#D4AF37]/30"
@@ -540,7 +665,14 @@ export function SignUpForm() {
                   fill="none"
                   viewBox="0 0 24 24"
                 >
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
                   <path
                     className="opacity-75"
                     fill="currentColor"
@@ -584,9 +716,11 @@ export function SignUpForm() {
           {/* Content with improved styling */}
           <div className="p-6 prose max-w-none space-y-6 overflow-y-auto max-h-[60vh] animate-in fade-in-0 duration-300">
             <p className="text-foreground leading-relaxed">
-              Welcome to WildWatch, the official incident reporting and case management platform of Cebu Institute of
-              Technology – University (CITU). By accessing or using the WildWatch website and application (the
-              "Platform"), you agree to comply with and be bound by the following Terms and Conditions. Please read them
+              Welcome to WildWatch, the official incident reporting and case
+              management platform of Cebu Institute of Technology – University
+              (CITU). By accessing or using the WildWatch website and
+              application (the "Platform"), you agree to comply with and be
+              bound by the following Terms and Conditions. Please read them
               carefully.
             </p>
 
@@ -598,15 +732,20 @@ export function SignUpForm() {
                 Use of the Platform
               </h3>
               <p className="text-foreground">
-                WildWatch is intended to facilitate the structured reporting, tracking, and resolution of campus-related
-                incidents within CITU. Use of this platform must be in accordance with university policies, applicable
-                laws, and ethical conduct.
+                WildWatch is intended to facilitate the structured reporting,
+                tracking, and resolution of campus-related incidents within
+                CITU. Use of this platform must be in accordance with university
+                policies, applicable laws, and ethical conduct.
               </p>
               <ul className="list-disc pl-6 space-y-2 mt-2">
-                <li>You must be a currently enrolled student or an authorized CITU personnel to use the platform.</li>
                 <li>
-                  You agree to provide accurate, truthful, and complete information when submitting a report or using
-                  any part of the Platform.
+                  You must be a currently enrolled student or an authorized CITU
+                  personnel to use the platform.
+                </li>
+                <li>
+                  You agree to provide accurate, truthful, and complete
+                  information when submitting a report or using any part of the
+                  Platform.
                 </li>
               </ul>
             </div>
@@ -619,10 +758,18 @@ export function SignUpForm() {
                 User Responsibilities
               </h3>
               <ul className="list-disc pl-6 space-y-2">
-                <li>Maintain the confidentiality of your account credentials</li>
+                <li>
+                  Maintain the confidentiality of your account credentials
+                </li>
                 <li>Report incidents truthfully and in good faith</li>
-                <li>Respect the privacy and rights of others involved in reported incidents</li>
-                <li>Use the platform responsibly and not for any malicious purposes</li>
+                <li>
+                  Respect the privacy and rights of others involved in reported
+                  incidents
+                </li>
+                <li>
+                  Use the platform responsibly and not for any malicious
+                  purposes
+                </li>
                 <li>Keep your contact information updated</li>
               </ul>
             </div>
@@ -635,9 +782,18 @@ export function SignUpForm() {
                 Privacy and Data Protection
               </h3>
               <ul className="list-disc pl-6 space-y-2">
-                <li>Your personal information will be handled in accordance with our Privacy Policy</li>
-                <li>Incident reports and related information will be treated with appropriate confidentiality</li>
-                <li>Access to incident details will be restricted to authorized personnel only</li>
+                <li>
+                  Your personal information will be handled in accordance with
+                  our Privacy Policy
+                </li>
+                <li>
+                  Incident reports and related information will be treated with
+                  appropriate confidentiality
+                </li>
+                <li>
+                  Access to incident details will be restricted to authorized
+                  personnel only
+                </li>
               </ul>
             </div>
 
@@ -665,7 +821,9 @@ export function SignUpForm() {
                 </span>
                 Consequences of Violation
               </h3>
-              <p className="text-foreground">Violation of these terms may result in:</p>
+              <p className="text-foreground">
+                Violation of these terms may result in:
+              </p>
               <ul className="list-disc pl-6 space-y-2">
                 <li>Temporary or permanent account suspension</li>
                 <li>Disciplinary action under university policies</li>
@@ -681,8 +839,9 @@ export function SignUpForm() {
                 Changes to Terms
               </h3>
               <p className="text-foreground">
-                CITU reserves the right to modify these terms at any time. Users will be notified of significant
-                changes, and continued use of the platform constitutes acceptance of modified terms.
+                CITU reserves the right to modify these terms at any time. Users
+                will be notified of significant changes, and continued use of
+                the platform constitutes acceptance of modified terms.
               </p>
             </div>
 
@@ -694,7 +853,8 @@ export function SignUpForm() {
                 Contact Information
               </h3>
               <p className="text-foreground">
-                For questions about these terms or the platform, contact the CITU Security Office or IT Department.
+                For questions about these terms or the platform, contact the
+                CITU Security Office or IT Department.
               </p>
             </div>
           </div>
@@ -712,8 +872,8 @@ export function SignUpForm() {
             <Button
               type="button"
               onClick={() => {
-                form.setValue("acceptTerms", true)
-                setShowTerms(false)
+                form.setValue("acceptTerms", true);
+                setShowTerms(false);
               }}
               className="bg-[#800000] hover:bg-[#800000]/90 text-white shadow-md hover:shadow-lg transition-all duration-200"
             >
@@ -728,9 +888,9 @@ export function SignUpForm() {
         open={showVerificationModal}
         onOpenChange={(open) => {
           if (!open && countdown > 0) {
-            router.push("/")
+            router.push("/");
           }
-          setShowVerificationModal(open)
+          setShowVerificationModal(open);
         }}
       >
         <DialogContent className="max-w-md border-[#D4AF37]/30 p-0 rounded-xl overflow-hidden">
@@ -741,7 +901,9 @@ export function SignUpForm() {
               <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-[#D4AF37]/10 flex items-center justify-center">
                 <Mail className="h-8 w-8 text-[#800000]" />
               </div>
-              <DialogTitle className="text-2xl font-bold text-[#800000]">Check Your Email</DialogTitle>
+              <DialogTitle className="text-2xl font-bold text-[#800000]">
+                Check Your Email
+              </DialogTitle>
               <DialogDescription className="text-muted-foreground mt-2">
                 Please verify your account to complete registration
               </DialogDescription>
@@ -752,14 +914,18 @@ export function SignUpForm() {
             <div className="bg-[#FFF8E1] p-4 rounded-md border-l-4 border-[#D4AF37] text-sm">
               <p className="font-medium text-[#800000]">Important:</p>
               <p className="mt-1 text-foreground">
-                We've sent a verification link to <span className="font-medium">{form.getValues().email}</span>. Please
-                check your inbox and click the link to activate your account.
+                We've sent a verification link to{" "}
+                <span className="font-medium">{form.getValues().email}</span>.
+                Please check your inbox and click the link to activate your
+                account.
               </p>
             </div>
 
             <div className="text-center space-y-2">
               <p className="text-sm text-muted-foreground">
-                Redirecting to home page in <span className="font-bold text-[#800000]">{countdown}</span> seconds...
+                Redirecting to home page in{" "}
+                <span className="font-bold text-[#800000]">{countdown}</span>{" "}
+                seconds...
               </p>
               <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
                 <div
@@ -792,10 +958,13 @@ export function SignUpForm() {
 
       <div className="text-center text-sm pt-4 border-t border-[#D4AF37]/30">
         Already have an account?{" "}
-        <Link href="/login" className="text-[#800000] hover:text-[#800000]/80 font-medium transition-colors">
+        <Link
+          href="/login"
+          className="text-[#800000] hover:text-[#800000]/80 font-medium transition-colors"
+        >
           Sign in
         </Link>
       </div>
     </div>
-  )
+  );
 }

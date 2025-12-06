@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Sidebar } from "@/components/Sidebar";
-import { useSidebar } from "@/contexts/SidebarContext";
 import { Navbar } from "@/components/Navbar";
+import { PageLoader } from "@/components/PageLoader";
 import Image from "next/image";
 import {
   CheckCircle2,
@@ -68,7 +68,6 @@ type ProcessedWitness =
 
 export default function ReviewSubmissionPage() {
   const router = useRouter();
-  const { collapsed } = useSidebar();
   const [incidentData, setIncidentData] = useState<any>(null);
   const [evidenceData, setEvidenceData] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -288,7 +287,6 @@ export default function ReviewSubmissionPage() {
       };
 
       // Log the payload for debugging (remove in production)
-      console.log("Incident payload:", incidentPayload);
 
       // Use JSON.stringify which properly handles special characters
       formData.append("incidentData", JSON.stringify(incidentPayload));
@@ -366,7 +364,6 @@ export default function ReviewSubmissionPage() {
 
   const handleCloseDialog = () => {
     setShowSuccessDialog(false);
-    console.log("Redirecting to dashboard");
     router.push("/dashboard");
   };
 
@@ -392,42 +389,45 @@ export default function ReviewSubmissionPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex bg-[#f8f8f8]">
+      <div className="flex-1 flex bg-[#f8f8f8]">
         <Sidebar />
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <div className="relative">
-              <div className="absolute inset-0 rounded-full bg-gradient-to-r from-[#800000] to-[#D4AF37] opacity-30 blur-lg animate-pulse"></div>
-              <div className="relative animate-spin rounded-full h-16 w-16 border-4 border-[#D4AF37] border-t-transparent"></div>
-            </div>
-            <p className="mt-6 text-gray-600 font-medium">
-              Loading your report...
-            </p>
+
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          {/* Navbar */}
+          <div className="sticky top-0 z-30 flex-shrink-0">
+            <Navbar
+              title="Report an Incident"
+              subtitle="Review and submit your report"
+              showSearch={false}
+            />
           </div>
+
+          {/* PageLoader - fills the remaining space below Navbar */}
+          <PageLoader pageTitle="review form" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex bg-[#f8f8f8]">
+    <div className="flex-1 flex bg-[#f8f8f8]">
       <Sidebar />
 
-      {/* Main Content */}
-      <div
-        className={`flex-1 transition-all duration-300 ${
-          collapsed ? "ml-20" : "ml-64"
-        }`}
-      >
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Navbar */}
-        <Navbar
-          title="Report an Incident"
-          subtitle="Review and submit your report"
-          showSearch={false}
-        />
+        <div className="sticky top-0 z-30 flex-shrink-0">
+          <Navbar
+            title="Report an Incident"
+            subtitle="Review and submit your report"
+            showSearch={false}
+          />
+        </div>
 
-        {/* Content */}
-        <div className="pt-24 px-6 pb-10">
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto bg-[#f8f8f8]">
+          <div className="px-6 py-10">
           {/* Progress Indicator */}
           <div className="mb-8 bg-white rounded-xl shadow-sm p-6 border border-gray-100">
             <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-6">
@@ -1216,10 +1216,10 @@ export default function ReviewSubmissionPage() {
             </div>
           </div>
         </div>
-      </div>
+        </div>
 
-      {/* Loading Dialog */}
-      <Dialog open={showLoadingDialog} onOpenChange={setShowLoadingDialog}>
+        {/* Loading Dialog */}
+        <Dialog open={showLoadingDialog} onOpenChange={setShowLoadingDialog}>
         <DialogContent className="sm:max-w-md">
           <div className="flex flex-col items-center justify-center py-8 space-y-6">
             <div className="relative">
@@ -1553,6 +1553,7 @@ export default function ReviewSubmissionPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 }

@@ -22,16 +22,31 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import jsPDF from "jspdf";
-import "jspdf-autotable";
 import { API_BASE_URL } from "@/utils/api";
+import { generatePDF } from "@/components/GeneralFormatOfPDF";
+import { preparePDFPreviewData } from "@/components/format/TSG";
 import { motion } from "framer-motion";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { Inter } from "next/font/google";
-import { toast } from "sonner";
 import { formatDateOnly, parseUTCDate } from "@/utils/dateUtils";
+import { PageLoader } from "@/components/PageLoader";
+import userProfileService from "@/utils/userProfileService";
+import { toast } from "sonner";
+import {
+  formatLocationForTable,
+  formatLocationString,
+} from "@/utils/locationFormatter";
 
 const inter = Inter({ subsets: ["latin"] });
+
+interface Evidence {
+  id: string;
+  fileUrl: string;
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+  uploadedAt: string;
+}
 
 interface Incident {
   id: string;
@@ -48,9 +63,22 @@ interface Incident {
   description?: string;
   submittedByEmail?: string;
   submittedByPhone?: string;
-  evidence?: any[];
+  resolutionNotes?: string; // Add this field
+  evidence?: Evidence[]; // Change from any[] to Evidence[]
   witnesses?: any[];
   updates?: any[];
+  // Allow for alternative field names that might come from API
+  administrativeNotes?: string;
+  verificationNotes?: string;
+  // Location data fields (optional, for enhanced formatting)
+  formattedAddress?: string;
+  buildingName?: string;
+  buildingCode?: string;
+  room?: string;
+  building?: {
+    fullName?: string;
+    code?: string;
+  };
 }
 
 export default function OfficeAdminIncidentHistoryPage() {
@@ -63,6 +91,7 @@ export default function OfficeAdminIncidentHistoryPage() {
   const [isDownloading, setIsDownloading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isFetchingDetails, setIsFetchingDetails] = useState(false);
   const { collapsed } = useSidebar();
 
   const incidentsPerPage = 5;
@@ -143,539 +172,93 @@ export default function OfficeAdminIncidentHistoryPage() {
 
   const totalPages = Math.ceil(filteredIncidents.length / incidentsPerPage);
 
-  const handleDownloadPDF = async (incident: any) => {
-    setIsDownloading(true);
+  // Determine PDF format based on user email
+  const getPDFFormat = (): "default" | "tsg" => {
+    if (typeof window === "undefined") return "default";
+
     try {
-      // Create a new PDF document with better margins
-      const doc = new jsPDF({
-        orientation: "portrait",
-        unit: "mm",
-        format: "a4",
-      });
+      const userProfile = userProfileService.getUserProfile();
+      if (!userProfile || !userProfile.email) return "default";
 
-      // Manually track page numbers
-      let currentPage = 1;
-      let pageCount = 1;
-
-      let y = 20;
-      const margin = 20;
-      const contentWidth = 170;
-      const lineHeight = 7;
-      const sectionSpacing = 8;
-      const pageHeight = 270;
-
-      // Set default font
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(11);
-
-      // Header background with gradient
-      const createGradient = (
-        x: number,
-        y: number,
-        width: number,
-        height: number
-      ) => {
-        const steps = 100; // Increased steps for even smoother gradient
-        const stepWidth = width / steps;
-
-        // Color stops for rich gradient
-        const colorStops = [
-          { r: 139, g: 0, b: 0 }, // Maroon
-          { r: 160, g: 40, b: 0 }, // Dark Red
-          { r: 180, g: 80, b: 0 }, // Deep Orange
-          { r: 200, g: 120, b: 0 }, // Orange
-          { r: 218, g: 165, b: 32 }, // Gold
-        ];
-
-        for (let i = 0; i < steps; i++) {
-          const ratio = i / (steps - 1);
-
-          // Enhanced cubic easing for smoother transition
-          const easedRatio =
-            ratio < 0.5
-              ? 8 * ratio * ratio * ratio * ratio
-              : 1 - Math.pow(-2 * ratio + 2, 4) / 2;
-
-          // Find the two colors to interpolate between
-          const colorIndex = Math.floor(easedRatio * (colorStops.length - 1));
-          const nextColorIndex = Math.min(
-            colorIndex + 1,
-            colorStops.length - 1
-          );
-          const localRatio = easedRatio * (colorStops.length - 1) - colorIndex;
-
-          const startColor = colorStops[colorIndex];
-          const endColor = colorStops[nextColorIndex];
-
-          // Smooth interpolation between colors
-          const r = Math.round(
-            startColor.r + (endColor.r - startColor.r) * localRatio
-          );
-          const g = Math.round(
-            startColor.g + (endColor.g - startColor.g) * localRatio
-          );
-          const b = Math.round(
-            startColor.b + (endColor.b - startColor.b) * localRatio
-          );
-
-          doc.setFillColor(r, g, b);
-          doc.rect(x + i * stepWidth, y, stepWidth, height, "F");
-        }
-      };
-
-      // Apply gradient only to header
-      createGradient(0, 0, 210, 40);
-
-      // Logo placeholder (replace with actual logo if available)
-      try {
-        const logoImg = new Image();
-        logoImg.crossOrigin = "anonymous";
-        logoImg.src = "/logo2.png";
-        await new Promise((resolve, reject) => {
-          logoImg.onload = resolve;
-          logoImg.onerror = reject;
-        });
-        const logoHeight = 25;
-        const logoWidth = (logoImg.width / logoImg.height) * logoHeight;
-        doc.addImage(logoImg, "PNG", 20, 8, logoWidth, logoHeight);
-      } catch (error) {
-        doc.setFillColor(255, 255, 255);
-        doc.circle(30, 20, 10, "F");
+      const email = userProfile.email.toLowerCase();
+      // Check if email contains "tsg" and ends with "@cit.edu"
+      if (email.includes("tsg") && email.endsWith("@cit.edu")) {
+        return "tsg";
       }
-
-      // Add CIT logo to the right side of the header
-      try {
-        const citLogoImg = new Image();
-        citLogoImg.crossOrigin = "anonymous";
-        citLogoImg.src = "/citlogo.png";
-        await new Promise((resolve, reject) => {
-          citLogoImg.onload = resolve;
-          citLogoImg.onerror = reject;
-        });
-        const citLogoHeight = 25;
-        const citLogoWidth =
-          (citLogoImg.width / citLogoImg.height) * citLogoHeight;
-        // Place it 20mm from the right edge, same vertical as the left logo
-        doc.addImage(
-          citLogoImg,
-          "PNG",
-          210 - 20 - citLogoWidth,
-          8,
-          citLogoWidth,
-          citLogoHeight
-        );
-      } catch (error) {
-        // If CIT logo fails to load, do nothing
-      }
-
-      doc.setFontSize(30);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(255, 255, 255);
-      doc.text("WildWatch", 105, 20, { align: "center" });
-      doc.setFontSize(20);
-      doc.setTextColor(255, 255, 255);
-      doc.text("Incident Report", 105, 30, { align: "center" });
-      y = 50;
-      doc.setTextColor(0, 0, 0);
-      doc.setFontSize(11);
-      doc.setFont("helvetica", "normal");
-      doc.setDrawColor(139, 0, 0);
-      doc.setLineWidth(0.5);
-      doc.line(margin, 45, margin + contentWidth, 45);
-
-      // Helper function to add a section title with modern styling
-      const addSectionTitle = (title: string) => {
-        // Create solid maroon background for section titles with rounded corners
-        doc.setFillColor(139, 0, 0); // Maroon
-        doc.roundedRect(margin - 2, y - 2, contentWidth + 4, 10, 3, 3, "F");
-
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(12);
-        doc.setTextColor(255, 255, 255);
-        doc.text(title, margin + 2, y + 5);
-        y += 14;
-        doc.setTextColor(0, 0, 0);
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(11);
-      };
-
-      const addWrappedText = (text: string, indent = 0, isBold = false) => {
-        if (isBold) doc.setFont("helvetica", "bold");
-        const lines = doc.splitTextToSize(text, contentWidth - indent);
-        doc.text(lines, margin + indent, y);
-        y += lines.length * lineHeight;
-        if (isBold) doc.setFont("helvetica", "normal");
-      };
-
-      const addField = (label: string, value: string, isLeft = true) => {
-        doc.setFont("helvetica", "bold");
-        doc.text(label + ":", isLeft ? margin : margin + 85, y);
-        doc.setFont("helvetica", "normal");
-        const valueWidth = isLeft ? 75 : 85;
-        const valueX = isLeft ? margin + 30 : margin + 85 + 30;
-        const lines = doc.splitTextToSize(value, valueWidth);
-        doc.text(lines, valueX, y);
-        return lines.length * lineHeight;
-      };
-
-      const addFieldRow = (
-        leftLabel: string,
-        leftValue: string,
-        rightLabel: string,
-        rightValue: string
-      ) => {
-        const leftHeight = addField(leftLabel, leftValue, true);
-        const rightHeight = addField(rightLabel, rightValue, false);
-        y += Math.max(leftHeight, rightHeight);
-      };
-
-      // Update footer styling
-      const addFooter = (pageNum: number, totalPages: number) => {
-        doc.setDrawColor(139, 0, 0);
-        doc.setLineWidth(0.5);
-        doc.line(margin, 280, margin + contentWidth, 280);
-        doc.setFontSize(9);
-        doc.setTextColor(139, 0, 0);
-        doc.text(`Page ${pageNum} of ${totalPages}`, margin, 287);
-        doc.text(
-          `Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`,
-          margin + contentWidth,
-          287,
-          { align: "right" }
-        );
-        doc.text(`Case ID: ${incident.trackingNumber}`, 105, 287, {
-          align: "center",
-        });
-      };
-
-      const checkNewPage = (requiredSpace: number) => {
-        if (y + requiredSpace > pageHeight) {
-          addFooter(currentPage, pageCount);
-          doc.addPage();
-          currentPage++;
-          pageCount = Math.max(pageCount, currentPage);
-          y = 20;
-          return true;
-        }
-        return false;
-      };
-
-      // Case Information Section
-      addSectionTitle("Case Information");
-      addFieldRow(
-        "Case ID",
-        incident.trackingNumber,
-        "Status",
-        incident.status
-      );
-      addFieldRow(
-        "Priority",
-        incident.priorityLevel || "-",
-        "Department",
-        incident.officeAdminName || "-"
-      );
-      addFieldRow(
-        "Submitted",
-        formatDateOnly(incident.submittedAt),
-        "Finished Date",
-        incident.finishedDate ? formatDateOnly(incident.finishedDate) : "-"
-      );
-      y += sectionSpacing;
-
-      // Incident Details Section
-      addSectionTitle("Incident Details");
-      addFieldRow(
-        "Incident Type",
-        incident.incidentType,
-        "Location",
-        incident.location
-      );
-      addFieldRow(
-        "Date Reported",
-        formatDateOnly(incident.dateOfIncident),
-        "",
-        ""
-      );
-      doc.setFont("helvetica", "bold");
-      doc.text("Description:", margin, y);
-      doc.setFont("helvetica", "normal");
-      y += lineHeight;
-      const descriptionText = incident.description || "-";
-      const descLines = doc.splitTextToSize(descriptionText, contentWidth - 4);
-      doc.setFillColor(248, 248, 248);
-      doc.roundedRect(
-        margin,
-        y - 4,
-        contentWidth,
-        descLines.length * lineHeight + 8,
-        2,
-        2,
-        "F"
-      );
-      doc.text(descLines, margin + 2, y + 2);
-      y += descLines.length * lineHeight + 10;
-
-      // Reporter Information Section
-      addSectionTitle("Reporter Information");
-      addFieldRow(
-        "Reporter",
-        incident.submittedByFullName,
-        "Email",
-        incident.submittedByEmail || "-"
-      );
-      if (incident.submittedByPhone) {
-        addFieldRow("Phone", incident.submittedByPhone, "", "");
-      }
-      y += sectionSpacing;
-
-      // Evidence Section
-      if (
-        incident.evidence &&
-        Array.isArray(incident.evidence) &&
-        incident.evidence.length > 0
-      ) {
-        checkNewPage(40);
-        addSectionTitle("Evidence");
-        // Process images in parallel (user-side logic)
-        const imagePromises = incident.evidence
-          .filter((file: any) => file.fileType?.startsWith("image/"))
-          .map(async (file: any, index: number) => {
-            try {
-              const img = new Image();
-              img.crossOrigin = "anonymous";
-              await new Promise((resolve, reject) => {
-                img.onload = resolve;
-                img.onerror = reject;
-                img.src = `${file.fileUrl}?t=${new Date().getTime()}`;
-              });
-              const maxWidth = 75;
-              const maxHeight = 75;
-              let imgWidth = img.width;
-              let imgHeight = img.height;
-              if (imgWidth > maxWidth) {
-                const ratio = maxWidth / imgWidth;
-                imgWidth = maxWidth;
-                imgHeight *= ratio;
-              }
-              if (imgHeight > maxHeight) {
-                const ratio = maxHeight / imgHeight;
-                imgWidth *= ratio;
-                imgHeight = maxHeight;
-              }
-              return {
-                img,
-                imgWidth,
-                imgHeight,
-                fileName: file.fileName,
-                index: index + 1,
-              };
-            } catch (error) {
-              console.error("Error loading image:", error);
-              return null;
-            }
-          });
-        const loadedImages = await Promise.all(imagePromises);
-        // Add loaded images in a grid layout (2 per row)
-        if (loadedImages.some((img) => img !== null)) {
-          addWrappedText("Images:", 0, true);
-          y += 5;
-          const imageGap = 15;
-          const imageContainerPadding = 10;
-          const captionHeight = 15;
-          const availableWidth = contentWidth;
-          const optimalImageWidth =
-            (availableWidth - imageGap) / 2 - imageContainerPadding * 2;
-          const maxImageHeight = 100;
-          let currentRow = [];
-          for (let i = 0; i < loadedImages.length; i++) {
-            if (!loadedImages[i]) continue;
-            currentRow.push(loadedImages[i]);
-            if (currentRow.length === 2 || i === loadedImages.length - 1) {
-              let rowImageHeight = 0;
-              currentRow.forEach((imageData) => {
-                let scaledHeight =
-                  (imageData.imgHeight / imageData.imgWidth) *
-                  optimalImageWidth;
-                if (scaledHeight > maxImageHeight) {
-                  scaledHeight = maxImageHeight;
-                }
-                rowImageHeight = Math.max(rowImageHeight, scaledHeight);
-              });
-              const totalRowHeight =
-                rowImageHeight + imageContainerPadding * 2 + captionHeight + 10;
-              if (y + totalRowHeight > pageHeight - 20) {
-                addFooter(currentPage, pageCount);
-                doc.addPage();
-                currentPage++;
-                pageCount = Math.max(pageCount, currentPage);
-                y = 20;
-                addWrappedText("Images (continued):", 0, true);
-                y += 5;
-              }
-              let xPosition = margin;
-              currentRow.forEach((imageData) => {
-                let scaledWidth = optimalImageWidth;
-                let scaledHeight =
-                  (imageData.imgHeight / imageData.imgWidth) *
-                  optimalImageWidth;
-                if (scaledHeight > maxImageHeight) {
-                  scaledHeight = maxImageHeight;
-                  scaledWidth =
-                    (imageData.imgWidth / imageData.imgHeight) * maxImageHeight;
-                }
-                const xOffset = (optimalImageWidth - scaledWidth) / 2;
-                doc.setFillColor(220, 220, 220);
-                doc.roundedRect(
-                  xPosition + 2,
-                  y + 2,
-                  optimalImageWidth + imageContainerPadding * 2,
-                  rowImageHeight + imageContainerPadding * 2 + captionHeight,
-                  3,
-                  3,
-                  "F"
-                );
-                doc.setFillColor(255, 255, 255);
-                doc.setDrawColor(200, 200, 200);
-                doc.roundedRect(
-                  xPosition,
-                  y,
-                  optimalImageWidth + imageContainerPadding * 2,
-                  rowImageHeight + imageContainerPadding * 2 + captionHeight,
-                  3,
-                  3,
-                  "FD"
-                );
-                doc.addImage(
-                  imageData.img,
-                  "JPEG",
-                  xPosition + imageContainerPadding + xOffset,
-                  y + imageContainerPadding,
-                  scaledWidth,
-                  scaledHeight,
-                  undefined,
-                  "FAST"
-                );
-                doc.setFontSize(8);
-                const filenameLines = doc.splitTextToSize(
-                  `Image ${imageData.index}: ${imageData.fileName}`,
-                  optimalImageWidth
-                );
-                doc.text(
-                  filenameLines,
-                  xPosition + imageContainerPadding,
-                  y + imageContainerPadding + rowImageHeight + 10
-                );
-                doc.setFontSize(11);
-                xPosition +=
-                  optimalImageWidth + imageContainerPadding * 2 + imageGap;
-              });
-              y +=
-                rowImageHeight + imageContainerPadding * 2 + captionHeight + 15;
-              currentRow = [];
-            }
-          }
-          y += 5;
-        }
-      }
-
-      // Witnesses Section
-      if (
-        incident.witnesses &&
-        Array.isArray(incident.witnesses) &&
-        incident.witnesses.length > 0
-      ) {
-        checkNewPage(40);
-        addSectionTitle("Witnesses");
-        doc.setFont("helvetica", "bold");
-        doc.text("#", margin + 5, y + 7);
-        doc.text("Name", margin + 20, y + 7);
-        doc.text("Notes", margin + 85, y + 7);
-        doc.setFont("helvetica", "normal");
-        y += 15;
-        incident.witnesses.forEach((witness: any, idx: number) => {
-          const witnessNum = (idx + 1).toString();
-          const witnessName = witness.name || "(witness)";
-          const witnessNotes = witness.additionalNotes || "-";
-          if (idx % 2 === 0) {
-            doc.setFillColor(248, 248, 248);
-            doc.rect(margin, y - 5, contentWidth, 12, "F");
-          }
-          doc.text(witnessNum, margin + 5, y);
-          doc.text(witnessName, margin + 20, y);
-          const noteLines = doc.splitTextToSize(witnessNotes, 85);
-          doc.text(noteLines, margin + 85, y);
-          const lineHeight = Math.max(noteLines.length * 7, 12);
-          y += lineHeight + 5;
-        });
-        y += 10;
-      }
-
-      // Updates Section
-      if (
-        incident.updates &&
-        Array.isArray(incident.updates) &&
-        incident.updates.length > 0
-      ) {
-        checkNewPage(40);
-        addSectionTitle("Case Updates");
-        incident.updates.forEach((update: any, idx: number) => {
-          if (checkNewPage(30)) addSectionTitle("Case Updates (continued)");
-          doc.setFillColor(128, 0, 0);
-          doc.circle(margin + 4, y + 4, 3, "F");
-          if (idx < incident.updates.length - 1) {
-            doc.setDrawColor(200, 200, 200);
-            doc.setLineWidth(0.5);
-            doc.line(margin + 4, y + 8, margin + 4, y + 30);
-          }
-          doc.setFillColor(248, 248, 248);
-          doc.roundedRect(margin + 10, y - 2, contentWidth - 10, 24, 2, 2, "F");
-          doc.setFont("helvetica", "bold");
-          doc.text(
-            update.title || update.status || `Update ${idx + 1}`,
-            margin + 15,
-            y + 5
-          );
-          doc.setFont("helvetica", "normal");
-          doc.setFontSize(9);
-          const updateDate = update.updatedAt
-            ? formatDateOnly(update.updatedAt)
-            : "-";
-          const updateAuthor =
-            update.updatedByName ||
-            update.updatedByFullName ||
-            update.author ||
-            "-";
-          doc.text(`${updateDate} by ${updateAuthor}`, margin + 15, y + 13);
-          if (update.message || update.description) {
-            const updateMsg = update.message || update.description;
-            const msgLines = doc.splitTextToSize(updateMsg, contentWidth - 20);
-            doc.text(msgLines, margin + 15, y + 20);
-          }
-          y += 30;
-          doc.setFontSize(11);
-        });
-      }
-
-      addFooter(currentPage, pageCount);
-      for (let i = 1; i < currentPage; i++) {
-        doc.setPage(i);
-        addFooter(i, pageCount);
-      }
-      doc.save(`Office_Incident_Report_${incident.trackingNumber}.pdf`);
-      toast.success("PDF Downloaded Successfully", {
-        description: `Incident report for ${incident.trackingNumber} has been downloaded.`,
-        duration: 3000,
-        id: `pdf-download-success-${Date.now()}`,
-      });
     } catch (error) {
-      console.error("Error generating PDF:", error);
-      toast.error("Failed to Download PDF", {
-        id: "pdf-download-error",
-        description: "There was an error generating the PDF. Please try again.",
-        duration: 3000,
-      });
-    } finally {
-      setIsDownloading(false);
+      console.error("Error getting user profile:", error);
+    }
+
+    return "default";
+  };
+
+  const handleDownloadPDF = async (incident: any) => {
+    const pdfFormat = getPDFFormat();
+
+    switch (pdfFormat) {
+      case "tsg":
+        try {
+          setIsFetchingDetails(true);
+          // Fetch full incident details including resolutionNotes
+          const token = document.cookie
+            .split("; ")
+            .find((row) => row.startsWith("token="))
+            ?.split("=")[1];
+
+          if (!token) {
+            throw new Error("No authentication token found");
+          }
+
+          const response = await fetch(
+            `${API_BASE_URL}/api/incidents/track/${incident.trackingNumber}`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+            }
+          );
+
+          if (!response.ok) {
+            throw new Error(
+              `Failed to fetch full incident details: ${response.status}`
+            );
+          }
+
+          const fullIncidentData = await response.json();
+          console.log("Full incident data fetched for PDF:", fullIncidentData);
+
+          // Prepare data for PDF preview page
+          preparePDFPreviewData(fullIncidentData);
+
+          // Use Next.js router for client-side navigation (no full page reload)
+          // This prevents AppLoader from showing "Initializing..." screen
+          router.push(
+            `/office-admin/pdf-preview/${fullIncidentData.trackingNumber}`
+          );
+        } catch (error) {
+          console.error("Error fetching full incident details:", error);
+          toast.error("Failed to load incident details", {
+            description:
+              "Could not fetch complete incident data. Please try again.",
+          });
+        } finally {
+          setIsFetchingDetails(false);
+        }
+        break;
+
+      case "default":
+      default:
+        // Use default PDF format
+        setIsDownloading(true);
+        try {
+          await generatePDF(incident);
+        } catch (error) {
+          // Error is already handled in generatePDF
+        } finally {
+          setIsDownloading(false);
+        }
+        break;
     }
   };
 
@@ -698,23 +281,19 @@ export default function OfficeAdminIncidentHistoryPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9]">
+      <div className="flex-1 flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9]">
         <OfficeAdminSidebar />
-        <div
-          className={`flex-1 flex items-center justify-center transition-all duration-300 ${
-            collapsed ? "ml-[5rem]" : "ml-64"
-          }`}
-        >
-          <div className="text-center">
-            <div className="relative w-20 h-20 mx-auto">
-              <div className="absolute inset-0 rounded-full border-t-2 border-b-2 border-[#8B0000] animate-spin"></div>
-              <div className="absolute inset-2 rounded-full border-r-2 border-l-2 border-[#DAA520] animate-spin animation-delay-150"></div>
-              <div className="absolute inset-4 rounded-full border-t-2 border-b-2 border-[#8B0000] animate-spin animation-delay-300"></div>
-            </div>
-            <p className="mt-6 text-gray-600 font-medium">
-              Loading incident history...
-            </p>
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          <div className="sticky top-0 z-30 flex-shrink-0">
+            <OfficeAdminNavbar
+              title="Office  Incident History"
+              subtitle="View and access past incident reports"
+              showSearch={true}
+              searchPlaceholder="Search incidents..."
+              onSearch={setSearch}
+            />
           </div>
+          <PageLoader pageTitle="incident history" />
         </div>
       </div>
     );
@@ -722,517 +301,555 @@ export default function OfficeAdminIncidentHistoryPage() {
 
   return (
     <div
-      className={`min-h-screen flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9] ${inter.className}`}
+      className={`flex-1 flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9] overflow-x-hidden ${inter.className}`}
     >
       <OfficeAdminSidebar />
-      <OfficeAdminNavbar
-        title="Office  Incident History"
-        subtitle="View and access past incident reports"
-        showSearch={true}
-        searchPlaceholder="Search incidents..."
-        onSearch={setSearch}
-      />
-
-      {/* Loading Modal */}
-      {isDownloading && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center">
-          <div className="bg-white rounded-lg p-6 shadow-xl flex flex-col items-center gap-4">
-            <div className="relative w-16 h-16 mx-auto">
-              <div className="absolute inset-0 rounded-full border-t-2 border-b-2 border-[#8B0000] animate-spin"></div>
-              <div className="absolute inset-2 rounded-full border-r-2 border-l-2 border-[#DAA520] animate-spin animation-delay-150"></div>
-              <div className="absolute inset-4 rounded-full border-t-2 border-b-2 border-[#8B0000] animate-spin animation-delay-300"></div>
-            </div>
-            <p className="text-gray-700 font-medium">Generating PDF...</p>
-          </div>
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <div className="sticky top-0 z-30 flex-shrink-0">
+          <OfficeAdminNavbar
+            title="Office  Incident History"
+            subtitle="View and access past incident reports"
+            showSearch={true}
+            searchPlaceholder="Search incidents..."
+            onSearch={setSearch}
+          />
         </div>
-      )}
 
-      <div
-        className={`flex-1 overflow-hidden transition-all duration-300 ${
-          collapsed ? "ml-[5rem]" : "ml-64"
-        } pt-24`}
-      >
-        <div
-          className={`p-6 -mt-3 mx-8 ${
-            collapsed ? "max-w-[95vw]" : "max-w-[calc(100vw-8rem)]"
-          }`}
-        >
-          {/* Status Filter Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-              className={`bg-white rounded-xl shadow-md border overflow-hidden relative cursor-pointer transition-all duration-200 hover:shadow-lg ${
-                statusFilter === "All"
-                  ? "border-[#8B0000] bg-[#fff9f9]"
-                  : "border-gray-100"
-              }`}
-              onClick={() => setStatusFilter("All")}
-            >
-              <div className="p-6">
-                <div className="flex items-center gap-4">
-                  <div
-                    className={`p-3 rounded-lg shadow-md ${
-                      statusFilter === "All"
-                        ? "bg-gradient-to-br from-[#8B0000] to-[#6B0000]"
-                        : "bg-gradient-to-br from-gray-500 to-gray-600"
-                    }`}
-                  >
-                    <History className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-gray-600 text-sm font-medium">
-                      All Cases
-                    </p>
-                    <h3 className="text-3xl font-bold text-[#8B0000]">
-                      {incidents.length}
-                    </h3>
-                  </div>
-                </div>
+        {/* Loading Modal for fetching details */}
+        {isFetchingDetails && (
+          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center">
+            <div className="bg-white rounded-lg p-6 shadow-xl flex flex-col items-center gap-4">
+              <div className="relative w-16 h-16 mx-auto">
+                <div className="absolute inset-0 rounded-full border-t-2 border-b-2 border-[#8B0000] animate-spin"></div>
+                <div className="absolute inset-2 rounded-full border-r-2 border-l-2 border-[#DAA520] animate-spin animation-delay-150"></div>
+                <div className="absolute inset-4 rounded-full border-t-2 border-b-2 border-[#8B0000] animate-spin animation-delay-300"></div>
               </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.1 }}
-              className={`bg-white rounded-xl shadow-md border overflow-hidden relative cursor-pointer transition-all duration-200 hover:shadow-lg ${
-                statusFilter === "Resolved"
-                  ? "border-[#8B0000] bg-[#fff9f9]"
-                  : "border-gray-100"
-              }`}
-              onClick={() => setStatusFilter("Resolved")}
-            >
-              <div className="p-6">
-                <div className="flex items-center gap-4">
-                  <div
-                    className={`p-3 rounded-lg shadow-md ${
-                      statusFilter === "Resolved"
-                        ? "bg-gradient-to-br from-[#8B0000] to-[#6B0000]"
-                        : "bg-gradient-to-br from-green-500 to-green-600"
-                    }`}
-                  >
-                    <CheckCircle className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-gray-600 text-sm font-medium">
-                      Resolved
-                    </p>
-                    <h3 className="text-3xl font-bold text-green-500">
-                      {resolvedCount}
-                    </h3>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.2 }}
-              className={`bg-white rounded-xl shadow-md border overflow-hidden relative cursor-pointer transition-all duration-200 hover:shadow-lg ${
-                statusFilter === "Dismissed"
-                  ? "border-[#8B0000] bg-[#fff9f9]"
-                  : "border-gray-100"
-              }`}
-              onClick={() => setStatusFilter("Dismissed")}
-            >
-              <div className="p-6">
-                <div className="flex items-center gap-4">
-                  <div
-                    className={`p-3 rounded-lg shadow-md ${
-                      statusFilter === "Dismissed"
-                        ? "bg-gradient-to-br from-[#8B0000] to-[#6B0000]"
-                        : "bg-gradient-to-br from-gray-500 to-gray-600"
-                    }`}
-                  >
-                    <XCircle className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-gray-600 text-sm font-medium">
-                      Dismissed
-                    </p>
-                    <h3 className="text-3xl font-bold text-gray-500">
-                      {dismissedCount}
-                    </h3>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
+              <p className="text-gray-700 font-medium">
+                Loading incident details...
+              </p>
+            </div>
           </div>
+        )}
 
-          {/* Filters */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.3 }}
-            className="flex flex-col gap-4 mb-6"
-          >
-            <div className="flex flex-wrap items-center gap-4">
-              <div className="flex items-center gap-2">
-                <div className="bg-[#8B0000]/10 p-2 rounded-lg">
-                  <Filter className="h-5 w-5 text-[#8B0000]" />
-                </div>
-                <h3 className="text-lg font-semibold text-[#8B0000]">
-                  Priority Filters
-                </h3>
+        {/* Loading Modal for PDF generation */}
+        {isDownloading && (
+          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center">
+            <div className="bg-white rounded-lg p-6 shadow-xl flex flex-col items-center gap-4">
+              <div className="relative w-16 h-16 mx-auto">
+                <div className="absolute inset-0 rounded-full border-t-2 border-b-2 border-[#8B0000] animate-spin"></div>
+                <div className="absolute inset-2 rounded-full border-r-2 border-l-2 border-[#DAA520] animate-spin animation-delay-150"></div>
+                <div className="absolute inset-4 rounded-full border-t-2 border-b-2 border-[#8B0000] animate-spin animation-delay-300"></div>
               </div>
-
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant={priorityFilter === "All" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setPriorityFilter("All")}
-                  className={
-                    priorityFilter === "All"
-                      ? "bg-[#8B0000] hover:bg-[#6B0000]"
-                      : "border-[#DAA520]/30 text-[#8B0000] hover:bg-[#8B0000] hover:text-white"
-                  }
-                >
-                  All Priorities
-                </Button>
-                <Button
-                  variant={priorityFilter === "HIGH" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setPriorityFilter("HIGH")}
-                  className={
-                    priorityFilter === "HIGH"
-                      ? "bg-red-600 hover:bg-red-700"
-                      : "border-red-200 text-red-600 hover:bg-red-600 hover:text-white"
-                  }
-                >
-                  High
-                </Button>
-                <Button
-                  variant={priorityFilter === "MEDIUM" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setPriorityFilter("MEDIUM")}
-                  className={
-                    priorityFilter === "MEDIUM"
-                      ? "bg-orange-500 hover:bg-orange-600"
-                      : "border-orange-200 text-orange-500 hover:bg-orange-500 hover:text-white"
-                  }
-                >
-                  Medium
-                </Button>
-                <Button
-                  variant={priorityFilter === "LOW" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setPriorityFilter("LOW")}
-                  className={
-                    priorityFilter === "LOW"
-                      ? "bg-green-600 hover:bg-green-700"
-                      : "border-green-200 text-green-600 hover:bg-green-600 hover:text-white"
-                  }
-                >
-                  Low
-                </Button>
-              </div>
-
-              <div className="ml-auto">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleRefresh}
-                  disabled={isRefreshing}
-                  className="border-[#DAA520]/30 text-[#8B0000] hover:bg-[#8B0000] hover:text-white"
-                >
-                  <RefreshCw
-                    className={`h-4 w-4 mr-2 ${
-                      isRefreshing ? "animate-spin" : ""
-                    }`}
-                  />
-                  {isRefreshing ? "Refreshing..." : "Refresh"}
-                </Button>
-              </div>
+              <p className="text-gray-700 font-medium">Generating PDF...</p>
             </div>
-          </motion.div>
+          </div>
+        )}
 
-          {/* Table */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.4 }}
-            className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden"
+        <div className="flex-1 overflow-y-auto overflow-x-hidden bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9] pt-16">
+          <div
+            className={`px-3 sm:px-4 md:px-6 py-6 sm:py-8 md:py-10 ${
+              collapsed
+                ? "max-w-[calc(100vw-5rem-2rem)]"
+                : "max-w-[calc(100vw-16rem-2rem)]"
+            } mx-auto w-full`}
           >
-            <div className="p-4 border-b border-[#DAA520]/20">
-              <div className="flex items-center gap-2">
-                <div className="bg-[#8B0000]/10 p-2 rounded-lg">
-                  <FileText className="h-5 w-5 text-[#8B0000]" />
-                </div>
-                <h2 className="text-lg font-semibold text-[#8B0000]">
-                  Incident History
-                  <span className="ml-2 text-sm bg-[#8B0000]/10 text-[#8B0000] px-2 py-0.5 rounded-full">
-                    {filteredIncidents.length}
-                  </span>
-                </h2>
-              </div>
-            </div>
-
-            {error ? (
-              <div className="p-6 text-center">
-                <div className="bg-red-50 border border-red-200 rounded-lg p-6 shadow-sm inline-flex items-start gap-4">
-                  <div className="bg-red-100 p-3 rounded-full">
-                    <AlertTriangle className="h-6 w-6 text-red-600" />
+            <div className="w-full max-w-full">
+              {/* Status Filter Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className={`bg-white rounded-xl shadow-md border overflow-hidden relative cursor-pointer transition-all duration-200 hover:shadow-lg ${
+                    statusFilter === "All"
+                      ? "border-[#8B0000] bg-[#fff9f9]"
+                      : "border-gray-100"
+                  }`}
+                  onClick={() => setStatusFilter("All")}
+                >
+                  <div className="p-6">
+                    <div className="flex items-center gap-4">
+                      <div
+                        className={`p-3 rounded-lg shadow-md ${
+                          statusFilter === "All"
+                            ? "bg-gradient-to-br from-[#8B0000] to-[#6B0000]"
+                            : "bg-gradient-to-br from-gray-500 to-gray-600"
+                        }`}
+                      >
+                        <History className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-gray-600 text-sm font-medium">
+                          All Cases
+                        </p>
+                        <h3 className="text-3xl font-bold text-[#8B0000]">
+                          {incidents.length}
+                        </h3>
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-left">
-                    <h3 className="text-lg font-semibold text-red-800 mb-2">
-                      Error Loading Incidents
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: 0.1 }}
+                  className={`bg-white rounded-xl shadow-md border overflow-hidden relative cursor-pointer transition-all duration-200 hover:shadow-lg ${
+                    statusFilter === "Resolved"
+                      ? "border-[#8B0000] bg-[#fff9f9]"
+                      : "border-gray-100"
+                  }`}
+                  onClick={() => setStatusFilter("Resolved")}
+                >
+                  <div className="p-6">
+                    <div className="flex items-center gap-4">
+                      <div
+                        className={`p-3 rounded-lg shadow-md ${
+                          statusFilter === "Resolved"
+                            ? "bg-gradient-to-br from-[#8B0000] to-[#6B0000]"
+                            : "bg-gradient-to-br from-green-500 to-green-600"
+                        }`}
+                      >
+                        <CheckCircle className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-gray-600 text-sm font-medium">
+                          Resolved
+                        </p>
+                        <h3 className="text-3xl font-bold text-green-500">
+                          {resolvedCount}
+                        </h3>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: 0.2 }}
+                  className={`bg-white rounded-xl shadow-md border overflow-hidden relative cursor-pointer transition-all duration-200 hover:shadow-lg ${
+                    statusFilter === "Dismissed"
+                      ? "border-[#8B0000] bg-[#fff9f9]"
+                      : "border-gray-100"
+                  }`}
+                  onClick={() => setStatusFilter("Dismissed")}
+                >
+                  <div className="p-6">
+                    <div className="flex items-center gap-4">
+                      <div
+                        className={`p-3 rounded-lg shadow-md ${
+                          statusFilter === "Dismissed"
+                            ? "bg-gradient-to-br from-[#8B0000] to-[#6B0000]"
+                            : "bg-gradient-to-br from-gray-500 to-gray-600"
+                        }`}
+                      >
+                        <XCircle className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-gray-600 text-sm font-medium">
+                          Dismissed
+                        </p>
+                        <h3 className="text-3xl font-bold text-gray-500">
+                          {dismissedCount}
+                        </h3>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+
+              {/* Filters */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 0.3 }}
+                className="flex flex-col gap-4 mb-6"
+              >
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <div className="bg-[#8B0000]/10 p-2 rounded-lg">
+                      <Filter className="h-5 w-5 text-[#8B0000]" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-[#8B0000]">
+                      Priority Filters
                     </h3>
-                    <p className="text-red-700">{error}</p>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
                     <Button
-                      className="mt-4 bg-[#8B0000] hover:bg-[#6B0000] text-white"
-                      onClick={handleRefresh}
+                      variant={priorityFilter === "All" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setPriorityFilter("All")}
+                      className={
+                        priorityFilter === "All"
+                          ? "bg-[#8B0000] hover:bg-[#6B0000]"
+                          : "border-[#DAA520]/30 text-[#8B0000] hover:bg-[#8B0000] hover:text-white"
+                      }
                     >
-                      <RefreshCw className="mr-2 h-4 w-4" /> Try Again
+                      All Priorities
+                    </Button>
+                    <Button
+                      variant={
+                        priorityFilter === "HIGH" ? "default" : "outline"
+                      }
+                      size="sm"
+                      onClick={() => setPriorityFilter("HIGH")}
+                      className={
+                        priorityFilter === "HIGH"
+                          ? "bg-red-600 hover:bg-red-700"
+                          : "border-red-200 text-red-600 hover:bg-red-600 hover:text-white"
+                      }
+                    >
+                      High
+                    </Button>
+                    <Button
+                      variant={
+                        priorityFilter === "MEDIUM" ? "default" : "outline"
+                      }
+                      size="sm"
+                      onClick={() => setPriorityFilter("MEDIUM")}
+                      className={
+                        priorityFilter === "MEDIUM"
+                          ? "bg-orange-500 hover:bg-orange-600"
+                          : "border-orange-200 text-orange-500 hover:bg-orange-500 hover:text-white"
+                      }
+                    >
+                      Medium
+                    </Button>
+                    <Button
+                      variant={priorityFilter === "LOW" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setPriorityFilter("LOW")}
+                      className={
+                        priorityFilter === "LOW"
+                          ? "bg-green-600 hover:bg-green-700"
+                          : "border-green-200 text-green-600 hover:bg-green-600 hover:text-white"
+                      }
+                    >
+                      Low
+                    </Button>
+                  </div>
+
+                  <div className="ml-auto">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleRefresh}
+                      disabled={isRefreshing}
+                      className="border-[#DAA520]/30 text-[#8B0000] hover:bg-[#8B0000] hover:text-white"
+                    >
+                      <RefreshCw
+                        className={`h-4 w-4 mr-2 ${
+                          isRefreshing ? "animate-spin" : ""
+                        }`}
+                      />
+                      {isRefreshing ? "Refreshing..." : "Refresh"}
                     </Button>
                   </div>
                 </div>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-[#DAA520]/20">
-                  <thead className="bg-[#8B0000]/5">
-                    <tr>
-                      <th className="px-3 py-3 text-left text-xs font-medium text-[#8B0000] uppercase tracking-wider">
-                        Case ID
-                      </th>
-                      <th className="px-3 py-3 text-left text-xs font-medium text-[#8B0000] uppercase tracking-wider">
-                        Date Reported
-                      </th>
-                      <th className="px-3 py-3 text-left text-xs font-medium text-[#8B0000] uppercase tracking-wider">
-                        Incident Type
-                      </th>
-                      <th className="px-3 py-3 text-left text-xs font-medium text-[#8B0000] uppercase tracking-wider">
-                        Location
-                      </th>
-                      <th className="px-3 py-3 text-left text-xs font-medium text-[#8B0000] uppercase tracking-wider">
-                        Reporter
-                      </th>
-                      <th className="px-3 py-3 text-left text-xs font-medium text-[#8B0000] uppercase tracking-wider">
-                        Priority
-                      </th>
-                      <th className="px-3 py-3 text-left text-xs font-medium text-[#8B0000] uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="px-3 py-3 text-left text-xs font-medium text-[#8B0000] uppercase tracking-wider">
-                        Finished Date
-                      </th>
-                      <th className="px-3 py-3 text-center text-xs font-medium text-[#8B0000] uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-[#DAA520]/20">
-                    {paginatedIncidents.length === 0 ? (
-                      <tr>
-                        <td colSpan={9} className="p-6 text-center">
-                          <div className="w-16 h-16 bg-[#8B0000]/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <History className="h-8 w-8 text-[#8B0000]" />
-                          </div>
-                          <p className="text-lg font-medium text-gray-800 mb-2">
-                            No incidents found
-                          </p>
-                          <p className="text-gray-500 max-w-md mx-auto">
-                            {search ||
-                            statusFilter !== "All" ||
-                            priorityFilter !== "All"
-                              ? "No incidents match your search criteria. Try adjusting your filters."
-                              : "There are no historical incidents to display at this time."}
-                          </p>
-                          {(search ||
-                            statusFilter !== "All" ||
-                            priorityFilter !== "All") && (
-                            <Button
-                              variant="outline"
-                              className="mt-4 border-[#DAA520]/30 text-[#8B0000] hover:bg-[#8B0000] hover:text-white"
-                              onClick={() => {
-                                setSearch("");
-                                setStatusFilter("All");
-                                setPriorityFilter("All");
+              </motion.div>
+
+              {/* Table */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 0.4 }}
+                className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden"
+              >
+                <div className="p-4 border-b border-[#DAA520]/20">
+                  <div className="flex items-center gap-2">
+                    <div className="bg-[#8B0000]/10 p-2 rounded-lg">
+                      <FileText className="h-5 w-5 text-[#8B0000]" />
+                    </div>
+                    <h2 className="text-lg font-semibold text-[#8B0000]">
+                      Incident History
+                      <span className="ml-2 text-sm bg-[#8B0000]/10 text-[#8B0000] px-2 py-0.5 rounded-full">
+                        {filteredIncidents.length}
+                      </span>
+                    </h2>
+                  </div>
+                </div>
+
+                {error ? (
+                  <div className="p-6 text-center">
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-6 shadow-sm inline-flex items-start gap-4">
+                      <div className="bg-red-100 p-3 rounded-full">
+                        <AlertTriangle className="h-6 w-6 text-red-600" />
+                      </div>
+                      <div className="text-left">
+                        <h3 className="text-lg font-semibold text-red-800 mb-2">
+                          Error Loading Incidents
+                        </h3>
+                        <p className="text-red-700">{error}</p>
+                        <Button
+                          className="mt-4 bg-[#8B0000] hover:bg-[#6B0000] text-white"
+                          onClick={handleRefresh}
+                        >
+                          <RefreshCw className="mr-2 h-4 w-4" /> Try Again
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-[#DAA520]/20">
+                      <thead className="bg-[#8B0000]/5">
+                        <tr>
+                          <th className="px-3 py-3 text-left text-xs font-medium text-[#8B0000] uppercase tracking-wider">
+                            Case ID
+                          </th>
+                          <th className="px-3 py-3 text-left text-xs font-medium text-[#8B0000] uppercase tracking-wider">
+                            Date Reported
+                          </th>
+                          <th className="px-3 py-3 text-left text-xs font-medium text-[#8B0000] uppercase tracking-wider">
+                            Incident Type
+                          </th>
+                          <th className="px-3 py-3 text-left text-xs font-medium text-[#8B0000] uppercase tracking-wider">
+                            Location
+                          </th>
+                          <th className="px-3 py-3 text-left text-xs font-medium text-[#8B0000] uppercase tracking-wider">
+                            Reporter
+                          </th>
+                          <th className="px-3 py-3 text-left text-xs font-medium text-[#8B0000] uppercase tracking-wider">
+                            Priority
+                          </th>
+                          <th className="px-3 py-3 text-left text-xs font-medium text-[#8B0000] uppercase tracking-wider">
+                            Status
+                          </th>
+                          <th className="px-3 py-3 text-left text-xs font-medium text-[#8B0000] uppercase tracking-wider">
+                            Finished Date
+                          </th>
+                          <th className="px-3 py-3 text-center text-xs font-medium text-[#8B0000] uppercase tracking-wider">
+                            Actions
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-[#DAA520]/20">
+                        {paginatedIncidents.length === 0 ? (
+                          <tr>
+                            <td colSpan={9} className="p-6 text-center">
+                              <div className="w-16 h-16 bg-[#8B0000]/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <History className="h-8 w-8 text-[#8B0000]" />
+                              </div>
+                              <p className="text-lg font-medium text-gray-800 mb-2">
+                                No incidents found
+                              </p>
+                              <p className="text-gray-500 max-w-md mx-auto">
+                                {search ||
+                                statusFilter !== "All" ||
+                                priorityFilter !== "All"
+                                  ? "No incidents match your search criteria. Try adjusting your filters."
+                                  : "There are no historical incidents to display at this time."}
+                              </p>
+                              {(search ||
+                                statusFilter !== "All" ||
+                                priorityFilter !== "All") && (
+                                <Button
+                                  variant="outline"
+                                  className="mt-4 border-[#DAA520]/30 text-[#8B0000] hover:bg-[#8B0000] hover:text-white"
+                                  onClick={() => {
+                                    setSearch("");
+                                    setStatusFilter("All");
+                                    setPriorityFilter("All");
+                                  }}
+                                >
+                                  Clear Filters
+                                </Button>
+                              )}
+                            </td>
+                          </tr>
+                        ) : (
+                          paginatedIncidents.map((incident, index) => (
+                            <motion.tr
+                              key={incident.id}
+                              className="hover:bg-[#8B0000]/5 transition-colors"
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{
+                                duration: 0.2,
+                                delay: index * 0.05,
                               }}
                             >
-                              Clear Filters
-                            </Button>
-                          )}
-                        </td>
-                      </tr>
-                    ) : (
-                      paginatedIncidents.map((incident, index) => (
-                        <motion.tr
-                          key={incident.id}
-                          className="hover:bg-[#8B0000]/5 transition-colors"
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.2, delay: index * 0.05 }}
-                        >
-                          <td className="px-3 py-3 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <div
-                                className={`flex-shrink-0 h-8 w-1 rounded-full mr-3 ${
-                                  incident.priorityLevel === "HIGH"
-                                    ? "bg-red-400"
-                                    : incident.priorityLevel === "MEDIUM"
-                                    ? "bg-orange-400"
-                                    : "bg-green-400"
-                                }`}
-                              ></div>
-                              <div className="text-sm font-medium text-[#8B0000]">
-                                {incident.trackingNumber}
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-3 py-3 whitespace-nowrap">
-                            <div className="flex items-center text-sm text-gray-700">
-                              <Calendar className="h-4 w-4 text-gray-400 mr-2" />
-                              {formatDateOnly(incident.submittedAt)}
-                            </div>
-                          </td>
-                          <td className="px-3 py-3 whitespace-nowrap">
-                            <Badge
-                              variant="outline"
-                              className={`bg-[#8B0000]/5 text-[#8B0000] border-[#DAA520]/30`}
-                            >
-                              {incident.incidentType}
-                            </Badge>
-                          </td>
-                          <td className="px-3 py-3 whitespace-nowrap">
-                            <div className="flex items-center text-sm text-gray-700">
-                              <MapPin className="h-4 w-4 text-gray-400 mr-2" />
-                              {incident.location}
-                            </div>
-                          </td>
-                          <td className="px-3 py-3 whitespace-nowrap">
-                            <div className="flex items-center text-sm text-gray-700">
-                              <User className="h-4 w-4 text-gray-400 mr-2" />
-                              {incident.submittedByFullName}
-                            </div>
-                          </td>
-                          <td className="px-3 py-3 whitespace-nowrap">
-                            <Badge
-                              className={
-                                incident.priorityLevel === "HIGH"
-                                  ? "bg-red-100 text-red-800 border-red-200"
-                                  : incident.priorityLevel === "MEDIUM"
-                                  ? "bg-orange-100 text-orange-800 border-orange-200"
-                                  : "bg-green-100 text-green-800 border-green-200"
-                              }
-                            >
-                              {incident.priorityLevel || "N/A"}
-                            </Badge>
-                          </td>
-                          <td className="px-3 py-3 whitespace-nowrap">
-                            <Badge
-                              className={
-                                incident.status.toLowerCase() === "resolved"
-                                  ? "bg-green-100 text-green-800 border-green-200"
-                                  : "bg-gray-100 text-gray-800 border-gray-200"
-                              }
-                            >
-                              {incident.status.toLowerCase() === "dismissed"
-                                ? "Dismissed"
-                                : incident.status}
-                            </Badge>
-                          </td>
-                          <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-700">
-                            {incident.finishedDate
-                              ? formatDateOnly(incident.finishedDate)
-                              : "-"}
-                          </td>
-                          <td className="px-3 py-3 whitespace-nowrap text-center">
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="mr-2 border-[#DAA520]/30 text-[#8B0000] hover:bg-[#8B0000] hover:text-white"
-                              onClick={() =>
-                                router.push(
-                                  `/incidents/tracking/${incident.trackingNumber}`
-                                )
-                              }
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="border-[#DAA520]/30 text-[#8B0000] hover:bg-[#8B0000] hover:text-white"
-                              onClick={() => handleDownloadPDF(incident)}
-                              disabled={isDownloading}
-                            >
-                              <Download className="h-4 w-4" />
-                            </Button>
-                          </td>
-                        </motion.tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                              <td className="px-3 py-3 whitespace-nowrap">
+                                <div className="flex items-center">
+                                  <div
+                                    className={`flex-shrink-0 h-8 w-1 rounded-full mr-3 ${
+                                      incident.priorityLevel === "HIGH"
+                                        ? "bg-red-400"
+                                        : incident.priorityLevel === "MEDIUM"
+                                        ? "bg-orange-400"
+                                        : "bg-green-400"
+                                    }`}
+                                  ></div>
+                                  <div className="text-sm font-medium text-[#8B0000]">
+                                    {incident.trackingNumber}
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-3 py-3 whitespace-nowrap">
+                                <div className="flex items-center text-sm text-gray-700">
+                                  <Calendar className="h-4 w-4 text-gray-400 mr-2" />
+                                  {formatDateOnly(incident.submittedAt)}
+                                </div>
+                              </td>
+                              <td className="px-3 py-3 whitespace-nowrap">
+                                <Badge
+                                  variant="outline"
+                                  className={`bg-[#8B0000]/5 text-[#8B0000] border-[#DAA520]/30`}
+                                >
+                                  {incident.incidentType}
+                                </Badge>
+                              </td>
+                              <td className="px-3 py-3 whitespace-nowrap">
+                                <div className="flex items-center text-sm text-gray-700">
+                                  <MapPin className="h-4 w-4 text-gray-400 mr-2" />
+                                  {formatLocationForTable(incident)}
+                                </div>
+                              </td>
+                              <td className="px-3 py-3 whitespace-nowrap">
+                                <div className="flex items-center text-sm text-gray-700">
+                                  <User className="h-4 w-4 text-gray-400 mr-2" />
+                                  {incident.submittedByFullName}
+                                </div>
+                              </td>
+                              <td className="px-3 py-3 whitespace-nowrap">
+                                <Badge
+                                  className={
+                                    incident.priorityLevel === "HIGH"
+                                      ? "bg-red-100 text-red-800 border-red-200"
+                                      : incident.priorityLevel === "MEDIUM"
+                                      ? "bg-orange-100 text-orange-800 border-orange-200"
+                                      : "bg-green-100 text-green-800 border-green-200"
+                                  }
+                                >
+                                  {incident.priorityLevel || "N/A"}
+                                </Badge>
+                              </td>
+                              <td className="px-3 py-3 whitespace-nowrap">
+                                <Badge
+                                  className={
+                                    incident.status.toLowerCase() === "resolved"
+                                      ? "bg-green-100 text-green-800 border-green-200"
+                                      : "bg-gray-100 text-gray-800 border-gray-200"
+                                  }
+                                >
+                                  {incident.status.toLowerCase() === "dismissed"
+                                    ? "Dismissed"
+                                    : incident.status}
+                                </Badge>
+                              </td>
+                              <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-700">
+                                {incident.finishedDate
+                                  ? formatDateOnly(incident.finishedDate)
+                                  : "-"}
+                              </td>
+                              <td className="px-3 py-3 whitespace-nowrap text-center">
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="mr-2 border-[#DAA520]/30 text-[#8B0000] hover:bg-[#8B0000] hover:text-white"
+                                  onClick={() =>
+                                    router.push(
+                                      `/office-admin/incidents/tracking/${incident.trackingNumber}`
+                                    )
+                                  }
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="border-[#DAA520]/30 text-[#8B0000] hover:bg-[#8B0000] hover:text-white"
+                                  onClick={() => handleDownloadPDF(incident)}
+                                  disabled={isDownloading}
+                                >
+                                  <Download className="h-4 w-4" />
+                                </Button>
+                              </td>
+                            </motion.tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
 
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="p-4 border-t border-[#DAA520]/20 flex items-center justify-between">
-                <div className="text-sm text-gray-500">
-                  Showing{" "}
-                  {paginatedIncidents.length === 0
-                    ? 0
-                    : (page - 1) * incidentsPerPage + 1}
-                  -{(page - 1) * incidentsPerPage + paginatedIncidents.length}{" "}
-                  of {filteredIncidents.length} incidents
-                </div>
-                <div className="flex items-center space-x-1">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 w-8 p-0 border-[#DAA520]/30"
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={page === 1}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                    <span className="sr-only">Previous page</span>
-                  </Button>
-
-                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                    const pageNumber = i + 1;
-                    return (
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="p-4 border-t border-[#DAA520]/20 flex items-center justify-between">
+                    <div className="text-sm text-gray-500">
+                      Showing{" "}
+                      {paginatedIncidents.length === 0
+                        ? 0
+                        : (page - 1) * incidentsPerPage + 1}
+                      -
+                      {(page - 1) * incidentsPerPage +
+                        paginatedIncidents.length}{" "}
+                      of {filteredIncidents.length} incidents
+                    </div>
+                    <div className="flex items-center space-x-1">
                       <Button
-                        key={i}
-                        variant={page === pageNumber ? "default" : "outline"}
+                        variant="outline"
                         size="sm"
-                        className={`h-8 w-8 p-0 ${
-                          page === pageNumber
-                            ? "bg-[#8B0000] text-white hover:bg-[#8B0000]/90"
-                            : "border-[#DAA520]/30"
-                        }`}
-                        onClick={() => setPage(pageNumber)}
+                        className="h-8 w-8 p-0 border-[#DAA520]/30"
+                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                        disabled={page === 1}
                       >
-                        {pageNumber}
+                        <ChevronLeft className="h-4 w-4" />
+                        <span className="sr-only">Previous page</span>
                       </Button>
-                    );
-                  })}
 
-                  {totalPages > 5 && (
-                    <span className="px-2 text-gray-500">...</span>
-                  )}
+                      {Array.from(
+                        { length: Math.min(5, totalPages) },
+                        (_, i) => {
+                          const pageNumber = i + 1;
+                          return (
+                            <Button
+                              key={i}
+                              variant={
+                                page === pageNumber ? "default" : "outline"
+                              }
+                              size="sm"
+                              className={`h-8 w-8 p-0 ${
+                                page === pageNumber
+                                  ? "bg-[#8B0000] text-white hover:bg-[#8B0000]/90"
+                                  : "border-[#DAA520]/30"
+                              }`}
+                              onClick={() => setPage(pageNumber)}
+                            >
+                              {pageNumber}
+                            </Button>
+                          );
+                        }
+                      )}
 
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 w-8 p-0 border-[#DAA520]/30"
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={page === totalPages}
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                    <span className="sr-only">Next page</span>
-                  </Button>
-                </div>
-              </div>
-            )}
-          </motion.div>
+                      {totalPages > 5 && (
+                        <span className="px-2 text-gray-500">...</span>
+                      )}
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 w-8 p-0 border-[#DAA520]/30"
+                        onClick={() =>
+                          setPage((p) => Math.min(totalPages, p + 1))
+                        }
+                        disabled={page === totalPages}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                        <span className="sr-only">Next page</span>
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* TSG PDF Modal */}
 
       {/* Add custom styles for animation delays */}
       <style jsx global>{`

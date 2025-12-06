@@ -27,7 +27,7 @@ import { useUser } from "@/contexts/UserContext";
 import { Inter } from "next/font/google";
 import {
   formatRelativeDate,
-  formatDateWithYear,
+  formatDateOnly,
   parseUTCDate,
 } from "@/utils/dateUtils";
 
