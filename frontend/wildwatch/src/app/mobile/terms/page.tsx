@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { handleAuthRedirect } from "@/utils/auth";
 import Cookies from "js-cookie";
-import { getApiBaseUrl } from "@/utils/api";
+import { API_BASE_URL } from "@/utils/api";
 import {
   CheckCircle2,
   AlertCircle,
@@ -104,7 +104,7 @@ export default function MobileTermsPage() {
         );
       }
 
-      const response = await fetch(`${getApiBaseUrl()}/api/terms/accept`, {
+      const response = await fetch(`${API_BASE_URL}/api/terms/accept`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -139,15 +139,12 @@ export default function MobileTermsPage() {
       }
 
       // For regular users, fetch the user profile to get the role
-      const profileResponse = await fetch(
-        `${getApiBaseUrl()}/api/auth/profile`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const profileResponse = await fetch(`${API_BASE_URL}/api/auth/profile`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
 
       if (!profileResponse.ok) {
         throw new Error("Failed to fetch user profile");
