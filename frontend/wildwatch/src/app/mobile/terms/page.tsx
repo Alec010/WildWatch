@@ -58,8 +58,22 @@ export default function MobileTermsPage() {
 
       // ✅ FIX: Get token from cookies first (most reliable source)
       // Only use fallbacks if cookie token is not available
-      const token = Cookies.get("token")
+      let token = Cookies.get("token");
 
+      // Fallback: Check URL params (for mobile OAuth redirects)
+      if (!token && typeof window !== "undefined") {
+        const urlParams = new URLSearchParams(window.location.search);
+        token = urlParams.get("token") || undefined;
+        if (token) {
+          // Store token in cookies for consistency
+          Cookies.set("token", token, {
+            expires: 7,
+            secure: true,
+            sameSite: "lax",
+            path: "/",
+          });
+        }
+      }
 
       if (!token) {
         throw new Error(
@@ -77,6 +91,27 @@ export default function MobileTermsPage() {
           sessionStorage.removeItem("oauthUserData");
         }
         throw new Error("Invalid authentication token. Please log in again.");
+      }
+
+      // ✅ Validate token subject is an email (not firstName + lastName)
+      try {
+        const payload = JSON.parse(atob(tokenParts[1]));
+        const subject = payload.sub || payload.email;
+
+        // Check if subject looks like an email (contains @) or if it's a name (contains spaces)
+        if (subject && !subject.includes("@") && subject.includes(" ")) {
+          console.error("Invalid token: Subject is not an email:", subject);
+          // Clear invalid token
+          Cookies.remove("token", { path: "/" });
+          if (typeof window !== "undefined") {
+            sessionStorage.removeItem("oauthUserData");
+          }
+          throw new Error("Invalid authentication token. Please log in again.");
+        }
+      } catch (decodeError) {
+        console.error("Failed to decode token:", decodeError);
+        // If we can't decode, still try to use it (might be a different format)
+        // But log the error for debugging
       }
 
       const response = await fetch(`${API_BASE_URL}/api/terms/accept`, {
