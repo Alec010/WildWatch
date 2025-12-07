@@ -88,9 +88,10 @@ export const openMicrosoftOAuth = async (browserPreference: BrowserPreference = 
             await Linking.openURL(chromeUrlHttp);
             console.log('✅ Opened Chrome with HTTP scheme:', chromeUrlHttp);
           } catch (error2) {
-            // If both fail, Chrome might not be installed - fallback to default
+            // If both fail, Chrome might not be installed - fallback to default browser
+            // Use Linking.openURL to open in external browser (not popup)
             console.log('❌ Chrome schemes failed, falling back to default browser', error2);
-            await WebBrowser.openBrowserAsync(oauthUrl);
+            await Linking.openURL(oauthUrl);
           }
         }
       } else if (Platform.OS === 'android') {
@@ -124,15 +125,16 @@ export const openMicrosoftOAuth = async (browserPreference: BrowserPreference = 
               await Linking.openURL(simpleIntent);
               console.log('✅ Opened Chrome with simple intent');
             } catch (error3) {
-              // If all methods fail, Chrome might not be installed - fallback to default
+              // If all methods fail, Chrome might not be installed - fallback to default browser
+              // Use Linking.openURL to open in external browser (not popup)
               console.log('❌ All Chrome intent methods failed, falling back to default browser', error3);
-              await WebBrowser.openBrowserAsync(oauthUrl);
+              await Linking.openURL(oauthUrl);
             }
           }
         }
       } else {
-        // Web or other platforms - use default
-        await WebBrowser.openBrowserAsync(oauthUrl);
+        // Web or other platforms - use Linking to open in external browser
+        await Linking.openURL(oauthUrl);
       }
     } else if (browserPreference === 'safari') {
       // Safari-specific handling (iOS only)
@@ -154,12 +156,14 @@ export const openMicrosoftOAuth = async (browserPreference: BrowserPreference = 
         }
       } else {
         // Android or other platforms - Safari not available, use default
+        // Use Linking.openURL to open in external browser (not popup)
         console.log('Safari not available on this platform, using default browser');
-        await WebBrowser.openBrowserAsync(oauthUrl);
+        await Linking.openURL(oauthUrl);
       }
     } else {
-      // Default browser - use WebBrowser which opens in system default
-      await WebBrowser.openBrowserAsync(oauthUrl);
+      // Default browser - use Linking.openURL to open in external browser (not popup)
+      // This ensures it opens directly in the browser app, not as a modal/popup
+      await Linking.openURL(oauthUrl);
     }
 
     // Note: The browser will handle the OAuth flow

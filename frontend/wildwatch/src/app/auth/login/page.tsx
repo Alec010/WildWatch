@@ -40,7 +40,13 @@ const LoginPage: React.FC = () => {
 
       const data = await response.json();
       console.log("Login response:", data); // Debug log
-      Cookies.set("token", data.token);
+      // ✅ FIX: Use same cookie settings as tokenService for consistency
+      Cookies.set("token", data.token, {
+        expires: 7,
+        secure: true,
+        sameSite: "lax", // Use 'lax' for Android compatibility
+        path: "/",
+      });
 
       // Use handleAuthRedirect to determine the correct redirect path based on user role
       const user = data.user || data;

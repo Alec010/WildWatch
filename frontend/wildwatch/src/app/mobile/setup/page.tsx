@@ -184,9 +184,46 @@ export default function MobileSetupPage() {
       setIsLoading(true);
       setError(null);
 
-      const token = Cookies.get("token");
+      // ✅ FIX: Get token from multiple sources for Android compatibility
+      let token = Cookies.get("token");
+      
+      // Fallback 1: Check URL params
+      if (!token && typeof window !== "undefined") {
+        const urlParams = new URLSearchParams(window.location.search);
+        token = urlParams.get("token") || null;
+        if (token) {
+          Cookies.set("token", token, {
+            expires: 7,
+            secure: true,
+            sameSite: "lax",
+            path: "/",
+          });
+        }
+      }
+      
+      // Fallback 2: Check sessionStorage
+      if (!token && typeof window !== "undefined") {
+        const oauthUserData = sessionStorage.getItem("oauthUserData");
+        if (oauthUserData) {
+          try {
+            const userData = JSON.parse(oauthUserData);
+            if (userData.token) {
+              token = userData.token;
+              Cookies.set("token", token, {
+                expires: 7,
+                secure: true,
+                sameSite: "lax",
+                path: "/",
+              });
+            }
+          } catch (e) {
+            console.warn("Could not parse oauthUserData:", e);
+          }
+        }
+      }
+
       if (!token) {
-        throw new Error("No authentication token found");
+        throw new Error("No authentication token found. Please try logging in again.");
       }
 
       // Store token for later use in deep link

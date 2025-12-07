@@ -41,12 +41,36 @@ export default function MobileCompletePage() {
     };
     checkMobile();
 
-    // Get token from URL params or cookies
+    // ✅ FIX: Get token from multiple sources for Android compatibility
     if (typeof window !== "undefined") {
       const urlParams = new URLSearchParams(window.location.search);
-      const tokenFromUrl = urlParams.get("token");
-      const tokenFromCookie = Cookies.get("token");
-      const token = tokenFromUrl || tokenFromCookie || null;
+      let token = urlParams.get("token") || Cookies.get("token") || null;
+
+      // Fallback: Check sessionStorage for OAuth user data
+      if (!token) {
+        const oauthUserData = sessionStorage.getItem("oauthUserData");
+        if (oauthUserData) {
+          try {
+            const userData = JSON.parse(oauthUserData);
+            if (userData.token) {
+              token = userData.token;
+            }
+          } catch (e) {
+            console.warn("Could not parse oauthUserData:", e);
+          }
+        }
+      }
+
+      // If token found in URL, store it in cookies for consistency
+      if (token && urlParams.get("token")) {
+        Cookies.set("token", token, {
+          expires: 7,
+          secure: true,
+          sameSite: "lax",
+          path: "/",
+        });
+      }
+
       setAuthToken(token);
     }
 
