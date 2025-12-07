@@ -58,12 +58,12 @@ export default function MobileTermsPage() {
 
       // ✅ FIX: Get token from multiple sources for Android compatibility
       // Android browsers may not send cookies with sameSite: 'strict' after OAuth redirect
-      let token = Cookies.get("token");
+      let token: string | undefined = Cookies.get("token");
       
       // Fallback 1: Check URL params (OAuth redirect may include token)
       if (!token && typeof window !== "undefined") {
         const urlParams = new URLSearchParams(window.location.search);
-        token = urlParams.get("token") || null;
+        token = urlParams.get("token") || undefined;
         // If found in URL, also set it in cookies for future requests
         if (token) {
           Cookies.set("token", token, {
