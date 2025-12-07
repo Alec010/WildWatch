@@ -97,11 +97,10 @@ export default function OAuth2Redirect() {
             tokenService.setToken(token);
 
             // Fetch user profile to get full user data
-            // For mobile web, use the specific API URL
+            // Use the API base URL from config (works for both local and production)
             const isMobile = isMobileDevice();
-            const apiBaseUrl = isMobile
-              ? "http://192.168.1.60:3000"
-              : (await import("@/utils/api")).getApiBaseUrl();
+            const { getApiBaseUrl } = await import("@/utils/api");
+            const apiBaseUrl = getApiBaseUrl();
 
             const profileResponse = await fetch(
               `${apiBaseUrl}/api/auth/profile`,
@@ -148,26 +147,14 @@ export default function OAuth2Redirect() {
               return;
             }
 
-            // For desktop/web
+            // For desktop/web only - mobile users should never reach here
             if (!user.termsAccepted || !termsAccepted) {
               sessionStorage.setItem("oauthUserData", JSON.stringify(user));
               router.push("/terms");
               return;
             }
 
-            // Check if setup is needed (for Microsoft OAuth users)
-            if (
-              user.authProvider === "microsoft" &&
-              (user.contactNumber === "Not provided" ||
-                user.contactNumber === "+639000000000" ||
-                !user.password)
-            ) {
-              sessionStorage.setItem("oauthUserData", JSON.stringify(user));
-              router.push("/auth/setup");
-              return;
-            }
-
-            // For desktop/web, check if setup is needed
+            // Check if setup is needed (for Microsoft OAuth users) - desktop only
             if (
               user.authProvider === "microsoft" &&
               (user.contactNumber === "Not provided" ||
@@ -188,7 +175,7 @@ export default function OAuth2Redirect() {
               role: user.role || "",
             });
 
-            // Use handleAuthRedirect to determine the correct redirect path
+            // Use handleAuthRedirect to determine the correct redirect path (desktop only)
             const redirectPath = handleAuthRedirect(user);
             router.push(redirectPath);
             return;
