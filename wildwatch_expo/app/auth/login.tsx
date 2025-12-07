@@ -11,6 +11,7 @@ import {
   Platform,
   StyleSheet,
   useWindowDimensions,
+  Modal,
 } from "react-native";
 import {
   SafeAreaView,
@@ -20,6 +21,7 @@ import { Stack, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useAuthLogin } from "../../src/features/auth/hooks/useAuthLogin";
+import { openMicrosoftOAuth, BrowserPreference } from "../../lib/webOAuth";
 
 const COLORS = {
   maroon: "#8B0000",
@@ -50,7 +52,18 @@ export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const { isLoading, login, loginWithMicrosoft } = useAuthLogin();
+  const [showBrowserModal, setShowBrowserModal] = useState(false);
+  const { isLoading, error, login, clearError } = useAuthLogin();
+
+  const handleEmailChange = (text: string) => {
+    setEmail(text);
+    if (error) clearError();
+  };
+
+  const handlePasswordChange = (text: string) => {
+    setPassword(text);
+    if (error) clearError();
+  };
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -62,18 +75,86 @@ export default function LoginScreen() {
     } catch {}
   };
 
-  const handleMicrosoftLogin = async () => {
+  const handleMicrosoftLogin = () => {
+    // Clear any existing errors when user attempts Microsoft login
+    if (error) clearError();
+    // Show browser selection modal
+    setShowBrowserModal(true);
+  };
+
+  const handleBrowserSelection = async (browser: BrowserPreference) => {
+    setShowBrowserModal(false);
     try {
-      await loginWithMicrosoft();
+      await openMicrosoftOAuth(browser);
     } catch (e: any) {
+      // Check if user cancelled - if so, don't log as error
+      if (
+        e?.message?.includes("cancelled") ||
+        e?.message?.includes("User cancelled")
+      ) {
+        // User intentionally cancelled, no action needed
+        return;
+      }
+      // For other errors, log for debugging
+      console.error("Microsoft login error:", e);
       Alert.alert(
-        "Microsoft Login Error",
-        e?.message || "Microsoft login failed. Please try again."
+        "Error",
+        "Failed to open browser. Please try again or select a different browser."
       );
     }
   };
 
-  const keyboardBehavior = Platform.OS === "ios" ? "padding" : "height";
+  const getErrorType = (
+    errorMessage: string | null
+  ): "network" | "server" | "auth" | null => {
+    if (!errorMessage) return null;
+    const lowerError = errorMessage.toLowerCase();
+
+    if (
+      lowerError.includes("network") ||
+      lowerError.includes("connection") ||
+      lowerError.includes("timeout") ||
+      lowerError.includes("fetch")
+    ) {
+      return "network";
+    }
+    if (
+      lowerError.includes("500") ||
+      lowerError.includes("server error") ||
+      lowerError.includes("internal server")
+    ) {
+      return "server";
+    }
+    return "auth";
+  };
+
+  const getErrorIcon = (type: "network" | "server" | "auth" | null) => {
+    switch (type) {
+      case "network":
+        return "cloud-offline-outline";
+      case "server":
+        return "server-outline";
+      case "auth":
+        return "alert-circle-outline";
+      default:
+        return "alert-circle-outline";
+    }
+  };
+
+  const getErrorTitle = (type: "network" | "server" | "auth" | null) => {
+    switch (type) {
+      case "network":
+        return "Connection Issue";
+      case "server":
+        return "Server Error";
+      case "auth":
+        return "Login Failed";
+      default:
+        return "Error";
+    }
+  };
+
+  const keyboardBehavior = Platform.OS === "ios" ? "padding" : undefined;
   const keyboardVerticalOffset = Platform.OS === "ios" ? insets.top : 0;
 
   return (
@@ -83,6 +164,7 @@ export default function LoginScreen() {
         style={{ flex: 1 }}
         behavior={keyboardBehavior as any}
         keyboardVerticalOffset={keyboardVerticalOffset}
+        enabled={Platform.OS === "ios"}
       >
         {/* Top (flex) Gradient with centered logo */}
         <View style={styles.top}>
@@ -149,11 +231,12 @@ export default function LoginScreen() {
                   placeholder="your.name@cit.edu"
                   placeholderTextColor={COLORS.textMuted}
                   value={email}
-                  onChangeText={setEmail}
+                  onChangeText={handleEmailChange}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
                   returnKeyType="next"
+                  editable={!isLoading}
                 />
               </View>
             </View>
@@ -186,11 +269,13 @@ export default function LoginScreen() {
                   placeholder="Enter your password"
                   placeholderTextColor={COLORS.textMuted}
                   value={password}
-                  onChangeText={setPassword}
+                  onChangeText={handlePasswordChange}
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
                   autoCorrect={false}
                   returnKeyType="done"
+                  onSubmitEditing={handleLogin}
+                  editable={!isLoading}
                 />
                 <Pressable
                   onPress={() => setShowPassword((v) => !v)}
@@ -204,6 +289,40 @@ export default function LoginScreen() {
                 </Pressable>
               </View>
             </View>
+
+            {/* Error Message */}
+            {error && (
+              <View
+                style={[
+                  styles.errorContainer,
+                  { width: "100%", maxWidth: contentMaxWidth },
+                ]}
+              >
+                <View style={styles.errorHeader}>
+                  <Ionicons
+                    name={getErrorIcon(getErrorType(error)) as any}
+                    size={20}
+                    color="#DC2626"
+                  />
+                  <Text style={styles.errorTitle}>
+                    {getErrorTitle(getErrorType(error))}
+                  </Text>
+                </View>
+                <Text style={styles.errorMessage}>{error}</Text>
+                {getErrorType(error) === "network" && (
+                  <Text style={styles.errorHint}>
+                    • Check your internet connection{"\n"}• Make sure you're
+                    connected to WiFi or mobile data
+                  </Text>
+                )}
+                {getErrorType(error) === "server" && (
+                  <Text style={styles.errorHint}>
+                    • The server is temporarily unavailable{"\n"}• Please try
+                    again in a few moments
+                  </Text>
+                )}
+              </View>
+            )}
 
             {/* Sign In Button */}
             <Pressable
@@ -267,9 +386,126 @@ export default function LoginScreen() {
                 { width: "100%", maxWidth: contentMaxWidth },
               ]}
             >
-              Note: When signing in with Microsoft, additional credentials may
-              be required after authentication.
+              Note: When signing in with Microsoft, you will be redirected to
+              your web browser to complete authentication.
             </Text>
+
+            {/* Browser Selection Modal */}
+            <Modal
+              visible={showBrowserModal}
+              transparent={true}
+              animationType="fade"
+              onRequestClose={() => setShowBrowserModal(false)}
+            >
+              <Pressable
+                style={styles.modalOverlay}
+                onPress={() => setShowBrowserModal(false)}
+              >
+                <Pressable
+                  style={[styles.modalContent, { maxWidth: contentMaxWidth }]}
+                  onPress={(e) => e.stopPropagation()}
+                >
+                  <View style={styles.modalHeader}>
+                    <Text style={styles.modalTitle}>Choose Browser</Text>
+                    <Pressable
+                      onPress={() => setShowBrowserModal(false)}
+                      style={styles.modalCloseButton}
+                    >
+                      <Ionicons name="close" size={24} color="#6B7280" />
+                    </Pressable>
+                  </View>
+                  <Text style={styles.modalSubtitle}>
+                    Select which browser to use for Microsoft sign-in
+                  </Text>
+
+                  {/* Chrome Option */}
+                  <Pressable
+                    style={styles.browserOption}
+                    onPress={() => handleBrowserSelection("chrome")}
+                  >
+                    <View style={styles.browserOptionContent}>
+                      <Ionicons
+                        name="logo-chrome"
+                        size={24}
+                        color="#4285F4"
+                        style={styles.browserIcon}
+                      />
+                      <View style={styles.browserOptionText}>
+                        <Text style={styles.browserOptionTitle}>
+                          Google Chrome
+                        </Text>
+                        <Text style={styles.browserOptionSubtitle}>
+                          {Platform.OS === "ios"
+                            ? "Open in Chrome (if installed)"
+                            : "Open in Chrome"}
+                        </Text>
+                      </View>
+                    </View>
+                    <Ionicons
+                      name="chevron-forward"
+                      size={20}
+                      color="#9CA3AF"
+                    />
+                  </Pressable>
+
+                  {/* Safari Option (iOS only) */}
+                  {Platform.OS === "ios" && (
+                    <Pressable
+                      style={styles.browserOption}
+                      onPress={() => handleBrowserSelection("safari")}
+                    >
+                      <View style={styles.browserOptionContent}>
+                        <Ionicons
+                          name="compass"
+                          size={24}
+                          color="#007AFF"
+                          style={styles.browserIcon}
+                        />
+                        <View style={styles.browserOptionText}>
+                          <Text style={styles.browserOptionTitle}>Safari</Text>
+                          <Text style={styles.browserOptionSubtitle}>
+                            Open in Safari browser
+                          </Text>
+                        </View>
+                      </View>
+                      <Ionicons
+                        name="chevron-forward"
+                        size={20}
+                        color="#9CA3AF"
+                      />
+                    </Pressable>
+                  )}
+
+                  {/* Default Browser Option */}
+                  <Pressable
+                    style={styles.browserOption}
+                    onPress={() => handleBrowserSelection("default")}
+                  >
+                    <View style={styles.browserOptionContent}>
+                      <Ionicons
+                        name="globe"
+                        size={24}
+                        color="#6B7280"
+                        style={styles.browserIcon}
+                      />
+                      <View style={styles.browserOptionText}>
+                        <Text style={styles.browserOptionTitle}>
+                          Default Browser
+                        </Text>
+                        <Text style={styles.browserOptionSubtitle}>
+                          Use your device&apos;s default browser
+                        </Text>
+                      </View>
+                    </View>
+                    <Ionicons
+                      name="chevron-forward"
+                      size={20}
+                      color="#9CA3AF"
+                    />
+                  </Pressable>
+                </Pressable>
+              </Pressable>
+            </Modal>
 
             {/* Sign Up */}
             <View
@@ -426,5 +662,107 @@ const styles = StyleSheet.create({
     color: "#6B7280",
     textAlign: "center",
     marginTop: 10,
+  },
+  errorContainer: {
+    marginTop: 14,
+    backgroundColor: "#FEF2F2",
+    borderLeftWidth: 4,
+    borderLeftColor: "#DC2626",
+    borderRadius: 8,
+    padding: 12,
+  },
+  errorHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  errorTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#DC2626",
+    marginLeft: 8,
+  },
+  errorMessage: {
+    fontSize: 13,
+    color: "#991B1B",
+    lineHeight: 18,
+    marginBottom: 4,
+  },
+  errorHint: {
+    fontSize: 12,
+    color: "#B91C1C",
+    lineHeight: 18,
+    marginTop: 6,
+    fontStyle: "italic",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    width: "100%",
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: COLORS.maroon,
+  },
+  modalCloseButton: {
+    padding: 4,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: COLORS.textMuted,
+    marginBottom: 20,
+  },
+  browserOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginBottom: 12,
+    backgroundColor: "#FFFFFF",
+  },
+  browserOptionContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  browserIcon: {
+    marginRight: 12,
+  },
+  browserOptionText: {
+    flex: 1,
+  },
+  browserOptionTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#111827",
+    marginBottom: 2,
+  },
+  browserOptionSubtitle: {
+    fontSize: 12,
+    color: COLORS.textMuted,
   },
 });

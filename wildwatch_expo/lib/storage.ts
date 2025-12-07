@@ -238,4 +238,27 @@ export const storage = {
       console.error('Error clearing all form data:', error);
     }
   },
+
+  // ✅ Clear ALL user session data (for logout or new login)
+  clearAllUserData: async () => {
+    try {
+      await Promise.all([
+        // Auth tokens
+        AsyncStorage.removeItem(AUTH_TOKEN_KEY),
+        AsyncStorage.removeItem('pendingOAuthToken'),
+        AsyncStorage.removeItem('oauthUserData'),
+        // Form data
+        AsyncStorage.removeItem(LOCATION_DATA_KEY),
+        AsyncStorage.removeItem(REPORT_FORM_KEY),
+        AsyncStorage.removeItem(EVIDENCE_FILES_KEY),
+        AsyncStorage.removeItem(REPORT_STEP_KEY),
+        AsyncStorage.removeItem(REPORT_FLOW_STEP_KEY),
+        // Chat data (might contain user-specific conversations)
+        AsyncStorage.removeItem(CHAT_MESSAGES_KEY),
+      ]);
+      console.log('✅ All user session data cleared');
+    } catch (error) {
+      console.error('Error clearing all user data:', error);
+    }
+  },
 };

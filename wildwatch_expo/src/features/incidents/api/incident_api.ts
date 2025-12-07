@@ -12,9 +12,9 @@ export const incidentAPI = {
         type: file.type,
       } as any);
     });
-    const response = await api.post<IncidentResponseDto>('/incidents', form, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    // Do NOT set Content-Type header - axios will automatically set it with the correct boundary
+    // This ensures compatibility with both Expo Go and production builds
+    const response = await api.post<IncidentResponseDto>('/incidents', form);
     return response.data;
   },
   getMyIncidents: async (): Promise<IncidentResponseDto[]> => {

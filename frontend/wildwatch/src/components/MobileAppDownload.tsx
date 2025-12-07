@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { Smartphone, Download, Sparkles, Shield } from "lucide-react";
 import Image from "next/image";
 import { toast } from "sonner";
 
 export function MobileAppDownload() {
   const [isMobile, setIsMobile] = useState(false);
+  const [shouldShow, setShouldShow] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
     const checkMobile = () => {
@@ -27,7 +30,32 @@ export function MobileAppDownload() {
     };
   }, []);
 
-  if (!isMobile) return null;
+  // Check if we should show the component based on pathname
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      setShouldShow(false);
+      return;
+    }
+
+    // Get pathname from both Next.js router and window.location as fallback
+    const currentPath = pathname || window.location.pathname;
+
+    // Don't show on mobile pages (they are part of the OAuth flow)
+    const isMobilePage = currentPath?.startsWith("/mobile/");
+
+    // Don't show on OAuth redirect pages
+    const isOAuthPage =
+      currentPath?.startsWith("/oauth2/redirect") ||
+      currentPath?.startsWith("/auth/oauth2/redirect");
+
+    // Only show if:
+    // 1. Device is mobile
+    // 2. NOT on a mobile page
+    // 3. NOT on an OAuth redirect page
+    setShouldShow(isMobile && !isMobilePage && !isOAuthPage);
+  }, [isMobile, pathname]);
+
+  if (!shouldShow) return null;
 
   return (
     <div className="fixed inset-0 z-[9999] bg-gradient-to-br from-[#2b0000] via-[#800000] to-[#D4AF37] flex flex-col items-center justify-center overflow-hidden px-4 sm:px-6 md:px-8">

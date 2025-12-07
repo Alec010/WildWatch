@@ -18,6 +18,7 @@ export default function AuthLayout() {
       <Stack.Screen name="signup" />
       <Stack.Screen name="forgot-password" />
       <Stack.Screen name="onboarding" />
+      <Stack.Screen name="oauth2" />
     </Stack>
   );
 }

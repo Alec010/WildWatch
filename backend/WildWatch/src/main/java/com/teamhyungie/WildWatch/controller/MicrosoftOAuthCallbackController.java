@@ -1,28 +1,36 @@
 package com.teamhyungie.WildWatch.controller;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.teamhyungie.WildWatch.config.FrontendConfig;
-import com.teamhyungie.WildWatch.model.User;
-import com.teamhyungie.WildWatch.model.Role;
-import com.teamhyungie.WildWatch.service.UserService;
-import com.teamhyungie.WildWatch.security.JwtUtil;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import java.util.UUID;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.client.RestTemplate;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.teamhyungie.WildWatch.config.FrontendConfig;
+import com.teamhyungie.WildWatch.model.Role;
+import com.teamhyungie.WildWatch.model.User;
+import com.teamhyungie.WildWatch.security.JwtUtil;
+import com.teamhyungie.WildWatch.service.UserService;
+
 import jakarta.servlet.http.HttpServletResponse;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.util.*;
 
 @Controller
 public class MicrosoftOAuthCallbackController {
+
     private static final Logger logger = LoggerFactory.getLogger(MicrosoftOAuthCallbackController.class);
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -58,7 +66,7 @@ public class MicrosoftOAuthCallbackController {
             HttpServletResponse response
     ) throws Exception {
         logger.info("[OAuthCallback] Received Microsoft OAuth callback with state: {}", state);
-        
+
         // 1. Decode state and extract mobile_redirect_uri
         String decodedState = null;
         try {
@@ -67,7 +75,7 @@ public class MicrosoftOAuthCallbackController {
         } catch (Exception e) {
             logger.error("[OAuthCallback] Failed to decode state: {}", e.getMessage());
         }
-        
+
         String mobileRedirectUri = null;
         try {
             if (decodedState != null) {
@@ -89,11 +97,11 @@ public class MicrosoftOAuthCallbackController {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
-        String body = "client_id=" + URLEncoder.encode(clientId, StandardCharsets.UTF_8) +
-                "&client_secret=" + URLEncoder.encode(clientSecret, StandardCharsets.UTF_8) +
-                "&code=" + URLEncoder.encode(code, StandardCharsets.UTF_8) +
-                "&redirect_uri=" + URLEncoder.encode(redirectUri, StandardCharsets.UTF_8) +
-                "&grant_type=authorization_code";
+        String body = "client_id=" + URLEncoder.encode(clientId, StandardCharsets.UTF_8)
+                + "&client_secret=" + URLEncoder.encode(clientSecret, StandardCharsets.UTF_8)
+                + "&code=" + URLEncoder.encode(code, StandardCharsets.UTF_8)
+                + "&redirect_uri=" + URLEncoder.encode(redirectUri, StandardCharsets.UTF_8)
+                + "&grant_type=authorization_code";
 
         HttpEntity<String> request = new HttpEntity<>(body, headers);
         ResponseEntity<String> tokenResponse = restTemplate.exchange(tokenUri, HttpMethod.POST, request, String.class);
@@ -142,8 +150,8 @@ public class MicrosoftOAuthCallbackController {
 
         // 5. Generate JWT
         logger.info("[OAuthCallback] Generating JWT token");
-        org.springframework.security.core.userdetails.UserDetails userDetails =
-                org.springframework.security.core.userdetails.User
+        org.springframework.security.core.userdetails.UserDetails userDetails
+                = org.springframework.security.core.userdetails.User
                         .withUsername(user.getEmail())
                         .password(user.getPassword() != null ? user.getPassword() : "")
                         .authorities(user.getRole().name())
@@ -169,4 +177,4 @@ public class MicrosoftOAuthCallbackController {
         response.sendRedirect(redirectUrl);
         logger.info("[OAuthCallback] Redirect response sent");
     }
-} 
+}

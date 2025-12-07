@@ -4,6 +4,7 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
+  Pressable,
   TextInput,
   Alert,
   ActivityIndicator,
@@ -16,6 +17,9 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { storage } from "../../lib/storage";
+import { api } from "../../lib/api";
+import * as FileSystem from "expo-file-system/legacy";
+import axios from "axios";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
@@ -38,6 +42,9 @@ import BlockedContentModal from "../../components/BlockedContentModal";
 import ProcessingReportModal from "../../components/ProcessingReportModal";
 import SimilarIncidentsModal from "../../components/SimilarIncidentsModal";
 import ReportSuccessModal from "../../components/ReportSuccessModal";
+import ReportErrorModal, {
+  type ErrorType,
+} from "../../components/ReportErrorModal";
 import EmergencyNoteBanner from "../../components/EmergencyNoteBanner";
 import EvidenceGuidelinesBanner from "../../components/EvidenceGuidelinesBanner";
 import { sanitizeLocation } from "../../src/utils/locationUtils";
@@ -233,6 +240,16 @@ export default function ReportScreen() {
   const params = useLocalSearchParams();
   const [token, setToken] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [processingPhase, setProcessingPhase] = useState<
+    "analyzing" | "uploading" | "submitting" | "finalizing"
+  >("analyzing");
+  const [submissionError, setSubmissionError] = useState<{
+    type: ErrorType;
+    message: string;
+    statusCode?: number;
+    technicalDetails?: string;
+  } | null>(null);
+  const [showErrorModal, setShowErrorModal] = useState(false);
   const [offices, setOffices] = useState<OfficeInfo[]>([]);
   const [loadingOffices, setLoadingOffices] = useState(false);
   const [showOfficeDescription, setShowOfficeDescription] = useState(false);
@@ -785,6 +802,7 @@ export default function ReportScreen() {
     incidentData: any
   ): Promise<boolean> => {
     try {
+      setProcessingPhase("analyzing");
       const analysisRequest: AnalyzeRequest = {
         incidentType: incidentData.incidentType,
         description: incidentData.description,
@@ -796,11 +814,21 @@ export default function ReportScreen() {
         longitude: incidentData.longitude,
       };
 
-      console.log("Starting AI analysis...");
+      console.log("🤖 [AI ANALYSIS] Starting AI content analysis...");
+      const startTime = Date.now();
+
       const analysis = await incidentAnalysisAPI.analyzeIncident(
         analysisRequest
       );
-      console.log("AI analysis completed:", analysis);
+
+      const analysisDuration = ((Date.now() - startTime) / 1000).toFixed(2);
+      console.log(
+        `✅ [AI ANALYSIS] AI analysis completed in ${analysisDuration}s`,
+        {
+          decision: analysis.decision,
+          similarIncidentsFound: analysis.similarIncidents?.length || 0,
+        }
+      );
 
       if (analysis.decision === "BLOCK") {
         setShowProcessingModal(false);
@@ -961,74 +989,426 @@ export default function ReportScreen() {
     };
   };
 
-  // Actual submission function
+  // Actual submission function - Using fetch API for proper FormData handling in production builds
+  // Note: fetch handles FormData better than axios in React Native production builds (APK)
   const doSubmit = async () => {
-    if (!token) {
+    // ✅ FIX: Always get fresh token from storage before submission
+    // This ensures token is available even if state wasn't updated after OAuth
+    const currentToken = await storage.getToken();
+
+    if (!currentToken) {
       Alert.alert("Error", "You must be logged in to report an incident");
       return;
     }
 
+    console.log("🚀 [SUBMISSION] Starting incident submission");
+    console.log("📊 [SUBMISSION] Evidence files count:", evidenceFiles.length);
+
+    // Set uploading phase if we have files
+    if (evidenceFiles.length > 0) {
+      setProcessingPhase("uploading");
+    } else {
+      setProcessingPhase("submitting");
+    }
+
     const incidentData = prepareIncidentData();
 
-    // Create FormData for multipart request
-    const formData = new FormData();
-    formData.append("incidentData", JSON.stringify(incidentData));
+    // Set timeout constant - INCREASED to 3 minutes for image uploads + AI processing
+    const SUBMISSION_TIMEOUT = 180000; // 3 minutes (180 seconds)
 
-    // Add evidence files if any
-    evidenceFiles.forEach((file, index) => {
-      if (file.uri) {
-        // Create a file object from the URI with Android-compatible format
-        const fileInfo = {
-          uri: file.uri,
-          type: file.type || "image/jpeg",
-          name: file.name || `evidence_${index}.jpg`,
-        };
+    try {
+      setProcessingPhase("submitting");
+      console.log(
+        "🌐 [SUBMISSION] Sending POST request to:",
+        `${config.API.BASE_URL}/incidents`
+      );
+      console.log(
+        "📦 [SUBMISSION] Evidence files count:",
+        evidenceFiles.length
+      );
+      const startTime = Date.now();
 
-        // Android-specific file handling
-        if (Platform.OS === "android") {
-          formData.append("files", {
-            uri: file.uri,
+      // Use proper FormData as expected by the backend
+      console.log("📤 [SUBMISSION] Creating FormData request...");
+      console.log(
+        "📋 [SUBMISSION] Platform:",
+        Platform.OS,
+        "Version:",
+        Platform.Version
+      );
+
+      console.log("🚀 [SUBMISSION] Preparing files for upload via FormData...");
+
+      // ✅ DEBUG: Log the API configuration to verify environment variables are loaded
+      console.log("🔍 [SUBMISSION] API Configuration:", {
+        BASE_URL: config.API.BASE_URL,
+        TIMEOUT: config.API.TIMEOUT,
+        ENV: config.ENV,
+        RAW_ENV: process.env.EXPO_PUBLIC_API_BASE_URL,
+      });
+
+      // Construct the full URL
+      // Note: config.API.BASE_URL should already include /api if set correctly in Expo
+      // Example: https://wildwatch-zgaw.onrender.com/api
+      const endpoint = "/incidents";
+
+      // ✅ FIX: Ensure no double slashes in URL construction
+      const baseUrl = config.API.BASE_URL.endsWith("/")
+        ? config.API.BASE_URL.slice(0, -1)
+        : config.API.BASE_URL;
+      const endpointPath = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+      const url = `${baseUrl}${endpointPath}`;
+
+      console.log("🌐 [SUBMISSION] Full endpoint URL:", url);
+      console.log("🌐 [SUBMISSION] Base URL from config:", config.API.BASE_URL);
+      console.log("🌐 [SUBMISSION] Endpoint path:", endpoint);
+      console.log("🌐 [SUBMISSION] Constructed URL:", url);
+
+      // Validate that BASE_URL is set
+      if (
+        !config.API.BASE_URL ||
+        config.API.BASE_URL === "undefined" ||
+        config.API.BASE_URL.includes("undefined")
+      ) {
+        console.error(
+          "❌ [SUBMISSION] API_BASE_URL is not configured properly!"
+        );
+        console.error(
+          "❌ [SUBMISSION] Raw env value:",
+          process.env.EXPO_PUBLIC_API_BASE_URL
+        );
+        throw new Error(
+          "API_BASE_URL is not configured. Please rebuild your app with environment variables set in Expo."
+        );
+      }
+
+      // Create FormData
+      const formData = new FormData();
+
+      // Add incidentData as form field
+      formData.append("incidentData", JSON.stringify(incidentData));
+
+      // Verify and prepare files for FormData
+      for (let i = 0; i < evidenceFiles.length; i++) {
+        const file = evidenceFiles[i];
+        if (file.uri) {
+          console.log(
+            `📎 [SUBMISSION] Processing file ${i + 1}/${evidenceFiles.length}:`,
+            file.name
+          );
+
+          // Normalize URI for both iOS and Android production builds
+          // iOS: Uses file:// format
+          // Android: Can use file://, content://, or file paths
+          let normalizedUri = file.uri;
+
+          // Handle Android file paths that aren't properly formatted
+          if (Platform.OS === "android") {
+            if (
+              !normalizedUri.startsWith("file://") &&
+              !normalizedUri.startsWith("http") &&
+              !normalizedUri.startsWith("content://") &&
+              !normalizedUri.startsWith("ph://") // Photo library on iOS
+            ) {
+              // Convert relative or absolute paths to file:// URI
+              normalizedUri = normalizedUri.startsWith("/")
+                ? `file://${normalizedUri}`
+                : `file:///${normalizedUri}`;
+            }
+          }
+
+          // iOS typically already has file:// prefix, but ensure it's correct
+          if (
+            Platform.OS === "ios" &&
+            !normalizedUri.startsWith("file://") &&
+            !normalizedUri.startsWith("ph://")
+          ) {
+            normalizedUri = normalizedUri.startsWith("/")
+              ? `file://${normalizedUri}`
+              : `file:///${normalizedUri}`;
+          }
+
+          // Verify file exists - critical for production builds
+          // In production, file URIs may differ from development
+          try {
+            let fileInfo = await FileSystem.getInfoAsync(normalizedUri);
+
+            // If normalized URI doesn't exist and it's different from original, try original
+            if (!fileInfo.exists && normalizedUri !== file.uri) {
+              console.log(
+                `⚠️ [SUBMISSION] Normalized URI not found, trying original: ${file.uri}`
+              );
+              const originalInfo = await FileSystem.getInfoAsync(file.uri);
+              if (originalInfo.exists) {
+                normalizedUri = file.uri;
+                fileInfo = originalInfo;
+                console.log(`✅ [SUBMISSION] Using original URI: ${file.uri}`);
+              }
+            }
+
+            // Final check - if file still doesn't exist, throw error
+            if (!fileInfo.exists) {
+              throw new Error(
+                `File not found: ${file.name} (URI: ${normalizedUri})`
+              );
+            }
+
+            // Log file info for debugging (useful in production)
+            const fileSize = "size" in fileInfo ? fileInfo.size : 0;
+            console.log(
+              `✅ [SUBMISSION] File verified: ${file.name} (${(
+                fileSize / 1024
+              ).toFixed(2)}KB) - URI: ${normalizedUri.substring(0, 50)}...`
+            );
+          } catch (fileError: any) {
+            console.error(
+              `❌ [SUBMISSION] File verification failed for ${file.name}:`,
+              fileError.message
+            );
+            throw new Error(
+              `Cannot access file ${file.name}: ${fileError.message}`
+            );
+          }
+
+          // Add file to FormData
+          // For React Native, FormData requires an object with uri, type, and name
+          // This format works in both Expo Go and production builds (iOS/Android)
+          const fileObject: any = {
+            uri: normalizedUri,
             type: file.type || "image/jpeg",
-            name: file.name || `evidence_${index}.jpg`,
-          } as any);
-        } else {
-          formData.append("files", fileInfo as any);
+            name: file.name || `evidence_${i}.jpg`,
+          };
+
+          // Ensure proper file extension for type detection
+          if (!file.type) {
+            const extension = file.name?.split(".").pop()?.toLowerCase();
+            if (extension === "png") {
+              fileObject.type = "image/png";
+            } else if (extension === "jpg" || extension === "jpeg") {
+              fileObject.type = "image/jpeg";
+            } else if (extension === "mp4") {
+              fileObject.type = "video/mp4";
+            } else if (extension === "mov") {
+              fileObject.type = "video/quicktime";
+            }
+          }
+
+          formData.append("files", fileObject);
+
+          console.log(
+            `✅ [SUBMISSION] Added file ${i + 1}: ${file.name} (${
+              fileObject.type
+            })`
+          );
         }
       }
-    });
 
-    // Android-specific headers
-    const headers: any = {
-      Authorization: `Bearer ${token}`,
-    };
+      // Use axios for multipart form data upload
+      // IMPORTANT: Do NOT set Content-Type header manually - axios will set it automatically
+      // with the correct boundary for multipart/form-data. Setting it manually breaks the upload.
+      // Using axios directly (not the api instance) to avoid default JSON Content-Type header
+      const uploadResponse = await axios.post(url, formData, {
+        headers: {
+          Authorization: `Bearer ${currentToken}`, // Use currentToken from storage instead of state
+          // Do NOT set Content-Type - axios will automatically set:
+          // Content-Type: multipart/form-data; boundary=----WebKitFormBoundary...
+        },
+        timeout: SUBMISSION_TIMEOUT,
+        // In React Native, FormData is handled natively by axios
+        // No transformRequest needed - FormData works directly
+      });
 
-    // Don't set Content-Type for FormData on Android - let the system handle it
-    if (Platform.OS !== "android") {
-      headers["Content-Type"] = "multipart/form-data";
-    }
+      const result = {
+        status: uploadResponse.status,
+        data: uploadResponse.data,
+        ok: uploadResponse.status >= 200 && uploadResponse.status < 300,
+      };
 
-    const response = await fetch(`${config.API.BASE_URL}/incidents`, {
-      method: "POST",
-      headers,
-      body: formData,
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(
-        `Failed to submit report: ${response.status} - ${errorText}`
+      const requestDuration = ((Date.now() - startTime) / 1000).toFixed(2);
+      console.log(
+        `✅ [SUBMISSION] Response received in ${requestDuration}s - Status: ${result.status}`
       );
+
+      // Check if request was successful
+      if (!result.ok) {
+        const errorObj: any = new Error("Server returned error");
+        errorObj.status = result.status;
+        errorObj.data = result.data;
+        throw errorObj;
+      }
+
+      setProcessingPhase("finalizing");
+
+      const responseData = result.data;
+
+      console.log("🎉 [SUBMISSION] Report submitted successfully!", {
+        trackingNumber: responseData.trackingNumber,
+        assignedOffice: responseData.assignedOffice?.name,
+      });
+
+      // Hide processing modal and show success modal
+      setShowProcessingModal(false);
+      setSubmissionResult({
+        trackingNumber: responseData.trackingNumber,
+        assignedOffice: responseData.assignedOffice,
+      });
+      setShowSuccessModal(true);
+    } catch (submitError: any) {
+      console.error("💥 [SUBMISSION] Upload error:", {
+        name: submitError.name,
+        message: submitError.message,
+        code: submitError.code,
+        error: submitError,
+      });
+
+      // Handle AxiosError network errors - check code first
+      if (
+        submitError.code === "ERR_NETWORK" ||
+        submitError.code === "ECONNABORTED" ||
+        submitError.code === "ETIMEDOUT" ||
+        submitError.code === "ENOTFOUND" ||
+        submitError.code === "ECONNREFUSED"
+      ) {
+        console.error("🌐 [SUBMISSION] Network connection failed (AxiosError)");
+        const error = {
+          type: "network" as const,
+          message:
+            "Unable to connect to the server. Please check your internet connection and try again.",
+          technicalDetails: `${submitError.code}: ${
+            submitError.message || submitError.name
+          }`,
+        };
+        setSubmissionError(error);
+        setShowErrorModal(true);
+        setIsSubmitting(false);
+        setShowProcessingModal(false);
+        return; // Return early instead of throwing
+      }
+
+      // Handle timeout errors (XMLHttpRequest timeout or AbortError)
+      if (
+        submitError.name === "AbortError" ||
+        submitError.message?.includes("timed out") ||
+        submitError.message?.includes("aborted") ||
+        submitError.message?.includes("timeout")
+      ) {
+        console.error("⏰ [SUBMISSION] Request timed out");
+        const error = {
+          type: "timeout" as const,
+          message:
+            "The request took too long to complete. This may be due to slow network or large files.",
+          technicalDetails: "Request timed out after 180 seconds",
+        };
+        setSubmissionError(error);
+        setShowErrorModal(true);
+        setIsSubmitting(false);
+        setShowProcessingModal(false);
+        return;
+      }
+
+      // Handle network errors (XMLHttpRequest onerror or fetch TypeError)
+      // Also check for AxiosError "Network Error" message
+      if (
+        submitError.message?.includes("Network request failed") ||
+        submitError.message?.includes("Failed to fetch") ||
+        submitError.message?.includes("NetworkError") ||
+        submitError.message?.includes("Network request") ||
+        submitError.message?.toLowerCase().includes("network error") ||
+        (submitError.name === "TypeError" &&
+          submitError.message?.includes("fetch")) ||
+        // Check if no response (network error in axios)
+        (!submitError.response && submitError.request)
+      ) {
+        console.error("🌐 [SUBMISSION] Network connection failed");
+        const error = {
+          type: "network" as const,
+          message:
+            "Unable to connect to the server. Please check your internet connection and try again.",
+          technicalDetails:
+            submitError.message || submitError.name || "Network Error",
+        };
+        setSubmissionError(error);
+        setShowErrorModal(true);
+        setIsSubmitting(false);
+        setShowProcessingModal(false);
+        return;
+      }
+
+      // Handle server errors with response (response.ok === false)
+      // Check if we have a status code from the response
+      const status = submitError.response?.status || submitError.status;
+      if (status) {
+        console.error("❌ [SUBMISSION] Server returned error:", {
+          status: status,
+          data: submitError.response?.data || submitError.data,
+        });
+
+        // Determine error type and message based on status code
+        let errorType: ErrorType = "server";
+        let errorMessage = "Failed to submit report. Please try again.";
+        let technicalDetails = `Status: ${status}`;
+
+        if (status >= 500) {
+          errorType = "server";
+          errorMessage =
+            "The server encountered an error and could not process your request. Our team has been notified.";
+          if (status === 502 || status === 503) {
+            errorMessage =
+              "The server is temporarily unavailable. Please try again in a few minutes.";
+          } else if (status === 504) {
+            errorMessage =
+              "The server took too long to respond. Please try again.";
+          }
+        } else if (status === 400) {
+          errorType = "validation";
+          errorMessage =
+            "Invalid report data. Please check that all required fields are filled correctly.";
+        } else if (status === 401) {
+          errorType = "validation";
+          errorMessage =
+            "Your session has expired. Please log out and log back in.";
+        } else if (status === 403) {
+          errorType = "validation";
+          errorMessage =
+            "You do not have permission to submit reports. Please check your account status.";
+        } else if (status === 413) {
+          errorType = "validation";
+          errorMessage =
+            "Your files are too large. Please reduce file sizes to under 5MB each and try again.";
+        } else if (status === 429) {
+          errorType = "server";
+          errorMessage =
+            "Too many requests. Please wait a moment before trying again.";
+        }
+
+        // Set error and show modal
+        setSubmissionError({
+          type: errorType,
+          message: errorMessage,
+          statusCode: status,
+          technicalDetails: technicalDetails,
+        });
+        setShowErrorModal(true);
+        setIsSubmitting(false);
+        setShowProcessingModal(false);
+        return;
+      }
+
+      // Unknown error - but still check for network-related issues
+      const error = {
+        type: "unknown" as const,
+        message:
+          submitError.message ||
+          "An unexpected error occurred. Please try again.",
+        technicalDetails: `${submitError.name || "Unknown"}: ${
+          submitError.message || "No error message"
+        }`,
+      };
+      setSubmissionError(error);
+      setShowErrorModal(true);
+      setIsSubmitting(false);
+      setShowProcessingModal(false);
     }
-
-    const result = await response.json();
-
-    // Hide processing modal and show success modal
-    setShowProcessingModal(false);
-    setSubmissionResult({
-      trackingNumber: result.trackingNumber,
-      assignedOffice: result.assignedOffice,
-    });
-    setShowSuccessModal(true);
   };
 
   const handleSuccessModalClose = async () => {
@@ -1073,6 +1453,7 @@ export default function ReportScreen() {
 
     setIsSubmitting(true);
     setShowProcessingModal(true);
+    setSubmissionError(null); // Clear any previous errors
 
     try {
       const incidentData = prepareIncidentData();
@@ -1081,15 +1462,26 @@ export default function ReportScreen() {
       const isContentApproved = await analyzeIncidentContent(incidentData);
       if (!isContentApproved) {
         setIsSubmitting(false);
+        setShowProcessingModal(false);
         return; // Stop submission if content is blocked or similar incidents found
       }
 
       // If we reach here, proceed with submission
       await doSubmit();
     } catch (error: any) {
-      console.error("Error submitting report:", error);
+      console.error("❌ [SUBMISSION] Error in handleSubmit:", error);
       setShowProcessingModal(false);
-      Alert.alert("Error", error.message || "Failed to submit report");
+
+      // Set structured error for display if not already set
+      if (!submissionError) {
+        setSubmissionError({
+          type: "unknown",
+          message:
+            error.message || "Failed to submit report. Please try again.",
+          technicalDetails: error.stack?.substring(0, 200),
+        });
+        setShowErrorModal(true);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -1158,21 +1550,54 @@ export default function ReportScreen() {
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [4, 3],
-        quality: 0.8,
+        quality: 0.7, // Reduced from 0.8 to 0.7 for better compression
       });
 
       if (!result.canceled && result.assets && result.assets[0]) {
         const asset = result.assets[0];
         const fileName = `photo_${Date.now()}.jpg`;
+        const fileSize = asset.fileSize || 0;
 
-        addEvidenceFiles([
-          {
-            uri: asset.uri,
-            name: fileName,
-            type: "image/jpeg",
-            size: asset.fileSize || 0,
-          },
-        ]);
+        // Warn if file is larger than 5MB
+        if (fileSize > 5 * 1024 * 1024) {
+          console.warn(
+            `⚠️ [IMAGE] Large file detected: ${(
+              fileSize /
+              (1024 * 1024)
+            ).toFixed(2)}MB`
+          );
+          Alert.alert(
+            "Large File",
+            `This photo is ${(fileSize / (1024 * 1024)).toFixed(
+              2
+            )}MB. Large files may take longer to upload. Consider taking a new photo or using a smaller resolution.`,
+            [
+              {
+                text: "Use Anyway",
+                onPress: () => {
+                  addEvidenceFiles([
+                    {
+                      uri: asset.uri,
+                      name: fileName,
+                      type: "image/jpeg",
+                      size: fileSize,
+                    },
+                  ]);
+                },
+              },
+              { text: "Cancel", style: "cancel" },
+            ]
+          );
+        } else {
+          addEvidenceFiles([
+            {
+              uri: asset.uri,
+              name: fileName,
+              type: "image/jpeg",
+              size: fileSize,
+            },
+          ]);
+        }
       }
     } catch (error) {
       console.error("Error taking photo:", error);
@@ -1189,7 +1614,7 @@ export default function ReportScreen() {
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsMultipleSelection: true,
         allowsEditing: false,
-        quality: 0.8,
+        quality: 0.7, // Reduced from 0.8 to 0.7 for better compression
       });
 
       if (!result.canceled && result.assets) {
@@ -1200,7 +1625,27 @@ export default function ReportScreen() {
           size: asset.fileSize || 0,
         }));
 
-        addEvidenceFiles(newFiles);
+        // Check total size of all files
+        const totalSize = newFiles.reduce((sum, file) => sum + file.size, 0);
+        const totalSizeMB = totalSize / (1024 * 1024);
+
+        if (totalSizeMB > 20) {
+          console.warn(
+            `⚠️ [IMAGE] Large batch detected: ${totalSizeMB.toFixed(2)}MB total`
+          );
+          Alert.alert(
+            "Large Files",
+            `The selected images total ${totalSizeMB.toFixed(
+              2
+            )}MB. This may take longer to upload. Consider selecting fewer or smaller images.`,
+            [
+              { text: "Use Anyway", onPress: () => addEvidenceFiles(newFiles) },
+              { text: "Cancel", style: "cancel" },
+            ]
+          );
+        } else {
+          addEvidenceFiles(newFiles);
+        }
       }
     } catch (error) {
       console.error("Error picking images:", error);
@@ -1264,35 +1709,23 @@ export default function ReportScreen() {
     setGeneratedTags([]);
 
     try {
-      const response = await fetch(`${config.API.BASE_URL}/tags/generate`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          description: form.description.trim(),
-          incidentType: form.incidentType,
-          location:
-            form.formattedAddress ||
-            form.location ||
-            `${form.latitude}, ${form.longitude}`,
-          formattedAddress: form.formattedAddress,
-          buildingName: form.buildingName,
-          buildingCode: form.buildingCode,
-          latitude: form.latitude,
-          longitude: form.longitude,
-        }),
+      // ✅ FIX: Use configured api instance instead of raw fetch for proper baseURL, timeout, and error handling
+      const endpoint = "/tags/generate";
+      const response = await api.post(endpoint, {
+        description: form.description.trim(),
+        incidentType: form.incidentType,
+        location:
+          form.formattedAddress ||
+          form.location ||
+          `${form.latitude}, ${form.longitude}`,
+        formattedAddress: form.formattedAddress,
+        buildingName: form.buildingName,
+        buildingCode: form.buildingCode,
+        latitude: form.latitude,
+        longitude: form.longitude,
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(
-          `Failed to generate tags: ${response.status} - ${errorText}`
-        );
-      }
-
-      const data = await response.json();
+      const data = response.data;
 
       // Handle response format: allTags (all 20 generated tags) and top5Tags (top 5 scored tags)
       const allGeneratedTags = data.allTags || data.tags || [];
@@ -1797,11 +2230,20 @@ export default function ReportScreen() {
                     {/* Generate Tags Button - Always visible */}
                     <TouchableOpacity
                       onPress={generateTags}
-                      disabled={isGeneratingTags || !form.description.trim() || !form.latitude || !form.longitude}
+                      disabled={
+                        isGeneratingTags ||
+                        !form.description.trim() ||
+                        !form.latitude ||
+                        !form.longitude
+                      }
                       style={{
-                        backgroundColor: (isGeneratingTags || !form.description.trim() || !form.latitude || !form.longitude)
-                          ? "#E5E7EB"
-                          : "#8B0000",
+                        backgroundColor:
+                          isGeneratingTags ||
+                          !form.description.trim() ||
+                          !form.latitude ||
+                          !form.longitude
+                            ? "#E5E7EB"
+                            : "#8B0000",
                         borderRadius: 12,
                         paddingVertical: 16,
                         paddingHorizontal: 20,
@@ -1809,9 +2251,21 @@ export default function ReportScreen() {
                         justifyContent: "center",
                         flexDirection: "row",
                         marginBottom: 16,
-                        shadowColor: (isGeneratingTags || !form.description.trim() || !form.latitude || !form.longitude) ? "#000" : "#8B0000",
+                        shadowColor:
+                          isGeneratingTags ||
+                          !form.description.trim() ||
+                          !form.latitude ||
+                          !form.longitude
+                            ? "#000"
+                            : "#8B0000",
                         shadowOffset: { width: 0, height: 2 },
-                        shadowOpacity: (isGeneratingTags || !form.description.trim() || !form.latitude || !form.longitude) ? 0.1 : 0.2,
+                        shadowOpacity:
+                          isGeneratingTags ||
+                          !form.description.trim() ||
+                          !form.latitude ||
+                          !form.longitude
+                            ? 0.1
+                            : 0.2,
                         shadowRadius: 4,
                         elevation: 3,
                       }}
@@ -1832,11 +2286,7 @@ export default function ReportScreen() {
                         </>
                       ) : (
                         <>
-                          <Ionicons
-                            name="sparkles"
-                            size={22}
-                            color="#FFFFFF"
-                          />
+                          <Ionicons name="sparkles" size={22} color="#FFFFFF" />
                           <Text
                             style={{
                               color: "#FFFFFF",
@@ -3324,6 +3774,119 @@ export default function ReportScreen() {
                     </View>
                   </View>
 
+                  {/* Error Banner */}
+                  {submissionError && (
+                    <View style={{ marginTop: 16, marginBottom: 8 }}>
+                      <View
+                        style={{
+                          backgroundColor: "#FEF2F2",
+                          borderLeftWidth: 4,
+                          borderLeftColor: "#DC2626",
+                          borderRadius: 8,
+                          padding: 16,
+                        }}
+                      >
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            marginBottom: 8,
+                          }}
+                        >
+                          <Text
+                            style={{
+                              fontSize: 16,
+                              fontWeight: "700",
+                              color: "#DC2626",
+                              marginLeft: 8,
+                              flex: 1,
+                            }}
+                          >
+                            {submissionError.type === "network"
+                              ? "🌐 Connection Issue"
+                              : submissionError.type === "server"
+                              ? "🖥️ Server Error"
+                              : submissionError.type === "timeout"
+                              ? "⏱️ Request Timed Out"
+                              : submissionError.type === "validation"
+                              ? "⚠️ Validation Error"
+                              : "❌ Submission Failed"}
+                          </Text>
+                          <Pressable
+                            onPress={() => setSubmissionError(null)}
+                            style={{ padding: 4 }}
+                          >
+                            <Text style={{ fontSize: 18, color: "#991B1B" }}>
+                              ✕
+                            </Text>
+                          </Pressable>
+                        </View>
+                        <Text
+                          style={{
+                            fontSize: 14,
+                            color: "#991B1B",
+                            lineHeight: 20,
+                            marginBottom: 8,
+                          }}
+                        >
+                          {submissionError.message}
+                        </Text>
+                        {submissionError.type === "network" && (
+                          <Text
+                            style={{
+                              fontSize: 13,
+                              color: "#B91C1C",
+                              lineHeight: 20,
+                            }}
+                          >
+                            • Check your internet connection{"\n"}• Make sure
+                            you're connected to WiFi or mobile data{"\n"}• Try
+                            moving to an area with better signal
+                          </Text>
+                        )}
+                        {submissionError.type === "server" && (
+                          <Text
+                            style={{
+                              fontSize: 13,
+                              color: "#B91C1C",
+                              lineHeight: 20,
+                            }}
+                          >
+                            • The server is temporarily unavailable{"\n"}•
+                            Please try again in a few moments{"\n"}• If the
+                            problem persists, contact support
+                          </Text>
+                        )}
+                        {submissionError.type === "timeout" && (
+                          <Text
+                            style={{
+                              fontSize: 13,
+                              color: "#B91C1C",
+                              lineHeight: 20,
+                            }}
+                          >
+                            • The request took too long to complete{"\n"}• Check
+                            your internet connection speed{"\n"}• Try again with
+                            a more stable connection
+                          </Text>
+                        )}
+                        {submissionError.type === "validation" && (
+                          <Text
+                            style={{
+                              fontSize: 13,
+                              color: "#B91C1C",
+                              lineHeight: 20,
+                            }}
+                          >
+                            • Check that all required fields are filled{"\n"}•
+                            Ensure file sizes are not too large{"\n"}• Verify
+                            your login session is still active
+                          </Text>
+                        )}
+                      </View>
+                    </View>
+                  )}
+
                   {/* Submit Button */}
                   <FormNavigationButtons
                     onBackClick={() => setCurrentStep(1)}
@@ -4145,7 +4708,35 @@ export default function ReportScreen() {
       />
 
       {/* Processing Report Modal */}
-      <ProcessingReportModal visible={showProcessingModal} />
+      <ProcessingReportModal
+        visible={showProcessingModal}
+        phase={processingPhase}
+      />
+
+      {/* Error Modal */}
+      <ReportErrorModal
+        visible={showErrorModal}
+        error={submissionError}
+        onClose={() => {
+          setShowErrorModal(false);
+          setSubmissionError(null);
+        }}
+        onRetry={async () => {
+          setShowErrorModal(false);
+          setSubmissionError(null);
+          // Retry submission
+          try {
+            setIsSubmitting(true);
+            setShowProcessingModal(true);
+            await doSubmit();
+          } catch (error) {
+            console.error("❌ [RETRY] Error retrying submission:", error);
+            // Error will be caught and modal will show again
+          } finally {
+            setIsSubmitting(false);
+          }
+        }}
+      />
 
       {/* Similar Incidents Modal */}
       <SimilarIncidentsModal

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Modal,
   View,
@@ -11,12 +11,69 @@ import { Ionicons } from '@expo/vector-icons';
 
 interface ProcessingReportModalProps {
   visible: boolean;
+  phase?: 'analyzing' | 'uploading' | 'submitting' | 'finalizing';
 }
 
-export default function ProcessingReportModal({ visible }: ProcessingReportModalProps) {
+export default function ProcessingReportModal({ visible, phase = 'analyzing' }: ProcessingReportModalProps) {
   const spinValue = useRef(new Animated.Value(0)).current;
   const pulseValue = useRef(new Animated.Value(0)).current;
   const progressValue = useRef(new Animated.Value(0)).current;
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
+  // Get phase-specific content
+  const getPhaseContent = () => {
+    switch (phase) {
+      case 'analyzing':
+        return {
+          title: 'Analyzing Content',
+          description: 'Our AI is reviewing your report for inappropriate content and finding similar incidents...',
+          progress: 0.25,
+          icon: 'search' as const,
+        };
+      case 'uploading':
+        return {
+          title: 'Uploading Evidence',
+          description: 'Uploading your photos and evidence files. This may take a moment...',
+          progress: 0.5,
+          icon: 'cloud-upload' as const,
+        };
+      case 'submitting':
+        return {
+          title: 'Submitting Report',
+          description: 'Generating tags, assigning to appropriate office, and saving your report...',
+          progress: 0.75,
+          icon: 'paper-plane' as const,
+        };
+      case 'finalizing':
+        return {
+          title: 'Finalizing',
+          description: 'Almost done! Creating notifications and activity logs...',
+          progress: 0.9,
+          icon: 'checkmark-circle' as const,
+        };
+      default:
+        return {
+          title: 'Processing Your Report',
+          description: 'Our AI system is analyzing your report and assigning it to the most appropriate office for review...',
+          progress: 0.5,
+          icon: 'refresh' as const,
+        };
+    }
+  };
+
+  const phaseContent = getPhaseContent();
+
+  // Timer to show elapsed time
+  useEffect(() => {
+    if (visible) {
+      setElapsedSeconds(0);
+      const timer = setInterval(() => {
+        setElapsedSeconds(prev => prev + 1);
+      }, 1000);
+      
+      return () => clearInterval(timer);
+    }
+  }, [visible]);
 
   useEffect(() => {
     if (visible) {
@@ -45,10 +102,10 @@ export default function ProcessingReportModal({ visible }: ProcessingReportModal
         ])
       );
 
-      // Start progress animation
+      // Animate progress to phase-specific value
       const progressAnimation = Animated.timing(progressValue, {
-        toValue: 1,
-        duration: 3000,
+        toValue: phaseContent.progress,
+        duration: 1000,
         useNativeDriver: false,
       });
 
@@ -66,8 +123,9 @@ export default function ProcessingReportModal({ visible }: ProcessingReportModal
       spinValue.setValue(0);
       pulseValue.setValue(0);
       progressValue.setValue(0);
+      setElapsedSeconds(0);
     }
-  }, [visible, spinValue, pulseValue, progressValue]);
+  }, [visible, phase, spinValue, pulseValue, progressValue]);
 
   const spin = spinValue.interpolate({
     inputRange: [0, 1],
@@ -81,7 +139,7 @@ export default function ProcessingReportModal({ visible }: ProcessingReportModal
 
   const progressWidth = progressValue.interpolate({
     inputRange: [0, 1],
-    outputRange: ['0%', '75%'],
+    outputRange: ['0%', '100%'],
   });
 
   return (
@@ -114,16 +172,23 @@ export default function ProcessingReportModal({ visible }: ProcessingReportModal
                 },
               ]}
             >
-              <Ionicons name="refresh" size={32} color="#D4AF37" />
+              <Ionicons name={phaseContent.icon} size={32} color="#D4AF37" />
             </Animated.View>
           </View>
 
           {/* Title and Description */}
           <View style={styles.textContainer}>
-            <Text style={styles.title}>Processing Your Report</Text>
+            <Text style={styles.title}>{phaseContent.title}</Text>
             <Text style={styles.description}>
-              Our AI system is analyzing your report and assigning it to the most appropriate office for review. This may take a moment...
+              {phaseContent.description}
             </Text>
+            
+            {/* Elapsed time indicator */}
+            {elapsedSeconds > 10 && (
+              <Text style={styles.timeIndicator}>
+                {elapsedSeconds}s elapsed... {elapsedSeconds > 30 ? '(Large files may take longer)' : ''}
+              </Text>
+            )}
           </View>
 
           {/* Progress Bar */}
@@ -138,6 +203,9 @@ export default function ProcessingReportModal({ visible }: ProcessingReportModal
                 ]}
               />
             </View>
+            <Text style={styles.progressText}>
+              {Math.round(phaseContent.progress * 100)}% Complete
+            </Text>
           </View>
         </View>
       </View>
@@ -218,10 +286,24 @@ const styles = StyleSheet.create({
     backgroundColor: '#E5E7EB',
     borderRadius: 5,
     overflow: 'hidden',
+    marginBottom: 8,
   },
   progressBarFill: {
     height: '100%',
     backgroundColor: '#800000',
     borderRadius: 5,
+  },
+  progressText: {
+    fontSize: 12,
+    color: '#6B7280',
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  timeIndicator: {
+    fontSize: 12,
+    color: '#D97706',
+    textAlign: 'center',
+    marginTop: 8,
+    fontStyle: 'italic',
   },
 });
