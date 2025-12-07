@@ -53,12 +53,14 @@ export default function MobileTermsPage() {
     setIsLoading(true);
     setError("");
 
+    // ✅ Declare tokenService at the top so it's available in both try and catch blocks
+    const tokenService = (await import("@/utils/tokenService")).default;
+
     try {
       console.log("Sending terms acceptance request...");
 
       // ✅ FIX: Get token using tokenService for consistency
       // This ensures we use the same method as OAuth2Redirect.tsx
-      const tokenService = (await import("@/utils/tokenService")).default;
       let token = tokenService.getToken();
 
       // Fallback 1: Check URL params (for direct OAuth redirects or if cookie wasn't set)
@@ -77,7 +79,7 @@ export default function MobileTermsPage() {
 
       // Fallback 2: Check cookies directly (in case tokenService didn't work)
       if (!token) {
-        token = Cookies.get("token") || undefined;
+        token = Cookies.get("token") || null;
         if (token) {
           console.log(
             "Token found in cookies, ensuring it's stored via tokenService..."
@@ -232,8 +234,7 @@ export default function MobileTermsPage() {
           error.message.includes("Invalid authentication token"))
       ) {
         console.log("Authentication failed, redirect to login...");
-        // Clear any remaining invalid tokens using tokenService
-        const tokenService = (await import("@/utils/tokenService")).default;
+        // Clear any remaining invalid tokens using tokenService (now available in catch block)
         tokenService.removeToken();
         Cookies.remove("token", { path: "/" });
         if (typeof window !== "undefined") {
