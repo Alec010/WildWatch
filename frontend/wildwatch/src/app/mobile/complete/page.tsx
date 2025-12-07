@@ -88,7 +88,7 @@ export default function MobileCompletePage() {
       // Use stored token or get from cookies as fallback
       const token = authToken || Cookies.get("token");
 
-      // Logout from web session first
+      // ✅ STEP 1: Perform web logout (API call to clear server session)
       try {
         const { getApiBaseUrl } = await import("@/utils/api");
         if (token) {
@@ -103,22 +103,38 @@ export default function MobileCompletePage() {
         }
       } catch (logoutError) {
         console.error("Logout error (non-critical):", logoutError);
-        // Continue even if logout fails
+        // Continue even if logout fails - we'll still clear local storage
       }
 
-      // Clear all web storage and cookies
-      Cookies.remove("token");
+      // ✅ STEP 2: Comprehensive cleanup - clear all storage and cookies
+      const { clearAllStorage } = await import("@/utils/storageCleanup");
+      clearAllStorage();
+
+      // Also clear token via tokenService (dispatches events)
+      const tokenService = (await import("@/utils/tokenService")).default;
+      tokenService.removeToken();
+
+      // Additional cleanup for any remaining cookies
+      Cookies.remove("token", { path: "/" });
+      Cookies.remove("token", { path: "/", domain: window.location.hostname });
+      Cookies.remove("token", {
+        path: "/",
+        domain: `.${window.location.hostname}`,
+      });
+
+      // Clear sessionStorage and localStorage explicitly
       sessionStorage.clear();
       localStorage.clear();
 
       // Small delay to ensure cleanup completes
       await new Promise((resolve) => setTimeout(resolve, 100));
 
+      // ✅ STEP 3: Try to open the mobile app (in background)
       // Detect if we're on Android or iOS
       const isAndroid = /Android/i.test(navigator.userAgent);
       const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-      // Deep link to open the mobile app with token
+      // Deep link to open the mobile app with token (if available)
       // Using scheme from app.json: "wildwatchexpo"
       const appScheme = token
         ? `wildwatchexpo://auth/oauth2/callback?token=${encodeURIComponent(
@@ -126,55 +142,35 @@ export default function MobileCompletePage() {
           )}`
         : "wildwatchexpo://auth/oauth2/callback";
 
-      // For Android, use Intent URL format which provides better error handling
+      // Try to open app (non-blocking)
       if (isAndroid) {
         const intentUrl = `intent://auth/oauth2/callback${
           token ? `?token=${encodeURIComponent(token)}` : ""
         }#Intent;scheme=wildwatchexpo;package=com.wildwatch.app;end`;
-
-        // Try intent URL first (better for Android)
-        window.location.href = intentUrl;
-
-        // Fallback after delay if app doesn't open
-        setTimeout(() => {
-          if (document.hasFocus()) {
-            // App didn't open, redirect to Play Store
-            window.location.href =
-              "https://play.google.com/store/apps/details?id=com.wildwatch.app";
-          }
-        }, 2000);
-      } else {
-        // For iOS or other platforms, use direct scheme
-        const startTime = Date.now();
-        window.location.href = appScheme;
-
-        // Fallback after delay if app doesn't open
-        setTimeout(() => {
-          const elapsed = Date.now() - startTime;
-          // If page is still focused after 2 seconds, app likely didn't open
-          if (document.hasFocus() && elapsed >= 2000) {
-            if (isIOS) {
-              // For iOS, show error with instructions
-              setErrorMessage(
-                "The WildWatch app doesn't appear to be installed. Please install it from the App Store and try again."
-              );
-              setShowErrorDialog(true);
-            } else {
-              // For other platforms, show generic error
-              setErrorMessage(
-                "The WildWatch app doesn't appear to be installed. Please install it and try again."
-              );
-              setShowErrorDialog(true);
-            }
-          }
-        }, 2000);
+        // Open in new window/tab (non-blocking)
+        window.open(intentUrl, "_blank");
+      } else if (isIOS) {
+        // For iOS, try to open app
+        window.open(appScheme, "_blank");
       }
+
+      // ✅ STEP 4: Always redirect to /login after cleanup
+      // This ensures the web session is completely cleared
+      router.push("/login");
     } catch (error) {
-      console.error("Error during app redirect:", error);
-      setErrorMessage(
-        "Unable to open the app. Please make sure the WildWatch app is installed and try again."
-      );
-      setShowErrorDialog(true);
+      console.error("Error during cleanup and redirect:", error);
+      // Even if there's an error, try to redirect to login
+      // Clear storage as fallback
+      try {
+        const { clearAllStorage } = await import("@/utils/storageCleanup");
+        clearAllStorage();
+        const tokenService = (await import("@/utils/tokenService")).default;
+        tokenService.removeToken();
+      } catch (cleanupError) {
+        console.error("Error during fallback cleanup:", cleanupError);
+      }
+      // Redirect to login
+      router.push("/login");
     }
   };
 
