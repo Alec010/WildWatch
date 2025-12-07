@@ -386,14 +386,49 @@ export function LoginForm() {
               type="button"
               variant="outline"
               className="w-full flex items-center justify-center gap-2 border-[#D4AF37]/30 hover:bg-[#D4AF37]/10 py-5"
-              onClick={() => {
+              onClick={async () => {
                 if (typeof window !== "undefined") {
-                  // Import getBackendUrl dynamically to get the current value
-                  import("@/config").then(({ getBackendUrl }) => {
+                  try {
+                    // Clear all storage, cookies, and sessions before OAuth flow
+                    // This ensures a clean OAuth flow without cached authentication state
+                    const { clearAllStorage } = await import(
+                      "@/utils/storageCleanup"
+                    );
+                    clearAllStorage();
+
+                    // Also clear token via tokenService (dispatches events)
+                    const tokenService = (await import("@/utils/tokenService"))
+                      .default;
+                    tokenService.removeToken();
+
+                    // Clear service worker caches if available
+                    if ("serviceWorker" in navigator && "caches" in window) {
+                      try {
+                        const cacheNames = await caches.keys();
+                        await Promise.all(
+                          cacheNames.map((cacheName) =>
+                            caches.delete(cacheName)
+                          )
+                        );
+                      } catch (cacheError) {
+                        console.warn(
+                          "Could not clear service worker caches:",
+                          cacheError
+                        );
+                      }
+                    }
+
+                    // Import getBackendUrl dynamically to get the current value
+                    const { getBackendUrl } = await import("@/config");
                     // Add prompt=select_account to force account selection screen
                     // This ensures users can always select which Microsoft account to use
                     window.location.href = `${getBackendUrl()}/oauth2/authorization/microsoft?prompt=select_account`;
-                  });
+                  } catch (error) {
+                    console.error("Error during OAuth cleanup:", error);
+                    // Continue with OAuth even if cleanup fails
+                    const { getBackendUrl } = await import("@/config");
+                    window.location.href = `${getBackendUrl()}/oauth2/authorization/microsoft?prompt=select_account`;
+                  }
                 }
               }}
             >
