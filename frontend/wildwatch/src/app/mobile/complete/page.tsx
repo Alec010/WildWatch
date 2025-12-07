@@ -12,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { CheckCircle2, Smartphone } from "lucide-react";
+import { CheckCircle2, Smartphone, AlertCircle } from "lucide-react";
 import Cookies from "js-cookie";
 
 export default function MobileCompletePage() {
@@ -20,6 +20,8 @@ export default function MobileCompletePage() {
   const [isMobile, setIsMobile] = useState(false);
   const [showSuccessMessage, setShowSuccessMessage] = useState(true);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const [authToken, setAuthToken] = useState<string | null>(null);
 
   useEffect(() => {
@@ -88,6 +90,10 @@ export default function MobileCompletePage() {
       // Small delay to ensure cleanup completes
       await new Promise((resolve) => setTimeout(resolve, 100));
 
+      // Detect if we're on Android or iOS
+      const isAndroid = /Android/i.test(navigator.userAgent);
+      const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
       // Deep link to open the mobile app with token
       // Using scheme from app.json: "wildwatchexpo"
       const appScheme = token
@@ -96,18 +102,55 @@ export default function MobileCompletePage() {
           )}`
         : "wildwatchexpo://auth/oauth2/callback";
 
-      // Open the app - no store redirect fallback
-      window.location.href = appScheme;
+      // For Android, use Intent URL format which provides better error handling
+      if (isAndroid) {
+        const intentUrl = `intent://auth/oauth2/callback${
+          token ? `?token=${encodeURIComponent(token)}` : ""
+        }#Intent;scheme=wildwatchexpo;package=com.wildwatch.app;end`;
+
+        // Try intent URL first (better for Android)
+        window.location.href = intentUrl;
+
+        // Fallback after delay if app doesn't open
+        setTimeout(() => {
+          if (document.hasFocus()) {
+            // App didn't open, redirect to Play Store
+            window.location.href =
+              "https://play.google.com/store/apps/details?id=com.wildwatch.app";
+          }
+        }, 2000);
+      } else {
+        // For iOS or other platforms, use direct scheme
+        const startTime = Date.now();
+        window.location.href = appScheme;
+
+        // Fallback after delay if app doesn't open
+        setTimeout(() => {
+          const elapsed = Date.now() - startTime;
+          // If page is still focused after 2 seconds, app likely didn't open
+          if (document.hasFocus() && elapsed >= 2000) {
+            if (isIOS) {
+              // For iOS, show error with instructions
+              setErrorMessage(
+                "The WildWatch app doesn't appear to be installed. Please install it from the App Store and try again."
+              );
+              setShowErrorDialog(true);
+            } else {
+              // For other platforms, show generic error
+              setErrorMessage(
+                "The WildWatch app doesn't appear to be installed. Please install it and try again."
+              );
+              setShowErrorDialog(true);
+            }
+          }
+        }, 2000);
+      }
     } catch (error) {
       console.error("Error during app redirect:", error);
-      // Still try to open the app even if there's an error
-      const token = authToken || Cookies.get("token");
-      const appScheme = token
-        ? `wildwatchexpo://auth/oauth2/callback?token=${encodeURIComponent(
-            token
-          )}`
-        : "wildwatchexpo://auth/oauth2/callback";
-      window.location.href = appScheme;
+      setErrorMessage(
+        "Unable to open the app. Please make sure the WildWatch app is installed and try again."
+      );
+      setShowErrorDialog(true);
     }
   };
 
@@ -180,6 +223,30 @@ export default function MobileCompletePage() {
             >
               <Smartphone className="mr-2 h-4 w-4" />
               Open App
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Error Dialog */}
+      <Dialog open={showErrorDialog} onOpenChange={setShowErrorDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-[#800000]">
+              <AlertCircle className="h-6 w-6 text-red-500" />
+              App Not Found
+            </DialogTitle>
+            <DialogDescription className="pt-2">
+              {errorMessage ||
+                "The WildWatch app doesn't appear to be installed. Please install it and try again."}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              onClick={() => setShowErrorDialog(false)}
+              className="w-full bg-[#800000] hover:bg-[#800000]/90 text-white"
+            >
+              OK
             </Button>
           </DialogFooter>
         </DialogContent>
