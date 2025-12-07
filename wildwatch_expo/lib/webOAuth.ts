@@ -40,6 +40,17 @@ const base64Encode = (str: string): string => {
  */
 export const openMicrosoftOAuth = async (browserPreference: BrowserPreference = 'default'): Promise<void> => {
   try {
+    // ✅ Clear all user session data before OAuth flow
+    // This ensures a clean OAuth flow without cached authentication state
+    try {
+      const { storage } = await import('./storage');
+      await storage.clearAllUserData();
+      console.log('🧹 Cleared all user session data before OAuth');
+    } catch (storageError) {
+      console.warn('⚠️ Could not clear storage before OAuth:', storageError);
+      // Continue with OAuth even if storage cleanup fails
+    }
+
     // Get the backend URL
     const backendUrl = config.API.BASE_URL.replace('/api', ''); // Remove /api suffix
 
@@ -64,6 +75,7 @@ export const openMicrosoftOAuth = async (browserPreference: BrowserPreference = 
     console.log(`🔗 Opening Microsoft OAuth in ${browserPreference} browser`);
     console.log(`📱 OAuth URL: ${oauthUrl}`);
     console.log(`📱 Flow: Microsoft OAuth -> Frontend OAuth2Redirect -> mobile/terms -> mobile/setup -> mobile/complete -> App`);
+    console.log(`📱 Note: Browser storage will be cleared by OAuth2Redirect component when it loads`);
 
     // Open in the selected browser
     if (browserPreference === 'chrome') {
