@@ -185,12 +185,12 @@ export default function MobileSetupPage() {
       setError(null);
 
       // ✅ FIX: Get token from multiple sources for Android compatibility
-      let token = Cookies.get("token");
+      let token: string | undefined = Cookies.get("token");
       
       // Fallback 1: Check URL params
       if (!token && typeof window !== "undefined") {
         const urlParams = new URLSearchParams(window.location.search);
-        token = urlParams.get("token") || null;
+        token = urlParams.get("token") || undefined;
         if (token) {
           Cookies.set("token", token, {
             expires: 7,
