@@ -1,25 +1,32 @@
 package com.teamhyungie.WildWatch.controller;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.teamhyungie.WildWatch.config.FrontendConfig;
-import com.teamhyungie.WildWatch.model.User;
-import com.teamhyungie.WildWatch.model.Role;
-import com.teamhyungie.WildWatch.service.UserService;
-import com.teamhyungie.WildWatch.security.JwtUtil;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import java.util.UUID;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.client.RestTemplate;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.teamhyungie.WildWatch.config.FrontendConfig;
+import com.teamhyungie.WildWatch.model.Role;
+import com.teamhyungie.WildWatch.model.User;
+import com.teamhyungie.WildWatch.security.JwtUtil;
+import com.teamhyungie.WildWatch.service.UserService;
+
 import jakarta.servlet.http.HttpServletResponse;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.util.*;
 
 @Controller
 public class MicrosoftOAuthCallbackController {
@@ -56,7 +63,6 @@ public class MicrosoftOAuthCallbackController {
     public void handleMicrosoftCallback(
             @RequestParam("code") String code,
             @RequestParam("state") String state,
-            jakarta.servlet.http.HttpServletRequest request,
             HttpServletResponse response
     ) throws Exception {
         logger.info("[OAuthCallback] Received Microsoft OAuth callback with state: {}", state);
@@ -153,28 +159,15 @@ public class MicrosoftOAuthCallbackController {
         String token = jwtUtil.generateToken(userDetails);
         logger.info("Generated JWT token successfully");
 
-        // 6. Detect if request is from mobile device
-        String userAgent = request.getHeader("User-Agent");
-        boolean isMobileDevice = userAgent != null && (userAgent.toLowerCase().contains("android")
-                || userAgent.toLowerCase().contains("iphone")
-                || userAgent.toLowerCase().contains("ipad")
-                || userAgent.toLowerCase().contains("ipod")
-                || userAgent.toLowerCase().contains("blackberry")
-                || userAgent.toLowerCase().contains("windows phone"));
-
-        logger.info("[OAuthCallback] User-Agent: {}, Is Mobile: {}", userAgent, isMobileDevice);
-
-        // 7. Redirect to mobile app or web frontend with token
+        // 6. Redirect to mobile app or web frontend with token
         String redirectUrl;
         if (mobileRedirectUri != null && !mobileRedirectUri.isEmpty()) {
-            // Mobile app deep link
             redirectUrl = String.format("%s?token=%s&termsAccepted=%s",
                     mobileRedirectUri,
                     URLEncoder.encode(token, StandardCharsets.UTF_8),
                     user.isTermsAccepted());
             logger.info("[OAuthCallback] Redirecting to mobile app URL: {}", redirectUrl);
         } else {
-            // Web frontend - redirect to OAuth2 redirect page which will handle mobile detection
             redirectUrl = String.format("%s/auth/oauth2/redirect?token=%s&termsAccepted=%s",
                     frontendConfig.getActiveUrl(),
                     URLEncoder.encode(token, StandardCharsets.UTF_8),
