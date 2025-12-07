@@ -62,17 +62,30 @@ export default function MobileCompletePage() {
       // Use stored token or get from cookies as fallback
       const token = authToken || Cookies.get("token");
 
-      // Logout in the background first
-      // Clear cookies
+      // Logout from web session first
+      try {
+        const MOBILE_API_BASE_URL = "http://192.168.1.60:3000";
+        if (token) {
+          await fetch(`${MOBILE_API_BASE_URL}/api/auth/logout`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            credentials: "include",
+          });
+        }
+      } catch (logoutError) {
+        console.error("Logout error (non-critical):", logoutError);
+        // Continue even if logout fails
+      }
+
+      // Clear all web storage and cookies
       Cookies.remove("token");
-
-      // Clear session storage
       sessionStorage.clear();
-
-      // Clear local storage
       localStorage.clear();
 
-      // Small delay to ensure logout completes
+      // Small delay to ensure cleanup completes
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Deep link to open the mobile app with token
@@ -95,8 +108,8 @@ export default function MobileCompletePage() {
         }
       }, 2000);
     } catch (error) {
-      console.error("Error during logout:", error);
-      // Still try to open the app even if logout fails
+      console.error("Error during app redirect:", error);
+      // Still try to open the app even if there's an error
       window.location.href = "wildwatchexpo://auth/oauth2/callback";
     }
   };
@@ -131,10 +144,10 @@ export default function MobileCompletePage() {
               </div>
             </div>
             <h1 className="text-2xl font-bold text-[#800000] text-center">
-              Authentication Complete!
+              Successfully Created Your Account!
             </h1>
             <p className="text-sm text-muted-foreground text-center max-w-sm">
-              Your account is ready. You can now open the WildWatch mobile app
+              Your account has been successfully created. You can now open the WildWatch mobile app
               to continue.
             </p>
           </div>
@@ -143,7 +156,7 @@ export default function MobileCompletePage() {
             <div className="p-4 bg-green-50 border-l-4 border-green-500 rounded-md flex items-start">
               <CheckCircle2 className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
               <p className="text-sm font-normal text-green-700">
-                Account setup completed successfully!
+                Successfully created your account!
               </p>
             </div>
           )}
@@ -156,10 +169,10 @@ export default function MobileCompletePage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-[#800000]">
               <CheckCircle2 className="h-6 w-6 text-green-500" />
-              Setup Complete!
+              Account Created Successfully!
             </DialogTitle>
             <DialogDescription className="pt-2">
-              Your account has been successfully set up. You can now open the
+              Successfully created your account! You can now open the
               WildWatch mobile app to continue.
             </DialogDescription>
           </DialogHeader>
@@ -169,7 +182,7 @@ export default function MobileCompletePage() {
               className="w-full bg-[#800000] hover:bg-[#800000]/90 text-white"
             >
               <Smartphone className="mr-2 h-4 w-4" />
-              Go to the mobile app
+              Open App
             </Button>
           </DialogFooter>
         </DialogContent>

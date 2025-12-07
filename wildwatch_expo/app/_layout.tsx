@@ -70,28 +70,15 @@ function RootLayoutNav() {
           // ✅ FIX: Clear profile state before fetching to prevent showing old account data
           clearUserProfileState();
 
-          // Check if terms are accepted by fetching user profile
-          const userProfile = await authAPI.getProfile();
-          const termsAccepted = userProfile.termsAccepted;
-
+          // Terms and setup are handled on the web frontend (mobile/terms -> mobile/setup -> mobile/complete)
+          // When user reaches the app, they have already completed these steps
+          // So we can go directly to tabs if they're on an auth page (except login/oauth callback)
           if (
-            !termsAccepted &&
-            !pathname?.startsWith("/auth/terms") &&
-            !pathname?.startsWith("/auth/setup")
-          ) {
-            router.replace("/auth/terms");
-          } else if (
             pathname?.startsWith("/auth") &&
-            termsAccepted &&
-            !pathname?.startsWith("/auth/setup")
+            !pathname?.startsWith("/auth/login") &&
+            !pathname?.startsWith("/auth/oauth2")
           ) {
-            // Only redirect to tabs if not on an auth page that requires completion
-            if (
-              !pathname?.startsWith("/auth/terms") &&
-              !pathname?.startsWith("/auth/setup")
-            ) {
-              router.replace("/(tabs)");
-            }
+            router.replace("/(tabs)");
           }
         } else if (pathname?.startsWith("/(tabs)")) {
           router.replace("/auth/login");

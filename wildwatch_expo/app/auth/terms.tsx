@@ -163,6 +163,36 @@ export default function TermsPage() {
 
       // ✅ FIX: Clear profile state before navigating to prevent showing old account data
       clearUserProfileState();
+
+      // Check if setup is needed (for Microsoft OAuth users)
+      try {
+        const profile = await authAPI.getProfile();
+        if (
+          profile.authProvider === "microsoft" ||
+          profile.authProvider === "microsoft_mobile"
+        ) {
+          const contactNeedsSetup =
+            !profile.contactNumber ||
+            profile.contactNumber === "Not provided" ||
+            profile.contactNumber === "+639000000000";
+          const passwordNeedsSetup =
+            profile.passwordNeedsSetup !== undefined
+              ? profile.passwordNeedsSetup
+              : !profile.password;
+
+          if (contactNeedsSetup || passwordNeedsSetup) {
+            console.log(
+              "Setup needed after terms acceptance, navigating to setup"
+            );
+            router.replace("/auth/setup");
+            return;
+          }
+        }
+      } catch (e) {
+        console.log("Could not check setup status, proceeding to app");
+      }
+
+      // All steps completed - navigate to dashboard
       router.replace("/(tabs)");
     } catch (error: any) {
       const errorMessage =

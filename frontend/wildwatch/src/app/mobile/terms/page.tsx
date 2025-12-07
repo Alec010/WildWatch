@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { handleAuthRedirect } from "@/utils/auth";
 import Cookies from "js-cookie";
-import { API_BASE_URL } from "@/utils/api";
+// Use specific API URL for mobile web
+const MOBILE_API_BASE_URL = "http://192.168.1.60:3000";
 import {
   CheckCircle2,
   AlertCircle,
@@ -61,7 +62,7 @@ export default function MobileTermsPage() {
         throw new Error("No authentication token found");
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/terms/accept`, {
+      const response = await fetch(`${MOBILE_API_BASE_URL}/api/terms/accept`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -96,7 +97,7 @@ export default function MobileTermsPage() {
       }
 
       // For regular users, fetch the user profile to get the role
-      const profileResponse = await fetch(`${API_BASE_URL}/api/auth/profile`, {
+      const profileResponse = await fetch(`${MOBILE_API_BASE_URL}/api/auth/profile`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",

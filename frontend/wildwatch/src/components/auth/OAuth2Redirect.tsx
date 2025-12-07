@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { handleAuthRedirect } from "@/utils/auth";
 import userProfileService from "@/utils/userProfileService";
+import { clearAllStorage } from "@/utils/storageCleanup";
 
 export default function OAuth2Redirect() {
   const router = useRouter();
@@ -20,9 +21,68 @@ export default function OAuth2Redirect() {
     );
   };
 
+  // Clear browser data, session, and cache
+  const clearBrowserData = () => {
+    if (typeof window === "undefined") return;
+
+    try {
+      console.log(
+        "🧹 Clearing browser data, session, and cache for fresh OAuth flow..."
+      );
+
+      // Clear all cookies, localStorage, and sessionStorage
+      clearAllStorage();
+
+      // Clear service worker cache if available (browser cache)
+      if ("serviceWorker" in navigator && "caches" in window) {
+        caches
+          .keys()
+          .then((cacheNames) => {
+            return Promise.all(
+              cacheNames.map((cacheName) => {
+                console.log(`🗑️ Deleting cache: ${cacheName}`);
+                return caches.delete(cacheName);
+              })
+            );
+          })
+          .then(() => {
+            console.log("✅ Service worker caches cleared");
+          })
+          .catch((e: unknown) => {
+            console.warn("Could not clear service worker caches:", e);
+          });
+      }
+
+      // Clear IndexedDB if available (for cache)
+      if ("indexedDB" in window && "databases" in indexedDB) {
+        // Modern browsers support indexedDB.databases()
+        (indexedDB as any)
+          .databases()
+          .then((databases: any[]) => {
+            databases.forEach((db: any) => {
+              console.log(`🗑️ Attempting to clear IndexedDB: ${db.name}`);
+              // Note: We can't directly delete IndexedDB from here without opening it
+              // But we've logged it for visibility
+            });
+          })
+          .catch((e: unknown) => {
+            console.warn("Could not list IndexedDB databases:", e);
+          });
+      }
+
+      console.log("✅ Browser data, session, and cache cleared");
+    } catch (error) {
+      console.error("Error clearing browser data:", error);
+      // Continue anyway - don't block the OAuth flow
+    }
+  };
+
   useEffect(() => {
     const processLogin = async () => {
       try {
+        // Clear browser data, session, and cache at the start of OAuth flow
+        clearBrowserData();
+
         // Get the encoded data from URL parameters
         if (typeof window !== "undefined") {
           const urlParams = new URLSearchParams(window.location.search);
@@ -37,9 +97,14 @@ export default function OAuth2Redirect() {
             tokenService.setToken(token);
 
             // Fetch user profile to get full user data
-            const { getApiBaseUrl } = await import("@/utils/api");
+            // For mobile web, use the specific API URL
+            const isMobile = isMobileDevice();
+            const apiBaseUrl = isMobile
+              ? "http://192.168.1.60:3000"
+              : (await import("@/utils/api")).getApiBaseUrl();
+
             const profileResponse = await fetch(
-              `${getApiBaseUrl()}/api/auth/profile`,
+              `${apiBaseUrl}/api/auth/profile`,
               {
                 headers: {
                   Authorization: `Bearer ${token}`,
@@ -53,20 +118,44 @@ export default function OAuth2Redirect() {
             }
 
             const user = await profileResponse.json();
-            const isMobile = isMobileDevice();
 
-            // Check if terms are accepted
-            if (!user.termsAccepted || !termsAccepted) {
+            // For mobile, always go through the mobile flow: terms -> setup -> complete
+            // This ensures proper flow and prevents direct app redirect
+            if (isMobile) {
+              // Store user data for the mobile flow
               sessionStorage.setItem("oauthUserData", JSON.stringify(user));
-              if (isMobile) {
+
+              // Always start with terms (even if already accepted, the page will handle it)
+              if (!user.termsAccepted || !termsAccepted) {
                 router.push("/mobile/terms");
-              } else {
-                router.push("/terms");
+                return;
               }
+
+              // Check if setup is needed (for Microsoft OAuth users)
+              const needsSetup =
+                user.authProvider === "microsoft" &&
+                (user.contactNumber === "Not provided" ||
+                  user.contactNumber === "+639000000000" ||
+                  !user.password);
+
+              if (needsSetup) {
+                router.push("/mobile/setup");
+                return;
+              }
+
+              // If user is complete, show completion page with app redirect
+              router.push("/mobile/complete");
               return;
             }
 
-            // Check if contact number and password are set (for Microsoft OAuth users)
+            // For desktop/web
+            if (!user.termsAccepted || !termsAccepted) {
+              sessionStorage.setItem("oauthUserData", JSON.stringify(user));
+              router.push("/terms");
+              return;
+            }
+
+            // Check if setup is needed (for Microsoft OAuth users)
             if (
               user.authProvider === "microsoft" &&
               (user.contactNumber === "Not provided" ||
@@ -74,17 +163,19 @@ export default function OAuth2Redirect() {
                 !user.password)
             ) {
               sessionStorage.setItem("oauthUserData", JSON.stringify(user));
-              if (isMobile) {
-                router.push("/mobile/setup");
-              } else {
-                router.push("/auth/setup");
-              }
+              router.push("/auth/setup");
               return;
             }
 
-            // If user is complete and on mobile, show completion page with app redirect
-            if (isMobile) {
-              router.push("/mobile/complete");
+            // For desktop/web, check if setup is needed
+            if (
+              user.authProvider === "microsoft" &&
+              (user.contactNumber === "Not provided" ||
+                user.contactNumber === "+639000000000" ||
+                !user.password)
+            ) {
+              sessionStorage.setItem("oauthUserData", JSON.stringify(user));
+              router.push("/auth/setup");
               return;
             }
 

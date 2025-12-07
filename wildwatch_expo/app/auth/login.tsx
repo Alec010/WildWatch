@@ -11,6 +11,7 @@ import {
   Platform,
   StyleSheet,
   useWindowDimensions,
+  Modal,
 } from "react-native";
 import {
   SafeAreaView,
@@ -20,7 +21,7 @@ import { Stack, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useAuthLogin } from "../../src/features/auth/hooks/useAuthLogin";
-import { openMicrosoftOAuth } from "../../lib/webOAuth";
+import { openMicrosoftOAuth, BrowserPreference } from "../../lib/webOAuth";
 
 const COLORS = {
   maroon: "#8B0000",
@@ -51,6 +52,7 @@ export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showBrowserModal, setShowBrowserModal] = useState(false);
   const { isLoading, error, login, clearError } = useAuthLogin();
 
   const handleEmailChange = (text: string) => {
@@ -73,12 +75,17 @@ export default function LoginScreen() {
     } catch {}
   };
 
-  const handleMicrosoftLogin = async () => {
+  const handleMicrosoftLogin = () => {
     // Clear any existing errors when user attempts Microsoft login
     if (error) clearError();
+    // Show browser selection modal
+    setShowBrowserModal(true);
+  };
 
+  const handleBrowserSelection = async (browser: BrowserPreference) => {
+    setShowBrowserModal(false);
     try {
-      await openMicrosoftOAuth();
+      await openMicrosoftOAuth(browser);
     } catch (e: any) {
       // Check if user cancelled - if so, don't log as error
       if (
@@ -90,6 +97,10 @@ export default function LoginScreen() {
       }
       // For other errors, log for debugging
       console.error("Microsoft login error:", e);
+      Alert.alert(
+        "Error",
+        "Failed to open browser. Please try again or select a different browser."
+      );
     }
   };
 
@@ -379,6 +390,123 @@ export default function LoginScreen() {
               your web browser to complete authentication.
             </Text>
 
+            {/* Browser Selection Modal */}
+            <Modal
+              visible={showBrowserModal}
+              transparent={true}
+              animationType="fade"
+              onRequestClose={() => setShowBrowserModal(false)}
+            >
+              <Pressable
+                style={styles.modalOverlay}
+                onPress={() => setShowBrowserModal(false)}
+              >
+                <Pressable
+                  style={[styles.modalContent, { maxWidth: contentMaxWidth }]}
+                  onPress={(e) => e.stopPropagation()}
+                >
+                  <View style={styles.modalHeader}>
+                    <Text style={styles.modalTitle}>Choose Browser</Text>
+                    <Pressable
+                      onPress={() => setShowBrowserModal(false)}
+                      style={styles.modalCloseButton}
+                    >
+                      <Ionicons name="close" size={24} color="#6B7280" />
+                    </Pressable>
+                  </View>
+                  <Text style={styles.modalSubtitle}>
+                    Select which browser to use for Microsoft sign-in
+                  </Text>
+
+                  {/* Chrome Option */}
+                  <Pressable
+                    style={styles.browserOption}
+                    onPress={() => handleBrowserSelection("chrome")}
+                  >
+                    <View style={styles.browserOptionContent}>
+                      <Ionicons
+                        name="logo-chrome"
+                        size={24}
+                        color="#4285F4"
+                        style={styles.browserIcon}
+                      />
+                      <View style={styles.browserOptionText}>
+                        <Text style={styles.browserOptionTitle}>
+                          Google Chrome
+                        </Text>
+                        <Text style={styles.browserOptionSubtitle}>
+                          {Platform.OS === "ios"
+                            ? "Open in Chrome (if installed)"
+                            : "Open in Chrome"}
+                        </Text>
+                      </View>
+                    </View>
+                    <Ionicons
+                      name="chevron-forward"
+                      size={20}
+                      color="#9CA3AF"
+                    />
+                  </Pressable>
+
+                  {/* Safari Option (iOS only) */}
+                  {Platform.OS === "ios" && (
+                    <Pressable
+                      style={styles.browserOption}
+                      onPress={() => handleBrowserSelection("safari")}
+                    >
+                      <View style={styles.browserOptionContent}>
+                        <Ionicons
+                          name="compass"
+                          size={24}
+                          color="#007AFF"
+                          style={styles.browserIcon}
+                        />
+                        <View style={styles.browserOptionText}>
+                          <Text style={styles.browserOptionTitle}>Safari</Text>
+                          <Text style={styles.browserOptionSubtitle}>
+                            Open in Safari browser
+                          </Text>
+                        </View>
+                      </View>
+                      <Ionicons
+                        name="chevron-forward"
+                        size={20}
+                        color="#9CA3AF"
+                      />
+                    </Pressable>
+                  )}
+
+                  {/* Default Browser Option */}
+                  <Pressable
+                    style={styles.browserOption}
+                    onPress={() => handleBrowserSelection("default")}
+                  >
+                    <View style={styles.browserOptionContent}>
+                      <Ionicons
+                        name="globe"
+                        size={24}
+                        color="#6B7280"
+                        style={styles.browserIcon}
+                      />
+                      <View style={styles.browserOptionText}>
+                        <Text style={styles.browserOptionTitle}>
+                          Default Browser
+                        </Text>
+                        <Text style={styles.browserOptionSubtitle}>
+                          Use your device&apos;s default browser
+                        </Text>
+                      </View>
+                    </View>
+                    <Ionicons
+                      name="chevron-forward"
+                      size={20}
+                      color="#9CA3AF"
+                    />
+                  </Pressable>
+                </Pressable>
+              </Pressable>
+            </Modal>
+
             {/* Sign Up */}
             <View
               style={{
@@ -566,5 +694,75 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     marginTop: 6,
     fontStyle: "italic",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    width: "100%",
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: COLORS.maroon,
+  },
+  modalCloseButton: {
+    padding: 4,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: COLORS.textMuted,
+    marginBottom: 20,
+  },
+  browserOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginBottom: 12,
+    backgroundColor: "#FFFFFF",
+  },
+  browserOptionContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  browserIcon: {
+    marginRight: 12,
+  },
+  browserOptionText: {
+    flex: 1,
+  },
+  browserOptionTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#111827",
+    marginBottom: 2,
+  },
+  browserOptionSubtitle: {
+    fontSize: 12,
+    color: COLORS.textMuted,
   },
 });

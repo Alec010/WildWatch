@@ -26,18 +26,10 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { API_BASE_URL } from "@/utils/api";
+// Use specific API URL for mobile web
+const MOBILE_API_BASE_URL = "http://192.168.1.60:3000";
 import Cookies from "js-cookie";
 import Image from "next/image";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Smartphone } from "lucide-react";
 
 const formSchema = z
   .object({
@@ -79,7 +71,6 @@ export default function MobileSetupPage() {
   const [error, setError] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
-  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
 
   useEffect(() => {
     // Check if mobile device
@@ -202,7 +193,7 @@ export default function MobileSetupPage() {
       // Store token for later use in deep link
       setAuthToken(token);
 
-      const response = await fetch(`${API_BASE_URL}/api/auth/setup`, {
+      const response = await fetch(`${MOBILE_API_BASE_URL}/api/auth/setup`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -222,10 +213,14 @@ export default function MobileSetupPage() {
       // Show success message first
       setShowSuccessMessage(true);
 
-      // After 2 seconds, show the dialog
+      // After 2 seconds, redirect to complete page with token
       setTimeout(() => {
         setShowSuccessMessage(false);
-        setShowSuccessDialog(true);
+        const token = Cookies.get("token");
+        const redirectUrl = token
+          ? `/mobile/complete?token=${encodeURIComponent(token)}`
+          : "/mobile/complete";
+        router.push(redirectUrl);
       }, 2000);
     } catch (error) {
       console.error("Setup error:", error);
@@ -558,30 +553,6 @@ export default function MobileSetupPage() {
         </div>
       </div>
 
-      {/* Success Dialog */}
-      <Dialog open={showSuccessDialog} onOpenChange={() => {}}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-[#800000]">
-              <CheckCircle2 className="h-6 w-6 text-green-500" />
-              Setup Complete!
-            </DialogTitle>
-            <DialogDescription className="pt-2">
-              Your account has been successfully set up. You can now open the
-              WildWatch mobile app to continue.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              onClick={handleOpenApp}
-              className="w-full bg-[#800000] hover:bg-[#800000]/90 text-white"
-            >
-              <Smartphone className="mr-2 h-4 w-4" />
-              Go to the mobile app
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }

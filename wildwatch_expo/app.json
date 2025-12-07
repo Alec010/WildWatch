@@ -18,7 +18,12 @@
       "buildNumber": "1",
       "supportsTablet": true,
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "LSApplicationQueriesSchemes": [
+          "googlechrome",
+          "googlechromes",
+          "x-safari-https"
+        ]
       }
     },
     "android": {

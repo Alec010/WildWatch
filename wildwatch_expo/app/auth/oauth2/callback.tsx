@@ -3,7 +3,6 @@ import { View, Text, ActivityIndicator, Alert } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { storage } from "../../../lib/storage";
 import { clearUserProfileState } from "../../../src/features/users/hooks/useUserProfile";
-import { authAPI } from "../../../src/features/auth/api/auth_api";
 
 export default function OAuth2Callback() {
   const params = useLocalSearchParams();
@@ -15,7 +14,7 @@ export default function OAuth2Callback() {
         console.log("🔄 [OAUTH CALLBACK] Processing OAuth callback...");
 
         // Get token from URL parameters
-        const { token, termsAccepted } = params;
+        const { token } = params;
 
         if (!token || typeof token !== "string") {
           console.error("❌ [OAUTH CALLBACK] No token received");
@@ -27,65 +26,44 @@ export default function OAuth2Callback() {
           return;
         }
 
-        console.log("✅ [OAUTH CALLBACK] Token received, storing...");
-
-        // Store the token
-        await storage.setToken(token);
-
-        // Clear profile state to prevent showing old account data
-        clearUserProfileState();
-
-        // Fetch user profile to check status
-        try {
-          const profile = await authAPI.getProfile();
-
-          // Check if terms are accepted
-          if (!profile.termsAccepted || termsAccepted !== "true") {
-            console.log(
-              "📋 [OAUTH CALLBACK] Terms not accepted, navigating to terms page"
-            );
-            router.replace("/auth/terms");
-            return;
-          }
-
-          // Check if setup is needed (for Microsoft OAuth users)
-          if (
-            profile.authProvider === "microsoft" ||
-            profile.authProvider === "microsoft_mobile"
-          ) {
-            const contactNeedsSetup =
-              !profile.contactNumber ||
-              profile.contactNumber === "Not provided" ||
-              profile.contactNumber === "+639000000000";
-            const passwordNeedsSetup =
-              profile.passwordNeedsSetup !== undefined
-                ? profile.passwordNeedsSetup
-                : !profile.password;
-
-            if (contactNeedsSetup || passwordNeedsSetup) {
-              console.log(
-                "⚙️ [OAUTH CALLBACK] Setup needed, navigating to setup page"
-              );
-              router.replace("/auth/setup");
-              return;
-            }
-          }
-
-          // All steps completed - navigate to dashboard
-          console.log(
-            "✅ [OAUTH CALLBACK] All steps completed, navigating to dashboard"
+        // Check if there's an existing logged-in user (app opened from web browser)
+        const existingToken = await storage.getToken();
+        if (existingToken && existingToken !== token) {
+          // App was opened from web browser with a different token
+          // Show logout confirmation
+          Alert.alert(
+            "Logout Current Account?",
+            "You are currently logged in with a different account. Do you want to logout and sign in with the new account?",
+            [
+              {
+                text: "No",
+                style: "cancel",
+                onPress: () => {
+                  // User chose not to logout, go back to tabs
+                  router.replace("/auth/login");
+                },
+              },
+              {
+                text: "Yes",
+                style: "destructive",
+                onPress: async () => {
+                  // User chose to logout, clear all data and continue with new token
+                  console.log(
+                    "🔄 [OAUTH CALLBACK] User chose to logout current account"
+                  );
+                  await storage.clearAllUserData();
+                  clearUserProfileState();
+                  // Continue with the new token flow below
+                  await processNewToken(token);
+                },
+              },
+            ]
           );
-          clearUserProfileState();
-          router.replace("/(tabs)");
-        } catch (profileError) {
-          console.error(
-            "❌ [OAUTH CALLBACK] Profile fetch error:",
-            profileError
-          );
-          // Navigate to dashboard anyway, let it handle auth requirements
-          clearUserProfileState();
-          router.replace("/(tabs)");
+          return;
         }
+
+        // No existing session or same token, proceed normally
+        await processNewToken(token);
       } catch (error: any) {
         console.error("❌ [OAUTH CALLBACK] Error during OAuth callback:", {
           message: error?.message,
@@ -111,6 +89,29 @@ export default function OAuth2Callback() {
         router.replace("/auth/login");
       } finally {
         setIsProcessing(false);
+      }
+    };
+
+    const processNewToken = async (token: string) => {
+      try {
+        console.log("✅ [OAUTH CALLBACK] Token received, storing...");
+
+        // Store the token
+        await storage.setToken(token);
+
+        // Clear profile state to prevent showing old account data
+        clearUserProfileState();
+
+        // Terms and setup are handled on the web frontend (mobile/terms -> mobile/setup -> mobile/complete)
+        // When the app is opened from mobile/complete, the user has already completed these steps
+        // So we can go directly to the dashboard
+        console.log(
+          "✅ [OAUTH CALLBACK] User completed terms/setup on web, navigating to dashboard"
+        );
+        router.replace("/(tabs)");
+      } catch (error: any) {
+        console.error("❌ [OAUTH CALLBACK] Error processing new token:", error);
+        throw error;
       }
     };
 
