@@ -264,9 +264,9 @@ export default function MobileTermsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f5f5f7] flex flex-col">
+    <div className="min-h-screen bg-[#f5f5f7] flex flex-col overflow-y-auto">
       {/* Header with gradient border */}
-      <div className="bg-white shadow-sm relative">
+      <div className="bg-white shadow-sm relative flex-shrink-0">
         <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#800000] via-[#D4AF37] to-[#800000] animate-gradient-x"></div>
         <div className="max-w-[1200px] mx-auto p-4 pt-6">
           <Image
@@ -279,7 +279,7 @@ export default function MobileTermsPage() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 py-8">
+      <div className="flex-1 py-8 overflow-y-auto">
         <div className="max-w-[1000px] mx-auto px-4">
           <div className="bg-white rounded-xl shadow-xl overflow-hidden border border-[#D4AF37]/20 relative">
             {/* Decorative elements */}
@@ -311,7 +311,7 @@ export default function MobileTermsPage() {
             </div>
 
             {/* Accordion sections */}
-            <div className="p-6 md:p-8 space-y-4 max-h-full overflow-y-auto">
+            <div className="p-6 md:p-8 space-y-4">
               {sections.map((section, index) => (
                 <div
                   key={index}
@@ -424,7 +424,7 @@ export default function MobileTermsPage() {
       </div>
 
       {/* Footer */}
-      <div className="bg-white py-4 border-t border-[#D4AF37]/20 mt-auto">
+      <div className="bg-white py-4 border-t border-[#D4AF37]/20 mt-auto flex-shrink-0">
         <div className="max-w-[1200px] mx-auto px-4 text-center text-sm text-muted-foreground">
           &copy; {new Date().getFullYear()} WildWatch - Cebu Institute of
           Technology – University. All rights reserved.
