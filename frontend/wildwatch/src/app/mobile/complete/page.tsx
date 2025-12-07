@@ -192,9 +192,9 @@ export default function MobileCompletePage() {
         window.open(appScheme, "_blank");
       }
 
-      // ✅ STEP 4: Always redirect to /login after cleanup
-      // This ensures the web session is completely cleared
-      router.push("/login");
+      // ✅ STEP 4: Redirect to /auth/signout to perform proper signout flow
+      // This ensures the web session is completely cleared and uses the signout page logic
+      router.push("/auth/signout");
     } catch (error) {
       console.error("Error during cleanup and redirect:", error);
       // Even if there's an error, try to redirect to login
@@ -234,8 +234,8 @@ export default function MobileCompletePage() {
       } catch (cleanupError) {
         console.error("Error during fallback cleanup:", cleanupError);
       }
-      // Redirect to login
-      router.push("/login");
+      // Redirect to signout page to ensure proper cleanup
+      router.push("/auth/signout");
     }
   };
 
