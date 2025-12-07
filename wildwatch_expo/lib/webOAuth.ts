@@ -58,7 +58,8 @@ export const openMicrosoftOAuth = async (browserPreference: BrowserPreference = 
     // Construct OAuth URL - backend will handle Microsoft OAuth and redirect to frontend
     // The frontend OAuth2Redirect will detect mobile and route through mobile/terms -> mobile/setup -> mobile/complete
     // mobile/complete will redirect to the app via deep link: wildwatchexpo://auth/oauth2/callback?token=...
-    const oauthUrl = `${backendUrl}/oauth2/authorization/microsoft?state=${encodeURIComponent(state)}`;
+    // Add prompt=select_account to force account selection screen for mobile web OAuth
+    const oauthUrl = `${backendUrl}/oauth2/authorization/microsoft?state=${encodeURIComponent(state)}&prompt=select_account`;
 
     console.log(`🔗 Opening Microsoft OAuth in ${browserPreference} browser`);
     console.log(`📱 OAuth URL: ${oauthUrl}`);

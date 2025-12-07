@@ -123,7 +123,11 @@ export function LoginForm() {
 
       // Check if user data exists and has required properties
       // If user data is missing or termsAccepted is not explicitly true, fetch profile
-      if (!data.user || data.user.termsAccepted === undefined || data.user.termsAccepted === null) {
+      if (
+        !data.user ||
+        data.user.termsAccepted === undefined ||
+        data.user.termsAccepted === null
+      ) {
         setLoadingMessage("Fetching your profile...");
         // If user data is missing, fetch the user profile
         const profileResponse = await fetch(
@@ -386,7 +390,9 @@ export function LoginForm() {
                 if (typeof window !== "undefined") {
                   // Import getBackendUrl dynamically to get the current value
                   import("@/config").then(({ getBackendUrl }) => {
-                    window.location.href = `${getBackendUrl()}/oauth2/authorization/microsoft`;
+                    // Add prompt=select_account to force account selection screen
+                    // This ensures users can always select which Microsoft account to use
+                    window.location.href = `${getBackendUrl()}/oauth2/authorization/microsoft?prompt=select_account`;
                   });
                 }
               }}
