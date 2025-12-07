@@ -86,36 +86,7 @@ class TokenService {
    */
   removeToken(): void {
     if (isClient) {
-      // Remove token cookie with all possible option combinations
-      // Cookies must be removed with the exact same options they were set with
-      const cookieOptions: Array<{
-        path: string;
-        secure?: boolean;
-        sameSite?: 'lax' | 'strict' | 'none';
-      }> = [
-          { path: '/' },
-          { path: '/', secure: true },
-          { path: '/', sameSite: 'lax' },
-          { path: '/', secure: true, sameSite: 'lax' },
-        ];
-
-      cookieOptions.forEach((options) => {
-        try {
-          Cookies.remove('token', options);
-        } catch (e) {
-          // Ignore errors for individual attempts
-        }
-      });
-
-      // Also use document.cookie directly as a fallback
-      if (typeof window !== 'undefined') {
-        const expireDate = 'Thu, 01 Jan 1970 00:00:00 GMT';
-        const hostname = window.location.hostname;
-        document.cookie = `token=;expires=${expireDate};path=/`;
-        document.cookie = `token=;expires=${expireDate};path=/;domain=${hostname}`;
-        document.cookie = `token=;expires=${expireDate};path=/;domain=.${hostname}`;
-      }
-
+      Cookies.remove('token');
       if (this.refreshTimer) {
         clearTimeout(this.refreshTimer);
         this.refreshTimer = null;
