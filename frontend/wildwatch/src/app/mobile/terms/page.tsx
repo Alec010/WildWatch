@@ -56,16 +56,16 @@ export default function MobileTermsPage() {
     try {
       console.log("Sending terms acceptance request...");
 
-      // ✅ FIX: Get token from cookies first (most reliable source)
-      // Only use fallbacks if cookie token is not available
-      let token = Cookies.get("token");
+      // ✅ FIX: Get token from multiple sources for Android compatibility
+      // Android browsers may not send cookies with sameSite: 'strict' after OAuth redirect
+      let token: string | undefined = Cookies.get("token");
 
-      // Fallback: Check URL params (for mobile OAuth redirects)
+      // Fallback 1: Check URL params (OAuth redirect may include token)
       if (!token && typeof window !== "undefined") {
         const urlParams = new URLSearchParams(window.location.search);
         token = urlParams.get("token") || undefined;
+        // If found in URL, also set it in cookies for future requests
         if (token) {
-          // Store token in cookies for consistency
           Cookies.set("token", token, {
             expires: 7,
             secure: true,
@@ -75,43 +75,33 @@ export default function MobileTermsPage() {
         }
       }
 
+      // Fallback 2: Check sessionStorage (OAuth2Redirect may have stored it)
+      if (!token && typeof window !== "undefined") {
+        const oauthUserData = sessionStorage.getItem("oauthUserData");
+        if (oauthUserData) {
+          try {
+            const userData = JSON.parse(oauthUserData);
+            // Token might be in the OAuth user data
+            const tokenFromStorage = userData.token;
+            if (tokenFromStorage && typeof tokenFromStorage === "string") {
+              token = tokenFromStorage;
+              Cookies.set("token", tokenFromStorage, {
+                expires: 7,
+                secure: true,
+                sameSite: "lax",
+                path: "/",
+              });
+            }
+          } catch (e) {
+            console.warn("Could not parse oauthUserData:", e);
+          }
+        }
+      }
+
       if (!token) {
         throw new Error(
           "No authentication token found. Please try logging in again."
         );
-      }
-
-      // ✅ Validate token format (basic JWT check)
-      // JWT tokens have 3 parts separated by dots
-      const tokenParts = token.split(".");
-      if (tokenParts.length !== 3) {
-        // Invalid token format - clear it and redirect
-        Cookies.remove("token", { path: "/" });
-        if (typeof window !== "undefined") {
-          sessionStorage.removeItem("oauthUserData");
-        }
-        throw new Error("Invalid authentication token. Please log in again.");
-      }
-
-      // ✅ Validate token subject is an email (not firstName + lastName)
-      try {
-        const payload = JSON.parse(atob(tokenParts[1]));
-        const subject = payload.sub || payload.email;
-
-        // Check if subject looks like an email (contains @) or if it's a name (contains spaces)
-        if (subject && !subject.includes("@") && subject.includes(" ")) {
-          console.error("Invalid token: Subject is not an email:", subject);
-          // Clear invalid token
-          Cookies.remove("token", { path: "/" });
-          if (typeof window !== "undefined") {
-            sessionStorage.removeItem("oauthUserData");
-          }
-          throw new Error("Invalid authentication token. Please log in again.");
-        }
-      } catch (decodeError) {
-        console.error("Failed to decode token:", decodeError);
-        // If we can't decode, still try to use it (might be a different format)
-        // But log the error for debugging
       }
 
       const response = await fetch(`${API_BASE_URL}/api/terms/accept`, {
@@ -130,21 +120,6 @@ export default function MobileTermsPage() {
       if (!response.ok) {
         const errorText = await response.text();
         console.error("Error response:", errorText);
-
-        // Handle "User not found" error - invalid token issue
-        if (errorText.includes("User not found")) {
-          // Clear invalid token from all sources
-          Cookies.remove("token", { path: "/" });
-          if (typeof window !== "undefined") {
-            sessionStorage.removeItem("oauthUserData");
-            // Also try to clear token from URL if present
-            const url = new URL(window.location.href);
-            url.searchParams.delete("token");
-            window.history.replaceState({}, "", url.toString());
-          }
-          throw new Error("Your session is invalid. Please log in again.");
-        }
-
         throw new Error(`Failed to accept terms: ${errorText}`);
       }
 
@@ -185,19 +160,9 @@ export default function MobileTermsPage() {
         error instanceof Error ? error.message : "Failed to accept terms"
       );
 
-      // If the error is due to authentication or invalid token, redirect to login
-      if (
-        error instanceof Error &&
-        (error.message.includes("401") ||
-          error.message.includes("session is invalid") ||
-          error.message.includes("User not found"))
-      ) {
+      // If the error is due to authentication, redirect to login
+      if (error instanceof Error && error.message.includes("401")) {
         console.log("Authentication failed, redirect to login...");
-        // Clear any remaining invalid tokens
-        Cookies.remove("token", { path: "/" });
-        if (typeof window !== "undefined") {
-          sessionStorage.removeItem("oauthUserData");
-        }
         router.push("/login");
         return;
       }
