@@ -56,22 +56,34 @@ export default function MobileTermsPage() {
     try {
       console.log("Sending terms acceptance request...");
 
-      // ✅ FIX: Get token from cookies first (most reliable source)
-      // Only use fallbacks if cookie token is not available
-      let token = Cookies.get("token");
+      // ✅ FIX: Get token using tokenService for consistency
+      // This ensures we use the same method as OAuth2Redirect.tsx
+      const tokenService = (await import("@/utils/tokenService")).default;
+      let token = tokenService.getToken();
 
-      // Fallback: Check URL params (for mobile OAuth redirects)
+      // Fallback 1: Check URL params (for direct OAuth redirects or if cookie wasn't set)
       if (!token && typeof window !== "undefined") {
         const urlParams = new URLSearchParams(window.location.search);
-        token = urlParams.get("token") || undefined;
+        const tokenFromUrl = urlParams.get("token");
+        if (tokenFromUrl) {
+          console.log(
+            "Token found in URL, storing in cookies via tokenService..."
+          );
+          // Use tokenService to store token for consistency
+          tokenService.setToken(tokenFromUrl);
+          token = tokenFromUrl;
+        }
+      }
+
+      // Fallback 2: Check cookies directly (in case tokenService didn't work)
+      if (!token) {
+        token = Cookies.get("token") || undefined;
         if (token) {
-          // Store token in cookies for consistency
-          Cookies.set("token", token, {
-            expires: 7,
-            secure: true,
-            sameSite: "lax",
-            path: "/",
-          });
+          console.log(
+            "Token found in cookies, ensuring it's stored via tokenService..."
+          );
+          // Ensure token is stored via tokenService for consistency
+          tokenService.setToken(token);
         }
       }
 
@@ -86,6 +98,7 @@ export default function MobileTermsPage() {
       const tokenParts = token.split(".");
       if (tokenParts.length !== 3) {
         // Invalid token format - clear it and redirect
+        tokenService.removeToken();
         Cookies.remove("token", { path: "/" });
         if (typeof window !== "undefined") {
           sessionStorage.removeItem("oauthUserData");
@@ -111,6 +124,12 @@ export default function MobileTermsPage() {
             subject
           );
           isValidToken = false;
+        } else {
+          // Token is valid - log for debugging
+          console.log(
+            "Token validated successfully. Subject (email):",
+            subject
+          );
         }
       } catch (decodeError) {
         console.error("Failed to decode token:", decodeError);
@@ -119,7 +138,8 @@ export default function MobileTermsPage() {
 
       // If token is invalid, clear it and throw error to prevent API call
       if (!isValidToken) {
-        // Clear invalid token
+        // Clear invalid token using tokenService
+        tokenService.removeToken();
         Cookies.remove("token", { path: "/" });
         if (typeof window !== "undefined") {
           sessionStorage.removeItem("oauthUserData");
@@ -151,6 +171,7 @@ export default function MobileTermsPage() {
         // Handle "User not found" error - invalid token issue
         if (errorText.includes("User not found")) {
           // Clear invalid token from all sources
+          tokenService.removeToken();
           Cookies.remove("token", { path: "/" });
           if (typeof window !== "undefined") {
             sessionStorage.removeItem("oauthUserData");
@@ -207,10 +228,13 @@ export default function MobileTermsPage() {
         error instanceof Error &&
         (error.message.includes("401") ||
           error.message.includes("session is invalid") ||
-          error.message.includes("User not found"))
+          error.message.includes("User not found") ||
+          error.message.includes("Invalid authentication token"))
       ) {
         console.log("Authentication failed, redirect to login...");
-        // Clear any remaining invalid tokens
+        // Clear any remaining invalid tokens using tokenService
+        const tokenService = (await import("@/utils/tokenService")).default;
+        tokenService.removeToken();
         Cookies.remove("token", { path: "/" });
         if (typeof window !== "undefined") {
           sessionStorage.removeItem("oauthUserData");
