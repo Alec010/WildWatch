@@ -14,7 +14,7 @@ class TokenService {
   private refreshPromise: Promise<string> | null = null;
   private refreshTimer: NodeJS.Timeout | null = null;
 
-  private constructor() {}
+  private constructor() { }
 
   static getInstance(): TokenService {
     if (!TokenService.instance) {
@@ -61,11 +61,14 @@ class TokenService {
    */
   setToken(token: string): void {
     if (!isClient) return;
-    
+
+    // Use 'lax' instead of 'strict' for better cross-site cookie support
+    // This is especially important for Android browsers during OAuth redirects
+    // 'lax' still provides CSRF protection while allowing cookies on top-level navigations
     Cookies.set('token', token, {
       expires: 7,
       secure: true,
-      sameSite: 'strict',
+      sameSite: 'lax', // Changed from 'strict' to 'lax' for Android compatibility
       path: '/',
     });
 
@@ -136,7 +139,7 @@ class TokenService {
     }
 
     this.refreshPromise = this.performTokenRefresh(currentToken);
-    
+
     try {
       const newToken = await this.refreshPromise;
       this.refreshPromise = null;
@@ -169,13 +172,13 @@ class TokenService {
 
       // Update token in cookies and schedule next refresh
       this.setToken(newToken);
-      
+
       return newToken;
     } catch (error) {
       console.error('Token refresh failed:', error);
       // If refresh fails, clean up all storage
       this.removeToken();
-      
+
       // Clear all storage on authentication failure
       if (typeof window !== 'undefined') {
         import('./storageCleanup').then(({ clearAllStorage }) => {
@@ -183,7 +186,7 @@ class TokenService {
         });
         window.location.href = '/login';
       }
-      
+
       throw error;
     }
   }
