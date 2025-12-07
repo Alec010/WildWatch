@@ -89,28 +89,25 @@ export default function MobileCompletePage() {
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Deep link to open the mobile app with token
+      // Using scheme from app.json: "wildwatchexpo"
       const appScheme = token
         ? `wildwatchexpo://auth/oauth2/callback?token=${encodeURIComponent(
             token
           )}`
         : "wildwatchexpo://auth/oauth2/callback";
-      const fallbackUrl =
-        "https://play.google.com/store/apps/details?id=com.wildwatch.app";
 
-      // Try to open the app
+      // Open the app - no store redirect fallback
       window.location.href = appScheme;
-
-      // Fallback after a delay if app doesn't open
-      setTimeout(() => {
-        // If still on the page, redirect to app store
-        if (document.hasFocus()) {
-          window.location.href = fallbackUrl;
-        }
-      }, 2000);
     } catch (error) {
       console.error("Error during app redirect:", error);
       // Still try to open the app even if there's an error
-      window.location.href = "wildwatchexpo://auth/oauth2/callback";
+      const token = authToken || Cookies.get("token");
+      const appScheme = token
+        ? `wildwatchexpo://auth/oauth2/callback?token=${encodeURIComponent(
+            token
+          )}`
+        : "wildwatchexpo://auth/oauth2/callback";
+      window.location.href = appScheme;
     }
   };
 
