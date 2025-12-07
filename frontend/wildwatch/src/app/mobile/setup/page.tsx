@@ -186,7 +186,7 @@ export default function MobileSetupPage() {
 
       // ✅ FIX: Get token from multiple sources for Android compatibility
       let token: string | undefined = Cookies.get("token");
-      
+
       // Fallback 1: Check URL params
       if (!token && typeof window !== "undefined") {
         const urlParams = new URLSearchParams(window.location.search);
@@ -200,16 +200,17 @@ export default function MobileSetupPage() {
           });
         }
       }
-      
+
       // Fallback 2: Check sessionStorage
       if (!token && typeof window !== "undefined") {
         const oauthUserData = sessionStorage.getItem("oauthUserData");
         if (oauthUserData) {
           try {
             const userData = JSON.parse(oauthUserData);
-            if (userData.token) {
-              token = userData.token;
-              Cookies.set("token", token, {
+            const tokenFromStorage = userData.token;
+            if (tokenFromStorage && typeof tokenFromStorage === "string") {
+              token = tokenFromStorage;
+              Cookies.set("token", tokenFromStorage, {
                 expires: 7,
                 secure: true,
                 sameSite: "lax",
@@ -223,7 +224,9 @@ export default function MobileSetupPage() {
       }
 
       if (!token) {
-        throw new Error("No authentication token found. Please try logging in again.");
+        throw new Error(
+          "No authentication token found. Please try logging in again."
+        );
       }
 
       // Store token for later use in deep link

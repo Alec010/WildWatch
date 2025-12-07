@@ -59,7 +59,7 @@ export default function MobileTermsPage() {
       // ✅ FIX: Get token from multiple sources for Android compatibility
       // Android browsers may not send cookies with sameSite: 'strict' after OAuth redirect
       let token: string | undefined = Cookies.get("token");
-      
+
       // Fallback 1: Check URL params (OAuth redirect may include token)
       if (!token && typeof window !== "undefined") {
         const urlParams = new URLSearchParams(window.location.search);
@@ -74,7 +74,7 @@ export default function MobileTermsPage() {
           });
         }
       }
-      
+
       // Fallback 2: Check sessionStorage (OAuth2Redirect may have stored it)
       if (!token && typeof window !== "undefined") {
         const oauthUserData = sessionStorage.getItem("oauthUserData");
@@ -82,9 +82,10 @@ export default function MobileTermsPage() {
           try {
             const userData = JSON.parse(oauthUserData);
             // Token might be in the OAuth user data
-            if (userData.token) {
-              token = userData.token;
-              Cookies.set("token", token, {
+            const tokenFromStorage = userData.token;
+            if (tokenFromStorage && typeof tokenFromStorage === "string") {
+              token = tokenFromStorage;
+              Cookies.set("token", tokenFromStorage, {
                 expires: 7,
                 secure: true,
                 sameSite: "lax",
@@ -98,7 +99,9 @@ export default function MobileTermsPage() {
       }
 
       if (!token) {
-        throw new Error("No authentication token found. Please try logging in again.");
+        throw new Error(
+          "No authentication token found. Please try logging in again."
+        );
       }
 
       const response = await fetch(`${getApiBaseUrl()}/api/terms/accept`, {
