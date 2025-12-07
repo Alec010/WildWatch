@@ -148,26 +148,14 @@ export default function OAuth2Redirect() {
               return;
             }
 
-            // For desktop/web
+            // For desktop/web only - mobile users should never reach here
             if (!user.termsAccepted || !termsAccepted) {
               sessionStorage.setItem("oauthUserData", JSON.stringify(user));
               router.push("/terms");
               return;
             }
 
-            // Check if setup is needed (for Microsoft OAuth users)
-            if (
-              user.authProvider === "microsoft" &&
-              (user.contactNumber === "Not provided" ||
-                user.contactNumber === "+639000000000" ||
-                !user.password)
-            ) {
-              sessionStorage.setItem("oauthUserData", JSON.stringify(user));
-              router.push("/auth/setup");
-              return;
-            }
-
-            // For desktop/web, check if setup is needed
+            // Check if setup is needed (for Microsoft OAuth users) - desktop only
             if (
               user.authProvider === "microsoft" &&
               (user.contactNumber === "Not provided" ||
@@ -188,7 +176,7 @@ export default function OAuth2Redirect() {
               role: user.role || "",
             });
 
-            // Use handleAuthRedirect to determine the correct redirect path
+            // Use handleAuthRedirect to determine the correct redirect path (desktop only)
             const redirectPath = handleAuthRedirect(user);
             router.push(redirectPath);
             return;
