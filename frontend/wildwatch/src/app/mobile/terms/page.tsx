@@ -53,39 +53,25 @@ export default function MobileTermsPage() {
     setIsLoading(true);
     setError("");
 
-    // ✅ Declare tokenService at the top so it's available in both try and catch blocks
-    const tokenService = (await import("@/utils/tokenService")).default;
-
     try {
       console.log("Sending terms acceptance request...");
 
-      // ✅ FIX: Get token using tokenService for consistency
-      // This ensures we use the same method as OAuth2Redirect.tsx
-      let token = tokenService.getToken();
+      // ✅ FIX: Get token from cookies first (most reliable source)
+      // Only use fallbacks if cookie token is not available
+      let token = Cookies.get("token");
 
-      // Fallback 1: Check URL params (for direct OAuth redirects or if cookie wasn't set)
+      // Fallback: Check URL params (for mobile OAuth redirects)
       if (!token && typeof window !== "undefined") {
         const urlParams = new URLSearchParams(window.location.search);
-        const tokenFromUrl = urlParams.get("token");
-        if (tokenFromUrl) {
-          console.log(
-            "Token found in URL, storing in cookies via tokenService..."
-          );
-          // Use tokenService to store token for consistency
-          tokenService.setToken(tokenFromUrl);
-          token = tokenFromUrl;
-        }
-      }
-
-      // Fallback 2: Check cookies directly (in case tokenService didn't work)
-      if (!token) {
-        token = Cookies.get("token") || null;
+        token = urlParams.get("token") || undefined;
         if (token) {
-          console.log(
-            "Token found in cookies, ensuring it's stored via tokenService..."
-          );
-          // Ensure token is stored via tokenService for consistency
-          tokenService.setToken(token);
+          // Store token in cookies for consistency
+          Cookies.set("token", token, {
+            expires: 7,
+            secure: true,
+            sameSite: "lax",
+            path: "/",
+          });
         }
       }
 
@@ -100,7 +86,6 @@ export default function MobileTermsPage() {
       const tokenParts = token.split(".");
       if (tokenParts.length !== 3) {
         // Invalid token format - clear it and redirect
-        tokenService.removeToken();
         Cookies.remove("token", { path: "/" });
         if (typeof window !== "undefined") {
           sessionStorage.removeItem("oauthUserData");
@@ -109,48 +94,24 @@ export default function MobileTermsPage() {
       }
 
       // ✅ Validate token subject is an email (not firstName + lastName)
-      let isValidToken = true;
       try {
         const payload = JSON.parse(atob(tokenParts[1]));
         const subject = payload.sub || payload.email;
 
-        // Check if subject looks like an email (must contain @)
-        // If subject doesn't contain @, it's invalid (could be a name)
-        if (!subject || !subject.includes("@")) {
+        // Check if subject looks like an email (contains @) or if it's a name (contains spaces)
+        if (subject && !subject.includes("@") && subject.includes(" ")) {
           console.error("Invalid token: Subject is not an email:", subject);
-          isValidToken = false;
-        } else if (subject.includes(" ")) {
-          // Subject contains spaces - definitely not an email
-          console.error(
-            "Invalid token: Subject contains spaces (likely a name):",
-            subject
-          );
-          isValidToken = false;
-        } else {
-          // Token is valid - log for debugging
-          console.log(
-            "Token validated successfully. Subject (email):",
-            subject
-          );
+          // Clear invalid token
+          Cookies.remove("token", { path: "/" });
+          if (typeof window !== "undefined") {
+            sessionStorage.removeItem("oauthUserData");
+          }
+          throw new Error("Invalid authentication token. Please log in again.");
         }
       } catch (decodeError) {
         console.error("Failed to decode token:", decodeError);
-        isValidToken = false;
-      }
-
-      // If token is invalid, clear it and throw error to prevent API call
-      if (!isValidToken) {
-        // Clear invalid token using tokenService
-        tokenService.removeToken();
-        Cookies.remove("token", { path: "/" });
-        if (typeof window !== "undefined") {
-          sessionStorage.removeItem("oauthUserData");
-          // Also try to clear token from URL if present
-          const url = new URL(window.location.href);
-          url.searchParams.delete("token");
-          window.history.replaceState({}, "", url.toString());
-        }
-        throw new Error("Invalid authentication token. Please log in again.");
+        // If we can't decode, still try to use it (might be a different format)
+        // But log the error for debugging
       }
 
       const response = await fetch(`${API_BASE_URL}/api/terms/accept`, {
@@ -173,7 +134,6 @@ export default function MobileTermsPage() {
         // Handle "User not found" error - invalid token issue
         if (errorText.includes("User not found")) {
           // Clear invalid token from all sources
-          tokenService.removeToken();
           Cookies.remove("token", { path: "/" });
           if (typeof window !== "undefined") {
             sessionStorage.removeItem("oauthUserData");
@@ -230,12 +190,10 @@ export default function MobileTermsPage() {
         error instanceof Error &&
         (error.message.includes("401") ||
           error.message.includes("session is invalid") ||
-          error.message.includes("User not found") ||
-          error.message.includes("Invalid authentication token"))
+          error.message.includes("User not found"))
       ) {
         console.log("Authentication failed, redirect to login...");
-        // Clear any remaining invalid tokens using tokenService (now available in catch block)
-        tokenService.removeToken();
+        // Clear any remaining invalid tokens
         Cookies.remove("token", { path: "/" });
         if (typeof window !== "undefined") {
           sessionStorage.removeItem("oauthUserData");
