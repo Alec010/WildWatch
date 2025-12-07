@@ -114,12 +114,50 @@ export default function MobileCompletePage() {
       const tokenService = (await import("@/utils/tokenService")).default;
       tokenService.removeToken();
 
-      // Additional cleanup for any remaining cookies
-      Cookies.remove("token", { path: "/" });
-      Cookies.remove("token", { path: "/", domain: window.location.hostname });
-      Cookies.remove("token", {
-        path: "/",
-        domain: `.${window.location.hostname}`,
+      // ✅ FIX: Remove token cookie with ALL possible combinations of options
+      // Cookies must be removed with the exact same options they were set with
+      const hostname = window.location.hostname;
+      const cookieOptions: Array<{
+        path: string;
+        secure?: boolean;
+        sameSite?: "lax" | "strict" | "none";
+        domain?: string;
+      }> = [
+        { path: "/" },
+        { path: "/", secure: true },
+        { path: "/", sameSite: "lax" },
+        { path: "/", secure: true, sameSite: "lax" },
+        { path: "/", domain: hostname },
+        { path: "/", domain: hostname, secure: true },
+        { path: "/", domain: hostname, sameSite: "lax" },
+        { path: "/", domain: hostname, secure: true, sameSite: "lax" },
+        { path: "/", domain: `.${hostname}` },
+        { path: "/", domain: `.${hostname}`, secure: true },
+        { path: "/", domain: `.${hostname}`, sameSite: "lax" },
+        { path: "/", domain: `.${hostname}`, secure: true, sameSite: "lax" },
+      ];
+
+      // Remove cookie with all option combinations
+      cookieOptions.forEach((options) => {
+        try {
+          Cookies.remove("token", options);
+        } catch (e) {
+          // Ignore errors for individual attempts
+        }
+      });
+
+      // ✅ FIX: Also use document.cookie directly as a fallback
+      // This ensures removal even if js-cookie fails
+      const expireDate = "Thu, 01 Jan 1970 00:00:00 GMT";
+      const paths = ["/", ""];
+      const domains = [hostname, `.${hostname}`, ""];
+
+      paths.forEach((path) => {
+        domains.forEach((domain) => {
+          const domainPart = domain ? `domain=${domain};` : "";
+          const pathPart = path ? `path=${path};` : "";
+          document.cookie = `token=;expires=${expireDate};${domainPart}${pathPart}`;
+        });
       });
 
       // Clear sessionStorage and localStorage explicitly
@@ -127,7 +165,7 @@ export default function MobileCompletePage() {
       localStorage.clear();
 
       // Small delay to ensure cleanup completes
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 200));
 
       // ✅ STEP 3: Try to open the mobile app (in background)
       // Detect if we're on Android or iOS
@@ -166,6 +204,33 @@ export default function MobileCompletePage() {
         clearAllStorage();
         const tokenService = (await import("@/utils/tokenService")).default;
         tokenService.removeToken();
+
+        // Remove token cookie with all possible options
+        const hostname = window.location.hostname;
+        const cookieOptions: Array<{
+          path: string;
+          secure?: boolean;
+          sameSite?: "lax" | "strict" | "none";
+        }> = [
+          { path: "/" },
+          { path: "/", secure: true },
+          { path: "/", sameSite: "lax" },
+          { path: "/", secure: true, sameSite: "lax" },
+        ];
+
+        cookieOptions.forEach((options) => {
+          try {
+            Cookies.remove("token", options);
+          } catch (e) {
+            // Ignore errors
+          }
+        });
+
+        // Use document.cookie as fallback
+        const expireDate = "Thu, 01 Jan 1970 00:00:00 GMT";
+        document.cookie = `token=;expires=${expireDate};path=/`;
+        document.cookie = `token=;expires=${expireDate};path=/;domain=${hostname}`;
+        document.cookie = `token=;expires=${expireDate};path=/;domain=.${hostname}`;
       } catch (cleanupError) {
         console.error("Error during fallback cleanup:", cleanupError);
       }
