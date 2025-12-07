@@ -238,10 +238,10 @@ export default function MobileSetupPage() {
   return (
     <>
       <div
-        className="min-h-screen flex items-center justify-center"
+        className="min-h-screen flex items-start justify-center overflow-y-auto py-10"
         style={{ backgroundColor: "#f5f5f7" }}
       >
-        <div className="relative mb-10 mt-10 w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-xl border border-[#D4AF37]/20 mx-4">
+        <div className="relative w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-xl border border-[#D4AF37]/20 mx-4 my-10">
           {/* Decorative elements */}
           <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#800000] via-[#D4AF37] to-[#800000] rounded-t-lg animate-gradient-x"></div>
           <div className="absolute -z-10 top-20 right-0 w-64 h-64 bg-[#D4AF37]/10 rounded-full opacity-20 blur-3xl"></div>
