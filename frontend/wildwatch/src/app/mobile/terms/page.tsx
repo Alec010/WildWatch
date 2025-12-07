@@ -94,24 +94,41 @@ export default function MobileTermsPage() {
       }
 
       // ✅ Validate token subject is an email (not firstName + lastName)
+      let isValidToken = true;
       try {
         const payload = JSON.parse(atob(tokenParts[1]));
         const subject = payload.sub || payload.email;
 
-        // Check if subject looks like an email (contains @) or if it's a name (contains spaces)
-        if (subject && !subject.includes("@") && subject.includes(" ")) {
+        // Check if subject looks like an email (must contain @)
+        // If subject doesn't contain @, it's invalid (could be a name)
+        if (!subject || !subject.includes("@")) {
           console.error("Invalid token: Subject is not an email:", subject);
-          // Clear invalid token
-          Cookies.remove("token", { path: "/" });
-          if (typeof window !== "undefined") {
-            sessionStorage.removeItem("oauthUserData");
-          }
-          throw new Error("Invalid authentication token. Please log in again.");
+          isValidToken = false;
+        } else if (subject.includes(" ")) {
+          // Subject contains spaces - definitely not an email
+          console.error(
+            "Invalid token: Subject contains spaces (likely a name):",
+            subject
+          );
+          isValidToken = false;
         }
       } catch (decodeError) {
         console.error("Failed to decode token:", decodeError);
-        // If we can't decode, still try to use it (might be a different format)
-        // But log the error for debugging
+        isValidToken = false;
+      }
+
+      // If token is invalid, clear it and throw error to prevent API call
+      if (!isValidToken) {
+        // Clear invalid token
+        Cookies.remove("token", { path: "/" });
+        if (typeof window !== "undefined") {
+          sessionStorage.removeItem("oauthUserData");
+          // Also try to clear token from URL if present
+          const url = new URL(window.location.href);
+          url.searchParams.delete("token");
+          window.history.replaceState({}, "", url.toString());
+        }
+        throw new Error("Invalid authentication token. Please log in again.");
       }
 
       const response = await fetch(`${API_BASE_URL}/api/terms/accept`, {

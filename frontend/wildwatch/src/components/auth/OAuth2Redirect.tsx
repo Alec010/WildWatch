@@ -5,11 +5,24 @@ import { useRouter } from "next/navigation";
 import { handleAuthRedirect } from "@/utils/auth";
 import userProfileService from "@/utils/userProfileService";
 import { clearAllStorage } from "@/utils/storageCleanup";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { CheckCircle2, Smartphone } from "lucide-react";
+import Cookies from "js-cookie";
 
 export default function OAuth2Redirect() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showCompleteDialog, setShowCompleteDialog] = useState(false);
+  const [authToken, setAuthToken] = useState<string | null>(null);
 
   // Check if device is mobile
   const isMobileDevice = () => {
@@ -32,6 +45,9 @@ export default function OAuth2Redirect() {
 
       // Clear all cookies, localStorage, and sessionStorage
       clearAllStorage();
+      Cookies.remove("token");
+      sessionStorage.removeItem("oauthUserData");
+      localStorage.clear();
 
       // Clear service worker cache if available (browser cache)
       if ("serviceWorker" in navigator && "caches" in window) {
@@ -92,12 +108,14 @@ export default function OAuth2Redirect() {
 
           // Check if we have token directly (new flow from backend)
           if (token) {
+            // Store token temporarily for potential app redirect
+            setAuthToken(token);
+
             // Store the token using token service
             const tokenService = (await import("@/utils/tokenService")).default;
             tokenService.setToken(token);
 
             // Fetch user profile to get full user data
-            // Use the API base URL from config (works for both local and production)
             const isMobile = isMobileDevice();
             const { getApiBaseUrl } = await import("@/utils/api");
             const apiBaseUrl = getApiBaseUrl();
@@ -118,13 +136,34 @@ export default function OAuth2Redirect() {
 
             const user = await profileResponse.json();
 
-            // For mobile, always go through the mobile flow: terms -> setup -> complete
-            // This ensures proper flow and prevents direct app redirect
+            // For mobile, check if terms are already accepted
             if (isMobile) {
               // Store user data for the mobile flow
               sessionStorage.setItem("oauthUserData", JSON.stringify(user));
 
-              // Always start with terms (even if already accepted, the page will handle it)
+              // If terms are already accepted, perform signout and show completion dialog
+              if (user.termsAccepted && termsAccepted) {
+                // Check if setup is needed first
+                const needsSetup =
+                  user.authProvider === "microsoft" &&
+                  (user.contactNumber === "Not provided" ||
+                    user.contactNumber === "+639000000000" ||
+                    !user.password);
+
+                if (!needsSetup) {
+                  // Terms accepted and setup complete - perform signout and show dialog
+                  await performSignout(token);
+                  setShowCompleteDialog(true);
+                  setIsLoading(false);
+                  return;
+                } else {
+                  // Setup still needed
+                  router.push("/mobile/setup");
+                  return;
+                }
+              }
+
+              // Terms not accepted - go to terms page
               if (!user.termsAccepted || !termsAccepted) {
                 router.push("/mobile/terms");
                 return;
@@ -259,6 +298,115 @@ export default function OAuth2Redirect() {
     processLogin();
   }, [router]);
 
+  // Function to perform signout
+  const performSignout = async (token: string | null) => {
+    try {
+      // STEP 1: Perform server-side logout
+      if (token) {
+        try {
+          const { getApiBaseUrl } = await import("@/utils/api");
+          await fetch(`${getApiBaseUrl()}/api/auth/logout`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            credentials: "include",
+          });
+        } catch (logoutError) {
+          console.error("Logout error (non-critical):", logoutError);
+        }
+      }
+
+      // STEP 2: Clear all storage and cookies
+      clearAllStorage();
+      const tokenService = (await import("@/utils/tokenService")).default;
+      tokenService.removeToken();
+
+      // STEP 3: Remove token cookie with all possible combinations
+      const hostname = window.location.hostname;
+      const cookieOptions: Array<{
+        path: string;
+        secure?: boolean;
+        sameSite?: "lax" | "strict" | "none";
+        domain?: string;
+      }> = [
+        { path: "/" },
+        { path: "/", secure: true },
+        { path: "/", sameSite: "lax" },
+        { path: "/", secure: true, sameSite: "lax" },
+        { path: "/", domain: hostname },
+        { path: "/", domain: hostname, secure: true },
+        { path: "/", domain: hostname, sameSite: "lax" },
+        { path: "/", domain: hostname, secure: true, sameSite: "lax" },
+        { path: "/", domain: `.${hostname}` },
+        { path: "/", domain: `.${hostname}`, secure: true },
+        { path: "/", domain: `.${hostname}`, sameSite: "lax" },
+        { path: "/", domain: `.${hostname}`, secure: true, sameSite: "lax" },
+      ];
+
+      cookieOptions.forEach((options) => {
+        try {
+          Cookies.remove("token", options);
+        } catch (e) {
+          // Ignore errors
+        }
+      });
+
+      // Also use document.cookie directly as fallback
+      const expireDate = "Thu, 01 Jan 1970 00:00:00 GMT";
+      const paths = ["/", ""];
+      const domains = [hostname, `.${hostname}`, ""];
+
+      paths.forEach((path) => {
+        domains.forEach((domain) => {
+          const domainPart = domain ? `domain=${domain};` : "";
+          const pathPart = path ? `path=${path};` : "";
+          document.cookie = `token=;expires=${expireDate};${domainPart}${pathPart}`;
+        });
+      });
+
+      sessionStorage.clear();
+      localStorage.clear();
+    } catch (error) {
+      console.error("Error during signout:", error);
+    }
+  };
+
+  // Function to handle opening the app
+  const handleOpenApp = async () => {
+    try {
+      const token = authToken;
+
+      // Detect if we're on Android or iOS
+      const isAndroid = /Android/i.test(navigator.userAgent);
+      const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+      // Deep link to open the mobile app with token (if available)
+      const appScheme = token
+        ? `wildwatchexpo://auth/oauth2/callback?token=${encodeURIComponent(
+            token
+          )}`
+        : "wildwatchexpo://auth/oauth2/callback";
+
+      // Try to open app (non-blocking)
+      if (isAndroid) {
+        const intentUrl = `intent://auth/oauth2/callback${
+          token ? `?token=${encodeURIComponent(token)}` : ""
+        }#Intent;scheme=wildwatchexpo;package=com.wildwatch.app;end`;
+        window.open(intentUrl, "_blank");
+      } else if (isIOS) {
+        window.open(appScheme, "_blank");
+      }
+
+      // Redirect to login after opening app
+      router.push("/login");
+    } catch (error) {
+      console.error("Error opening app:", error);
+      router.push("/login");
+    }
+  };
+
   if (error) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -276,11 +424,41 @@ export default function OAuth2Redirect() {
   }
 
   return (
-    <div className="flex justify-center items-center min-h-screen">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
-        <p className="text-gray-600">Processing your login...</p>
-      </div>
-    </div>
+    <>
+      {showCompleteDialog ? (
+        <div className="flex justify-center items-center min-h-screen bg-[#f5f5f7]">
+          <Dialog open={showCompleteDialog} onOpenChange={() => {}}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2 text-[#800000]">
+                  <CheckCircle2 className="h-6 w-6 text-green-500" />
+                  You have finished setting up this account
+                </DialogTitle>
+                <DialogDescription className="pt-2">
+                  Your account setup is complete. You can now open the WildWatch
+                  mobile app to continue.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button
+                  onClick={handleOpenApp}
+                  className="w-full bg-[#800000] hover:bg-[#800000]/90 text-white"
+                >
+                  <Smartphone className="mr-2 h-4 w-4" />
+                  Open App
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+      ) : (
+        <div className="flex justify-center items-center min-h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+            <p className="text-gray-600">Processing your login...</p>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
