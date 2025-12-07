@@ -64,9 +64,9 @@ export default function MobileCompletePage() {
 
       // Logout from web session first
       try {
-        const MOBILE_API_BASE_URL = "http://192.168.1.60:3000";
+        const { getApiBaseUrl } = await import("@/utils/api");
         if (token) {
-          await fetch(`${MOBILE_API_BASE_URL}/api/auth/logout`, {
+          await fetch(`${getApiBaseUrl()}/api/auth/logout`, {
             method: "POST",
             headers: {
               Authorization: `Bearer ${token}`,
@@ -147,8 +147,8 @@ export default function MobileCompletePage() {
               Successfully Created Your Account!
             </h1>
             <p className="text-sm text-muted-foreground text-center max-w-sm">
-              Your account has been successfully created. You can now open the WildWatch mobile app
-              to continue.
+              Your account has been successfully created. You can now open the
+              WildWatch mobile app to continue.
             </p>
           </div>
 
@@ -172,8 +172,8 @@ export default function MobileCompletePage() {
               Account Created Successfully!
             </DialogTitle>
             <DialogDescription className="pt-2">
-              Successfully created your account! You can now open the
-              WildWatch mobile app to continue.
+              Successfully created your account! You can now open the WildWatch
+              mobile app to continue.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

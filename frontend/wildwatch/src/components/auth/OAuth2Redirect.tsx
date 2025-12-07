@@ -97,11 +97,10 @@ export default function OAuth2Redirect() {
             tokenService.setToken(token);
 
             // Fetch user profile to get full user data
-            // For mobile web, use the specific API URL
+            // Use the API base URL from config (works for both local and production)
             const isMobile = isMobileDevice();
-            const apiBaseUrl = isMobile
-              ? "http://192.168.1.60:3000"
-              : (await import("@/utils/api")).getApiBaseUrl();
+            const { getApiBaseUrl } = await import("@/utils/api");
+            const apiBaseUrl = getApiBaseUrl();
 
             const profileResponse = await fetch(
               `${apiBaseUrl}/api/auth/profile`,

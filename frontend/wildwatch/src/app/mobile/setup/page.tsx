@@ -26,9 +26,8 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-// Use specific API URL for mobile web
-const MOBILE_API_BASE_URL = "http://192.168.1.60:3000";
 import Cookies from "js-cookie";
+import { getApiBaseUrl } from "@/utils/api";
 import Image from "next/image";
 
 const formSchema = z
@@ -193,7 +192,7 @@ export default function MobileSetupPage() {
       // Store token for later use in deep link
       setAuthToken(token);
 
-      const response = await fetch(`${MOBILE_API_BASE_URL}/api/auth/setup`, {
+      const response = await fetch(`${getApiBaseUrl()}/api/auth/setup`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -552,7 +551,6 @@ export default function MobileSetupPage() {
           </div>
         </div>
       </div>
-
     </>
   );
 }
