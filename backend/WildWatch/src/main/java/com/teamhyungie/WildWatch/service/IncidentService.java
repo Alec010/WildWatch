@@ -578,6 +578,11 @@ public class IncidentService {
             incident.setIsPrivate(request.getIsPrivate());
         }
 
+        // Update incident/concern classification
+        if (request.getIsIncident() != null) {
+            incident.setIsIncident(request.getIsIncident());
+        }
+
         // Allow setting or updating the estimated resolution date when provided
         if (request.getEstimatedResolutionDate() != null) {
             incident.setEstimatedResolutionDate(request.getEstimatedResolutionDate());
@@ -587,6 +592,12 @@ public class IncidentService {
         if (request.getResolutionNotes() != null && request.getStatus() != null
                 && ("resolved".equalsIgnoreCase(request.getStatus()) || "closed".equalsIgnoreCase(request.getStatus()))) {
             incident.setResolutionNotes(request.getResolutionNotes());
+        }
+
+        // If update message provided and status is dismissed, store it as dismissal notes
+        if (request.getUpdateMessage() != null && request.getStatus() != null
+                && "dismissed".equalsIgnoreCase(request.getStatus())) {
+            incident.setDismissalNotes(request.getUpdateMessage().trim());
         }
 
         // Save the updated incident
@@ -748,9 +759,9 @@ public class IncidentService {
                     incident.getSubmittedBy()
             );
 
-            // Clear lastTransferredTo if resolved or closed
+            // Clear lastTransferredTo if resolved, closed, or dismissed
             if (request.getStatus() != null
-                    && (request.getStatus().equalsIgnoreCase("resolved") || request.getStatus().equalsIgnoreCase("closed"))) {
+                    && (request.getStatus().equalsIgnoreCase("resolved") || request.getStatus().equalsIgnoreCase("closed") || request.getStatus().equalsIgnoreCase("dismissed"))) {
                 incident.setLastTransferredTo(null);
                 incidentRepository.save(incident);
 
