@@ -67,74 +67,20 @@ export default function MobileTermsPage() {
     try {
       console.log("Sending terms acceptance request...");
 
-      // ✅ FIX: Get token from multiple sources for Android/OAuth compatibility
-      // Android browsers may not send cookies with sameSite: 'strict' after OAuth redirect
-      let token: string | undefined = Cookies.get("token");
-
-      // Fallback 1: Check URL params (OAuth redirect may include token)
-      if (!token && typeof window !== "undefined") {
-        const urlParams = new URLSearchParams(window.location.search);
-        token = urlParams.get("token") || undefined;
-        // If found in URL, also set it in cookies for future requests
-        if (token) {
-          Cookies.set("token", token, {
-            expires: 7,
-            secure: true,
-            sameSite: "lax",
-            path: "/",
-          });
-        }
-      }
-
-      // Fallback 2: Check tokenService (OAuth2Redirect may have stored it)
-      if (!token && typeof window !== "undefined") {
-        try {
-          const tokenService = (await import("@/utils/tokenService")).default;
-          const tokenFromService = tokenService.getToken();
-          if (tokenFromService) {
-            token = tokenFromService;
-          }
-        } catch (e) {
-          console.warn("Could not get token from tokenService:", e);
-        }
-      }
-
-      // Fallback 3: Check sessionStorage (OAuth2Redirect may have stored user data with token)
-      if (!token && typeof window !== "undefined") {
-        const oauthUserData = sessionStorage.getItem("oauthUserData");
-        if (oauthUserData) {
-          try {
-            const userData = JSON.parse(oauthUserData);
-            // Token might be in the OAuth user data
-            const tokenFromStorage = userData.token;
-            if (tokenFromStorage && typeof tokenFromStorage === "string") {
-              token = tokenFromStorage;
-              Cookies.set("token", tokenFromStorage, {
-                expires: 7,
-                secure: true,
-                sameSite: "lax",
-                path: "/",
-              });
-            }
-          } catch (e) {
-            console.warn("Could not parse oauthUserData:", e);
-          }
-        }
-      }
-
-      // Collect user data for debugging
-      let userDataFromStorage: any = null;
-      try {
-        const oauthUserDataStr = sessionStorage.getItem("oauthUserData");
-        if (oauthUserDataStr) {
-          userDataFromStorage = JSON.parse(oauthUserDataStr);
-        }
-      } catch (e) {
-        console.warn("Could not parse oauthUserData for debug:", e);
-      }
-
+      // Get token from cookies - exactly like desktop version
+      const token = Cookies.get("token");
       if (!token) {
         // Collect debug info before throwing
+        let userDataFromStorage: any = null;
+        try {
+          const oauthUserDataStr = sessionStorage.getItem("oauthUserData");
+          if (oauthUserDataStr) {
+            userDataFromStorage = JSON.parse(oauthUserDataStr);
+          }
+        } catch (e) {
+          // Ignore
+        }
+
         const debugInfo = {
           error: "No authentication token found",
           tokenSources: {
@@ -143,7 +89,6 @@ export default function MobileTermsPage() {
               typeof window !== "undefined"
                 ? !!new URLSearchParams(window.location.search).get("token")
                 : false,
-            fromTokenService: false,
             fromSessionStorage: !!userDataFromStorage?.token,
           },
           userData: userDataFromStorage,
@@ -151,17 +96,10 @@ export default function MobileTermsPage() {
         };
         setDebugData(debugInfo);
         setShowDebugDialog(true);
-        throw new Error(
-          "No authentication token found. Please try logging in again."
-        );
+        throw new Error("No authentication token found");
       }
 
-      // Mask token for display (show first 20 chars and last 10 chars)
-      const maskedToken =
-        token.length > 30
-          ? `${token.substring(0, 20)}...${token.substring(token.length - 10)}`
-          : "***masked***";
-
+      // Make the request - exactly like desktop version
       const response = await fetch(`${API_BASE_URL}/api/terms/accept`, {
         method: "POST",
         headers: {
@@ -179,7 +117,24 @@ export default function MobileTermsPage() {
         const errorText = await response.text();
         console.error("Error response:", errorText);
 
-        // Collect comprehensive debug info
+        // Collect debug info for troubleshooting
+        let userDataFromStorage: any = null;
+        try {
+          const oauthUserDataStr = sessionStorage.getItem("oauthUserData");
+          if (oauthUserDataStr) {
+            userDataFromStorage = JSON.parse(oauthUserDataStr);
+          }
+        } catch (e) {
+          // Ignore
+        }
+
+        const maskedToken =
+          token.length > 30
+            ? `${token.substring(0, 20)}...${token.substring(
+                token.length - 10
+              )}`
+            : "***masked***";
+
         const debugInfo = {
           error: errorText,
           errorMessage: `Failed to accept terms: ${errorText}`,
@@ -189,16 +144,7 @@ export default function MobileTermsPage() {
             present: true,
             length: token.length,
             masked: maskedToken,
-            source: (() => {
-              if (Cookies.get("token")) return "cookies";
-              if (
-                typeof window !== "undefined" &&
-                new URLSearchParams(window.location.search).get("token")
-              )
-                return "url";
-              if (userDataFromStorage?.token) return "sessionStorage";
-              return "unknown";
-            })(),
+            source: "cookies",
           },
           userData: userDataFromStorage,
           apiBaseUrl: API_BASE_URL,
@@ -251,7 +197,7 @@ export default function MobileTermsPage() {
         error instanceof Error ? error.message : "Failed to accept terms";
       setError(errorMessage);
 
-      // If debug data wasn't set in the try block, collect it now
+      // Collect debug info if not already collected
       if (!debugData) {
         let userDataFromStorage: any = null;
         try {
@@ -260,26 +206,10 @@ export default function MobileTermsPage() {
             userDataFromStorage = JSON.parse(oauthUserDataStr);
           }
         } catch (e) {
-          console.warn("Could not parse oauthUserData for debug:", e);
+          // Ignore
         }
 
-        let token: string | undefined = Cookies.get("token");
-        if (!token && typeof window !== "undefined") {
-          const urlParams = new URLSearchParams(window.location.search);
-          token = urlParams.get("token") || undefined;
-        }
-        if (!token && typeof window !== "undefined") {
-          try {
-            const oauthUserData = sessionStorage.getItem("oauthUserData");
-            if (oauthUserData) {
-              const userData = JSON.parse(oauthUserData);
-              token = userData.token;
-            }
-          } catch (e) {
-            // Ignore
-          }
-        }
-
+        const token = Cookies.get("token");
         const maskedToken =
           token && token.length > 30
             ? `${token.substring(0, 20)}...${token.substring(
@@ -293,16 +223,7 @@ export default function MobileTermsPage() {
             present: !!token,
             length: token?.length || 0,
             masked: maskedToken,
-            source: (() => {
-              if (Cookies.get("token")) return "cookies";
-              if (
-                typeof window !== "undefined" &&
-                new URLSearchParams(window.location.search).get("token")
-              )
-                return "url";
-              if (userDataFromStorage?.token) return "sessionStorage";
-              return "none";
-            })(),
+            source: "cookies",
           },
           userData: userDataFromStorage,
           apiBaseUrl: API_BASE_URL,
