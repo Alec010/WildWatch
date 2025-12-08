@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { handleAuthRedirect } from "@/utils/auth";
 import Cookies from "js-cookie";
-import { getApiBaseUrl } from "@/utils/api";
+import { API_BASE_URL } from "@/utils/api";
 import {
   CheckCircle2,
   AlertCircle,
@@ -56,55 +56,12 @@ export default function MobileTermsPage() {
     try {
       console.log("Sending terms acceptance request...");
 
-      // ✅ FIX: Get token from multiple sources for Android compatibility
-      // Android browsers may not send cookies with sameSite: 'strict' after OAuth redirect
-      let token: string | undefined = Cookies.get("token");
-
-      // Fallback 1: Check URL params (OAuth redirect may include token)
-      if (!token && typeof window !== "undefined") {
-        const urlParams = new URLSearchParams(window.location.search);
-        token = urlParams.get("token") || undefined;
-        // If found in URL, also set it in cookies for future requests
-        if (token) {
-          Cookies.set("token", token, {
-            expires: 7,
-            secure: true,
-            sameSite: "lax",
-            path: "/",
-          });
-        }
-      }
-
-      // Fallback 2: Check sessionStorage (OAuth2Redirect may have stored it)
-      if (!token && typeof window !== "undefined") {
-        const oauthUserData = sessionStorage.getItem("oauthUserData");
-        if (oauthUserData) {
-          try {
-            const userData = JSON.parse(oauthUserData);
-            // Token might be in the OAuth user data
-            const tokenFromStorage = userData.token;
-            if (tokenFromStorage && typeof tokenFromStorage === "string") {
-              token = tokenFromStorage;
-              Cookies.set("token", tokenFromStorage, {
-                expires: 7,
-                secure: true,
-                sameSite: "lax",
-                path: "/",
-              });
-            }
-          } catch (e) {
-            console.warn("Could not parse oauthUserData:", e);
-          }
-        }
-      }
-
+      const token = Cookies.get("token");
       if (!token) {
-        throw new Error(
-          "No authentication token found. Please try logging in again."
-        );
+        throw new Error("No authentication token found");
       }
 
-      const response = await fetch(`${getApiBaseUrl()}/api/terms/accept`, {
+      const response = await fetch(`${API_BASE_URL}/api/terms/accept`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -139,15 +96,12 @@ export default function MobileTermsPage() {
       }
 
       // For regular users, fetch the user profile to get the role
-      const profileResponse = await fetch(
-        `${getApiBaseUrl()}/api/auth/profile`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const profileResponse = await fetch(`${API_BASE_URL}/api/auth/profile`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
 
       if (!profileResponse.ok) {
         throw new Error("Failed to fetch user profile");
