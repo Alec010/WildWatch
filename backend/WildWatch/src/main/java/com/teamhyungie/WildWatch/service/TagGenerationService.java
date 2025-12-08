@@ -52,9 +52,10 @@ public class TagGenerationService {
                     "- Description: '" + (description == null ? "" : description) + "'\n" +
                     "- Location: '" + sanitizedLocation + "'\n" +
                     "Task:\n" +
-                    "- Generate EXACTLY 20 single-word tags (NO phrases, NO hyphens, ONLY one word per tag).\n" +
-                    "- First 3 tags MUST be location-related (building names, room identifiers, area names from the location).\n" +
-                    "- Next 17 tags MUST be about the incident description and incident type (context, severity, parties involved, impact).\n" +
+                    "- Generate EXACTLY 25 single-word tags (NO phrases, NO hyphens, ONLY one word per tag).\n" +
+                    "- First 4 tags MUST be location-related (building names, room identifiers, area names from the location).\n" +
+                    "- Next 21 tags MUST be about the incident description and incident type (context, severity, parties involved, impact).\n" +
+                    "- IMPORTANT: Generate 25 tags to ensure we have enough unique tags after filtering duplicates.\n" +
                     "- MANDATORY: If the location contains building identifiers or acronyms (e.g., 'GLE', 'MIS'), include them as location tags.\n" +
                     "- DO NOT include date or time tags (e.g., '2025-09-23', '10:30', dates, times).\n" +
                     "- DO NOT add external campuses, cities, or countries that are not explicitly present in the input.\n" +
@@ -62,8 +63,8 @@ public class TagGenerationService {
                     "- CRITICAL: Do NOT include duplicate tags, even if they differ only in capitalization (e.g., do NOT include both 'NGE' and 'Nge' or 'ST' and 'St').\n" +
                     "- Each tag must be unique when compared case-insensitively (e.g., 'NGE', 'Nge', 'nge' are all considered the same tag).\n" +
                     "- Avoid duplicates and avoid generic single-word tags like 'Issue' or 'Problem'.\n" +
-                    "- Output format: LocationTag1, LocationTag2, LocationTag3, DescTag1, DescTag2, ..., DescTag17\n" +
-                    "- Example: Gle, Classroom, Building, Vandalism, Property, Damage, Window, Broken, Safety, Urgent, Student, Witness, Report, Security, Glass, Shattered, Morning, Incident, Investigation, Evidence";
+                    "- Output format: LocationTag1, LocationTag2, LocationTag3, LocationTag4, DescTag1, DescTag2, ..., DescTag21\n" +
+                    "- Example: Gle, Classroom, Building, Hallway, Vandalism, Property, Damage, Window, Broken, Safety, Urgent, Student, Witness, Report, Security, Glass, Shattered, Morning, Incident, Investigation, Evidence, Equipment, Maintenance, Repair, Urgent";
 
             // Build Gemini API request body
             Map<String, Object> part = new HashMap<>();
