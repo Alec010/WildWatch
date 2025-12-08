@@ -391,7 +391,7 @@ export function Sidebar() {
 
       {/* Sidebar Container */}
       <div
-        className={`sticky top-0 left-0 h-screen z-40 bg-gradient-to-b from-[#800000] to-[#5a0000] text-white flex flex-col shadow-xl overflow-hidden flex-shrink-0 max-w-full ${
+        className={`sticky top-0 left-0 h-screen z-40 bg-gradient-to-b from-[#800000] to-[#5a0000] text-white flex flex-col shadow-xl overflow-y-auto overflow-x-hidden flex-shrink-0 max-w-full ${
           isMobile
             ? mobileOpen
               ? "fixed left-0"
@@ -404,7 +404,7 @@ export function Sidebar() {
       >
         {/* Logo Section */}
         <div
-          className={`p-2 max-w-full overflow-hidden ${
+          className={`p-2 w-full overflow-visible relative z-10 flex-shrink-0 ${
             collapsed && !isMobile ? "flex justify-center" : "px-4"
           }`}
         >
@@ -415,16 +415,36 @@ export function Sidebar() {
               </div>
             </div>
           ) : (
-            <div className="mt-2" style={{ width: 150, height: 50 }}>
-              <Image
-                src="/logo2.png"
-                alt="WildWatch Logo"
-                width={150}
-                height={50}
-                priority
-                unoptimized
-                style={{ width: "100%", height: "auto", display: "block" }}
-              />
+            <div
+              className="mt-2 relative z-10 flex items-center justify-start"
+              style={{ width: "100%", maxWidth: "100%", minHeight: 50 }}
+            >
+              <div
+                style={{
+                  width: 150,
+                  height: 50,
+                  flexShrink: 0,
+                  position: "relative",
+                  zIndex: 10,
+                }}
+              >
+                <Image
+                  src="/logo2.png"
+                  alt="WildWatch Logo"
+                  width={150}
+                  height={50}
+                  priority
+                  unoptimized
+                  style={{
+                    width: "100%",
+                    height: "auto",
+                    display: "block",
+                    position: "relative",
+                    zIndex: 10,
+                    objectFit: "contain",
+                  }}
+                />
+              </div>
             </div>
           )}
         </div>
@@ -432,7 +452,7 @@ export function Sidebar() {
         {/* Navigation */}
         <nav
           className={`flex-1 ${collapsed && !isMobile ? "px-4" : "px-4"} ${
-            collapsed && !isMobile ? "pt-4" : "pt-18"
+            collapsed && !isMobile ? "pt-4" : "pt-16"
           } pb-4 overflow-y-auto overflow-x-hidden hide-scrollbar min-w-0`}
         >
           <div className="space-y-2 w-full max-w-full">
