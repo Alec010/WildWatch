@@ -1,30 +1,48 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import * as z from "zod"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Eye, EyeOff, Phone, Shield, AlertCircle, ArrowRight } from "lucide-react"
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { API_BASE_URL } from "@/utils/api"
-import Cookies from "js-cookie"
-import Image from "next/image"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Eye,
+  EyeOff,
+  Phone,
+  Shield,
+  AlertCircle,
+  ArrowRight,
+} from "lucide-react";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { API_BASE_URL } from "@/utils/api";
+import Cookies from "js-cookie";
+import Image from "next/image";
 
 const formSchema = z
   .object({
     contactNumber: z
       .string()
-      .transform(val => val.replace(/\s/g, '')) // Remove spaces before validation
+      .transform((val) => val.replace(/\s/g, "")) // Remove spaces before validation
       .pipe(
-        z.string()
+        z
+          .string()
           .min(11, "Contact number must be at least 11 digits")
           .max(13, "Contact number must not exceed 13 digits")
-          .regex(/^\+?[0-9]+$/, "Contact number must contain only digits and may start with +")
+          .regex(
+            /^\+?[0-9]+$/,
+            "Contact number must contain only digits and may start with +"
+          )
       ),
     password: z
       .string()
@@ -32,20 +50,23 @@ const formSchema = z
       .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
       .regex(/[a-z]/, "Password must contain at least one lowercase letter")
       .regex(/[0-9]/, "Password must contain at least one number")
-      .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character"),
+      .regex(
+        /[^A-Za-z0-9]/,
+        "Password must contain at least one special character"
+      ),
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
     path: ["confirmPassword"],
-  })
+  });
 
 export default function SetupPage() {
-  const router = useRouter()
-  const [isLoading, setIsLoading] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -54,48 +75,51 @@ export default function SetupPage() {
       password: "",
       confirmPassword: "",
     },
-  })
+  });
 
-  const handleContactNumberChange = (e: React.ChangeEvent<HTMLInputElement>, onChange: (...event: any[]) => void) => {
+  const handleContactNumberChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    onChange: (...event: any[]) => void
+  ) => {
     // Remove all non-digits
-    let inputValue = e.target.value.replace(/\D/g, '')
-    
+    let inputValue = e.target.value.replace(/\D/g, "");
+
     // Always ensure it starts with +63
-    if (!inputValue.startsWith('639')) {
-      inputValue = '639' + inputValue.replace(/^639/, '')
+    if (!inputValue.startsWith("639")) {
+      inputValue = "639" + inputValue.replace(/^639/, "");
     }
-    
+
     // Format the number as +63### ### ####
-    let formattedValue = '+63'
+    let formattedValue = "+63";
     if (inputValue.length > 2) {
-      const remainingDigits = inputValue.slice(2)
+      const remainingDigits = inputValue.slice(2);
       if (remainingDigits.length > 0) {
-        formattedValue += ' ' + remainingDigits.slice(0, 3)
+        formattedValue += " " + remainingDigits.slice(0, 3);
       }
       if (remainingDigits.length > 3) {
-        formattedValue += ' ' + remainingDigits.slice(3, 6)
+        formattedValue += " " + remainingDigits.slice(3, 6);
       }
       if (remainingDigits.length > 6) {
-        formattedValue += ' ' + remainingDigits.slice(6, 10)
+        formattedValue += " " + remainingDigits.slice(6, 10);
       }
     }
-    
+
     // Limit total length to 15 characters (including spaces and +)
     if (formattedValue.length > 16) {
-      formattedValue = formattedValue.slice(0, 16)
+      formattedValue = formattedValue.slice(0, 16);
     }
-    
-    onChange(formattedValue)
-  }
+
+    onChange(formattedValue);
+  };
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
-      setIsLoading(true)
-      setError(null)
+      setIsLoading(true);
+      setError(null);
 
-      const token = Cookies.get("token")
+      const token = Cookies.get("token");
       if (!token) {
-        throw new Error("No authentication token found")
+        throw new Error("No authentication token found");
       }
 
       const response = await fetch(`${API_BASE_URL}/api/auth/setup`, {
@@ -108,26 +132,31 @@ export default function SetupPage() {
           contactNumber: values.contactNumber,
           password: values.password,
         }),
-      })
+      });
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || "Failed to setup account")
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to setup account");
       }
 
       // Redirect to dashboard after successful setup
-      router.push("/dashboard")
+      router.push("/dashboard");
     } catch (error) {
-      console.error("Setup error:", error)
-      setError(error instanceof Error ? error.message : "Failed to setup account")
+      console.error("Setup error:", error);
+      setError(
+        error instanceof Error ? error.message : "Failed to setup account"
+      );
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#f5f5f7" }}>
-      <div className="relative mb-10 mt-10 w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-xl border border-[#D4AF37]/20 mx-4">
+    <div
+      className="min-h-screen flex items-center justify-center overflow-y-auto"
+      style={{ backgroundColor: "#f5f5f7" }}
+    >
+      <div className="relative mb-10 mt-10 w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-xl border border-[#D4AF37]/20 mx-4 overflow-y-auto max-h-[90vh]">
         {/* Decorative elements */}
         <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#800000] via-[#D4AF37] to-[#800000] rounded-t-lg animate-gradient-x"></div>
         <div className="absolute -z-10 top-20 right-0 w-64 h-64 bg-[#D4AF37]/10 rounded-full opacity-20 blur-3xl"></div>
@@ -136,20 +165,31 @@ export default function SetupPage() {
         <div className="flex flex-col items-center space-y-4">
           <div className="relative">
             <div className="relative bg-white rounded-full p-1">
-              <Image src="/logo.png" alt="WildWatch Logo" width={150} height={50} priority className="relative" />
+              <Image
+                src="/logo.png"
+                alt="WildWatch Logo"
+                width={150}
+                height={50}
+                priority
+                className="relative"
+              />
             </div>
           </div>
-          <h1 className="text-2xl font-bold text-[#800000] text-center">Complete Your Account Setup</h1>
+          <h1 className="text-2xl font-bold text-[#800000] text-center">
+            Complete Your Account Setup
+          </h1>
           <p className="text-sm text-muted-foreground text-center max-w-sm">
-            Please provide your contact number and set a password for field login.
+            Please provide your contact number and set a password for field
+            login.
           </p>
         </div>
 
         <div className="p-1 bg-[#FFF8E1] border-l-4 border-[#D4AF37] rounded-md">
           <div className="p-3">
             <p className="text-sm text-foreground">
-              <span className="font-medium">Note:</span> Your account setup is almost complete. This information will be
-              used for authentication and important notifications.
+              <span className="font-medium">Note:</span> Your account setup is
+              almost complete. This information will be used for authentication
+              and important notifications.
             </p>
           </div>
         </div>
@@ -161,7 +201,9 @@ export default function SetupPage() {
               name="contactNumber"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-[#800000] font-medium">Contact Number</FormLabel>
+                  <FormLabel className="text-[#800000] font-medium">
+                    Contact Number
+                  </FormLabel>
                   <FormControl>
                     <div className="relative">
                       <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#800000]/70" />
@@ -170,7 +212,9 @@ export default function SetupPage() {
                         className="pl-10 border-[#D4AF37]/40 focus-visible:ring-[#D4AF37]/60 transition-all"
                         {...field}
                         value={field.value}
-                        onChange={(e) => handleContactNumberChange(e, field.onChange)}
+                        onChange={(e) =>
+                          handleContactNumberChange(e, field.onChange)
+                        }
                         disabled={isLoading}
                       />
                     </div>
@@ -185,7 +229,9 @@ export default function SetupPage() {
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-[#800000] font-medium">Password</FormLabel>
+                  <FormLabel className="text-[#800000] font-medium">
+                    Password
+                  </FormLabel>
                   <FormControl>
                     <div className="relative">
                       <Shield className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#800000]/70" />
@@ -202,48 +248,102 @@ export default function SetupPage() {
                         onClick={() => setShowPassword(!showPassword)}
                         tabIndex={-1}
                       >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
                       </button>
                     </div>
                   </FormControl>
                   <div className="mt-4 grid grid-cols-3 gap-2 text-xs">
                     <div className="flex items-center gap-1">
                       <div
-                        className={`h-3 w-3 rounded-full ${field.value.length >= 8 ? "bg-green-500" : "bg-gray-300"}`}
+                        className={`h-3 w-3 rounded-full ${
+                          field.value.length >= 8
+                            ? "bg-green-500"
+                            : "bg-gray-300"
+                        }`}
                       ></div>
-                      <span className={field.value.length >= 8 ? "text-green-700" : "text-gray-500"}>
+                      <span
+                        className={
+                          field.value.length >= 8
+                            ? "text-green-700"
+                            : "text-gray-500"
+                        }
+                      >
                         8+ characters
                       </span>
                     </div>
                     <div className="flex items-center gap-1">
                       <div
-                        className={`h-3 w-3 rounded-full ${/[A-Z]/.test(field.value) ? "bg-green-500" : "bg-gray-300"}`}
+                        className={`h-3 w-3 rounded-full ${
+                          /[A-Z]/.test(field.value)
+                            ? "bg-green-500"
+                            : "bg-gray-300"
+                        }`}
                       ></div>
-                      <span className={/[A-Z]/.test(field.value) ? "text-green-700" : "text-gray-500"}>
+                      <span
+                        className={
+                          /[A-Z]/.test(field.value)
+                            ? "text-green-700"
+                            : "text-gray-500"
+                        }
+                      >
                         Uppercase letter
                       </span>
                     </div>
                     <div className="flex items-center gap-1">
                       <div
-                        className={`h-3 w-3 rounded-full ${/[a-z]/.test(field.value) ? "bg-green-500" : "bg-gray-300"}`}
+                        className={`h-3 w-3 rounded-full ${
+                          /[a-z]/.test(field.value)
+                            ? "bg-green-500"
+                            : "bg-gray-300"
+                        }`}
                       ></div>
-                      <span className={/[a-z]/.test(field.value) ? "text-green-700" : "text-gray-500"}>
+                      <span
+                        className={
+                          /[a-z]/.test(field.value)
+                            ? "text-green-700"
+                            : "text-gray-500"
+                        }
+                      >
                         Lowercase letter
                       </span>
                     </div>
                     <div className="flex items-center gap-1">
                       <div
-                        className={`h-3 w-3 rounded-full ${/[0-9]/.test(field.value) ? "bg-green-500" : "bg-gray-300"}`}
+                        className={`h-3 w-3 rounded-full ${
+                          /[0-9]/.test(field.value)
+                            ? "bg-green-500"
+                            : "bg-gray-300"
+                        }`}
                       ></div>
-                      <span className={/[0-9]/.test(field.value) ? "text-green-700" : "text-gray-500"}>Number</span>
+                      <span
+                        className={
+                          /[0-9]/.test(field.value)
+                            ? "text-green-700"
+                            : "text-gray-500"
+                        }
+                      >
+                        Number
+                      </span>
                     </div>
                     <div className="flex items-center gap-1">
                       <div
                         className={`h-3 w-3 rounded-full ${
-                          /[^A-Za-z0-9]/.test(field.value) ? "bg-green-500" : "bg-gray-300"
+                          /[^A-Za-z0-9]/.test(field.value)
+                            ? "bg-green-500"
+                            : "bg-gray-300"
                         }`}
                       ></div>
-                      <span className={/[^A-Za-z0-9]/.test(field.value) ? "text-green-700" : "text-gray-500"}>
+                      <span
+                        className={
+                          /[^A-Za-z0-9]/.test(field.value)
+                            ? "text-green-700"
+                            : "text-gray-500"
+                        }
+                      >
                         Special character
                       </span>
                     </div>
@@ -258,7 +358,9 @@ export default function SetupPage() {
               name="confirmPassword"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-[#800000] font-medium">Confirm Password</FormLabel>
+                  <FormLabel className="text-[#800000] font-medium">
+                    Confirm Password
+                  </FormLabel>
                   <FormControl>
                     <div className="relative">
                       <Shield className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#800000]/70" />
@@ -272,10 +374,16 @@ export default function SetupPage() {
                       <button
                         type="button"
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-[#800000]/70 hover:text-[#800000] transition-colors"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        onClick={() =>
+                          setShowConfirmPassword(!showConfirmPassword)
+                        }
                         tabIndex={-1}
                       >
-                        {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        {showConfirmPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
                       </button>
                     </div>
                   </FormControl>
@@ -332,16 +440,22 @@ export default function SetupPage() {
 
         <div className="text-center text-xs text-muted-foreground pt-4">
           By completing this setup, you agree to our{" "}
-          <a href="/terms" className="text-[#800000] hover:text-[#800000]/80 font-medium transition-colors">
+          <a
+            href="/terms"
+            className="text-[#800000] hover:text-[#800000]/80 font-medium transition-colors"
+          >
             Terms and Conditions
           </a>{" "}
           and{" "}
-          <a href="/privacy" className="text-[#800000] hover:text-[#800000]/80 font-medium transition-colors">
+          <a
+            href="/privacy"
+            className="text-[#800000] hover:text-[#800000]/80 font-medium transition-colors"
+          >
             Privacy Policy
           </a>
           .
         </div>
       </div>
     </div>
-  )
+  );
 }
