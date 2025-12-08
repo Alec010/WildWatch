@@ -17,7 +17,16 @@ import {
   AlertTriangle,
   RefreshCw,
   HelpCircle,
+  Bug,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export default function MobileTermsPage() {
   const router = useRouter();
@@ -26,6 +35,8 @@ export default function MobileTermsPage() {
   const [isOAuthUser, setIsOAuthUser] = useState(false);
   const [activeSection, setActiveSection] = useState<number | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [showDebugDialog, setShowDebugDialog] = useState(false);
+  const [debugData, setDebugData] = useState<any>(null);
 
   useEffect(() => {
     // Check if mobile device
@@ -111,11 +122,41 @@ export default function MobileTermsPage() {
         }
       }
 
+      // Collect user data for debugging
+      let userDataFromStorage: any = null;
+      try {
+        const oauthUserDataStr = sessionStorage.getItem("oauthUserData");
+        if (oauthUserDataStr) {
+          userDataFromStorage = JSON.parse(oauthUserDataStr);
+        }
+      } catch (e) {
+        console.warn("Could not parse oauthUserData for debug:", e);
+      }
+
       if (!token) {
+        // Collect debug info before throwing
+        const debugInfo = {
+          error: "No authentication token found",
+          tokenSources: {
+            fromCookies: !!Cookies.get("token"),
+            fromUrl: typeof window !== "undefined" ? !!new URLSearchParams(window.location.search).get("token") : false,
+            fromTokenService: false,
+            fromSessionStorage: !!userDataFromStorage?.token,
+          },
+          userData: userDataFromStorage,
+          apiBaseUrl: API_BASE_URL,
+        };
+        setDebugData(debugInfo);
+        setShowDebugDialog(true);
         throw new Error(
           "No authentication token found. Please try logging in again."
         );
       }
+
+      // Mask token for display (show first 20 chars and last 10 chars)
+      const maskedToken = token.length > 30 
+        ? `${token.substring(0, 20)}...${token.substring(token.length - 10)}`
+        : "***masked***";
 
       const response = await fetch(`${API_BASE_URL}/api/terms/accept`, {
         method: "POST",
@@ -133,6 +174,35 @@ export default function MobileTermsPage() {
       if (!response.ok) {
         const errorText = await response.text();
         console.error("Error response:", errorText);
+        
+        // Collect comprehensive debug info
+        const debugInfo = {
+          error: errorText,
+          errorMessage: `Failed to accept terms: ${errorText}`,
+          responseStatus: response.status,
+          responseStatusText: response.statusText,
+          token: {
+            present: true,
+            length: token.length,
+            masked: maskedToken,
+            source: (() => {
+              if (Cookies.get("token")) return "cookies";
+              if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("token")) return "url";
+              if (userDataFromStorage?.token) return "sessionStorage";
+              return "unknown";
+            })(),
+          },
+          userData: userDataFromStorage,
+          apiBaseUrl: API_BASE_URL,
+          requestUrl: `${API_BASE_URL}/api/terms/accept`,
+          requestHeaders: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+            Authorization: `Bearer ${maskedToken}`,
+          },
+        };
+        setDebugData(debugInfo);
+        setShowDebugDialog(true);
         throw new Error(`Failed to accept terms: ${errorText}`);
       }
 
@@ -169,9 +239,62 @@ export default function MobileTermsPage() {
       router.push(redirectPath);
     } catch (error) {
       console.error("Error accepting terms:", error);
-      setError(
-        error instanceof Error ? error.message : "Failed to accept terms"
-      );
+      const errorMessage = error instanceof Error ? error.message : "Failed to accept terms";
+      setError(errorMessage);
+
+      // If debug data wasn't set in the try block, collect it now
+      if (!debugData) {
+        let userDataFromStorage: any = null;
+        try {
+          const oauthUserDataStr = sessionStorage.getItem("oauthUserData");
+          if (oauthUserDataStr) {
+            userDataFromStorage = JSON.parse(oauthUserDataStr);
+          }
+        } catch (e) {
+          console.warn("Could not parse oauthUserData for debug:", e);
+        }
+
+        let token: string | undefined = Cookies.get("token");
+        if (!token && typeof window !== "undefined") {
+          const urlParams = new URLSearchParams(window.location.search);
+          token = urlParams.get("token") || undefined;
+        }
+        if (!token && typeof window !== "undefined") {
+          try {
+            const oauthUserData = sessionStorage.getItem("oauthUserData");
+            if (oauthUserData) {
+              const userData = JSON.parse(oauthUserData);
+              token = userData.token;
+            }
+          } catch (e) {
+            // Ignore
+          }
+        }
+
+        const maskedToken = token && token.length > 30 
+          ? `${token.substring(0, 20)}...${token.substring(token.length - 10)}`
+          : token || "NONE";
+
+        const debugInfo = {
+          error: errorMessage,
+          token: {
+            present: !!token,
+            length: token?.length || 0,
+            masked: maskedToken,
+            source: (() => {
+              if (Cookies.get("token")) return "cookies";
+              if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("token")) return "url";
+              if (userDataFromStorage?.token) return "sessionStorage";
+              return "none";
+            })(),
+          },
+          userData: userDataFromStorage,
+          apiBaseUrl: API_BASE_URL,
+          requestUrl: `${API_BASE_URL}/api/terms/accept`,
+        };
+        setDebugData(debugInfo);
+        setShowDebugDialog(true);
+      }
 
       // If the error is due to authentication, redirect to login
       if (error instanceof Error && error.message.includes("401")) {
@@ -483,6 +606,90 @@ export default function MobileTermsPage() {
           Technology – University. All rights reserved.
         </div>
       </div>
+
+      {/* Debug Dialog */}
+      <Dialog open={showDebugDialog} onOpenChange={setShowDebugDialog}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-[#800000]">
+              <Bug className="h-6 w-6" />
+              Debug Information
+            </DialogTitle>
+            <DialogDescription>
+              Error details, user data, and token information for debugging
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {debugData && (
+              <div className="space-y-4">
+                {/* Error Details */}
+                <div>
+                  <h3 className="font-semibold text-sm mb-2 text-[#800000]">
+                    Error Details:
+                  </h3>
+                  <pre className="bg-gray-100 p-3 rounded-md text-xs overflow-x-auto">
+                    {JSON.stringify(
+                      {
+                        error: debugData.error || debugData.errorMessage,
+                        responseStatus: debugData.responseStatus,
+                        responseStatusText: debugData.responseStatusText,
+                      },
+                      null,
+                      2
+                    )}
+                  </pre>
+                </div>
+
+                {/* Token Information */}
+                <div>
+                  <h3 className="font-semibold text-sm mb-2 text-[#800000]">
+                    Token Information:
+                  </h3>
+                  <pre className="bg-gray-100 p-3 rounded-md text-xs overflow-x-auto">
+                    {JSON.stringify(debugData.token, null, 2)}
+                  </pre>
+                </div>
+
+                {/* User Data */}
+                <div>
+                  <h3 className="font-semibold text-sm mb-2 text-[#800000]">
+                    User Data from SessionStorage:
+                  </h3>
+                  <pre className="bg-gray-100 p-3 rounded-md text-xs overflow-x-auto">
+                    {JSON.stringify(debugData.userData, null, 2)}
+                  </pre>
+                </div>
+
+                {/* Request Details */}
+                <div>
+                  <h3 className="font-semibold text-sm mb-2 text-[#800000]">
+                    Request Details:
+                  </h3>
+                  <pre className="bg-gray-100 p-3 rounded-md text-xs overflow-x-auto">
+                    {JSON.stringify(
+                      {
+                        apiBaseUrl: debugData.apiBaseUrl,
+                        requestUrl: debugData.requestUrl,
+                        requestHeaders: debugData.requestHeaders,
+                      },
+                      null,
+                      2
+                    )}
+                  </pre>
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={() => setShowDebugDialog(false)}
+              className="bg-[#800000] hover:bg-[#800000]/90"
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
