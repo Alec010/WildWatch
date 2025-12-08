@@ -227,7 +227,7 @@ export function LoginForm() {
           contentOnly={false}
         />
       ) : (
-        <div className="relative w-full max-w-md p-8 space-y-6 bg-card rounded-lg shadow-xl border border-[#D4AF37]/20">
+        <div className="relative w-full max-w-md p-8 space-y-6 bg-card rounded-lg shadow-xl border border-[#D4AF37]/20 overflow-y-auto max-h-[90vh]">
           {/* Decorative elements */}
           <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#800000] via-[#D4AF37] to-[#800000] rounded-t-lg animate-gradient-x"></div>
           <div className="absolute -z-10 top-20 right-0 w-64 h-64 bg-[#D4AF37]/10 rounded-full opacity-20 blur-3xl"></div>
