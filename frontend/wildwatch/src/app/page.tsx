@@ -1,36 +1,55 @@
-"use client"
+"use client";
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import Link from "next/link"
-import { Shield, Clock, Camera, Users, ChevronRight, ArrowRight } from "lucide-react"
-import Image from "next/image"
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"
-import { FileText, Headphones, AlertTriangle, Smartphone, BarChart3 } from "lucide-react"
-import { useEffect, useState, useCallback } from "react"
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import Link from "next/link";
+import {
+  Shield,
+  Clock,
+  Camera,
+  Users,
+  ChevronRight,
+  ArrowRight,
+} from "lucide-react";
+import Image from "next/image";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
+import {
+  FileText,
+  Headphones,
+  AlertTriangle,
+  Smartphone,
+  BarChart3,
+} from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
 
 export default function Home() {
   // Add auto-scroll functionality for the carousel
-  const [api, setApi] = useState<any>()
+  const [api, setApi] = useState<any>();
 
   const scrollNext = useCallback(() => {
     if (api) {
-      api.scrollNext()
+      api.scrollNext();
     }
-  }, [api])
+  }, [api]);
 
   useEffect(() => {
-    if (!api) return
+    if (!api) return;
 
     // Set up interval for auto-scrolling
-    const interval = setInterval(scrollNext, 1500) // 1.5 seconds
+    const interval = setInterval(scrollNext, 1500); // 1.5 seconds
 
     // Clean up interval on component unmount
-    return () => clearInterval(interval)
-  }, [api, scrollNext])
+    return () => clearInterval(interval);
+  }, [api, scrollNext]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-white to-gray-50">
+    <div className="w-full min-h-screen flex flex-col bg-gradient-to-b from-white to-gray-50">
       {/* Navigation */}
       <nav className="bg-white py-3 px-6 md:px-12 flex justify-between items-center shadow-sm sticky top-0 z-50 border-b border-[#FFD700]/20">
         <div className="flex items-center">
@@ -66,17 +85,46 @@ export default function Home() {
 
         {/* Decorative patterns */}
         <div className="absolute top-10 right-10 w-20 h-20 opacity-10">
-          <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg
+            viewBox="0 0 100 100"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
             <circle cx="50" cy="50" r="40" stroke="#FFD700" strokeWidth="2" />
             <circle cx="50" cy="50" r="30" stroke="#FFD700" strokeWidth="2" />
             <circle cx="50" cy="50" r="20" stroke="#FFD700" strokeWidth="2" />
           </svg>
         </div>
         <div className="absolute bottom-10 left-10 w-20 h-20 opacity-10">
-          <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="10" y="10" width="80" height="80" stroke="#FFD700" strokeWidth="2" />
-            <rect x="25" y="25" width="50" height="50" stroke="#FFD700" strokeWidth="2" />
-            <rect x="40" y="40" width="20" height="20" stroke="#FFD700" strokeWidth="2" />
+          <svg
+            viewBox="0 0 100 100"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <rect
+              x="10"
+              y="10"
+              width="80"
+              height="80"
+              stroke="#FFD700"
+              strokeWidth="2"
+            />
+            <rect
+              x="25"
+              y="25"
+              width="50"
+              height="50"
+              stroke="#FFD700"
+              strokeWidth="2"
+            />
+            <rect
+              x="40"
+              y="40"
+              width="20"
+              height="20"
+              stroke="#FFD700"
+              strokeWidth="2"
+            />
           </svg>
         </div>
 
@@ -98,8 +146,9 @@ export default function Home() {
               </span>
             </h1>
             <p className="text-white/80 mb-8 max-w-lg text-base md:text-lg leading-relaxed">
-              Streamlining incident reporting for CIT University. Ensuring all campus concerns are properly documented
-              and addressed by the right authorities.
+              Streamlining incident reporting for CIT University. Ensuring all
+              campus concerns are properly documented and addressed by the right
+              authorities.
             </p>
             <div className="flex flex-wrap gap-4">
               <Button
@@ -127,7 +176,11 @@ export default function Home() {
               <div className="absolute inset-0 bg-[#FFD700]/10 backdrop-blur-sm rounded-lg shadow-2xl transform rotate-3 z-0"></div>
               <div className="absolute inset-0 bg-[#800000]/10 backdrop-blur-sm rounded-lg shadow-xl transform -rotate-3 z-0"></div>
               <div className="relative z-10">
-                <Carousel className="w-full max-w-md" setApi={setApi} opts={{ loop: true }}>
+                <Carousel
+                  className="w-full max-w-md"
+                  setApi={setApi}
+                  opts={{ loop: true }}
+                >
                   <CarouselContent>
                     {/* Campus Safety Card */}
                     <CarouselItem>
@@ -138,8 +191,12 @@ export default function Home() {
                               <div className="mb-4 bg-[#800000]/10 p-4 rounded-full">
                                 <Shield className="h-16 w-16 text-[#800000]" />
                               </div>
-                              <h3 className="text-[#800000] font-bold text-xl">Campus Safety</h3>
-                              <p className="text-gray-600 mt-2">Protecting our community together</p>
+                              <h3 className="text-[#800000] font-bold text-xl">
+                                Campus Safety
+                              </h3>
+                              <p className="text-gray-600 mt-2">
+                                Protecting our community together
+                              </p>
                             </div>
                           </div>
                         </CardContent>
@@ -155,8 +212,12 @@ export default function Home() {
                               <div className="mb-4 bg-[#800000]/10 p-4 rounded-full">
                                 <FileText className="h-16 w-16 text-[#800000]" />
                               </div>
-                              <h3 className="text-[#800000] font-bold text-xl">Incident Reporting</h3>
-                              <p className="text-gray-600 mt-2">Document and track all campus concerns</p>
+                              <h3 className="text-[#800000] font-bold text-xl">
+                                Incident Reporting
+                              </h3>
+                              <p className="text-gray-600 mt-2">
+                                Document and track all campus concerns
+                              </p>
                             </div>
                           </div>
                         </CardContent>
@@ -172,8 +233,12 @@ export default function Home() {
                               <div className="mb-4 bg-[#800000]/10 p-4 rounded-full">
                                 <Headphones className="h-16 w-16 text-[#800000]" />
                               </div>
-                              <h3 className="text-[#800000] font-bold text-xl">24/7 Support</h3>
-                              <p className="text-gray-600 mt-2">Always available when you need help</p>
+                              <h3 className="text-[#800000] font-bold text-xl">
+                                24/7 Support
+                              </h3>
+                              <p className="text-gray-600 mt-2">
+                                Always available when you need help
+                              </p>
                             </div>
                           </div>
                         </CardContent>
@@ -189,8 +254,12 @@ export default function Home() {
                               <div className="mb-4 bg-[#800000]/10 p-4 rounded-full">
                                 <AlertTriangle className="h-16 w-16 text-[#800000]" />
                               </div>
-                              <h3 className="text-[#800000] font-bold text-xl">Hazard Alerts</h3>
-                              <p className="text-gray-600 mt-2">Stay informed about potential dangers</p>
+                              <h3 className="text-[#800000] font-bold text-xl">
+                                Hazard Alerts
+                              </h3>
+                              <p className="text-gray-600 mt-2">
+                                Stay informed about potential dangers
+                              </p>
                             </div>
                           </div>
                         </CardContent>
@@ -206,8 +275,12 @@ export default function Home() {
                               <div className="mb-4 bg-[#800000]/10 p-4 rounded-full">
                                 <Smartphone className="h-16 w-16 text-[#800000]" />
                               </div>
-                              <h3 className="text-[#800000] font-bold text-xl">Mobile Access</h3>
-                              <p className="text-gray-600 mt-2">Report incidents from anywhere on campus</p>
+                              <h3 className="text-[#800000] font-bold text-xl">
+                                Mobile Access
+                              </h3>
+                              <p className="text-gray-600 mt-2">
+                                Report incidents from anywhere on campus
+                              </p>
                             </div>
                           </div>
                         </CardContent>
@@ -223,8 +296,12 @@ export default function Home() {
                               <div className="mb-4 bg-[#800000]/10 p-4 rounded-full">
                                 <BarChart3 className="h-16 w-16 text-[#800000]" />
                               </div>
-                              <h3 className="text-[#800000] font-bold text-xl">Data Analytics</h3>
-                              <p className="text-gray-600 mt-2">Insights to improve campus safety</p>
+                              <h3 className="text-[#800000] font-bold text-xl">
+                                Data Analytics
+                              </h3>
+                              <p className="text-gray-600 mt-2">
+                                Insights to improve campus safety
+                              </p>
                             </div>
                           </div>
                         </CardContent>
@@ -246,13 +323,18 @@ export default function Home() {
       <main className="flex-1 container mx-auto px-6 md:px-12 py-16">
         <div id="features" className="text-center mb-16">
           <div className="inline-block relative">
-            <span className="text-[#800000] font-bold tracking-wider text-sm uppercase">Platform Features</span>
+            <span className="text-[#800000] font-bold tracking-wider text-sm uppercase">
+              Platform Features
+            </span>
             <div className="absolute -bottom-1 left-1/4 right-1/4 h-0.5 bg-[#800000]/30"></div>
           </div>
-          <h2 className="text-3xl font-bold text-gray-800 mb-4 mt-2">How WildWatch Works</h2>
+          <h2 className="text-3xl font-bold text-gray-800 mb-4 mt-2">
+            How WildWatch Works
+          </h2>
           <p className="text-gray-600 max-w-2xl mx-auto mt-4">
-            Our platform provides a comprehensive solution for incident reporting and management, ensuring all concerns
-            are properly addressed and resolved.
+            Our platform provides a comprehensive solution for incident
+            reporting and management, ensuring all concerns are properly
+            addressed and resolved.
           </p>
         </div>
 
@@ -264,10 +346,12 @@ export default function Home() {
                 <div className="h-14 w-14 rounded-full bg-[#800000]/10 flex items-center justify-center mb-6 shadow-md group-hover:bg-[#800000]/20 transition-colors duration-300">
                   <Shield className="h-7 w-7 text-[#800000]" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-800 mb-3">Secure Reporting</h3>
+                <h3 className="text-xl font-bold text-gray-800 mb-3">
+                  Secure Reporting
+                </h3>
                 <p className="text-gray-600">
-                  End-to-end encryption ensures all wildwatch reports remain confidential and secure, protecting
-                  sensitive information.
+                  End-to-end encryption ensures all wildwatch reports remain
+                  confidential and secure, protecting sensitive information.
                 </p>
                 <div className="mt-6 w-16 h-1 bg-gradient-to-r from-[#800000] via-[#FFD700] to-[#800000] group-hover:w-full transition-all duration-500"></div>
               </div>
@@ -280,10 +364,12 @@ export default function Home() {
                 <div className="h-14 w-14 rounded-full bg-[#800000]/10 flex items-center justify-center mb-6 shadow-md group-hover:bg-[#800000]/20 transition-colors duration-300">
                   <Clock className="h-7 w-7 text-[#800000]" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-800 mb-3">Fast Response</h3>
+                <h3 className="text-xl font-bold text-gray-800 mb-3">
+                  Fast Response
+                </h3>
                 <p className="text-gray-600">
-                  Quick submission process and automated notifications ensure rapid response to wildwatch incidents when
-                  time matters most.
+                  Quick submission process and automated notifications ensure
+                  rapid response to wildwatch incidents when time matters most.
                 </p>
                 <div className="mt-6 w-16 h-1 bg-gradient-to-r from-[#800000] via-[#FFD700] to-[#800000] group-hover:w-full transition-all duration-500"></div>
               </div>
@@ -296,10 +382,12 @@ export default function Home() {
                 <div className="h-14 w-14 rounded-full bg-[#800000]/10 flex items-center justify-center mb-6 shadow-md group-hover:bg-[#800000]/20 transition-colors duration-300">
                   <Camera className="h-7 w-7 text-[#800000]" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-800 mb-3">Photo Documentation</h3>
+                <h3 className="text-xl font-bold text-gray-800 mb-3">
+                  Photo Documentation
+                </h3>
                 <p className="text-gray-600">
-                  Capture and organize high-quality images of wildwatch sightings with location and time data for
-                  complete records.
+                  Capture and organize high-quality images of wildwatch
+                  sightings with location and time data for complete records.
                 </p>
                 <div className="mt-6 w-16 h-1 bg-gradient-to-r from-[#800000] via-[#FFD700] to-[#800000] group-hover:w-full transition-all duration-500"></div>
               </div>
@@ -312,10 +400,12 @@ export default function Home() {
                 <div className="h-14 w-14 rounded-full bg-[#800000]/10 flex items-center justify-center mb-6 shadow-md group-hover:bg-[#800000]/20 transition-colors duration-300">
                   <Users className="h-7 w-7 text-[#800000]" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-800 mb-3">Team Collaboration</h3>
+                <h3 className="text-xl font-bold text-gray-800 mb-3">
+                  Team Collaboration
+                </h3>
                 <p className="text-gray-600">
-                  Collaborative tools enable team-based wildwatch monitoring and conservation efforts across departments
-                  and roles.
+                  Collaborative tools enable team-based wildwatch monitoring and
+                  conservation efforts across departments and roles.
                 </p>
                 <div className="mt-6 w-16 h-1 bg-gradient-to-r from-[#800000] via-[#FFD700] to-[#800000] group-hover:w-full transition-all duration-500"></div>
               </div>
@@ -327,7 +417,12 @@ export default function Home() {
         <div className="mt-20 flex justify-center items-center">
           <div className="bg-white py-6 px-8 rounded-full shadow-md flex items-center border border-[#FFD700]/20 gold-shimmer">
             <div className="h-10 w-10 rounded-full bg-[#800000]/10 flex items-center justify-center mr-4">
-              <svg className="h-6 w-6 text-[#800000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg
+                className="h-6 w-6 text-[#800000]"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -338,7 +433,9 @@ export default function Home() {
             </div>
             <div className="text-left">
               <p className="font-medium text-gray-800">Trusted by</p>
-              <p className="text-gray-600">Cebu Institute of Technology - University</p>
+              <p className="text-gray-600">
+                Cebu Institute of Technology - University
+              </p>
             </div>
           </div>
         </div>
@@ -347,12 +444,17 @@ export default function Home() {
         <div className="mt-24 mb-16">
           <div className="text-center mb-12">
             <div className="inline-block relative">
-              <span className="text-[#800000] font-bold tracking-wider text-sm uppercase">The Team</span>
+              <span className="text-[#800000] font-bold tracking-wider text-sm uppercase">
+                The Team
+              </span>
               <div className="absolute -bottom-1 left-1/4 right-1/4 h-0.5 bg-[#800000]/30"></div>
             </div>
-            <h2 className="text-3xl font-bold text-gray-800 mb-4 mt-2">Meet Our Development Team</h2>
+            <h2 className="text-3xl font-bold text-gray-800 mb-4 mt-2">
+              Meet Our Development Team
+            </h2>
             <p className="text-gray-600 max-w-2xl mx-auto mt-4">
-              The talented individuals behind WildWatch who are passionate about campus safety and technology.
+              The talented individuals behind WildWatch who are passionate about
+              campus safety and technology.
             </p>
           </div>
 
@@ -371,8 +473,12 @@ export default function Home() {
                     />
                   </div>
                   <div className="p-6 text-center">
-                    <h3 className="text-xl font-bold text-gray-800">Alec Arela</h3>
-                    <p className="text-[#800000] font-medium mb-3">Lead/Backend Developer</p>
+                    <h3 className="text-xl font-bold text-gray-800">
+                      Alec Arela
+                    </h3>
+                    <p className="text-[#800000] font-medium mb-3">
+                      Lead/Backend Developer
+                    </p>
                     <div className="flex justify-center items-center mt-4">
                       <a
                         href="mailto:alec.arela@cit.edu?subject=&body=&view=outlook"
@@ -401,8 +507,12 @@ export default function Home() {
                     />
                   </div>
                   <div className="p-6 text-center">
-                    <h3 className="text-xl font-bold text-gray-800">Katrina Amores</h3>
-                    <p className="text-[#800000] font-medium mb-3">UI/UX Web Developer</p>
+                    <h3 className="text-xl font-bold text-gray-800">
+                      Katrina Amores
+                    </h3>
+                    <p className="text-[#800000] font-medium mb-3">
+                      UI/UX Web Developer
+                    </p>
                     <div className="flex justify-center items-center mt-4">
                       <a
                         href="mailto:katrina.amores@cit.edu?subject=&body=&view=outlook"
@@ -416,7 +526,7 @@ export default function Home() {
                 </div>
               </CardContent>
             </Card>
-            
+
             {/* Developer 3 */}
             <Card className="bg-white border border-[#FFD700]/20 shadow-lg rounded-xl overflow-hidden hover:shadow-xl transition-all duration-300 group">
               <CardContent className="p-0">
@@ -431,8 +541,12 @@ export default function Home() {
                     />
                   </div>
                   <div className="p-6 text-center">
-                    <h3 className="text-xl font-bold text-gray-800">Jermaine Gadiano</h3>
-                    <p className="text-[#800000] font-medium mb-3">UI/UX Mobile Developer</p>
+                    <h3 className="text-xl font-bold text-gray-800">
+                      Jermaine Gadiano
+                    </h3>
+                    <p className="text-[#800000] font-medium mb-3">
+                      UI/UX Mobile Developer
+                    </p>
                     <div className="flex justify-center items-center mt-4">
                       <a
                         href="mailto:jermaine.gadiano@cit.edu?subject=&body=&view=outlook"
@@ -463,8 +577,12 @@ export default function Home() {
                     />
                   </div>
                   <div className="p-6 text-center">
-                    <h3 className="text-xl font-bold text-gray-800">Jhean Hecari Caag</h3>
-                    <p className="text-[#800000] font-medium mb-3">UI/UX Web Developer</p>
+                    <h3 className="text-xl font-bold text-gray-800">
+                      Jhean Hecari Caag
+                    </h3>
+                    <p className="text-[#800000] font-medium mb-3">
+                      UI/UX Web Developer
+                    </p>
                     <div className="flex justify-center items-center mt-4">
                       <a
                         href="mailto:jheanhecari.caag@cit.edu?subject=&body=&view=outlook"
@@ -478,7 +596,6 @@ export default function Home() {
                 </div>
               </CardContent>
             </Card>
-
 
             {/* Developer 5 */}
             <Card className="bg-white border border-[#FFD700]/20 shadow-lg rounded-xl overflow-hidden hover:shadow-xl transition-all duration-300 group">
@@ -494,8 +611,12 @@ export default function Home() {
                     />
                   </div>
                   <div className="p-6 text-center">
-                    <h3 className="text-xl font-bold text-gray-800">Joshua Daniel Pusing</h3>
-                    <p className="text-[#800000] font-medium mb-3">UI/UX Mobile Developer</p>
+                    <h3 className="text-xl font-bold text-gray-800">
+                      Joshua Daniel Pusing
+                    </h3>
+                    <p className="text-[#800000] font-medium mb-3">
+                      UI/UX Mobile Developer
+                    </p>
                     <div className="flex justify-center items-center mt-4">
                       <a
                         href="mailto:joshua.pusing@cit.edu?subject=&body=&view=outlook"
@@ -518,13 +639,19 @@ export default function Home() {
         <div className="container mx-auto px-6 md:px-12">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center mb-4 md:mb-0">
-              <img src="/wildwatchlogo2.png?height=30&width=30" alt="WILD Logo" className="h-8" />
+              <img
+                src="/wildwatchlogo2.png?height=30&width=30"
+                alt="WILD Logo"
+                className="h-8"
+              />
               <span className="ml-2 text-[#800000] font-medium">WILDWATCH</span>
             </div>
-            <div className="text-sm text-gray-500">© 2025 WILDWATCH. All rights reserved.</div>
+            <div className="text-sm text-gray-500">
+              © 2025 WILDWATCH. All rights reserved.
+            </div>
           </div>
         </div>
       </footer>
     </div>
-  )
+  );
 }
