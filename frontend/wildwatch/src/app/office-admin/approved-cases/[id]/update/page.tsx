@@ -165,6 +165,7 @@ export default function UpdateVerifiedCasePage() {
   const [isResolveDialogOpen, setIsResolveDialogOpen] = useState(false);
   const [isCloseDialogOpen, setIsCloseDialogOpen] = useState(false);
   const [resolutionNotes, setResolutionNotes] = useState("");
+  const [dismissalNotes, setDismissalNotes] = useState("");
   const [confirmResolution, setConfirmResolution] = useState(false);
   const [confirmAIGuideline, setConfirmAIGuideline] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
@@ -476,6 +477,15 @@ export default function UpdateVerifiedCasePage() {
   };
 
   const handleCloseCase = async () => {
+    if (!dismissalNotes.trim()) {
+      toast.error("Dismissal notes are required", {
+        description: "Please provide notes explaining why this case is being dismissed.",
+        duration: 5000,
+        id: "dismissal-notes-required",
+      });
+      return;
+    }
+
     try {
       setIsSending(true);
       const token = document.cookie
@@ -489,7 +499,7 @@ export default function UpdateVerifiedCasePage() {
 
       const updateRequest: UpdateRequest = {
         status: "Dismissed",
-        updateMessage: "Case has been resolved and dismissed.",
+        updateMessage: dismissalNotes.trim(),
         updatedBy: updatedBy || "System",
         visibleToReporter: true,
         priorityLevel,
@@ -519,6 +529,7 @@ export default function UpdateVerifiedCasePage() {
 
       setIncident((prev) => (prev ? { ...prev, status: "Dismissed" } : prev));
       await fetchUpdates();
+      setDismissalNotes("");
     } catch (error) {
       console.error("Error closing case:", error);
       toast.error("Failed to dismiss case", {
@@ -884,13 +895,13 @@ export default function UpdateVerifiedCasePage() {
                             >
                               <XCircle className="h-4 w-4 mr-2" />
                               <span className="hidden sm:inline">
-                                Resolve Case
+                                Dismiss Case
                               </span>
-                              <span className="sm:hidden">Resolve</span>
+                              <span className="sm:hidden">Dismiss</span>
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            Resolve and dismiss this case
+                            Dismiss this case
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -1435,17 +1446,40 @@ export default function UpdateVerifiedCasePage() {
       <AlertDialog open={isCloseDialogOpen} onOpenChange={setIsCloseDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Resolve Case</AlertDialogTitle>
+            <AlertDialogTitle>Dismiss Case</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to resolve and dismiss this case? This
-              action will mark the case as dismissed and notify the reporter.
+              Provide dismissal notes explaining why this case is being dismissed.
+              These notes will be shared with the reporter.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-[#8B0000] flex items-center justify-between">
+                <span>Dismissal Notes</span>
+                <span
+                  className={`text-xs ${
+                    dismissalNotes.length > 255
+                      ? "text-red-600 font-semibold"
+                      : "text-gray-500"
+                  }`}
+                >
+                  {dismissalNotes.length}/255
+                </span>
+              </label>
+              <Textarea
+                value={dismissalNotes}
+                onChange={(e) => setDismissalNotes(e.target.value)}
+                placeholder="Explain why this case is being dismissed..."
+                maxLength={255}
+                className="min-h-[120px] resize-none border-[#DAA520]/20 focus:ring-[#8B0000]/20 focus:border-[#8B0000]"
+              />
+            </div>
+          </div>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isSending}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleCloseCase}
-              disabled={isSending}
+              disabled={isSending || !dismissalNotes.trim()}
               className="bg-red-600 hover:bg-red-700 text-white"
             >
               {isSending ? (
@@ -1454,7 +1488,7 @@ export default function UpdateVerifiedCasePage() {
                   Processing...
                 </>
               ) : (
-                "Resolve Case"
+                "Dismiss Case"
               )}
             </AlertDialogAction>
           </AlertDialogFooter>

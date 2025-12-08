@@ -121,9 +121,29 @@ public class MicrosoftOAuthCallbackController {
 
         JsonNode userInfo = objectMapper.readTree(userInfoResponse.getBody());
         String email = userInfo.has("email") ? userInfo.get("email").asText() : userInfo.get("upn").asText();
-        String firstName = userInfo.has("given_name") ? userInfo.get("given_name").asText() : "";
+        String givenName = userInfo.has("given_name") ? userInfo.get("given_name").asText() : "";
         String lastName = userInfo.has("family_name") ? userInfo.get("family_name").asText() : "";
-        logger.info("Extracted user info - email: {}, firstName: {}, lastName: {}", email, firstName, lastName);
+        
+        // Extract school ID from given_name if it matches the pattern (e.g., "22-3326-574 FirstName")
+        // Format: "ID-NUMBER FirstName" or just "FirstName"
+        String schoolIdNumber = null;
+        String firstName = null;
+        
+        if (givenName != null && givenName.matches("\\d{2}-\\d{4}-\\d{3}\\s+.*")) {
+            // Pattern matches: "22-3326-574 FirstName" or "22-3326-574 FirstName LastName"
+            String[] parts = givenName.split("\\s+", 2);
+            schoolIdNumber = parts[0];
+            firstName = parts.length > 1 ? parts[1] : "User";
+            logger.info("Extracted school ID: {} and firstName: {} from given_name: {}", schoolIdNumber, firstName, givenName);
+        } else {
+            // No school ID in given_name, use given_name as firstName
+            firstName = (givenName != null && !givenName.trim().isEmpty()) ? givenName.trim() : "User";
+            schoolIdNumber = "TEMP_" + System.currentTimeMillis();
+            logger.info("No school ID found in given_name ({}), using temporary ID: {}", givenName, schoolIdNumber);
+        }
+        
+        logger.info("Extracted user info - email: {}, firstName: {}, lastName: {}, schoolIdNumber: {}", 
+                email, firstName, lastName, schoolIdNumber);
 
         // 4. Find or create user in your DB
         logger.info("[OAuthCallback] Looking up user in database");
@@ -138,7 +158,7 @@ public class MicrosoftOAuthCallbackController {
             user.setEnabled(true);
             user.setTermsAccepted(false);
             user.setPassword(UUID.randomUUID().toString());
-            user.setSchoolIdNumber("TEMP_" + System.currentTimeMillis());
+            user.setSchoolIdNumber(schoolIdNumber);
             user.setContactNumber("+639000000000");
             user.setMiddleInitial("");
             user.setAuthProvider("microsoft");

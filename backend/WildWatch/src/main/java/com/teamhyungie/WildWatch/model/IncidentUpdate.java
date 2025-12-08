@@ -11,7 +11,7 @@ public class IncidentUpdate {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 500)
     private String message;
 
     @Column(nullable = false)

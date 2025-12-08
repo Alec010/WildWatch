@@ -18,4 +18,6 @@ public class IncidentUpdateRequest {
     private Boolean isPrivate;
     // Optional – allows office admins to set or update the initial estimated resolution date
     private LocalDateTime estimatedResolutionDate;
+    // Optional – allows office admins to tag report as incident (true) or concern (false)
+    private Boolean isIncident;
 } 

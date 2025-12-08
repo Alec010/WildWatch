@@ -191,6 +191,26 @@ public class AuthController {
             user.setContactNumber(request.getContactNumber());
             user.setPassword(passwordEncoder.encode(request.getPassword()));
 
+            // Update school ID if provided and user currently has TEMP ID
+            if (request.getSchoolIdNumber() != null && !request.getSchoolIdNumber().trim().isEmpty()) {
+                String currentSchoolId = user.getSchoolIdNumber();
+                if (currentSchoolId != null && currentSchoolId.startsWith("TEMP_")) {
+                    // Validate format: XX-XXXX-XXX
+                    String schoolIdPattern = "^\\d{2}-\\d{4}-\\d{3}$";
+                    if (request.getSchoolIdNumber().matches(schoolIdPattern)) {
+                        // Check if school ID already exists
+                        if (userService.existsBySchoolIdNumber(request.getSchoolIdNumber())) {
+                            return ResponseEntity.badRequest().body(Map.of(
+                                    "message", "This school ID number is already registered"));
+                        }
+                        user.setSchoolIdNumber(request.getSchoolIdNumber().trim());
+                    } else {
+                        return ResponseEntity.badRequest().body(Map.of(
+                                "message", "School ID must be in format XX-XXXX-XXX (e.g., 22-3326-574)"));
+                    }
+                }
+            }
+
             userService.save(user);
 
             return ResponseEntity.ok(Map.of(
@@ -258,6 +278,7 @@ class SetupRequest {
 
     private String contactNumber;
     private String password;
+    private String schoolIdNumber;
 
     public String getContactNumber() {
         return contactNumber;
@@ -273,5 +294,13 @@ class SetupRequest {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public String getSchoolIdNumber() {
+        return schoolIdNumber;
+    }
+
+    public void setSchoolIdNumber(String schoolIdNumber) {
+        this.schoolIdNumber = schoolIdNumber;
     }
 }

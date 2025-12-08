@@ -20,7 +20,7 @@ public class ActivityLog {
     @Column(name = "activity_type", nullable = false)
     private String activityType; // e.g., "STATUS_CHANGE", "NEW_REPORT", "CASE_RESOLVED"
 
-    @Column(name = "description", nullable = false)
+    @Column(name = "description", nullable = false, length = 1000)
     private String description;
 
     @Column(name = "created_at", nullable = false)
