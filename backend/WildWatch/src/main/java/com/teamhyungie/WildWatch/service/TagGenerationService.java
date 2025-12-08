@@ -52,17 +52,16 @@ public class TagGenerationService {
                     "- Description: '" + (description == null ? "" : description) + "'\n" +
                     "- Location: '" + sanitizedLocation + "'\n" +
                     "Task:\n" +
-                    "- Generate AT LEAST 20-25 single-word tags (NO phrases, NO hyphens, ONLY one word per tag).\n" +
-                    "- Generate extra tags to account for potential filtering (aim for 22-25 tags to ensure we have 20 after filtering).\n" +
+                    "- Generate EXACTLY 20 single-word tags (NO phrases, NO hyphens, ONLY one word per tag).\n" +
                     "- First 3 tags MUST be location-related (building names, room identifiers, area names from the location).\n" +
-                    "- Remaining tags MUST be about the incident description and incident type (context, severity, parties involved, impact).\n" +
+                    "- Next 17 tags MUST be about the incident description and incident type (context, severity, parties involved, impact).\n" +
                     "- MANDATORY: If the location contains building identifiers or acronyms (e.g., 'GLE', 'MIS'), include them as location tags.\n" +
                     "- DO NOT include date or time tags (e.g., '2025-09-23', '10:30', dates, times).\n" +
                     "- DO NOT add external campuses, cities, or countries that are not explicitly present in the input.\n" +
                     "- Each tag MUST be a SINGLE WORD ONLY in sentence case (first letter capitalized, rest lowercase).\n" +
-                    "- CRITICAL: Avoid duplicates including case variations (e.g., do NOT generate both 'NGE' and 'Nge' - use consistent casing like 'Nge').\n" +
-                    "- Avoid generic single-word tags like 'Issue' or 'Problem'.\n" +
-                    "- Output format: LocationTag1, LocationTag2, LocationTag3, DescTag1, DescTag2, ..., DescTagN (at least 20 tags)\n" +
+                    "- CRITICAL: NO DUPLICATES - Each tag must be unique (case-insensitive). For example, do NOT generate both 'NGE' and 'Nge', or 'ST' and 'St'. If you include an acronym like 'NGE', use it consistently in one case only.\n" +
+                    "- Avoid duplicates and avoid generic single-word tags like 'Issue' or 'Problem'.\n" +
+                    "- Output format: LocationTag1, LocationTag2, LocationTag3, DescTag1, DescTag2, ..., DescTag17\n" +
                     "- Example: Gle, Classroom, Building, Vandalism, Property, Damage, Window, Broken, Safety, Urgent, Student, Witness, Report, Security, Glass, Shattered, Morning, Incident, Investigation, Evidence";
 
             // Build Gemini API request body
@@ -130,42 +129,24 @@ public class TagGenerationService {
             Pattern dateWordPattern = Pattern.compile("\\b(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)\\b", Pattern.CASE_INSENSITIVE);
             Pattern dayPattern = Pattern.compile("\\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|wed|thu|fri|sat|sun)\\b", Pattern.CASE_INSENSITIVE);
 
-            // Process tags with case-insensitive deduplication to prevent duplicates like "NGE" and "Nge"
-            LinkedHashSet<String> uniqueTags = new LinkedHashSet<>();
-            Set<String> seenLowercase = new HashSet<>();
-            
-            for (String tag : tagsText.split(",")) {
-                tag = tag.trim();
-                if (tag.isEmpty()) {
-                    continue;
-                }
-                
-                // Convert to sentence case
-                tag = toSentenceCase(tag);
-                
-                // Filter out date/time tags
-                String tagLower = tag.toLowerCase();
-                if (datePattern.matcher(tag).matches()
-                        || timePattern.matcher(tag).matches()
-                        || dateWordPattern.matcher(tagLower).find()
-                        || dayPattern.matcher(tagLower).find()) {
-                    continue;
-                }
-                
-                // ONLY allow single words (no spaces, hyphens, or special characters except building codes like GLE-202)
-                // Allow alphanumeric and single hyphen for building codes
-                if (!tag.matches("^[A-Za-z0-9]+(-[A-Za-z0-9]+)?$")) {
-                    continue;
-                }
-                
-                // Case-insensitive deduplication: prevent duplicates like "NGE" and "Nge"
-                if (!seenLowercase.contains(tagLower)) {
-                    seenLowercase.add(tagLower);
-                    uniqueTags.add(tag);
-                }
-            }
-            
-            List<String> generatedTags = new ArrayList<>(uniqueTags);
+            List<String> generatedTags = Arrays.stream(tagsText.split(","))
+                    .map(String::trim)
+                    .filter(tag -> !tag.isEmpty())
+                    .map(tag -> toSentenceCase(tag)) // Convert to sentence case
+                    .filter(tag -> {
+                        // Filter out date/time tags
+                        String tagLower = tag.toLowerCase();
+                        return !datePattern.matcher(tag).matches()
+                                && !timePattern.matcher(tag).matches()
+                                && !dateWordPattern.matcher(tagLower).find()
+                                && !dayPattern.matcher(tagLower).find();
+                    })
+                    .filter(tag -> {
+                        // ONLY allow single words (no spaces, hyphens, or special characters except building codes like GLE-202)
+                        // Allow alphanumeric and single hyphen for building codes
+                        return tag.matches("^[A-Za-z0-9]+(-[A-Za-z0-9]+)?$");
+                    })
+                    .collect(Collectors.toList());
 
             // Filter out irrelevant external campuses/cities not present in input
             Set<String> disallowedExact = new HashSet<>(Arrays.asList(
@@ -257,9 +238,9 @@ public class TagGenerationService {
             }
 
             // Merge mandatory tokens first, then AI-generated tags, keeping order and uniqueness
-            // Use case-insensitive deduplication to prevent duplicates like "NGE" and "Nge"
-            // Reuse the same seenLowercase set from initial processing to track all tags
+            // Use case-insensitive comparison to prevent duplicates like "NGE" and "Nge"
             LinkedHashSet<String> merged = new LinkedHashSet<>();
+            Set<String> seenLowercase = new HashSet<>(); // Track lowercase versions to prevent case-insensitive duplicates
             
             for (String t : mandatoryLocationTokens) {
                 String normalized = toSentenceCase(t);
@@ -270,10 +251,9 @@ public class TagGenerationService {
                 }
             }
             for (String t : cleanedGenerated) {
-                String normalized = toSentenceCase(t); // Ensure consistent normalization
-                String lower = normalized.toLowerCase();
+                String lower = t.toLowerCase();
                 if (!seenLowercase.contains(lower)) {
-                    merged.add(normalized);
+                    merged.add(t); // Already normalized to sentence case
                     seenLowercase.add(lower);
                 }
             }
@@ -287,16 +267,8 @@ public class TagGenerationService {
                 finalTags.add(t);
             }
 
-            // If we have fewer than 20 tags due to deduplication, try to generate additional tags
-            // This can happen if AI generated case duplicates like "NGE" and "Nge"
-            if (finalTags.size() < 20) {
-                int needed = 20 - finalTags.size();
-                log.warn("Only {} unique tags after deduplication (expected 20). Need {} more tags.", finalTags.size(), needed);
-                
-                // Try to get more tags from the AI-generated list that were filtered out
-                // or generate additional context-based tags
-                // For now, we'll accept fewer than 20 if deduplication removed duplicates
-                // The system will still work with fewer tags, but ideally AI should generate 20 unique tags
+            if (finalTags.size() != 20) {
+                log.warn("Generated {} tags after enforcement (expected 20)", finalTags.size());
             }
 
             return finalTags;
