@@ -895,13 +895,13 @@ export default function UpdateVerifiedCasePage() {
                             >
                               <XCircle className="h-4 w-4 mr-2" />
                               <span className="hidden sm:inline">
-                                Resolve Case
+                                Dismiss Case
                               </span>
-                              <span className="sm:hidden">Resolve</span>
+                              <span className="sm:hidden">Dismiss</span>
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            Resolve and dismiss this case
+                            Dismiss this case
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
