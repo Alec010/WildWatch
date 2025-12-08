@@ -1,115 +1,177 @@
-"use client"
+"use client";
 
-import React, { useState, useEffect, useRef } from "react"
-import { Bell, Check, X } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { api } from "@/utils/apiClient"
-import { formatDistanceToNow } from "date-fns"
-import { useRouter } from "next/navigation"
+import React, { useState, useEffect, useRef } from "react";
+import { Bell, Check, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { api } from "@/utils/apiClient";
+import { formatDistanceToNow } from "date-fns";
+import { useRouter } from "next/navigation";
 
 interface Notification {
-  id: string
-  activityType: string
-  description: string
-  createdAt: string
-  isRead: boolean
+  id: string;
+  activityType: string;
+  description: string;
+  createdAt: string;
+  isRead: boolean;
   incident?: {
-    id: string
-    trackingNumber: string
-  }
+    id: string;
+    trackingNumber: string;
+  };
 }
 
 export function NotificationDropdown() {
-  const [isOpen, setIsOpen] = useState(false)
-  const [notifications, setNotifications] = useState<Notification[]>([])
-  const [unreadCount, setUnreadCount] = useState(0)
-  const [isLoading, setIsLoading] = useState(false)
-  const dropdownRef = useRef<HTMLDivElement>(null)
-  const router = useRouter()
+  const [isOpen, setIsOpen] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const previousNotificationIdsRef = useRef<Set<string>>(new Set());
+  const notificationAudioRef = useRef<HTMLAudioElement | null>(null);
+  const router = useRouter();
+
+  // Initialize audio on client side only
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      notificationAudioRef.current = new Audio("/notification_sound.mp3");
+      // Preload the audio to ensure it's ready to play
+      notificationAudioRef.current.preload = "auto";
+      // Set volume (optional, adjust as needed)
+      notificationAudioRef.current.volume = 0.5;
+    }
+
+    // Cleanup: pause and reset audio on unmount
+    return () => {
+      if (notificationAudioRef.current) {
+        notificationAudioRef.current.pause();
+        notificationAudioRef.current.currentTime = 0;
+      }
+    };
+  }, []);
+
+  // Play notification sound
+  const playNotificationSound = async () => {
+    if (notificationAudioRef.current) {
+      try {
+        // Reset audio to start from beginning
+        notificationAudioRef.current.currentTime = 0;
+        await notificationAudioRef.current.play();
+      } catch (error) {
+        // Some browsers may block autoplay, log but don't throw
+        console.log("Could not play notification sound:", error);
+      }
+    }
+  };
 
   // Fetch notifications and unread count
   const fetchNotifications = async () => {
     try {
-      setIsLoading(true)
-      const notificationsData = await api.getActivityLogs()
-      setNotifications(notificationsData)
+      setIsLoading(true);
+      const notificationsData = (await api.getActivityLogs()) as Notification[];
+
+      // Detect new notifications by comparing with previous IDs
+      const currentNotificationIds = new Set<string>(
+        notificationsData.map((n) => n.id)
+      );
+      const previousIds = previousNotificationIdsRef.current;
+
+      // Check if there are any new notifications
+      const hasNewNotifications = notificationsData.some(
+        (n) => !previousIds.has(n.id)
+      );
+
+      // Play sound if there are new notifications
+      if (hasNewNotifications && previousIds.size > 0) {
+        // Only play if we had previous notifications (skip on initial load)
+        await playNotificationSound();
+      }
+
+      // Update previous notification IDs
+      previousNotificationIdsRef.current = currentNotificationIds;
+
+      setNotifications(notificationsData);
       // Derive unread count locally; backend count endpoint may not exist for ActivityLog
-      const unread = notificationsData.filter((n: Notification) => !n.isRead).length
-      setUnreadCount(unread)
+      const unread = notificationsData.filter((n) => !n.isRead).length;
+      setUnreadCount(unread);
     } catch (error) {
-      console.error("Failed to fetch notifications:", error)
+      console.error("Failed to fetch notifications:", error);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   // Initial fetch
   useEffect(() => {
-    fetchNotifications()
-    
+    fetchNotifications();
+
     // Set up interval to check for new notifications
-    const interval = setInterval(fetchNotifications, 30000) // Every 30 seconds
-    
-    return () => clearInterval(interval)
-  }, [])
+    const interval = setInterval(fetchNotifications, 30000); // Every 30 seconds
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false)
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false);
       }
-    }
-    
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [])
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Handle notification click
   const handleNotificationClick = async (notification: Notification) => {
     try {
       // Mark notification as read
-      await api.markActivityLogAsRead(notification.id)
-      
+      await api.markActivityLogAsRead(notification.id);
+
       // Update local state
-      setNotifications(prev => 
-        prev.map(n => n.id === notification.id ? { ...n, isRead: true } : n)
-      )
-      setUnreadCount(prev => (prev > 0 ? prev - 1 : 0))
-      
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === notification.id ? { ...n, isRead: true } : n))
+      );
+      setUnreadCount((prev) => (prev > 0 ? prev - 1 : 0));
+
       // Navigate to the bulletin if it's a bulletin upvote
-      if (notification.activityType === "BULLETIN_UPVOTE" || notification.activityType === "BULLETIN_UPVOTE_UPDATE") {
-        router.push(`/office-admin/office-bulletin`)
+      if (
+        notification.activityType === "BULLETIN_UPVOTE" ||
+        notification.activityType === "BULLETIN_UPVOTE_UPDATE"
+      ) {
+        router.push(`/office-admin/office-bulletin`);
       }
-      setIsOpen(false)
+      setIsOpen(false);
     } catch (error) {
-      console.error("Failed to handle notification click:", error)
+      console.error("Failed to handle notification click:", error);
     }
-  }
+  };
 
   // Mark all notifications as read
   const handleMarkAllAsRead = async () => {
     try {
-      await api.markAllActivityLogsAsRead()
-      
+      await api.markAllActivityLogsAsRead();
+
       // Update local state
-      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })))
-      setUnreadCount(0)
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      setUnreadCount(0);
     } catch (error) {
-      console.error("Failed to mark all as read:", error)
+      console.error("Failed to mark all as read:", error);
     }
-  }
+  };
 
   // Format notification message
   const formatNotificationMessage = (notification: Notification) => {
-    return notification.description
-  }
+    return notification.description;
+  };
 
   // Helper to truncate text
   const truncateText = (text: string, maxLength: number) => {
-    if (text.length <= maxLength) return text
-    return text.substring(0, maxLength) + "..."
-  }
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + "...";
+  };
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -126,15 +188,15 @@ export function NotificationDropdown() {
           </span>
         )}
       </Button>
-      
+
       {isOpen && (
         <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-[80vh] flex flex-col">
           <div className="p-3 border-b border-gray-200 flex justify-between items-center">
             <h3 className="font-semibold text-gray-800">Notifications</h3>
             {unreadCount > 0 && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <Button
+                variant="ghost"
+                size="sm"
                 className="h-8 text-xs text-[#8B0000] hover:text-[#6B0000] hover:bg-red-50"
                 onClick={handleMarkAllAsRead}
               >
@@ -143,7 +205,7 @@ export function NotificationDropdown() {
               </Button>
             )}
           </div>
-          
+
           <div className="overflow-y-auto flex-1">
             {isLoading ? (
               <div className="flex items-center justify-center py-8">
@@ -173,7 +235,10 @@ export function NotificationDropdown() {
                           {formatNotificationMessage(notification)}
                         </p>
                         <p className="text-xs text-gray-500 mt-1">
-                          {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+                          {formatDistanceToNow(
+                            new Date(notification.createdAt),
+                            { addSuffix: true }
+                          )}
                         </p>
                       </div>
                       {!notification.isRead && (
@@ -185,11 +250,11 @@ export function NotificationDropdown() {
               </div>
             )}
           </div>
-          
+
           <div className="p-2 border-t border-gray-200">
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              variant="ghost"
+              size="sm"
               className="w-full text-xs text-gray-600 hover:text-[#8B0000]"
               onClick={() => setIsOpen(false)}
             >
@@ -200,5 +265,5 @@ export function NotificationDropdown() {
         </div>
       )}
     </div>
-  )
+  );
 }
