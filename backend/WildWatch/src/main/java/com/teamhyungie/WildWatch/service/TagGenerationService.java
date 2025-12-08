@@ -59,7 +59,8 @@ public class TagGenerationService {
                     "- DO NOT include date or time tags (e.g., '2025-09-23', '10:30', dates, times).\n" +
                     "- DO NOT add external campuses, cities, or countries that are not explicitly present in the input.\n" +
                     "- Each tag MUST be a SINGLE WORD ONLY in sentence case (first letter capitalized, rest lowercase).\n" +
-                    "- CRITICAL: NO DUPLICATES - Each tag must be unique (case-insensitive). For example, do NOT generate both 'NGE' and 'Nge', or 'ST' and 'St'. If you include an acronym like 'NGE', use it consistently in one case only.\n" +
+                    "- CRITICAL: Do NOT include duplicate tags, even if they differ only in capitalization (e.g., do NOT include both 'NGE' and 'Nge' or 'ST' and 'St').\n" +
+                    "- Each tag must be unique when compared case-insensitively (e.g., 'NGE', 'Nge', 'nge' are all considered the same tag).\n" +
                     "- Avoid duplicates and avoid generic single-word tags like 'Issue' or 'Problem'.\n" +
                     "- Output format: LocationTag1, LocationTag2, LocationTag3, DescTag1, DescTag2, ..., DescTag17\n" +
                     "- Example: Gle, Classroom, Building, Vandalism, Property, Damage, Window, Broken, Safety, Urgent, Student, Witness, Report, Security, Glass, Shattered, Morning, Incident, Investigation, Evidence";
@@ -237,8 +238,7 @@ public class TagGenerationService {
                 }
             }
 
-            // Merge mandatory tokens first, then AI-generated tags, keeping order and uniqueness
-            // Use case-insensitive comparison to prevent duplicates like "NGE" and "Nge"
+            // Merge mandatory tokens first, then AI-generated tags, keeping order and case-insensitive uniqueness
             LinkedHashSet<String> merged = new LinkedHashSet<>();
             Set<String> seenLowercase = new HashSet<>(); // Track lowercase versions to prevent case-insensitive duplicates
             
