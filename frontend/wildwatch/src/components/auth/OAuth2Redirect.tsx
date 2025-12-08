@@ -121,8 +121,11 @@ export default function OAuth2Redirect() {
             // For mobile, always go through the mobile flow: terms -> setup -> complete
             // This ensures proper flow and prevents direct app redirect
             if (isMobile) {
-              // Store user data for the mobile flow
-              sessionStorage.setItem("oauthUserData", JSON.stringify(user));
+              // Store user data + token for the mobile flow (Android may lose cookies)
+              sessionStorage.setItem(
+                "oauthUserData",
+                JSON.stringify({ ...user, token })
+              );
 
               // Always start with terms (even if already accepted, the page will handle it)
               if (!user.termsAccepted || !termsAccepted) {
@@ -138,6 +141,10 @@ export default function OAuth2Redirect() {
                   !user.password);
 
               if (needsSetup) {
+                sessionStorage.setItem(
+                  "oauthUserData",
+                  JSON.stringify({ ...user, token })
+                );
                 router.push("/mobile/setup");
                 return;
               }
@@ -202,8 +209,11 @@ export default function OAuth2Redirect() {
 
           // Check if terms are accepted
           if (!data.user.termsAccepted) {
-            // Store the user data in session storage to be used after terms acceptance
-            sessionStorage.setItem("oauthUserData", JSON.stringify(data.user));
+            // Store the user data + token in session storage to be used after terms acceptance
+            sessionStorage.setItem(
+              "oauthUserData",
+              JSON.stringify({ ...data.user, token: data.token })
+            );
             if (isMobile) {
               router.push("/mobile/terms");
             } else {
@@ -217,7 +227,10 @@ export default function OAuth2Redirect() {
             data.user.authProvider === "microsoft" &&
             (data.user.contactNumber === "Not provided" || !data.user.password)
           ) {
-            sessionStorage.setItem("oauthUserData", JSON.stringify(data.user));
+            sessionStorage.setItem(
+              "oauthUserData",
+              JSON.stringify({ ...data.user, token: data.token })
+            );
             if (isMobile) {
               router.push("/mobile/setup");
             } else {
