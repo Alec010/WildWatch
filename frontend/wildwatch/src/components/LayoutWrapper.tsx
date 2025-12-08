@@ -30,7 +30,11 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
 
   // Full width pages should be scrollable (no flex layout)
   if (isFullWidthPage) {
-    return <div className="w-full">{children}</div>;
+    return (
+      <div className="w-full h-screen overflow-y-auto overscroll-none">
+        {children}
+      </div>
+    );
   }
 
   // Other pages use the flex layout for sidebar

@@ -153,7 +153,7 @@ export default function SetupPage() {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center"
+      className="min-h-screen flex items-center justify-center overflow-y-auto overscroll-y-none"
       style={{ backgroundColor: "#f5f5f7" }}
     >
       <div className="relative mb-10 mt-10 w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-xl border border-[#D4AF37]/20 mx-4">
