@@ -255,7 +255,7 @@ export default function TermsPage() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 py-8 overflow-y-auto">
+      <div className="flex-1 py-8">
         <div className="max-w-[1000px] mx-auto px-4">
           <div className="bg-white rounded-xl shadow-xl overflow-hidden border border-[#D4AF37]/20 relative">
             {/* Decorative elements */}
