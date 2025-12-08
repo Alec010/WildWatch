@@ -257,7 +257,7 @@ export default function MapPickerModal({
       ) {
         initializeMap();
       }
-    }, 0);
+    }, 100);
 
     return () => clearTimeout(timer);
   }, [isOpen, initializeMap]);
@@ -393,8 +393,8 @@ export default function MapPickerModal({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={handleClose}>
-        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
-          <DialogHeader className="flex-shrink-0">
+        <DialogContent className="w-[75vw] h-[85vh] max-w-none max-h-none flex flex-col overflow-hidden p-0">
+          <DialogHeader className="flex-shrink-0 px-6 pt-6 pb-4">
             <DialogTitle className="flex items-center gap-2">
               <MapPin className="h-5 w-5 text-[#800000]" />
               Select Location from Map
@@ -405,12 +405,12 @@ export default function MapPickerModal({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex flex-col flex-1 overflow-hidden">
+          <div className="flex flex-col flex-1 overflow-hidden px-6 pb-6">
             {/* Map Container */}
-            <div className="relative flex-1 min-h-[500px]">
+            <div className="relative flex-1 min-h-0">
               <div
                 ref={mapRef}
-                className="w-full h-full min-h-[500px] rounded-lg border border-gray-200 bg-gray-100"
+                className="w-full h-full rounded-lg border border-gray-200 bg-gray-100"
               />
 
               {isLoading && (
@@ -583,7 +583,7 @@ export default function MapPickerModal({
             </div>
           </div>
 
-          <DialogFooter className="flex justify-between flex-shrink-0 pt-4 border-t border-gray-200">
+          <DialogFooter className="flex justify-between flex-shrink-0 pt-4 px-6 pb-6 border-t border-gray-200">
             <Button
               onClick={handleClose}
               variant="outline"
