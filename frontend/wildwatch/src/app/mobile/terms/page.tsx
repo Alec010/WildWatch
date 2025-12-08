@@ -56,9 +56,65 @@ export default function MobileTermsPage() {
     try {
       console.log("Sending terms acceptance request...");
 
-      const token = Cookies.get("token");
+      // ✅ FIX: Get token from multiple sources for Android/OAuth compatibility
+      // Android browsers may not send cookies with sameSite: 'strict' after OAuth redirect
+      let token: string | undefined = Cookies.get("token");
+
+      // Fallback 1: Check URL params (OAuth redirect may include token)
+      if (!token && typeof window !== "undefined") {
+        const urlParams = new URLSearchParams(window.location.search);
+        token = urlParams.get("token") || undefined;
+        // If found in URL, also set it in cookies for future requests
+        if (token) {
+          Cookies.set("token", token, {
+            expires: 7,
+            secure: true,
+            sameSite: "lax",
+            path: "/",
+          });
+        }
+      }
+
+      // Fallback 2: Check tokenService (OAuth2Redirect may have stored it)
+      if (!token && typeof window !== "undefined") {
+        try {
+          const tokenService = (await import("@/utils/tokenService")).default;
+          const tokenFromService = tokenService.getToken();
+          if (tokenFromService) {
+            token = tokenFromService;
+          }
+        } catch (e) {
+          console.warn("Could not get token from tokenService:", e);
+        }
+      }
+
+      // Fallback 3: Check sessionStorage (OAuth2Redirect may have stored user data with token)
+      if (!token && typeof window !== "undefined") {
+        const oauthUserData = sessionStorage.getItem("oauthUserData");
+        if (oauthUserData) {
+          try {
+            const userData = JSON.parse(oauthUserData);
+            // Token might be in the OAuth user data
+            const tokenFromStorage = userData.token;
+            if (tokenFromStorage && typeof tokenFromStorage === "string") {
+              token = tokenFromStorage;
+              Cookies.set("token", tokenFromStorage, {
+                expires: 7,
+                secure: true,
+                sameSite: "lax",
+                path: "/",
+              });
+            }
+          } catch (e) {
+            console.warn("Could not parse oauthUserData:", e);
+          }
+        }
+      }
+
       if (!token) {
-        throw new Error("No authentication token found");
+        throw new Error(
+          "No authentication token found. Please try logging in again."
+        );
       }
 
       const response = await fetch(`${API_BASE_URL}/api/terms/accept`, {
