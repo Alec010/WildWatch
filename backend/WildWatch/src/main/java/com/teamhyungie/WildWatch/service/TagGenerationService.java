@@ -128,24 +128,42 @@ public class TagGenerationService {
             Pattern dateWordPattern = Pattern.compile("\\b(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)\\b", Pattern.CASE_INSENSITIVE);
             Pattern dayPattern = Pattern.compile("\\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|wed|thu|fri|sat|sun)\\b", Pattern.CASE_INSENSITIVE);
 
-            List<String> generatedTags = Arrays.stream(tagsText.split(","))
-                    .map(String::trim)
-                    .filter(tag -> !tag.isEmpty())
-                    .map(tag -> toSentenceCase(tag)) // Convert to sentence case
-                    .filter(tag -> {
-                        // Filter out date/time tags
-                        String tagLower = tag.toLowerCase();
-                        return !datePattern.matcher(tag).matches()
-                                && !timePattern.matcher(tag).matches()
-                                && !dateWordPattern.matcher(tagLower).find()
-                                && !dayPattern.matcher(tagLower).find();
-                    })
-                    .filter(tag -> {
-                        // ONLY allow single words (no spaces, hyphens, or special characters except building codes like GLE-202)
-                        // Allow alphanumeric and single hyphen for building codes
-                        return tag.matches("^[A-Za-z0-9]+(-[A-Za-z0-9]+)?$");
-                    })
-                    .collect(Collectors.toList());
+            // Process tags with case-insensitive deduplication to prevent duplicates like "NGE" and "Nge"
+            LinkedHashSet<String> uniqueTags = new LinkedHashSet<>();
+            Set<String> seenLowercase = new HashSet<>();
+            
+            for (String tag : tagsText.split(",")) {
+                tag = tag.trim();
+                if (tag.isEmpty()) {
+                    continue;
+                }
+                
+                // Convert to sentence case
+                tag = toSentenceCase(tag);
+                
+                // Filter out date/time tags
+                String tagLower = tag.toLowerCase();
+                if (datePattern.matcher(tag).matches()
+                        || timePattern.matcher(tag).matches()
+                        || dateWordPattern.matcher(tagLower).find()
+                        || dayPattern.matcher(tagLower).find()) {
+                    continue;
+                }
+                
+                // ONLY allow single words (no spaces, hyphens, or special characters except building codes like GLE-202)
+                // Allow alphanumeric and single hyphen for building codes
+                if (!tag.matches("^[A-Za-z0-9]+(-[A-Za-z0-9]+)?$")) {
+                    continue;
+                }
+                
+                // Case-insensitive deduplication: prevent duplicates like "NGE" and "Nge"
+                if (!seenLowercase.contains(tagLower)) {
+                    seenLowercase.add(tagLower);
+                    uniqueTags.add(tag);
+                }
+            }
+            
+            List<String> generatedTags = new ArrayList<>(uniqueTags);
 
             // Filter out irrelevant external campuses/cities not present in input
             Set<String> disallowedExact = new HashSet<>(Arrays.asList(
@@ -237,12 +255,25 @@ public class TagGenerationService {
             }
 
             // Merge mandatory tokens first, then AI-generated tags, keeping order and uniqueness
+            // Use case-insensitive deduplication to prevent duplicates like "NGE" and "Nge"
+            // Reuse the same seenLowercase set from initial processing to track all tags
             LinkedHashSet<String> merged = new LinkedHashSet<>();
+            
             for (String t : mandatoryLocationTokens) {
-                merged.add(toSentenceCase(t)); // Normalize to sentence case
+                String normalized = toSentenceCase(t);
+                String lower = normalized.toLowerCase();
+                if (!seenLowercase.contains(lower)) {
+                    merged.add(normalized);
+                    seenLowercase.add(lower);
+                }
             }
             for (String t : cleanedGenerated) {
-                merged.add(t); // Already normalized to sentence case
+                String normalized = toSentenceCase(t); // Ensure consistent normalization
+                String lower = normalized.toLowerCase();
+                if (!seenLowercase.contains(lower)) {
+                    merged.add(normalized);
+                    seenLowercase.add(lower);
+                }
             }
 
             // Enforce exactly 20 tags, prioritizing mandatory tokens
