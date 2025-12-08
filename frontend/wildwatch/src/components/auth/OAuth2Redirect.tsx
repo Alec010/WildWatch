@@ -11,16 +11,6 @@ export default function OAuth2Redirect() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Check if device is mobile
-  const isMobileDevice = () => {
-    if (typeof window === "undefined") return false;
-    return (
-      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-        navigator.userAgent
-      ) || window.innerWidth < 1024
-    );
-  };
-
   // Clear browser data, session, and cache
   const clearBrowserData = () => {
     if (typeof window === "undefined") return;
@@ -98,7 +88,6 @@ export default function OAuth2Redirect() {
 
             // Fetch user profile to get full user data
             // Use the API base URL from config (works for both local and production)
-            const isMobile = isMobileDevice();
             const { getApiBaseUrl } = await import("@/utils/api");
             const apiBaseUrl = getApiBaseUrl();
 
@@ -118,43 +107,7 @@ export default function OAuth2Redirect() {
 
             const user = await profileResponse.json();
 
-            // For mobile, always go through the mobile flow: terms -> setup -> complete
-            // This ensures proper flow and prevents direct app redirect
-            if (isMobile) {
-              // Store user data + token for the mobile flow (Android may lose cookies)
-              sessionStorage.setItem(
-                "oauthUserData",
-                JSON.stringify({ ...user, token })
-              );
-
-              // Always start with terms (even if already accepted, the page will handle it)
-              if (!user.termsAccepted || !termsAccepted) {
-                router.push("/mobile/terms");
-                return;
-              }
-
-              // Check if setup is needed (for Microsoft OAuth users)
-              const needsSetup =
-                user.authProvider === "microsoft" &&
-                (user.contactNumber === "Not provided" ||
-                  user.contactNumber === "+639000000000" ||
-                  !user.password);
-
-              if (needsSetup) {
-                sessionStorage.setItem(
-                  "oauthUserData",
-                  JSON.stringify({ ...user, token })
-                );
-                router.push("/mobile/setup");
-                return;
-              }
-
-              // If user is complete, show completion page with app redirect
-              router.push("/mobile/complete");
-              return;
-            }
-
-            // For desktop/web only - mobile users should never reach here
+            // Desktop OAuth flow
             if (!user.termsAccepted || !termsAccepted) {
               sessionStorage.setItem("oauthUserData", JSON.stringify(user));
               router.push("/terms");
@@ -205,20 +158,11 @@ export default function OAuth2Redirect() {
             throw new Error("Invalid user data received");
           }
 
-          const isMobile = isMobileDevice();
-
           // Check if terms are accepted
           if (!data.user.termsAccepted) {
-            // Store the user data + token in session storage to be used after terms acceptance
-            sessionStorage.setItem(
-              "oauthUserData",
-              JSON.stringify({ ...data.user, token: data.token })
-            );
-            if (isMobile) {
-              router.push("/mobile/terms");
-            } else {
-              router.push("/terms");
-            }
+            // Store the user data in session storage to be used after terms acceptance
+            sessionStorage.setItem("oauthUserData", JSON.stringify(data.user));
+            router.push("/terms");
             return;
           }
 
@@ -227,15 +171,8 @@ export default function OAuth2Redirect() {
             data.user.authProvider === "microsoft" &&
             (data.user.contactNumber === "Not provided" || !data.user.password)
           ) {
-            sessionStorage.setItem(
-              "oauthUserData",
-              JSON.stringify({ ...data.user, token: data.token })
-            );
-            if (isMobile) {
-              router.push("/mobile/setup");
-            } else {
-              router.push("/auth/setup");
-            }
+            sessionStorage.setItem("oauthUserData", JSON.stringify(data.user));
+            router.push("/auth/setup");
             return;
           }
 
