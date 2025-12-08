@@ -139,7 +139,10 @@ export default function MobileTermsPage() {
           error: "No authentication token found",
           tokenSources: {
             fromCookies: !!Cookies.get("token"),
-            fromUrl: typeof window !== "undefined" ? !!new URLSearchParams(window.location.search).get("token") : false,
+            fromUrl:
+              typeof window !== "undefined"
+                ? !!new URLSearchParams(window.location.search).get("token")
+                : false,
             fromTokenService: false,
             fromSessionStorage: !!userDataFromStorage?.token,
           },
@@ -154,9 +157,10 @@ export default function MobileTermsPage() {
       }
 
       // Mask token for display (show first 20 chars and last 10 chars)
-      const maskedToken = token.length > 30 
-        ? `${token.substring(0, 20)}...${token.substring(token.length - 10)}`
-        : "***masked***";
+      const maskedToken =
+        token.length > 30
+          ? `${token.substring(0, 20)}...${token.substring(token.length - 10)}`
+          : "***masked***";
 
       const response = await fetch(`${API_BASE_URL}/api/terms/accept`, {
         method: "POST",
@@ -174,7 +178,7 @@ export default function MobileTermsPage() {
       if (!response.ok) {
         const errorText = await response.text();
         console.error("Error response:", errorText);
-        
+
         // Collect comprehensive debug info
         const debugInfo = {
           error: errorText,
@@ -187,7 +191,11 @@ export default function MobileTermsPage() {
             masked: maskedToken,
             source: (() => {
               if (Cookies.get("token")) return "cookies";
-              if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("token")) return "url";
+              if (
+                typeof window !== "undefined" &&
+                new URLSearchParams(window.location.search).get("token")
+              )
+                return "url";
               if (userDataFromStorage?.token) return "sessionStorage";
               return "unknown";
             })(),
@@ -239,7 +247,8 @@ export default function MobileTermsPage() {
       router.push(redirectPath);
     } catch (error) {
       console.error("Error accepting terms:", error);
-      const errorMessage = error instanceof Error ? error.message : "Failed to accept terms";
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to accept terms";
       setError(errorMessage);
 
       // If debug data wasn't set in the try block, collect it now
@@ -271,9 +280,12 @@ export default function MobileTermsPage() {
           }
         }
 
-        const maskedToken = token && token.length > 30 
-          ? `${token.substring(0, 20)}...${token.substring(token.length - 10)}`
-          : token || "NONE";
+        const maskedToken =
+          token && token.length > 30
+            ? `${token.substring(0, 20)}...${token.substring(
+                token.length - 10
+              )}`
+            : token || "NONE";
 
         const debugInfo = {
           error: errorMessage,
@@ -283,7 +295,11 @@ export default function MobileTermsPage() {
             masked: maskedToken,
             source: (() => {
               if (Cookies.get("token")) return "cookies";
-              if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("token")) return "url";
+              if (
+                typeof window !== "undefined" &&
+                new URLSearchParams(window.location.search).get("token")
+              )
+                return "url";
               if (userDataFromStorage?.token) return "sessionStorage";
               return "none";
             })(),
