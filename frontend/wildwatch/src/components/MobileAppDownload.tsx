@@ -40,6 +40,9 @@ export function MobileAppDownload() {
     // Get pathname from both Next.js router and window.location as fallback
     const currentPath = pathname || window.location.pathname;
 
+    // Don't show on mobile pages (they are part of the OAuth flow)
+    const isMobilePage = currentPath?.startsWith("/mobile/");
+
     // Don't show on OAuth redirect pages
     const isOAuthPage =
       currentPath?.startsWith("/oauth2/redirect") ||
@@ -47,8 +50,9 @@ export function MobileAppDownload() {
 
     // Only show if:
     // 1. Device is mobile
-    // 2. NOT on an OAuth redirect page
-    setShouldShow(isMobile && !isOAuthPage);
+    // 2. NOT on a mobile page
+    // 3. NOT on an OAuth redirect page
+    setShouldShow(isMobile && !isMobilePage && !isOAuthPage);
   }, [isMobile, pathname]);
 
   if (!shouldShow) return null;
