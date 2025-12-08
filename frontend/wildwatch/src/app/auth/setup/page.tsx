@@ -2,7 +2,7 @@
 
 import type React from "react";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -16,6 +16,7 @@ import {
   Shield,
   AlertCircle,
   ArrowRight,
+  User,
 } from "lucide-react";
 import {
   Form,
@@ -67,13 +68,43 @@ export default function SetupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [needsSchoolId, setNeedsSchoolId] = useState(false);
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  // Check if user needs to provide school ID (if it starts with TEMP_)
+  useEffect(() => {
+    try {
+      const oauthUserData = sessionStorage.getItem("oauthUserData");
+      if (oauthUserData) {
+        const user = JSON.parse(oauthUserData);
+        if (user.schoolIdNumber && user.schoolIdNumber.startsWith("TEMP_")) {
+          setNeedsSchoolId(true);
+        }
+      }
+    } catch (e) {
+      console.error("Error reading oauthUserData:", e);
+    }
+  }, []);
+
+  // Create dynamic schema based on whether school ID is needed
+  const dynamicFormSchema = needsSchoolId
+    ? formSchema.extend({
+        schoolIdNumber: z
+          .string()
+          .min(1, "School ID is required")
+          .regex(
+            /^\d{2}-\d{4}-\d{3}$/,
+            "School ID must be in format XX-XXXX-XXX (e.g., 22-3326-574)"
+          ),
+      })
+    : formSchema;
+
+  const form = useForm({
+    resolver: zodResolver(dynamicFormSchema),
     defaultValues: {
       contactNumber: "+639",
       password: "",
       confirmPassword: "",
+      ...(needsSchoolId && { schoolIdNumber: "" }),
     },
   });
 
@@ -112,7 +143,7 @@ export default function SetupPage() {
     onChange(formattedValue);
   };
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: any) {
     try {
       setIsLoading(true);
       setError(null);
@@ -131,6 +162,9 @@ export default function SetupPage() {
         body: JSON.stringify({
           contactNumber: values.contactNumber,
           password: values.password,
+          ...(needsSchoolId && values.schoolIdNumber && {
+            schoolIdNumber: values.schoolIdNumber,
+          }),
         }),
       });
 
@@ -196,6 +230,52 @@ export default function SetupPage() {
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+            {needsSchoolId && (
+              <FormField
+                control={form.control}
+                name="schoolIdNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-[#800000] font-medium">
+                      School ID Number
+                    </FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#800000]/70" />
+                        <Input
+                          placeholder="e.g. 22-3326-574"
+                          className="pl-10 border-[#D4AF37]/40 focus-visible:ring-[#D4AF37]/60 transition-all"
+                          {...field}
+                          maxLength={11}
+                          onChange={(e) => {
+                            // Format input as user types: XX-XXXX-XXX
+                            let value = e.target.value.replace(/\D/g, ""); // Remove non-digits
+                            if (value.length > 0) {
+                              if (value.length <= 2) {
+                                value = value;
+                              } else if (value.length <= 6) {
+                                value = value.slice(0, 2) + "-" + value.slice(2);
+                              } else {
+                                value =
+                                  value.slice(0, 2) +
+                                  "-" +
+                                  value.slice(2, 6) +
+                                  "-" +
+                                  value.slice(6, 9);
+                              }
+                            }
+                            field.onChange(value);
+                          }}
+                          disabled={isLoading}
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage className="font-normal text-red-600" />
+                  </FormItem>
+                )}
+              />
+            )}
+
             <FormField
               control={form.control}
               name="contactNumber"

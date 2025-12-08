@@ -120,6 +120,10 @@ public class UserService {
         return userRepository.existsByEmail(email);
     }
 
+    public boolean existsBySchoolIdNumber(String schoolIdNumber) {
+        return userRepository.existsBySchoolIdNumber(schoolIdNumber);
+    }
+
     public void changePassword(String email, String currentPassword, String newPassword) {
         User user = getUserByEmail(email);
         if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
