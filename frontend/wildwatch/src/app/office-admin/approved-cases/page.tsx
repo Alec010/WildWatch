@@ -250,10 +250,24 @@ export default function VerifiedCaseTracker() {
   const endIndex = startIndex + itemsPerPage;
   const currentIncidents = filteredIncidents.slice(startIndex, endIndex);
 
+  const formatTime = (timeString: string) => {
+    if (!timeString) return "";
+    try {
+      const [hours, minutes] = timeString.split(":");
+      const hour = parseInt(hours, 10);
+      const minute = minutes || "00";
+      const period = hour >= 12 ? "PM" : "AM";
+      const hour12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+      return `${hour12}:${minute} ${period}`;
+    } catch {
+      return timeString;
+    }
+  };
+
   const formatDate = (dateString: string, timeString?: string) => {
     const date = parseUTCDate(dateString);
     return `${formatDateOnly(dateString)}${
-      timeString ? ` at ${timeString}` : ""
+      timeString ? ` at ${formatTime(timeString)}` : ""
     }`;
   };
 
@@ -444,7 +458,6 @@ export default function VerifiedCaseTracker() {
                 </div>
               </div>
 
-            
               {/* Cases Table */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}

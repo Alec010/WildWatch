@@ -31,6 +31,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { formatDateOnly, parseUTCDate } from "@/utils/dateUtils";
 import { PageLoader } from "@/components/PageLoader";
+import { IncidentReviewDialog } from "@/components/IncidentReviewDialog";
 
 interface Incident {
   id: string;
@@ -79,6 +80,10 @@ export default function IncidentManagementPage() {
   );
   const [pendingCount, setPendingCount] = useState(0);
   const [transferredCount, setTransferredCount] = useState(0);
+  const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
+  const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(
+    null
+  );
 
   // Fetch the admin's office code from the profile API
   const fetchAdminOfficeCode = async () => {
@@ -189,7 +194,8 @@ export default function IncidentManagementPage() {
   };
 
   const handleEditPending = (id: string) => {
-    router.push(`/office-admin/incidents/${id}`);
+    setSelectedIncidentId(id);
+    setReviewDialogOpen(true);
   };
 
   const handleEditVerified = (id: string) => {
@@ -200,10 +206,24 @@ export default function IncidentManagementPage() {
     router.push(`/incidents/tracking/${trackingNumber}`);
   };
 
+  const formatTime = (timeString: string) => {
+    if (!timeString) return "";
+    try {
+      const [hours, minutes] = timeString.split(":");
+      const hour = parseInt(hours, 10);
+      const minute = minutes || "00";
+      const period = hour >= 12 ? "PM" : "AM";
+      const hour12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+      return `${hour12}:${minute} ${period}`;
+    } catch {
+      return timeString;
+    }
+  };
+
   const formatDate = (dateString: string, timeString?: string) => {
     const date = parseUTCDate(dateString);
     return `${formatDateOnly(dateString)}${
-      timeString ? ` at ${timeString}` : ""
+      timeString ? ` at ${formatTime(timeString)}` : ""
     }`;
   };
 
@@ -791,6 +811,21 @@ export default function IncidentManagementPage() {
           </div>
         </div>
       </div>
+
+      {/* Incident Review Dialog */}
+      <IncidentReviewDialog
+        open={reviewDialogOpen}
+        onOpenChange={(open) => {
+          setReviewDialogOpen(open);
+          if (!open) {
+            setSelectedIncidentId(null);
+          }
+        }}
+        incidentId={selectedIncidentId}
+        onRefresh={() => {
+          fetchIncidents(currentOffice);
+        }}
+      />
     </div>
   );
 }

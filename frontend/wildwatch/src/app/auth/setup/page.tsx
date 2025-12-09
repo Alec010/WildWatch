@@ -30,37 +30,32 @@ import { API_BASE_URL } from "@/utils/api";
 import Cookies from "js-cookie";
 import Image from "next/image";
 
-const formSchema = z
-  .object({
-    contactNumber: z
-      .string()
-      .transform((val) => val.replace(/\s/g, "")) // Remove spaces before validation
-      .pipe(
-        z
-          .string()
-          .min(11, "Contact number must be at least 11 digits")
-          .max(13, "Contact number must not exceed 13 digits")
-          .regex(
-            /^\+?[0-9]+$/,
-            "Contact number must contain only digits and may start with +"
-          )
-      ),
-    password: z
-      .string()
-      .min(8, "Password must be at least 8 characters")
-      .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-      .regex(/[a-z]/, "Password must contain at least one lowercase letter")
-      .regex(/[0-9]/, "Password must contain at least one number")
-      .regex(
-        /[^A-Za-z0-9]/,
-        "Password must contain at least one special character"
-      ),
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords don't match",
-    path: ["confirmPassword"],
-  });
+const baseFormSchema = z.object({
+  contactNumber: z
+    .string()
+    .transform((val) => val.replace(/\s/g, "")) // Remove spaces before validation
+    .pipe(
+      z
+        .string()
+        .min(11, "Contact number must be at least 11 digits")
+        .max(13, "Contact number must not exceed 13 digits")
+        .regex(
+          /^\+?[0-9]+$/,
+          "Contact number must contain only digits and may start with +"
+        )
+    ),
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+    .regex(/[0-9]/, "Password must contain at least one number")
+    .regex(
+      /[^A-Za-z0-9]/,
+      "Password must contain at least one special character"
+    ),
+  confirmPassword: z.string(),
+});
 
 export default function SetupPage() {
   const router = useRouter();
@@ -86,19 +81,28 @@ export default function SetupPage() {
   }, []);
 
   // Create dynamic schema based on whether school ID is needed
-  const dynamicFormSchema = needsSchoolId
-    ? formSchema.extend({
-        schoolIdNumber: z
-          .string()
-          .min(1, "School ID is required")
-          .regex(
-            /^\d{2}-\d{4}-\d{3}$/,
-            "School ID must be in format XX-XXXX-XXX (e.g., 22-3326-574)"
-          ),
-      })
-    : formSchema;
+  const dynamicFormSchema = (
+    needsSchoolId
+      ? baseFormSchema.extend({
+          schoolIdNumber: z
+            .string()
+            .min(1, "School ID is required")
+            .regex(
+              /^\d{2}-\d{4}-\d{3}$/,
+              "School ID must be in format XX-XXXX-XXX (e.g., 22-3326-574)"
+            ),
+        })
+      : baseFormSchema
+  ).refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+  });
 
-  const form = useForm({
+  type FormData = z.infer<typeof baseFormSchema> & {
+    schoolIdNumber?: string;
+  };
+
+  const form = useForm<FormData>({
     resolver: zodResolver(dynamicFormSchema),
     defaultValues: {
       contactNumber: "+639",
@@ -162,9 +166,10 @@ export default function SetupPage() {
         body: JSON.stringify({
           contactNumber: values.contactNumber,
           password: values.password,
-          ...(needsSchoolId && values.schoolIdNumber && {
-            schoolIdNumber: values.schoolIdNumber,
-          }),
+          ...(needsSchoolId &&
+            values.schoolIdNumber && {
+              schoolIdNumber: values.schoolIdNumber,
+            }),
         }),
       });
 
@@ -254,7 +259,8 @@ export default function SetupPage() {
                               if (value.length <= 2) {
                                 value = value;
                               } else if (value.length <= 6) {
-                                value = value.slice(0, 2) + "-" + value.slice(2);
+                                value =
+                                  value.slice(0, 2) + "-" + value.slice(2);
                               } else {
                                 value =
                                   value.slice(0, 2) +

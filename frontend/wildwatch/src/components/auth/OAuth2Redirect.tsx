@@ -120,8 +120,8 @@ export default function OAuth2Redirect() {
             // Check if device is mobile
             const isMobile = isMobileDevice();
 
-            // For mobile, always go through the mobile flow: terms -> setup -> complete
-            // This ensures proper flow and prevents direct app redirect
+            // For mobile, go through the mobile flow: terms -> setup -> oauth-redirect
+            // If authenticated (terms accepted, setup complete), show oauth-redirect page
             if (isMobile) {
               // Store user data + token for the mobile flow (Android may lose cookies)
               sessionStorage.setItem(
@@ -151,8 +151,8 @@ export default function OAuth2Redirect() {
                 return;
               }
 
-              // If user is complete, show completion page with app redirect
-              router.push("/mobile/complete");
+              // If user is complete, show oauth-redirect page with app redirect
+              router.push("/mobile/oauth-redirect");
               return;
             }
 
@@ -250,7 +250,13 @@ export default function OAuth2Redirect() {
             role: data.user.role || "",
           });
 
-          // Use handleAuthRedirect to determine the correct redirect path
+          // For mobile, if user is complete, show oauth-redirect page with app redirect
+          if (isMobile) {
+            router.push("/mobile/oauth-redirect");
+            return;
+          }
+
+          // Use handleAuthRedirect to determine the correct redirect path (desktop only)
           const redirectPath = handleAuthRedirect(data.user);
           router.push(redirectPath);
         } else {

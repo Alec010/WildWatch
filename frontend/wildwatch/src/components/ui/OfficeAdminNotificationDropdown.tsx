@@ -81,9 +81,27 @@ export default function OfficeAdminNotificationDropdown({
   const notificationRef = useRef<HTMLDivElement>(null);
   const stompClientRef = useRef<Client | null>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const previousNotificationIdsRef = useRef<Set<string>>(new Set());
+  const notificationAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  const notificationAudio =
-    typeof window !== "undefined" ? new Audio("/notification_sound.mp3") : null;
+  // Initialize audio on client side only
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      notificationAudioRef.current = new Audio("/notification_sound.mp3");
+      // Preload the audio to ensure it's ready to play
+      notificationAudioRef.current.preload = "auto";
+      // Set volume (optional, adjust as needed)
+      notificationAudioRef.current.volume = 0.5;
+    }
+
+    // Cleanup: pause and reset audio on unmount
+    return () => {
+      if (notificationAudioRef.current) {
+        notificationAudioRef.current.pause();
+        notificationAudioRef.current.currentTime = 0;
+      }
+    };
+  }, []);
 
   // Fetch current user profile to get user ID and role
   useEffect(() => {
@@ -144,6 +162,20 @@ export default function OfficeAdminNotificationDropdown({
       };
     }
   }, []);
+
+  // Play notification sound
+  const playNotificationSound = async () => {
+    if (notificationAudioRef.current) {
+      try {
+        // Reset audio to start from beginning
+        notificationAudioRef.current.currentTime = 0;
+        await notificationAudioRef.current.play();
+      } catch (error) {
+        // Some browsers may block autoplay, log but don't throw
+        console.log("Could not play notification sound:", error);
+      }
+    }
+  };
 
   const fetchNotifications = async () => {
     try {
@@ -223,6 +255,27 @@ export default function OfficeAdminNotificationDropdown({
       const sortedNotifications = sortNotificationsByDate(
         filteredNotifications
       );
+
+      // Detect new notifications by comparing with previous IDs
+      const currentNotificationIds = new Set<string>(
+        sortedNotifications.map((n) => n.id)
+      );
+      const previousIds = previousNotificationIdsRef.current;
+
+      // Check if there are any new notifications
+      const hasNewNotifications = sortedNotifications.some(
+        (n) => !previousIds.has(n.id)
+      );
+
+      // Play sound if there are new notifications
+      if (hasNewNotifications && previousIds.size > 0) {
+        // Only play if we had previous notifications (skip on initial load)
+        await playNotificationSound();
+      }
+
+      // Update previous notification IDs
+      previousNotificationIdsRef.current = currentNotificationIds;
+
       setNotifications(sortedNotifications);
       const unreadCount = sortedNotifications.filter(
         (notification: ActivityLog) => !notification.isRead
@@ -273,7 +326,7 @@ export default function OfficeAdminNotificationDropdown({
               clearInterval(pollInterval);
               pollInterval = null;
             }
-            stompClient.subscribe("/topic/notifications", (message) => {
+            stompClient.subscribe("/topic/notifications", async (message) => {
               const notification = JSON.parse(message.body);
 
               // Filter notifications based on user_id and role
@@ -300,10 +353,10 @@ export default function OfficeAdminNotificationDropdown({
                   );
                 } else {
                   // Add new notification
-                  if (notificationAudio) {
-                    notificationAudio.play();
-                    console.log("Notification sound played");
-                  }
+                  playNotificationSound().catch((error) => {
+                    console.log("Could not play notification sound:", error);
+                  });
+                  console.log("Notification sound played");
                   updatedNotifications = [notification, ...prev];
                   setHasNewNotification(true);
                   setTimeout(() => setHasNewNotification(false), 3000);

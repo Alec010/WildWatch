@@ -402,7 +402,7 @@ export function OfficeAdminSidebar() {
           className={`flex-1 flex flex-col ${
             collapsed && !isMobile ? "px-4" : "px-4"
           } ${
-            collapsed && !isMobile ? "pt-12" : "pt-18"
+            collapsed && !isMobile ? "pt-12" : "pt-4"
           } pb-4 overflow-y-auto overflow-x-hidden hide-scrollbar min-w-0`}
         >
           <div className="space-y-2 w-full max-w-full">

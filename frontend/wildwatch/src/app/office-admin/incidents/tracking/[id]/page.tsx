@@ -61,6 +61,20 @@ function formatDate(dateString: string) {
   return formatDateOnly(dateString);
 }
 
+function formatTime(timeString: string) {
+  if (!timeString) return "";
+  try {
+    const [hours, minutes] = timeString.split(":");
+    const hour = parseInt(hours, 10);
+    const minute = minutes || "00";
+    const period = hour >= 12 ? "PM" : "AM";
+    const hour12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+    return `${hour12}:${minute} ${period}`;
+  } catch {
+    return timeString;
+  }
+}
+
 interface IncidentDetails {
   id: string;
   trackingNumber: string;
@@ -913,7 +927,7 @@ export default function CaseDetailsPage() {
                           <p className="text-gray-800 font-medium">
                             {formatDate(incident.dateOfIncident)}
                             {incident.timeOfIncident
-                              ? `, ${incident.timeOfIncident}`
+                              ? `, ${formatTime(incident.timeOfIncident)}`
                               : ""}
                           </p>
                         </div>
@@ -1176,6 +1190,7 @@ export default function CaseDetailsPage() {
                                           ).toLocaleTimeString([], {
                                             hour: "2-digit",
                                             minute: "2-digit",
+                                            hour12: true,
                                           })
                                         : ""}
                                     </span>
@@ -1429,6 +1444,7 @@ export default function CaseDetailsPage() {
                                 {followUpCooldown.toLocaleTimeString([], {
                                   hour: "2-digit",
                                   minute: "2-digit",
+                                  hour12: true,
                                 })}
                               </>
                             ) : (

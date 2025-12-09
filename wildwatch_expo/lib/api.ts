@@ -1,6 +1,7 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { config } from './config';
 import { storage } from './storage';
+import { clearUserProfileState } from '@/src/features/users/hooks/useUserProfile';
 
 export const api = axios.create({
   baseURL: config.API.BASE_URL,
@@ -35,10 +36,12 @@ api.interceptors.request.use(async (request: InternalAxiosRequestConfig) => {
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError<any>) => {
-    // Handle 401 Unauthorized - Clear ALL session data
+    // Handle 401 Unauthorized - Clear ALL session data and profile state
     if (error.response?.status === 401) {
       console.log('🔒 Unauthorized (401) - clearing all session data');
       await storage.clearAllUserData();
+      clearUserProfileState();
+      // Note: Navigation to login is handled by _layout.tsx based on token check
     }
 
     // Enhance error message based on error type

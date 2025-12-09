@@ -114,12 +114,15 @@ export default function NotificationDropdown({
       // Fetch user profile to get user ID if not already fetched
       if (!currentUserId) {
         try {
-          const profileResponse = await fetch(`${API_BASE_URL}/api/auth/profile`, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          });
+          const profileResponse = await fetch(
+            `${API_BASE_URL}/api/auth/profile`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+            }
+          );
           if (profileResponse.ok) {
             const profileData = await profileResponse.json();
             setCurrentUserId(profileData.id);
@@ -193,7 +196,10 @@ export default function NotificationDropdown({
 
       try {
         console.log("Connecting to WebSocket at:", `${WS_BASE_URL}/ws`);
-        console.log("Will subscribe to user-specific channel:", `/topic/notifications/${currentUserId}`);
+        console.log(
+          "Will subscribe to user-specific channel:",
+          `/topic/notifications/${currentUserId}`
+        );
         // Create SockJS connection with error handling
         const socket = new SockJS(`${WS_BASE_URL}/ws`, null, {
           transports: ["websocket", "xhr-streaming", "xhr-polling"],
@@ -212,59 +218,68 @@ export default function NotificationDropdown({
               pollInterval = null;
             }
             // Subscribe to user-specific notification channel
-            stompClient.subscribe(`/topic/notifications/${currentUserId}`, (message) => {
-              const notification = JSON.parse(message.body);
+            stompClient.subscribe(
+              `/topic/notifications/${currentUserId}`,
+              (message) => {
+                const notification = JSON.parse(message.body);
 
-              // Additional safety check: verify userId matches
-              if (notification.userId && notification.userId !== currentUserId) {
-                console.warn("Received notification for different user, ignoring:", notification.userId);
-                return;
-              }
-
-              // Filter out OFFICE_ADMIN specific notifications
-              const officeAdminActivityTypes = [
-                "NEW_CASE_ASSIGNED",
-                "TRANSFER_RECEIVED",
-                "TRANSFER_APPROVED",
-                "NEW_REPORT_RECEIVED",
-              ];
-
-              if (
-                officeAdminActivityTypes.includes(notification.activityType)
-              ) {
-                return; // Ignore office admin notifications
-              }
-
-              setNotifications((prev) => {
-                const exists = prev.some((n) => n.id === notification.id);
-                let updatedNotifications: ActivityLog[];
-
-                if (exists) {
-                  // Update existing notification
-                  updatedNotifications = prev.map((n) =>
-                    n.id === notification.id ? notification : n
+                // Additional safety check: verify userId matches
+                if (
+                  notification.userId &&
+                  notification.userId !== currentUserId
+                ) {
+                  console.warn(
+                    "Received notification for different user, ignoring:",
+                    notification.userId
                   );
-                } else {
-                  // Add new notification
-                  if (notificationAudio) {
-                    notificationAudio.play();
-                    console.log("Notification sound played");
-                  }
-                  updatedNotifications = [notification, ...prev];
-                  setHasNewNotification(true);
-                  setTimeout(() => setHasNewNotification(false), 3000);
+                  return;
                 }
 
-                // Sort by date to ensure newest is always first
-                const sortedNotifications =
-                  sortNotificationsByDate(updatedNotifications);
-                const newUnreadCount = sortedNotifications.filter(
-                  (n) => !n.isRead
-                ).length;
-                setUnreadCount(newUnreadCount);
-                return sortedNotifications;
-              });
-            });
+                // Filter out OFFICE_ADMIN specific notifications
+                const officeAdminActivityTypes = [
+                  "NEW_CASE_ASSIGNED",
+                  "TRANSFER_RECEIVED",
+                  "TRANSFER_APPROVED",
+                  "NEW_REPORT_RECEIVED",
+                ];
+
+                if (
+                  officeAdminActivityTypes.includes(notification.activityType)
+                ) {
+                  return; // Ignore office admin notifications
+                }
+
+                setNotifications((prev) => {
+                  const exists = prev.some((n) => n.id === notification.id);
+                  let updatedNotifications: ActivityLog[];
+
+                  if (exists) {
+                    // Update existing notification
+                    updatedNotifications = prev.map((n) =>
+                      n.id === notification.id ? notification : n
+                    );
+                  } else {
+                    // Add new notification
+                    if (notificationAudio) {
+                      notificationAudio.play();
+                      console.log("Notification sound played");
+                    }
+                    updatedNotifications = [notification, ...prev];
+                    setHasNewNotification(true);
+                    setTimeout(() => setHasNewNotification(false), 3000);
+                  }
+
+                  // Sort by date to ensure newest is always first
+                  const sortedNotifications =
+                    sortNotificationsByDate(updatedNotifications);
+                  const newUnreadCount = sortedNotifications.filter(
+                    (n) => !n.isRead
+                  ).length;
+                  setUnreadCount(newUnreadCount);
+                  return sortedNotifications;
+                });
+              }
+            );
           },
           onStompError: () => {
             setWsConnected(false);
