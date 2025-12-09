@@ -327,6 +327,20 @@ export default function UpdateVerifiedCasePage() {
     }
   }, [incident]);
 
+  const formatTime = (timeString: string) => {
+    if (!timeString) return "";
+    try {
+      const [hours, minutes] = timeString.split(":");
+      const hour = parseInt(hours, 10);
+      const minute = minutes || "00";
+      const period = hour >= 12 ? "PM" : "AM";
+      const hour12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+      return `${hour12}:${minute} ${period}`;
+    } catch {
+      return timeString;
+    }
+  };
+
   const formatDateTime = (dateString: string) => {
     const date = parseUTCDate(dateString);
     return date.toLocaleString("en-US", {
@@ -479,7 +493,8 @@ export default function UpdateVerifiedCasePage() {
   const handleCloseCase = async () => {
     if (!dismissalNotes.trim()) {
       toast.error("Dismissal notes are required", {
-        description: "Please provide notes explaining why this case is being dismissed.",
+        description:
+          "Please provide notes explaining why this case is being dismissed.",
         duration: 5000,
         id: "dismissal-notes-required",
       });
@@ -900,9 +915,7 @@ export default function UpdateVerifiedCasePage() {
                               <span className="sm:hidden">Dismiss</span>
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent>
-                            Dismiss this case
-                          </TooltipContent>
+                          <TooltipContent>Dismiss this case</TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
                     </div>
@@ -940,7 +953,7 @@ export default function UpdateVerifiedCasePage() {
                               </h3>
                               <p className="text-sm font-medium text-[#8B0000]">
                                 {formatDate(incident.dateOfIncident)} at{" "}
-                                {incident.timeOfIncident}
+                                {formatTime(incident.timeOfIncident)}
                               </p>
                             </div>
 
@@ -1448,8 +1461,8 @@ export default function UpdateVerifiedCasePage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Dismiss Case</AlertDialogTitle>
             <AlertDialogDescription>
-              Provide dismissal notes explaining why this case is being dismissed.
-              These notes will be shared with the reporter.
+              Provide dismissal notes explaining why this case is being
+              dismissed. These notes will be shared with the reporter.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="space-y-4 py-2">

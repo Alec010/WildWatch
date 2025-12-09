@@ -26,6 +26,11 @@ import {
   ArrowRightLeft,
   Info,
   Search,
+  ZoomIn,
+  ZoomOut,
+  RotateCw,
+  Maximize2,
+  X,
 } from "lucide-react";
 import Image from "next/image";
 import { Label } from "@/components/ui/label";
@@ -186,6 +191,14 @@ export default function IncidentDetailsPage() {
   const [officeSearchQuery, setOfficeSearchQuery] = useState("");
   const [isIncidentTag, setIsIncidentTag] = useState<boolean>(true); // true = Incident, false = Concern
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [previewImageName, setPreviewImageName] = useState<string | null>(null);
+  const [imageScale, setImageScale] = useState(1);
+  const [imageRotation, setImageRotation] = useState(0);
+  const [imagePosition, setImagePosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const imageContainerRef = useRef<HTMLDivElement>(null);
 
   // Handle countdown and navigation
   useEffect(() => {
@@ -901,7 +914,16 @@ export default function IncidentDetailsPage() {
                                   }}
                                 >
                                   {file.fileType.startsWith("image/") ? (
-                                    <div className="relative aspect-square rounded-lg overflow-hidden border border-[#DAA520]/20 shadow-sm group-hover:shadow-md transition-shadow">
+                                    <div
+                                      className="relative aspect-square rounded-lg overflow-hidden border border-[#DAA520]/20 shadow-sm group-hover:shadow-md transition-shadow cursor-pointer"
+                                      onClick={() => {
+                                        setPreviewImage(file.fileUrl);
+                                        setPreviewImageName(file.fileName);
+                                        setImageScale(1);
+                                        setImageRotation(0);
+                                        setImagePosition({ x: 0, y: 0 });
+                                      }}
+                                    >
                                       <Image
                                         src={file.fileUrl || "/placeholder.svg"}
                                         alt={file.fileName}
@@ -1684,6 +1706,161 @@ export default function IncidentDetailsPage() {
                       )}
                     </Button>
                   </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              {/* Image Preview Dialog */}
+              <Dialog
+                open={!!previewImage}
+                onOpenChange={(open) => {
+                  if (!open) {
+                    setPreviewImage(null);
+                    setPreviewImageName(null);
+                    setImageScale(1);
+                    setImageRotation(0);
+                    setImagePosition({ x: 0, y: 0 });
+                  }
+                }}
+              >
+                <DialogContent className="max-w-[95vw] max-h-[95vh] w-full h-full p-0 gap-0 overflow-hidden bg-black/95 border-none">
+                  <DialogHeader className="sr-only">
+                    <DialogTitle>Evidence Image Preview</DialogTitle>
+                  </DialogHeader>
+                  <div className="relative w-full h-full flex items-center justify-center bg-black/95">
+                    {/* Control Bar */}
+                    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-black/50 backdrop-blur-sm rounded-lg px-3 py-2">
+                      <button
+                        onClick={() =>
+                          setImageScale((prev) => Math.max(prev - 0.25, 0.5))
+                        }
+                        className="p-2 rounded-md hover:bg-white/20 text-white transition-colors"
+                        aria-label="Zoom out"
+                      >
+                        <ZoomOut className="h-4 w-4" />
+                      </button>
+                      <span className="text-white text-sm font-medium min-w-[50px] text-center">
+                        {Math.round(imageScale * 100)}%
+                      </span>
+                      <button
+                        onClick={() =>
+                          setImageScale((prev) => Math.min(prev + 0.25, 4))
+                        }
+                        className="p-2 rounded-md hover:bg-white/20 text-white transition-colors"
+                        aria-label="Zoom in"
+                      >
+                        <ZoomIn className="h-4 w-4" />
+                      </button>
+                      <div className="w-px h-6 bg-white/30 mx-1" />
+                      <button
+                        onClick={() =>
+                          setImageRotation((prev) => (prev + 90) % 360)
+                        }
+                        className="p-2 rounded-md hover:bg-white/20 text-white transition-colors"
+                        aria-label="Rotate"
+                      >
+                        <RotateCw className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          setImageScale(1);
+                          setImageRotation(0);
+                          setImagePosition({ x: 0, y: 0 });
+                        }}
+                        className="p-2 rounded-md hover:bg-white/20 text-white transition-colors"
+                        aria-label="Reset"
+                      >
+                        <Maximize2 className="h-4 w-4" />
+                      </button>
+                    </div>
+
+                    {/* Close Button */}
+                    <button
+                      onClick={() => {
+                        setPreviewImage(null);
+                        setPreviewImageName(null);
+                        setImageScale(1);
+                        setImageRotation(0);
+                        setImagePosition({ x: 0, y: 0 });
+                      }}
+                      className="absolute top-4 right-4 z-50 rounded-full p-2 bg-black/50 hover:bg-black/70 text-white transition-colors"
+                      aria-label="Close preview"
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
+
+                    {/* Image Name */}
+                    {previewImage && (
+                      <div className="absolute bottom-4 left-4 z-50 bg-black/50 text-white px-3 py-1.5 rounded-md text-sm max-w-[200px] truncate">
+                        {previewImageName}
+                      </div>
+                    )}
+
+                    {/* Image Container with Zoom and Pan */}
+                    {previewImage && (
+                      <div
+                        ref={imageContainerRef}
+                        className="w-full h-full overflow-auto cursor-move"
+                        onWheel={(e) => {
+                          e.preventDefault();
+                          const delta = e.deltaY > 0 ? -0.1 : 0.1;
+                          setImageScale((prev) =>
+                            Math.max(0.5, Math.min(4, prev + delta))
+                          );
+                        }}
+                        onMouseDown={(e) => {
+                          if (imageScale > 1) {
+                            setIsDragging(true);
+                            setDragStart({
+                              x: e.clientX - imagePosition.x,
+                              y: e.clientY - imagePosition.y,
+                            });
+                          }
+                        }}
+                        onMouseMove={(e) => {
+                          if (isDragging && imageScale > 1) {
+                            setImagePosition({
+                              x: e.clientX - dragStart.x,
+                              y: e.clientY - dragStart.y,
+                            });
+                          }
+                        }}
+                        onMouseUp={() => setIsDragging(false)}
+                        onMouseLeave={() => setIsDragging(false)}
+                        style={{
+                          cursor:
+                            imageScale > 1
+                              ? isDragging
+                                ? "grabbing"
+                                : "grab"
+                              : "default",
+                        }}
+                      >
+                        <div
+                          className="flex items-center justify-center min-h-full p-4"
+                          style={{
+                            transform: `translate(${imagePosition.x}px, ${imagePosition.y}px)`,
+                          }}
+                        >
+                          <img
+                            src={previewImage || ""}
+                            alt={previewImageName || "Evidence preview"}
+                            className="object-contain rounded-lg transition-transform duration-200"
+                            style={{
+                              transform: `scale(${imageScale}) rotate(${imageRotation}deg)`,
+                              maxWidth: "90vw",
+                              maxHeight: "90vh",
+                            }}
+                            draggable={false}
+                            onClick={(e) => {
+                              if (imageScale <= 1) {
+                                e.stopPropagation();
+                              }
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </DialogContent>
               </Dialog>
 

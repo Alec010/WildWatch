@@ -178,20 +178,22 @@ export default function OfficeAdminBulletinPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-6">
-                    <div className="flex items-center justify-between">
+                  <div>
+                    <div className="flex items-center justify-between mb-6">
                       <h2 className="text-lg font-semibold text-gray-900">
                         Recent Bulletins ({bulletins.length})
                       </h2>
                     </div>
 
-                    {bulletins.map((bulletin) => (
-                      <BulletinCard
-                        key={bulletin.id}
-                        bulletin={bulletin}
-                        isAdmin={true}
-                      />
-                    ))}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {bulletins.map((bulletin) => (
+                        <BulletinCard
+                          key={bulletin.id}
+                          bulletin={bulletin}
+                          isAdmin={true}
+                        />
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
