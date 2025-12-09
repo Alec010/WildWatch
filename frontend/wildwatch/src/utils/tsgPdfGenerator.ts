@@ -611,14 +611,6 @@ export async function generateTSGPDF(
         }
       });
 
-      // Draw final line extending down
-      if (updates.length > 0) {
-        doc.setDrawColor(200, 200, 200);
-        doc.setLineWidth(0.5);
-        const lastStepY = y - stepSpacing;
-        doc.line(lineStartX, lastStepY + circleRadius, lineStartX, lastStepY + 10);
-      }
-
       y += 5;
     } else {
       // Fallback to resolution notes if no valid updates
@@ -955,18 +947,19 @@ export async function generateTSGPDF(
     }
   }
 
-  doc.setDrawColor(0, 0, 0);
-  doc.setLineWidth(0.1);
-  const lineY = adjustedY + 1;
-  const lineStartX = margin;
-  doc.line(lineStartX, lineY, lineStartX + signatureTextWidth, lineY);
-
   doc.setFont("helvetica", "bold");
   const signatureY = adjustedY + 5;
   doc.text(signatureText, margin, signatureY);
   doc.setFont("helvetica", "normal");
 
+  // Draw signature line only when no signature image is provided
   if (!signatureImage) {
+    doc.setDrawColor(0, 0, 0);
+    doc.setLineWidth(0.1);
+    const lineY = adjustedY + 1;
+    const lineStartX = margin;
+    doc.line(lineStartX, lineY, lineStartX + signatureTextWidth, lineY);
+
     doc.line(
       signatureFieldStart,
       y + lineOffset,

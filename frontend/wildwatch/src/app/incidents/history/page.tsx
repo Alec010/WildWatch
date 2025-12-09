@@ -24,7 +24,6 @@ import {
 import { useRouter } from "next/navigation";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
-import { API_BASE_URL } from "@/utils/api";
 import { formatLocationCompact } from "@/utils/locationFormatter";
 import { api } from "@/utils/apiClient";
 import { filterIncidentsByPrivacy } from "@/utils/anonymization";
@@ -32,11 +31,15 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { Navbar } from "@/components/Navbar";
 import { Inter } from "next/font/google";
-import { formatDateOnly, parseUTCDate } from "@/utils/dateUtils";
+import { formatDateOnly, parseUTCDate, formatTime } from "@/utils/dateUtils";
 import { PageLoader } from "@/components/PageLoader";
 import { useSidebar } from "@/contexts/SidebarContext";
 
 const inter = Inter({ subsets: ["latin"] });
+
+/* -------------------------------------------------------------------------- */
+/*                                INTERFACES                                  */
+/* -------------------------------------------------------------------------- */
 
 interface Incident {
   id: string;
@@ -46,7 +49,6 @@ interface Incident {
   incidentType: string;
   location: string;
   submittedByFullName: string;
-  priorityLevel: "HIGH" | "MEDIUM" | "LOW" | null;
   status: string;
   officeAdminName?: string;
   finishedDate?: string;
@@ -57,7 +59,7 @@ interface Incident {
   witnesses?: any[];
   updates?: any[];
   upvoteCount?: number;
-  // Add other fields that might be in AnonymizedIncident
+
   timeOfIncident?: string;
   submittedBy?: string;
   submittedByIdNumber?: string;
@@ -80,6 +82,10 @@ interface EvidenceFile {
   uploadedAt: string;
 }
 
+/* -------------------------------------------------------------------------- */
+/*                            COMPONENT START                                  */
+/* -------------------------------------------------------------------------- */
+
 export default function IncidentHistoryPage() {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [search, setSearch] = useState("");
@@ -89,45 +95,38 @@ export default function IncidentHistoryPage() {
   const [isDownloading, setIsDownloading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { collapsed } = useSidebar();
 
+  const { collapsed } = useSidebar();
   const incidentsPerPage = 5;
   const router = useRouter();
 
+  /* ------------------------- INITIAL QUERY PARAM PARSE ------------------------- */
   useEffect(() => {
-    // Get status from URL query parameter
     if (typeof window !== "undefined") {
-      const searchParams = new URLSearchParams(window.location.search);
-      const statusFromUrl = searchParams.get("status");
-      if (statusFromUrl) {
-        setStatusFilter(statusFromUrl);
-      }
+      const params = new URLSearchParams(window.location.search);
+      const s = params.get("status");
+      if (s) setStatusFilter(s);
     }
   }, []);
 
+  /* ------------------------------- FETCH INCIDENTS ------------------------------ */
   const fetchIncidents = async () => {
     try {
       setError(null);
       const res = await api.get("/api/incidents/my-incidents");
 
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
-      }
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
 
       const data = await res.json();
-      // Only show Resolved or Dismissed (case-insensitive)
+
       const statusFiltered = data.filter((i: Incident) =>
         ["resolved", "dismissed"].includes(i.status.toLowerCase())
       );
-      // Users can see their own reports even if private (isViewerSubmitter = true)
-      const anonymizedData = filterIncidentsByPrivacy(
-        statusFiltered,
-        false,
-        true
-      ) as Incident[];
-      setIncidents(anonymizedData);
+
+      const anonymized = filterIncidentsByPrivacy(statusFiltered, false, true);
+
+      setIncidents(anonymized as Incident[]);
     } catch (e) {
-      console.error("Error fetching incidents:", e);
       setError(e instanceof Error ? e.message : "Failed to load incidents");
       setIncidents([]);
     } finally {
@@ -146,6 +145,10 @@ export default function IncidentHistoryPage() {
     await fetchIncidents();
   };
 
+  /* -------------------------------------------------------------------------- */
+  /*                                FILTER AND PAGING                            */
+  /* -------------------------------------------------------------------------- */
+
   const filteredIncidents = incidents.filter(
     (i) =>
       (statusFilter === "All" || i.status === statusFilter) &&
@@ -162,19 +165,57 @@ export default function IncidentHistoryPage() {
 
   const totalPages = Math.ceil(filteredIncidents.length / incidentsPerPage);
 
-  // Calculate statistics
   const resolvedCount = incidents.filter(
     (i) => i.status.toLowerCase() === "resolved"
   ).length;
+
   const dismissedCount = incidents.filter(
     (i) => i.status.toLowerCase() === "dismissed"
   ).length;
-  // removed unused priority counts and priority filters
 
-  // Function to download incident details as PDF (aligned with TSG structure but tailored for report viewers)
+  /* -------------------------------------------------------------------------- */
+  /*                          PDF GENERATION (REFORMATTED)                      */
+  /* -------------------------------------------------------------------------- */
+
   const handleDownloadPDF = async (incident: any) => {
     setIsDownloading(true);
+
     try {
+      await import("jspdf-autotable");
+
+      /* ---------------------------- FETCH FULL CASE ---------------------------- */
+      const fullIncidentRes = await api.get(
+        `/api/incidents/track/${incident.trackingNumber}`
+      );
+      if (!fullIncidentRes.ok)
+        throw new Error(
+          `Failed to fetch full incident: ${fullIncidentRes.status}`
+        );
+
+      const fullIncident = await fullIncidentRes.json();
+
+      /* ------------------------------ FETCH UPDATES ----------------------------- */
+      let updates: any[] = [];
+      if (fullIncident.id) {
+        try {
+          const updatesRes = await api.get(
+            `/api/incidents/${fullIncident.id}/updates`
+          );
+          if (updatesRes.ok) {
+            updates = await updatesRes.json();
+            updates.sort(
+              (a: any, b: any) =>
+                new Date(a.updatedAt).getTime() -
+                new Date(b.updatedAt).getTime()
+            );
+          }
+        } catch {}
+      }
+
+      fullIncident.updates = updates;
+
+      /* ------------------------------ PDF BASE SETUP ----------------------------- */
+
       const doc = new jsPDF({
         orientation: "portrait",
         unit: "mm",
@@ -192,15 +233,34 @@ export default function IncidentHistoryPage() {
       doc.setFont("helvetica", "normal");
       doc.setFontSize(11);
 
-      const formatDate = (dateString?: string) =>
-        dateString ? formatDateOnly(dateString) : "-";
+      /* ------------------------------- HELPERS ---------------------------------- */
 
-      const ensureSpace = (required: number) => {
-        if (cursorY + required > pageHeight - 20) {
+      const formatDate = (d?: string) => (d ? formatDateOnly(d) : "-");
+
+      const formatDateTime = (d?: string) => {
+        if (!d) return "-";
+        try {
+          const dt = new Date(d);
+          const hours = dt.getHours();
+          const minutes = dt.getMinutes();
+          const ampm = hours >= 12 ? "PM" : "AM";
+          const displayHours = hours % 12 || 12;
+          const displayMinutes = minutes.toString().padStart(2, "0");
+          const timeString = `${displayHours}:${displayMinutes} ${ampm}`;
+          return `${formatDateOnly(d)} ${timeString}`;
+        } catch {
+          return formatDateOnly(d);
+        }
+      };
+
+      const ensureSpace = (needed: number) => {
+        if (cursorY + needed > pageHeight - 20) {
           doc.addPage();
           cursorY = 20;
         }
       };
+
+      /* ----------------------------- HEADER SECTION ----------------------------- */
 
       const addHeader = async () => {
         doc.setFillColor(primary.r, primary.g, primary.b);
@@ -208,128 +268,208 @@ export default function IncidentHistoryPage() {
 
         try {
           const logoImg = new Image();
-          logoImg.crossOrigin = "anonymous";
           logoImg.src = "/logo2.png";
           await new Promise((resolve, reject) => {
             logoImg.onload = resolve;
             logoImg.onerror = reject;
           });
+
           const logoHeight = 18;
           const logoWidth = (logoImg.width / logoImg.height) * logoHeight;
+
           doc.addImage(logoImg, "PNG", margin, 10, logoWidth, logoHeight);
-        } catch (error) {
-          // Keep clean header if logo fails to load
-        }
+        } catch {}
 
         doc.setFont("helvetica", "bold");
         doc.setFontSize(18);
         doc.setTextColor(255, 255, 255);
         doc.text("Incident Report", pageWidth / 2, 16, { align: "center" });
+
         doc.setFontSize(11);
-        doc.text(`Tracking #: ${incident.trackingNumber}`, pageWidth / 2, 24, {
-          align: "center",
-        });
-        doc.setTextColor(255, 255, 255);
+        doc.text(
+          `Tracking #: ${fullIncident.trackingNumber}`,
+          pageWidth / 2,
+          24,
+          {
+            align: "center",
+          }
+        );
+
         doc.text(
           `Generated ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`,
           pageWidth - margin,
           16,
           { align: "right" }
         );
+
         cursorY = 46;
         doc.setTextColor(0, 0, 0);
       };
+
+      /* ---------------------------- SECTION TITLE + GRID ---------------------------- */
 
       const addSectionTitle = (title: string) => {
         ensureSpace(14);
         doc.setFillColor(primary.r, primary.g, primary.b);
         doc.setTextColor(255, 255, 255);
         doc.setFont("helvetica", "bold");
-        doc.setFontSize(11);
         doc.roundedRect(margin, cursorY, contentWidth, 9, 2, 2, "F");
         doc.text(title, margin + 4, cursorY + 6);
         cursorY += 14;
-        doc.setTextColor(0, 0, 0);
         doc.setFont("helvetica", "normal");
+        doc.setTextColor(0, 0, 0);
       };
 
       const addKeyValueGrid = (items: { label: string; value: string }[]) => {
         const colWidth = contentWidth / 2 - 4;
-        const labelColor = neutral;
+
         for (let i = 0; i < items.length; i += 2) {
           ensureSpace(10);
+
           const left = items[i];
           const right = items[i + 1];
+
           doc.setFont("helvetica", "bold");
-          doc.setTextColor(labelColor.r, labelColor.g, labelColor.b);
+          doc.setTextColor(neutral.r, neutral.g, neutral.b);
           doc.text(left.label, margin, cursorY);
+
           doc.setFont("helvetica", "normal");
           doc.setTextColor(0, 0, 0);
+
           const leftLines = doc.splitTextToSize(left.value || "-", colWidth);
           doc.text(leftLines, margin, cursorY + 4);
 
+          let height = leftLines.length * 5 + 6;
+
           if (right) {
             doc.setFont("helvetica", "bold");
-            doc.setTextColor(labelColor.r, labelColor.g, labelColor.b);
+            doc.setTextColor(neutral.r, neutral.g, neutral.b);
             doc.text(right.label, margin + colWidth + 8, cursorY);
+
             doc.setFont("helvetica", "normal");
             doc.setTextColor(0, 0, 0);
+
             const rightLines = doc.splitTextToSize(
               right.value || "-",
               colWidth
             );
             doc.text(rightLines, margin + colWidth + 8, cursorY + 4);
-            const height =
-              Math.max(leftLines.length, rightLines.length) * 5 + 6;
-            cursorY += height;
-          } else {
-            const height = leftLines.length * 5 + 6;
-            cursorY += height;
+
+            height = Math.max(leftLines.length, rightLines.length) * 5 + 6;
           }
+
+          cursorY += height;
         }
+
         cursorY += 2;
       };
 
+      /* ---------------------------- TAG ROWS ----------------------------------- */
+
       const addTagRow = (
-        tags: { label: string; value: string; color: string }[]
+        tags: {
+          label: string;
+          value: string;
+          color: string;
+          description?: string;
+        }[]
       ) => {
-        ensureSpace(14);
-        let x = margin;
+        const hasDescriptions = tags.some((tag) => tag.description);
+        const gap = 6; // Gap between columns
+        const colWidth = (contentWidth - gap * (tags.length - 1)) / tags.length;
+        const baseTagHeight = 8;
+        const descLineHeight = 3.5;
+
+        // Calculate max height needed
+        let maxHeight = baseTagHeight;
         tags.forEach((tag) => {
-          const textWidth = doc.getTextWidth(`${tag.label}: ${tag.value}`);
-          const boxWidth = textWidth + 10;
-          if (x + boxWidth > pageWidth - margin) {
-            cursorY += 10;
-            ensureSpace(14);
-            x = margin;
+          if (tag.description) {
+            doc.setFontSize(7);
+            const descLines = doc.splitTextToSize(
+              tag.description,
+              colWidth - 6
+            );
+            const tagText = `${tag.label}: ${tag.value}`;
+            doc.setFontSize(10);
+            const valueLines = doc.splitTextToSize(tagText, colWidth - 6);
+            const totalHeight =
+              5 + valueLines.length * 5 + descLines.length * descLineHeight + 2;
+            if (totalHeight > maxHeight) {
+              maxHeight = totalHeight;
+            }
           }
-          const color = tag.color;
-          doc.setDrawColor(color);
-          doc.setFillColor(255, 255, 255);
-          doc.roundedRect(x, cursorY, boxWidth, 8, 2, 2, "FD");
-          doc.setFont("helvetica", "bold");
-          doc.setTextColor(color);
-          doc.text(`${tag.label}: `, x + 3, cursorY + 5);
-          const labelWidth = doc.getTextWidth(`${tag.label}: `);
-          doc.setFont("helvetica", "normal");
-          doc.text(tag.value || "-", x + 3 + labelWidth, cursorY + 5);
-          x += boxWidth + 4;
         });
-        cursorY += 12;
+        doc.setFontSize(11);
+
+        ensureSpace(maxHeight + 4);
+
+        let x = margin;
+
+        tags.forEach((tag) => {
+          const boxWidth = colWidth;
+          const boxX = x;
+
+          // Draw tag box
+          doc.setDrawColor(tag.color);
+          doc.setFillColor(255, 255, 255);
+          doc.roundedRect(boxX, cursorY, boxWidth, maxHeight, 2, 2, "FD");
+
+          // Draw tag label and value
+          doc.setFont("helvetica", "bold");
+          doc.setTextColor(tag.color);
+          doc.setFontSize(10);
+          doc.text(`${tag.label}: `, boxX + 3, cursorY + 5);
+
+          const labelWidth = doc.getTextWidth(`${tag.label}: `);
+
+          doc.setFont("helvetica", "normal");
+          const valueLines = doc.splitTextToSize(
+            tag.value,
+            boxWidth - labelWidth - 6
+          );
+          doc.text(valueLines, boxX + 3 + labelWidth, cursorY + 5);
+          doc.setFontSize(11);
+
+          // Draw description if present
+          let descY = cursorY + 5 + valueLines.length * 5 + 2;
+          if (tag.description) {
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(7);
+            doc.setTextColor(100, 100, 100);
+            const descLines = doc.splitTextToSize(
+              tag.description,
+              boxWidth - 6
+            );
+            doc.text(descLines, boxX + 3, descY);
+            doc.setFontSize(11);
+          }
+
+          x += boxWidth + gap;
+        });
+
+        cursorY += maxHeight + 4;
         doc.setTextColor(0, 0, 0);
       };
 
+      /* ---------------------------- PARAGRAPH BLOCK ---------------------------- */
+
       const addParagraph = (label: string, text: string) => {
         ensureSpace(18);
+
         doc.setFont("helvetica", "bold");
         doc.setTextColor(neutral.r, neutral.g, neutral.b);
         doc.text(label, margin, cursorY);
+
         doc.setFont("helvetica", "normal");
         doc.setTextColor(0, 0, 0);
+
         cursorY += 5;
+
         const lines = doc.splitTextToSize(text || "-", contentWidth);
+
         doc.setFillColor(248, 248, 248);
         doc.setDrawColor(235, 235, 235);
+
         const boxHeight = lines.length * 6 + 6;
         doc.roundedRect(
           margin,
@@ -341,8 +481,11 @@ export default function IncidentHistoryPage() {
           "FD"
         );
         doc.text(lines, margin + 3, cursorY + 2);
+
         cursorY += boxHeight + 4;
       };
+
+      /* ---------------------------- TABLES ------------------------------------- */
 
       const addTable = (
         title: string,
@@ -350,217 +493,564 @@ export default function IncidentHistoryPage() {
         body: (string | number)[][]
       ) => {
         if (!body.length) return;
+
         addSectionTitle(title);
+
         const startY = cursorY;
-        // @ts-ignore - autoTable is attached by the jspdf-autotable plugin
-        doc.autoTable({
-          head: [head],
-          body,
-          startY,
-          margin: { left: margin, right: margin },
-          styles: { font: "helvetica", fontSize: 9, cellPadding: 3 },
-          headStyles: {
-            fillColor: [primary.r, primary.g, primary.b],
-            textColor: 255,
-            halign: "left",
-          },
-          alternateRowStyles: { fillColor: [248, 248, 248] },
-          theme: "grid",
-        });
-        // @ts-ignore - jsPDF autoTable attaches lastAutoTable
-        cursorY = doc.lastAutoTable.finalY + 10;
+
+        if (typeof (doc as any).autoTable === "function") {
+          (doc as any).autoTable({
+            head: [head],
+            body,
+            startY,
+            margin: { left: margin, right: margin },
+            styles: { font: "helvetica", fontSize: 9, cellPadding: 3 },
+            headStyles: {
+              fillColor: [primary.r, primary.g, primary.b],
+              textColor: 255,
+              halign: "left",
+            },
+            alternateRowStyles: { fillColor: [248, 248, 248] },
+            theme: "grid",
+          });
+
+          cursorY = (doc as any).lastAutoTable.finalY + 10;
+        }
       };
+
+      /* ---------------------------- FOOTER ------------------------------------- */
 
       const addFooter = (pageNum: number, totalPages: number) => {
         doc.setDrawColor(primary.r, primary.g, primary.b);
         doc.setLineWidth(0.4);
+
         doc.line(margin, pageHeight - 15, pageWidth - margin, pageHeight - 15);
+
         doc.setFontSize(9);
         doc.setTextColor(primary.r, primary.g, primary.b);
+
         doc.text(`Page ${pageNum} of ${totalPages}`, margin, pageHeight - 8);
+
         doc.text(
-          `Case ${incident.trackingNumber}`,
+          `Case ${fullIncident.trackingNumber}`,
           pageWidth / 2,
           pageHeight - 8,
           { align: "center" }
         );
+
         doc.text("WildWatch", pageWidth - margin, pageHeight - 8, {
           align: "right",
         });
+
         doc.setTextColor(0, 0, 0);
       };
 
+      /* ---------------------------- HEADER RENDER ------------------------------- */
       await addHeader();
 
-      // Case Snapshot tags
+      /* ---------------------------- CASE SNAPSHOT TAGS --------------------------- */
+
       addTagRow([
         {
           label: "Status",
-          value: incident.status || "-",
+          value: fullIncident.status || "-",
           color: "#0f766e",
         },
         {
-          label: "Priority",
-          value: incident.priorityLevel || "Not set",
-          color:
-            incident.priorityLevel === "HIGH"
-              ? "#b91c1c"
-              : incident.priorityLevel === "MEDIUM"
-              ? "#ea580c"
-              : "#15803d",
-        },
-        {
           label: "Submitted",
-          value: formatDate(incident.submittedAt),
+          value: formatDate(fullIncident.submittedAt),
           color: "#374151",
         },
         {
           label: "Finished",
-          value: formatDate(incident.finishedDate),
+          value: formatDate(fullIncident.finishedDate),
           color: "#374151",
         },
       ]);
 
-      // Case Information
+      /* ---------------------------- CASE INFO ----------------------------------- */
+
       addSectionTitle("Case Information");
+
       addKeyValueGrid([
-        { label: "Case ID", value: incident.trackingNumber || "-" },
-        { label: "Incident Type", value: incident.incidentType || "-" },
+        { label: "Case ID", value: fullIncident.trackingNumber || "-" },
+        { label: "Incident Type", value: fullIncident.incidentType || "-" },
         {
           label: "Date of Incident",
-          value: formatDate(incident.dateOfIncident),
+          value: formatDate(fullIncident.dateOfIncident),
         },
         {
           label: "Time of Incident",
-          value: incident.timeOfIncident || "-",
+          value: fullIncident.timeOfIncident || "-",
         },
         {
           label: "Location",
           value:
-            incident.formattedAddress ||
-            formatLocationCompact(incident) ||
-            incident.location ||
+            fullIncident.formattedAddress ||
+            formatLocationCompact(fullIncident) ||
+            fullIncident.location ||
             "-",
         },
         {
           label: "Assigned Department",
-          value: incident.officeAdminName || "-",
+          value: fullIncident.officeAdminName || "-",
         },
       ]);
 
-      // Reporter details and privacy
+      /* ---------------------------- REPORTER ------------------------------------ */
+
       addSectionTitle("Reporter");
+
+      const reporterName =
+        fullIncident.submittedByFullName ||
+        (fullIncident.firstName && fullIncident.lastName
+          ? `${fullIncident.firstName} ${fullIncident.lastName}`
+          : "-");
+
       addKeyValueGrid([
-        {
-          label: "Reporter Name",
-          value: incident.firstName + " " + incident.lastName || "-",
-        },
-        { label: "Email", value: incident.email || "-" },
-        { label: "Phone", value: incident.phone || "-" },
+        { label: "Reporter Name", value: reporterName },
+        { label: "Email", value: fullIncident.submittedByEmail || "-" },
+        { label: "Phone", value: fullIncident.submittedByPhone || "-" },
         {
           label: "Reporter ID",
-          value: incident.submittedByIdNumber || "-",
+          value: fullIncident.submittedByIdNumber || "-",
         },
       ]);
+
       addTagRow([
         {
           label: "Privacy",
-          value: incident.isPrivate ? "Private" : "Shareable",
-          color: incident.isPrivate ? "#1d4ed8" : "#15803d",
+          value: fullIncident.isPrivate ? "Private" : "Shareable",
+          color: fullIncident.isPrivate ? "#1d4ed8" : "#15803d",
+          description: fullIncident.isPrivate
+            ? "Report is private and not visible to other users"
+            : "Report can be shared and viewed by other users",
         },
         {
           label: "Prefer Anonymous",
-          value: incident.preferAnonymous ? "Yes" : "No",
-          color: incident.preferAnonymous ? "#b91c1c" : "#374151",
+          value: fullIncident.preferAnonymous ? "Yes" : "No",
+          color: fullIncident.preferAnonymous ? "#b91c1c" : "#374151",
+          description: fullIncident.preferAnonymous
+            ? "Reporter prefers to remain anonymous. This can be changed by the office admin."
+            : "Reporter is identified in the report",
         },
         {
           label: "Submitted By",
-          value: incident.isAnonymous ? "Anonymous" : "Identified",
-          color: incident.isAnonymous ? "#6b7280" : "#0f766e",
+          value: fullIncident.isAnonymous ? "Anonymous" : "Identified",
+          color: fullIncident.isAnonymous ? "#6b7280" : "#0f766e",
+          description: fullIncident.isAnonymous
+            ? "Report was submitted anonymously"
+            : "Reporter information is available",
         },
       ]);
 
-      // Narrative
-      addParagraph("Narrative / Description", incident.description || "-");
+      /* ---------------------------- NARRATIVE ---------------------------------- */
 
-      // Evidence summary
-      if (Array.isArray(incident.evidence) && incident.evidence.length > 0) {
-        const evidenceRows = incident.evidence.map((file: any, idx: number) => [
-          `${idx + 1}. ${file.fileName || "File"}`,
-          file.fileType || "-",
-          `${((file.fileSize || 0) / 1024 / 1024).toFixed(2)} MB`,
-          formatDate(file.uploadedAt),
-        ]);
+      addParagraph("Narrative / Description", fullIncident.description || "-");
+
+      /* ---------------------------- EVIDENCE ----------------------------------- */
+
+      // Evidence summary table
+      if (
+        Array.isArray(fullIncident.evidence) &&
+        fullIncident.evidence.length > 0
+      ) {
+        const evidenceRows = fullIncident.evidence.map(
+          (file: any, idx: number) => [
+            `${idx + 1}. ${file.fileName || "File"}`,
+            file.fileType || "-",
+            `${((file.fileSize || 0) / 1024 / 1024).toFixed(2)} MB`,
+            formatDate(file.uploadedAt),
+          ]
+        );
+
         addTable(
           "Evidence",
           ["File", "Type", "Size", "Uploaded"],
           evidenceRows
         );
+
+        // Load and display evidence images
+        const imageFiles = fullIncident.evidence.filter((file: any) =>
+          file.fileType?.startsWith("image/")
+        );
+
+        if (imageFiles.length > 0) {
+          ensureSpace(30);
+          addSectionTitle("Evidence Images");
+          cursorY += 5;
+
+          const imagePromises = imageFiles.map(
+            async (file: any, index: number) => {
+              try {
+                if (!file.fileUrl || !file.fileUrl.trim()) {
+                  throw new Error("No fileUrl provided");
+                }
+
+                const imageUrl = `${file.fileUrl}?t=${new Date().getTime()}`;
+                let response: Response;
+                try {
+                  response = await fetch(imageUrl, {
+                    method: "GET",
+                    mode: "cors",
+                    credentials: "omit",
+                    cache: "no-cache",
+                  });
+                } catch (fetchError) {
+                  // Retry without CORS mode
+                  response = await fetch(imageUrl, {
+                    method: "GET",
+                    credentials: "omit",
+                    cache: "no-cache",
+                  });
+                }
+
+                if (!response.ok) {
+                  throw new Error(
+                    `Failed to fetch image: ${response.status} ${response.statusText}`
+                  );
+                }
+
+                const blob = await response.blob();
+                if (!blob.type.startsWith("image/")) {
+                  throw new Error(`Blob is not an image: ${blob.type}`);
+                }
+
+                const base64 = await new Promise<string>((resolve, reject) => {
+                  const reader = new FileReader();
+                  reader.onloadend = () => {
+                    if (typeof reader.result === "string") {
+                      resolve(reader.result);
+                    } else {
+                      reject(new Error("Failed to convert blob to base64"));
+                    }
+                  };
+                  reader.onerror = reject;
+                  reader.readAsDataURL(blob);
+                });
+
+                const img = new Image();
+                img.crossOrigin = "anonymous";
+
+                await new Promise<HTMLImageElement>((resolve, reject) => {
+                  const timeout = setTimeout(() => {
+                    reject(new Error("Image load timeout"));
+                  }, 15000);
+
+                  img.onload = () => {
+                    clearTimeout(timeout);
+                    resolve(img);
+                  };
+                  img.onerror = (error) => {
+                    clearTimeout(timeout);
+                    reject(error);
+                  };
+                  img.src = base64;
+                });
+
+                // Scale images to fit PDF (max 75mm width or height)
+                const maxSize = 75;
+                let imgWidth = img.width;
+                let imgHeight = img.height;
+                const widthRatio = maxSize / imgWidth;
+                const heightRatio = maxSize / imgHeight;
+                const ratio = Math.min(widthRatio, heightRatio);
+                imgWidth = imgWidth * ratio;
+                imgHeight = imgHeight * ratio;
+
+                return {
+                  img,
+                  imgWidth,
+                  imgHeight,
+                  fileName: file.fileName,
+                  index: index + 1,
+                  base64,
+                  error: false,
+                };
+              } catch (error) {
+                console.error(`Error loading image ${file.fileName}:`, error);
+                return {
+                  img: null,
+                  imgWidth: 0,
+                  imgHeight: 0,
+                  fileName: file.fileName,
+                  index: index + 1,
+                  error: true,
+                };
+              }
+            }
+          );
+
+          const loadedImages = await Promise.all(imagePromises);
+          const validImages = loadedImages.filter(
+            (img) => img && !img.error && img.img !== null
+          );
+
+          if (validImages.length > 0) {
+            const imageSize = 75;
+            const imageGap = 10;
+            const captionHeight = 8;
+            const imagesPerRow = 2;
+            const rowWidth =
+              imagesPerRow * imageSize + (imagesPerRow - 1) * imageGap;
+            const startX = margin + (contentWidth - rowWidth) / 2;
+
+            let currentRow: any[] = [];
+            for (let i = 0; i < validImages.length; i++) {
+              if (!validImages[i]) continue;
+              currentRow.push(validImages[i]);
+
+              if (
+                currentRow.length === imagesPerRow ||
+                i === validImages.length - 1
+              ) {
+                const totalRowHeight = imageSize + captionHeight + 10;
+
+                if (cursorY + totalRowHeight > pageHeight - 20) {
+                  doc.addPage();
+                  cursorY = 20;
+                  addSectionTitle("Evidence Images (continued)");
+                  cursorY += 5;
+                }
+
+                let xPosition = startX;
+                currentRow.forEach((imageData) => {
+                  // Draw image container background
+                  doc.setFillColor(248, 248, 248);
+                  doc.setDrawColor(200, 200, 200);
+                  doc.roundedRect(
+                    xPosition,
+                    cursorY,
+                    imageSize,
+                    imageSize + captionHeight,
+                    2,
+                    2,
+                    "FD"
+                  );
+
+                  // Add image
+                  if (imageData.base64) {
+                    try {
+                      doc.addImage(
+                        imageData.base64,
+                        "JPEG",
+                        xPosition + (imageSize - imageData.imgWidth) / 2,
+                        cursorY + 2,
+                        imageData.imgWidth,
+                        imageData.imgHeight,
+                        undefined,
+                        "FAST"
+                      );
+                    } catch (error) {
+                      console.error("Error adding image to PDF:", error);
+                    }
+                  }
+
+                  // Add caption
+                  doc.setFontSize(8);
+                  doc.setFont("helvetica", "normal");
+                  doc.setTextColor(0, 0, 0);
+                  const captionText = `Image ${imageData.index}: ${imageData.fileName}`;
+                  const captionLines = doc.splitTextToSize(
+                    captionText,
+                    imageSize - 4
+                  );
+                  doc.text(
+                    captionLines,
+                    xPosition + 2,
+                    cursorY + imageSize + 4
+                  );
+                  doc.setFontSize(11);
+
+                  xPosition += imageSize + imageGap;
+                });
+
+                cursorY += totalRowHeight;
+                currentRow = [];
+              }
+            }
+            cursorY += 5;
+          }
+        }
       }
 
-      // Witnesses
-      if (Array.isArray(incident.witnesses) && incident.witnesses.length > 0) {
-        const witnessRows = incident.witnesses.map(
-          (witness: any, idx: number) => [
-            `${idx + 1}`,
-            witness.name || "(witness)",
-            witness.additionalNotes || "-",
-          ]
-        );
+      /* ---------------------------- WITNESSES ----------------------------------- */
+
+      if (
+        Array.isArray(fullIncident.witnesses) &&
+        fullIncident.witnesses.length
+      ) {
+        const witnessRows = fullIncident.witnesses.map((w: any, i: number) => [
+          `${i + 1}`,
+          w.name || "(witness)",
+          w.additionalNotes || "-",
+        ]);
+
         addTable("Witnesses", ["#", "Name", "Notes"], witnessRows);
       }
 
-      // Case updates timeline
-      if (Array.isArray(incident.updates) && incident.updates.length > 0) {
-        const updatesRows = incident.updates.map((update: any, idx: number) => [
-          formatDate(update.updatedAt),
-          update.title || update.status || `Update ${idx + 1}`,
-          update.message || update.description || "-",
-          update.updatedByName ||
-            update.updatedByFullName ||
-            update.author ||
-            "-",
-        ]);
-        addTable(
-          "Case Updates",
-          ["Date", "Title / Status", "Details", "Updated By"],
-          updatesRows
+      /* ---------------------------- ACTION TAKEN -------------------------------- */
+
+      addSectionTitle("Action Taken");
+
+      if (
+        Array.isArray(fullIncident.updates) &&
+        fullIncident.updates.length > 0
+      ) {
+        // Filter out updates without content
+        const validUpdates = fullIncident.updates.filter(
+          (u: any) => u.message || u.description || u.title
         );
+
+        if (validUpdates.length > 0) {
+          const stepSpacing = 20; // Space between each step
+          const circleRadius = 2.5; // Radius of the process indicator circle
+          const lineStartX = margin + circleRadius;
+          const contentStartX = margin + 12; // Start of text content
+          const contentWidthForSteps = contentWidth - 12;
+
+          validUpdates.forEach((update: any, index: number) => {
+            // Estimate step height for page break checking
+            const estimatedStepHeight = stepSpacing + 15;
+            if (cursorY + estimatedStepHeight > pageHeight - 20) {
+              // Draw continuation line from previous page
+              doc.setDrawColor(200, 200, 200);
+              doc.setLineWidth(0.5);
+              doc.line(lineStartX, margin - 5, lineStartX, cursorY);
+              cursorY = margin;
+              addSectionTitle("Action Taken (continued)");
+              cursorY += 5;
+            }
+
+            const stepY = cursorY;
+
+            // Draw connecting line from previous step (except for first step)
+            if (index > 0) {
+              doc.setDrawColor(200, 200, 200);
+              doc.setLineWidth(0.5);
+              const lineStartY = stepY - stepSpacing;
+              doc.line(
+                lineStartX,
+                lineStartY,
+                lineStartX,
+                stepY - circleRadius
+              );
+            }
+
+            // Draw process indicator circle
+            doc.setFillColor(70, 130, 180); // Steel blue color
+            doc.circle(lineStartX, stepY, circleRadius, "F");
+
+            // Draw date/time
+            const dateTime = formatDateTime(update.updatedAt);
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(9);
+            doc.text(dateTime, contentStartX, stepY - 1);
+
+            // Draw action title/status
+            const actionTitle =
+              update.title ||
+              update.status ||
+              (update.message?.toLowerCase().includes("verified")
+                ? "Verification"
+                : update.message?.toLowerCase().includes("transferred")
+                ? "Case Transfer"
+                : update.message?.toLowerCase().includes("resolved")
+                ? "Resolution"
+                : update.message?.toLowerCase().includes("dismissed")
+                ? "Dismissal"
+                : "Update") ||
+              "Action";
+
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(10);
+            doc.text(actionTitle, contentStartX, stepY + 4);
+
+            // Draw action message/description
+            const actionMessage =
+              update.message || update.description || "No details provided";
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(9);
+            const messageLines = doc.splitTextToSize(
+              actionMessage,
+              contentWidthForSteps - 2
+            );
+            doc.text(messageLines, contentStartX, stepY + 8);
+
+            // Update Y position for next step
+            cursorY = stepY + stepSpacing + messageLines.length * 4 + 4;
+
+            // Draw connecting line to next step (if not last)
+            if (index < validUpdates.length - 1) {
+              doc.setDrawColor(200, 200, 200);
+              doc.setLineWidth(0.5);
+              const nextLineY = cursorY - stepSpacing + circleRadius;
+              doc.line(lineStartX, stepY + circleRadius, lineStartX, nextLineY);
+            }
+          });
+
+          cursorY += 5;
+        } else {
+          // No valid updates, fall through to resolution notes
+          const notes =
+            fullIncident.resolutionNotes ||
+            fullIncident.administrativeNotes ||
+            fullIncident.verificationNotes ||
+            "No action details specified";
+
+          ensureSpace(20);
+
+          const lines = doc.splitTextToSize(notes, contentWidth - 4);
+          const height = lines.length * 6 + 4;
+
+          doc.setFillColor(230, 230, 250);
+          doc.roundedRect(margin, cursorY - 2, contentWidth, height, 2, 2, "F");
+          doc.text(lines, margin + 2, cursorY + 2);
+
+          cursorY += height + 10;
+        }
+      } else {
+        const notes =
+          fullIncident.resolutionNotes ||
+          fullIncident.administrativeNotes ||
+          fullIncident.verificationNotes ||
+          "No action details specified";
+
+        ensureSpace(20);
+
+        const lines = doc.splitTextToSize(notes, contentWidth - 4);
+        const height = lines.length * 6 + 4;
+
+        doc.setFillColor(230, 230, 250);
+        doc.roundedRect(margin, cursorY - 2, contentWidth, height, 2, 2, "F");
+        doc.text(lines, margin + 2, cursorY + 2);
+
+        cursorY += height + 10;
       }
 
-      // Additional notes and resolution details
-      const resolutionNotes =
-        incident.resolutionNotes ||
-        incident.administrativeNotes ||
-        incident.verificationNotes;
-      if (resolutionNotes) {
-        addParagraph("Resolution / Administrative Notes", resolutionNotes);
-      }
+      /* ---------------------------- FOOTERS PER PAGE ---------------------------- */
 
-      // Footer for every page
-      const totalPages = (doc as any).internal.getNumberOfPages();
-      for (let i = 1; i <= totalPages; i++) {
+      const total = (doc as any).internal.getNumberOfPages();
+      for (let i = 1; i <= total; i++) {
         doc.setPage(i);
-        addFooter(i, totalPages);
+        addFooter(i, total);
       }
 
-      doc.save(`Incident_Report_${incident.trackingNumber}.pdf`);
-      toast.success("PDF Downloaded Successfully", {
-        description: `Incident report for ${incident.trackingNumber} has been downloaded.`,
-        duration: 3000,
-        id: `pdf-download-success-${Date.now()}`,
-      });
+      /* ---------------------------- SAVE FILE ----------------------------------- */
+
+      doc.save(`Incident_Report_${fullIncident.trackingNumber}.pdf`);
+
+      toast.success("PDF Downloaded Successfully");
     } catch (error) {
-      console.error("Error generating PDF:", error);
-      toast.error("Failed to Download PDF", {
-        id: "pdf-download-error",
-        description: "There was an error generating the PDF. Please try again.",
-        duration: 3000,
-      });
+      toast.error("Failed to Download PDF");
     } finally {
       setIsDownloading(false);
     }
   };
+
+  /* -------------------------------------------------------------------------- */
+  /*                              UI RENDER START                                */
+  /* -------------------------------------------------------------------------- */
 
   if (loading) {
     return (
@@ -568,10 +1058,7 @@ export default function IncidentHistoryPage() {
         className={`flex-1 flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9] ${inter.className}`}
       >
         <Sidebar />
-
-        {/* Main Content Area */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-          {/* Navbar */}
           <div className="sticky top-0 z-30 flex-shrink-0">
             <Navbar
               title="Incident History"
@@ -579,8 +1066,6 @@ export default function IncidentHistoryPage() {
               onSearch={setSearch}
             />
           </div>
-
-          {/* PageLoader - fills the remaining space below Navbar */}
           <PageLoader pageTitle="incident history" />
         </div>
       </div>
@@ -814,7 +1299,7 @@ export default function IncidentHistoryPage() {
                           <th className="px-3 py-3 text-left text-xs font-medium text-[#8B0000] uppercase tracking-wider">
                             Location
                           </th>
-                          {/* Priority hidden for regular users */}
+
                           <th className="px-3 py-3 text-left text-xs font-medium text-[#8B0000] uppercase tracking-wider">
                             Status
                           </th>
@@ -871,15 +1356,6 @@ export default function IncidentHistoryPage() {
                             >
                               <td className="px-3 py-3 whitespace-nowrap">
                                 <div className="flex items-center">
-                                  <div
-                                    className={`flex-shrink-0 h-8 w-1 rounded-full mr-3 ${
-                                      incident.priorityLevel === "HIGH"
-                                        ? "bg-red-400"
-                                        : incident.priorityLevel === "MEDIUM"
-                                        ? "bg-orange-400"
-                                        : "bg-green-400"
-                                    }`}
-                                  ></div>
                                   <div className="text-sm font-medium text-[#8B0000]">
                                     {incident.trackingNumber}
                                   </div>
@@ -906,7 +1382,6 @@ export default function IncidentHistoryPage() {
                                 </div>
                               </td>
 
-                              {/* Priority hidden for regular users */}
                               <td className="px-3 py-3 whitespace-nowrap">
                                 <Badge
                                   className={

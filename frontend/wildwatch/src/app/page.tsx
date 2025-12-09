@@ -21,10 +21,13 @@ import {
 } from "@/components/ui/carousel";
 import {
   FileText,
-  Headphones,
-  AlertTriangle,
+  MessageCircle,
+  Search,
+  Building2,
   Smartphone,
-  BarChart3,
+  CheckCircle,
+  Copy,
+  Scale,
 } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 
@@ -146,9 +149,9 @@ export default function Home() {
               </span>
             </h1>
             <p className="text-white/80 mb-8 max-w-lg text-base md:text-lg leading-relaxed">
-              Streamlining incident reporting for CIT University. Ensuring all
-              campus concerns are properly documented and addressed by the right
-              authorities.
+              A comprehensive incident reporting platform for CIT University.
+              Submit reports with evidence, track case status in real-time, and
+              connect with the right departments through our AI-powered system.
             </p>
             <div className="flex flex-wrap gap-4">
               <Button
@@ -224,20 +227,20 @@ export default function Home() {
                       </Card>
                     </CarouselItem>
 
-                    {/* 24/7 Support Card */}
+                    {/* Case Tracking Card */}
                     <CarouselItem>
                       <Card className="bg-white/90 border-none shadow-lg overflow-hidden h-64 md:h-80 backdrop-blur-sm">
                         <CardContent className="p-0 h-full">
                           <div className="h-full flex items-center justify-center">
                             <div className="text-center p-6 flex flex-col items-center justify-center">
                               <div className="mb-4 bg-[#800000]/10 p-4 rounded-full">
-                                <Headphones className="h-16 w-16 text-[#800000]" />
+                                <Search className="h-16 w-16 text-[#800000]" />
                               </div>
                               <h3 className="text-[#800000] font-bold text-xl">
-                                24/7 Support
+                                Case Tracking
                               </h3>
                               <p className="text-gray-600 mt-2">
-                                Always available when you need help
+                                Track your reports with unique tracking numbers
                               </p>
                             </div>
                           </div>
@@ -245,20 +248,21 @@ export default function Home() {
                       </Card>
                     </CarouselItem>
 
-                    {/* Hazard Alerts Card */}
+                    {/* AI Chatbot Card */}
                     <CarouselItem>
                       <Card className="bg-white/90 border-none shadow-lg overflow-hidden h-64 md:h-80 backdrop-blur-sm">
                         <CardContent className="p-0 h-full">
                           <div className="h-full flex items-center justify-center">
                             <div className="text-center p-6 flex flex-col items-center justify-center">
                               <div className="mb-4 bg-[#800000]/10 p-4 rounded-full">
-                                <AlertTriangle className="h-16 w-16 text-[#800000]" />
+                                <MessageCircle className="h-16 w-16 text-[#800000]" />
                               </div>
                               <h3 className="text-[#800000] font-bold text-xl">
-                                Hazard Alerts
+                                AI Chatbot
                               </h3>
                               <p className="text-gray-600 mt-2">
-                                Stay informed about potential dangers
+                                Get instant help with incident reporting
+                                questions
                               </p>
                             </div>
                           </div>
@@ -266,20 +270,20 @@ export default function Home() {
                       </Card>
                     </CarouselItem>
 
-                    {/* Mobile Access Card */}
+                    {/* Department Assignment Card */}
                     <CarouselItem>
                       <Card className="bg-white/90 border-none shadow-lg overflow-hidden h-64 md:h-80 backdrop-blur-sm">
                         <CardContent className="p-0 h-full">
                           <div className="h-full flex items-center justify-center">
                             <div className="text-center p-6 flex flex-col items-center justify-center">
                               <div className="mb-4 bg-[#800000]/10 p-4 rounded-full">
-                                <Smartphone className="h-16 w-16 text-[#800000]" />
+                                <Building2 className="h-16 w-16 text-[#800000]" />
                               </div>
                               <h3 className="text-[#800000] font-bold text-xl">
-                                Mobile Access
+                                Department Routing
                               </h3>
                               <p className="text-gray-600 mt-2">
-                                Report incidents from anywhere on campus
+                                Reports automatically routed to the right office
                               </p>
                             </div>
                           </div>
@@ -287,20 +291,65 @@ export default function Home() {
                       </Card>
                     </CarouselItem>
 
-                    {/* Data Analytics Card */}
+                    {/* Status Updates Card */}
                     <CarouselItem>
                       <Card className="bg-white/90 border-none shadow-lg overflow-hidden h-64 md:h-80 backdrop-blur-sm">
                         <CardContent className="p-0 h-full">
                           <div className="h-full flex items-center justify-center">
                             <div className="text-center p-6 flex flex-col items-center justify-center">
                               <div className="mb-4 bg-[#800000]/10 p-4 rounded-full">
-                                <BarChart3 className="h-16 w-16 text-[#800000]" />
+                                <CheckCircle className="h-16 w-16 text-[#800000]" />
                               </div>
                               <h3 className="text-[#800000] font-bold text-xl">
-                                Data Analytics
+                                Real-Time Updates
                               </h3>
                               <p className="text-gray-600 mt-2">
-                                Insights to improve campus safety
+                                Receive email and SMS notifications on case
+                                status
+                              </p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </CarouselItem>
+
+                    {/* Similarity Detection Card */}
+                    <CarouselItem>
+                      <Card className="bg-white/90 border-none shadow-lg overflow-hidden h-64 md:h-80 backdrop-blur-sm">
+                        <CardContent className="p-0 h-full">
+                          <div className="h-full flex items-center justify-center">
+                            <div className="text-center p-6 flex flex-col items-center justify-center">
+                              <div className="mb-4 bg-[#800000]/10 p-4 rounded-full">
+                                <Copy className="h-16 w-16 text-[#800000]" />
+                              </div>
+                              <h3 className="text-[#800000] font-bold text-xl">
+                                Similarity Detection
+                              </h3>
+                              <p className="text-gray-600 mt-2">
+                                Automatically identifies duplicate or similar
+                                reports to prevent redundancy
+                              </p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </CarouselItem>
+
+                    {/* Objectivity Detection Card */}
+                    <CarouselItem>
+                      <Card className="bg-white/90 border-none shadow-lg overflow-hidden h-64 md:h-80 backdrop-blur-sm">
+                        <CardContent className="p-0 h-full">
+                          <div className="h-full flex items-center justify-center">
+                            <div className="text-center p-6 flex flex-col items-center justify-center">
+                              <div className="mb-4 bg-[#800000]/10 p-4 rounded-full">
+                                <Scale className="h-16 w-16 text-[#800000]" />
+                              </div>
+                              <h3 className="text-[#800000] font-bold text-xl">
+                                Content Moderation
+                              </h3>
+                              <p className="text-gray-600 mt-2">
+                                AI-powered review ensures objective and
+                                appropriate incident reports
                               </p>
                             </div>
                           </div>
@@ -350,8 +399,9 @@ export default function Home() {
                   Secure Reporting
                 </h3>
                 <p className="text-gray-600">
-                  End-to-end encryption ensures all wildwatch reports remain
-                  confidential and secure, protecting sensitive information.
+                  Microsoft authentication ensures secure access. Reports can be
+                  marked as private or anonymous to protect your privacy and
+                  sensitive information.
                 </p>
                 <div className="mt-6 w-16 h-1 bg-gradient-to-r from-[#800000] via-[#FFD700] to-[#800000] group-hover:w-full transition-all duration-500"></div>
               </div>
@@ -365,11 +415,12 @@ export default function Home() {
                   <Clock className="h-7 w-7 text-[#800000]" />
                 </div>
                 <h3 className="text-xl font-bold text-gray-800 mb-3">
-                  Fast Response
+                  Automated Notifications
                 </h3>
                 <p className="text-gray-600">
-                  Quick submission process and automated notifications ensure
-                  rapid response to wildwatch incidents when time matters most.
+                  Receive real-time email and SMS updates on your incident
+                  report status. Stay informed when your case is assigned,
+                  updated, or resolved.
                 </p>
                 <div className="mt-6 w-16 h-1 bg-gradient-to-r from-[#800000] via-[#FFD700] to-[#800000] group-hover:w-full transition-all duration-500"></div>
               </div>
@@ -383,11 +434,12 @@ export default function Home() {
                   <Camera className="h-7 w-7 text-[#800000]" />
                 </div>
                 <h3 className="text-xl font-bold text-gray-800 mb-3">
-                  Photo Documentation
+                  Evidence Upload
                 </h3>
                 <p className="text-gray-600">
-                  Capture and organize high-quality images of wildwatch
-                  sightings with location and time data for complete records.
+                  Attach photos and videos as evidence to support your incident
+                  report. Include witness information and detailed descriptions
+                  for complete documentation.
                 </p>
                 <div className="mt-6 w-16 h-1 bg-gradient-to-r from-[#800000] via-[#FFD700] to-[#800000] group-hover:w-full transition-all duration-500"></div>
               </div>
@@ -401,11 +453,50 @@ export default function Home() {
                   <Users className="h-7 w-7 text-[#800000]" />
                 </div>
                 <h3 className="text-xl font-bold text-gray-800 mb-3">
-                  Team Collaboration
+                  Department Routing
                 </h3>
                 <p className="text-gray-600">
-                  Collaborative tools enable team-based wildwatch monitoring and
-                  conservation efforts across departments and roles.
+                  Reports are automatically routed to the appropriate university
+                  department (TSG, OPC, SSO, SSD, or SSG) ensuring proper
+                  handling and faster resolution.
+                </p>
+                <div className="mt-6 w-16 h-1 bg-gradient-to-r from-[#800000] via-[#FFD700] to-[#800000] group-hover:w-full transition-all duration-500"></div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white border border-[#FFD700]/20 shadow-lg rounded-xl overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 group">
+            <CardContent className="p-8">
+              <div className="flex flex-col items-start text-left">
+                <div className="h-14 w-14 rounded-full bg-[#800000]/10 flex items-center justify-center mb-6 shadow-md group-hover:bg-[#800000]/20 transition-colors duration-300">
+                  <Copy className="h-7 w-7 text-[#800000]" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-800 mb-3">
+                  Similarity Detection
+                </h3>
+                <p className="text-gray-600">
+                  Advanced AI analyzes your report and identifies similar or
+                  duplicate incidents using tag-based matching, helping prevent
+                  redundant submissions and connecting related cases.
+                </p>
+                <div className="mt-6 w-16 h-1 bg-gradient-to-r from-[#800000] via-[#FFD700] to-[#800000] group-hover:w-full transition-all duration-500"></div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white border border-[#FFD700]/20 shadow-lg rounded-xl overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 group">
+            <CardContent className="p-8">
+              <div className="flex flex-col items-start text-left">
+                <div className="h-14 w-14 rounded-full bg-[#800000]/10 flex items-center justify-center mb-6 shadow-md group-hover:bg-[#800000]/20 transition-colors duration-300">
+                  <Scale className="h-7 w-7 text-[#800000]" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-800 mb-3">
+                  Objectivity Detection
+                </h3>
+                <p className="text-gray-600">
+                  AI-powered content moderation ensures reports are objective,
+                  appropriate, and meet quality standards. Automatically filters
+                  inappropriate content and validates incident authenticity.
                 </p>
                 <div className="mt-6 w-16 h-1 bg-gradient-to-r from-[#800000] via-[#FFD700] to-[#800000] group-hover:w-full transition-all duration-500"></div>
               </div>
