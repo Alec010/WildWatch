@@ -24,6 +24,7 @@ import { storage } from "../../lib/storage";
 import Colors from "../../constants/Colors";
 import { LinearGradient } from "expo-linear-gradient";
 import { clearUserProfileState } from "../../src/features/users/hooks/useUserProfile";
+import { performLogout } from "../../lib/auth";
 
 const sections = [
   {
@@ -124,10 +125,9 @@ export default function TermsPage() {
           text: "Decline & Logout",
           style: "destructive",
           onPress: async () => {
-            // Clean up ALL session data
-            console.log("🧹 User declined terms - clearing all data");
-            await storage.clearAllUserData();
-            router.replace("/auth/login");
+            // Clean up ALL session data using centralized logout
+            console.log("🧹 User declined terms - logging out");
+            await performLogout();
           },
         },
       ]

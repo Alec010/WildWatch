@@ -24,6 +24,7 @@ import { authAPI } from "../../src/features/auth/api/auth_api";
 import { storage } from "../../lib/storage";
 import Colors from "../../constants/Colors";
 import { clearUserProfileState } from "../../src/features/users/hooks/useUserProfile";
+import { performLogout } from "../../lib/auth";
 
 const COLORS = {
   maroon: Colors.maroon,
@@ -192,10 +193,9 @@ export default function SetupPage() {
           text: "Cancel & Logout",
           style: "destructive",
           onPress: async () => {
-            // Clean up ALL session data
-            console.log("🧹 User cancelled setup - clearing all data");
-            await storage.clearAllUserData();
-            router.replace("/auth/login");
+            // Clean up ALL session data using centralized logout
+            console.log("🧹 User cancelled setup - logging out");
+            await performLogout();
           },
         },
       ]

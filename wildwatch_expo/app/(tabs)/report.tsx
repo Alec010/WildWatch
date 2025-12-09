@@ -1047,24 +1047,7 @@ export default function ReportScreen() {
         RAW_ENV: process.env.EXPO_PUBLIC_API_BASE_URL,
       });
 
-      // Construct the full URL
-      // Note: config.API.BASE_URL should already include /api if set correctly in Expo
-      // Example: https://wildwatch-zgaw.onrender.com/api
-      const endpoint = "/incidents";
-
-      // ✅ FIX: Ensure no double slashes in URL construction
-      const baseUrl = config.API.BASE_URL.endsWith("/")
-        ? config.API.BASE_URL.slice(0, -1)
-        : config.API.BASE_URL;
-      const endpointPath = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
-      const url = `${baseUrl}${endpointPath}`;
-
-      console.log("🌐 [SUBMISSION] Full endpoint URL:", url);
-      console.log("🌐 [SUBMISSION] Base URL from config:", config.API.BASE_URL);
-      console.log("🌐 [SUBMISSION] Endpoint path:", endpoint);
-      console.log("🌐 [SUBMISSION] Constructed URL:", url);
-
-      // Validate that BASE_URL is set
+      // ✅ Validate that BASE_URL is set before proceeding
       if (
         !config.API.BASE_URL ||
         config.API.BASE_URL === "undefined" ||
@@ -1077,10 +1060,18 @@ export default function ReportScreen() {
           "❌ [SUBMISSION] Raw env value:",
           process.env.EXPO_PUBLIC_API_BASE_URL
         );
-        throw new Error(
-          "API_BASE_URL is not configured. Please rebuild your app with environment variables set in Expo."
+        Alert.alert(
+          "Configuration Error",
+          "API endpoint is not configured. Please rebuild the app with proper environment variables.",
+          [{ text: "OK" }]
         );
+        setIsSubmitting(false);
+        setShowProcessingModal(false);
+        return;
       }
+
+      // Note: We use the api instance which already has baseURL configured
+      // No need to construct URL manually - api.post("/incidents", ...) will use baseURL + "/incidents"
 
       // Create FormData
       const formData = new FormData();
@@ -1097,17 +1088,19 @@ export default function ReportScreen() {
             file.name
           );
 
-          // Normalize URI for both iOS and Android production builds
+          // ✅ IMPROVED: Better URI normalization for APK builds
           // iOS: Uses file:// format
           // Android: Can use file://, content://, or file paths
           let normalizedUri = file.uri;
 
-          // Handle Android file paths that aren't properly formatted
           if (Platform.OS === "android") {
-            if (
+            // In APK builds, file URIs can be content://, file://, or absolute paths
+            if (normalizedUri.startsWith("content://")) {
+              // Content URIs work directly in APK - no normalization needed
+              // These are used by Android's MediaStore and work natively
+            } else if (
               !normalizedUri.startsWith("file://") &&
               !normalizedUri.startsWith("http") &&
-              !normalizedUri.startsWith("content://") &&
               !normalizedUri.startsWith("ph://") // Photo library on iOS
             ) {
               // Convert relative or absolute paths to file:// URI
@@ -1115,17 +1108,16 @@ export default function ReportScreen() {
                 ? `file://${normalizedUri}`
                 : `file:///${normalizedUri}`;
             }
-          }
-
-          // iOS typically already has file:// prefix, but ensure it's correct
-          if (
-            Platform.OS === "ios" &&
-            !normalizedUri.startsWith("file://") &&
-            !normalizedUri.startsWith("ph://")
-          ) {
-            normalizedUri = normalizedUri.startsWith("/")
-              ? `file://${normalizedUri}`
-              : `file:///${normalizedUri}`;
+          } else if (Platform.OS === "ios") {
+            // iOS typically already has file:// prefix, but ensure it's correct
+            if (
+              !normalizedUri.startsWith("file://") &&
+              !normalizedUri.startsWith("ph://")
+            ) {
+              normalizedUri = normalizedUri.startsWith("/")
+                ? `file://${normalizedUri}`
+                : `file:///${normalizedUri}`;
+            }
           }
 
           // Verify file exists - critical for production builds
@@ -1203,19 +1195,29 @@ export default function ReportScreen() {
         }
       }
 
-      // Use axios for multipart form data upload
+      // ✅ FIX: Use the configured api instance for better error handling and consistency
+      // The api instance properly handles FormData and has interceptors for auth
       // IMPORTANT: Do NOT set Content-Type header manually - axios will set it automatically
       // with the correct boundary for multipart/form-data. Setting it manually breaks the upload.
-      // Using axios directly (not the api instance) to avoid default JSON Content-Type header
-      const uploadResponse = await axios.post(url, formData, {
-        headers: {
-          Authorization: `Bearer ${currentToken}`, // Use currentToken from storage instead of state
-          // Do NOT set Content-Type - axios will automatically set:
-          // Content-Type: multipart/form-data; boundary=----WebKitFormBoundary...
-        },
+      
+      // Log final request details for debugging (especially useful in APK)
+      console.log("🔍 [SUBMISSION] Final request details:", {
+        url: "/incidents",
+        baseURL: config.API.BASE_URL,
+        hasToken: !!currentToken,
+        tokenLength: currentToken?.length,
+        fileCount: evidenceFiles.length,
+        formDataKeys: ["incidentData", `files (${evidenceFiles.length})`],
+        platform: Platform.OS,
         timeout: SUBMISSION_TIMEOUT,
-        // In React Native, FormData is handled natively by axios
-        // No transformRequest needed - FormData works directly
+      });
+
+      // Use api instance - it handles FormData correctly via interceptors
+      // The interceptor checks for FormData and doesn't set Content-Type for it
+      const uploadResponse = await api.post("/incidents", formData, {
+        timeout: SUBMISSION_TIMEOUT,
+        // Authorization header is automatically added by api interceptor
+        // Content-Type is automatically set by axios for FormData
       });
 
       const result = {
@@ -1254,10 +1256,27 @@ export default function ReportScreen() {
       });
       setShowSuccessModal(true);
     } catch (submitError: any) {
+      // ✅ ENHANCED: Better error logging for APK debugging
       console.error("💥 [SUBMISSION] Upload error:", {
         name: submitError.name,
         message: submitError.message,
         code: submitError.code,
+        response: submitError.response ? {
+          status: submitError.response.status,
+          statusText: submitError.response.statusText,
+          data: submitError.response.data,
+        } : null,
+        request: submitError.request ? {
+          url: submitError.config?.url || submitError.request.url,
+          method: submitError.config?.method || submitError.request.method,
+        } : null,
+        config: {
+          baseURL: submitError.config?.baseURL,
+          url: submitError.config?.url,
+          timeout: submitError.config?.timeout,
+        },
+        platform: Platform.OS,
+        apiBaseUrl: config.API.BASE_URL,
         error: submitError,
       });
 

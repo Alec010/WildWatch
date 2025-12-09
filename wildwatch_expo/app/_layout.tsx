@@ -63,16 +63,26 @@ function RootLayoutNav() {
     const checkAuth = async () => {
       try {
         const token = await storage.getToken();
-        const authed = Boolean(token);
-        setIsAuthenticated(authed);
+        
+        if (!token) {
+          setIsAuthenticated(false);
+          if (pathname?.startsWith("/(tabs)")) {
+            router.replace("/auth/login");
+          }
+          setHasCheckedAuth(true);
+          return;
+        }
 
-        if (authed) {
-          // ✅ FIX: Clear profile state before fetching to prevent showing old account data
+        // ✅ FIX: Validate token by attempting to fetch profile
+        try {
+          // Quick validation - fetch profile to ensure token is valid
+          await authAPI.getProfile();
+          setIsAuthenticated(true);
+          
+          // Clear profile state before fetching to prevent showing old account data
           clearUserProfileState();
 
-          // Terms and setup are handled on the web frontend (mobile/terms -> mobile/setup -> mobile/complete)
-          // When user reaches the app, they have already completed these steps
-          // So we can go directly to tabs if they're on an auth page (except login/oauth callback)
+          // Navigate to tabs if on auth page (except login/oauth callback)
           if (
             pathname?.startsWith("/auth") &&
             !pathname?.startsWith("/auth/login") &&
@@ -80,12 +90,24 @@ function RootLayoutNav() {
           ) {
             router.replace("/(tabs)");
           }
-        } else if (pathname?.startsWith("/(tabs)")) {
-          router.replace("/auth/login");
+        } catch (error: any) {
+          // Token is invalid or expired
+          console.log('🔒 Token validation failed, clearing session');
+          setIsAuthenticated(false);
+          await storage.clearAllUserData();
+          clearUserProfileState();
+          
+          if (pathname?.startsWith("/(tabs)")) {
+            router.replace("/auth/login");
+          }
         }
       } catch (error) {
         // On error, assume not authenticated
+        console.error('Auth check error:', error);
         setIsAuthenticated(false);
+        await storage.clearAllUserData();
+        clearUserProfileState();
+        
         if (pathname?.startsWith("/(tabs)")) {
           router.replace("/auth/login");
         }

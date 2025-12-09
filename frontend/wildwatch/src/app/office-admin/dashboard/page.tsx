@@ -27,6 +27,7 @@ import { motion } from "framer-motion";
 import {
   formatDateWithYear,
   formatDate,
+  formatDateOnly,
   parseUTCDate,
 } from "@/utils/dateUtils";
 import { PageLoader } from "@/components/PageLoader";
@@ -35,7 +36,7 @@ const inter = Inter({ subsets: ["latin"] });
 
 // Utility functions for estimated resolution
 const formatEstimatedDate = (dateString: string) => {
-  return formatDateWithYear(dateString);
+  return formatDateOnly(dateString);
 };
 
 const getEstimatedResolution = (
@@ -90,6 +91,34 @@ export default function OfficeAdminDashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredIncidents, setFilteredIncidents] = useState<Incident[]>([]);
   const [activeTab, setActiveTab] = useState("overview");
+  const [isLargeDesktop, setIsLargeDesktop] = useState(() => {
+    // Initialize based on window size if available (client-side)
+    if (typeof window !== "undefined") {
+      return window.innerWidth >= 1620;
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    // Check if screen is >= 1620px (3xl breakpoint) using media query to match Tailwind
+    if (typeof window === "undefined") return;
+
+    const mediaQuery = window.matchMedia("(min-width: 1620px)");
+
+    const checkScreenSize = () => {
+      setIsLargeDesktop(mediaQuery.matches);
+    };
+
+    // Check on mount
+    checkScreenSize();
+
+    // Add event listener
+    mediaQuery.addEventListener("change", checkScreenSize);
+
+    return () => {
+      mediaQuery.removeEventListener("change", checkScreenSize);
+    };
+  }, []);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -457,113 +486,123 @@ export default function OfficeAdminDashboard() {
                     </Button>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 2xl:grid-cols-4 gap-6 overflow-visible">
+                  <div
+                    className={`grid gap-6 overflow-visible ${
+                      isLargeDesktop
+                        ? "grid-cols-4"
+                        : "grid-cols-1 md:grid-cols-3"
+                    }`}
+                  >
                     {recentIncidents.length > 0 ? (
-                      recentIncidents.slice(0, 3).map((incident, index) => (
-                        <motion.div
-                          key={incident.id}
-                          initial={{ opacity: 0, y: 12 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.25, delay: index * 0.06 }}
-                          className="rounded-xl border border-gray-200 bg-white hover:bg-gray-50 transition-colors p-5 flex flex-col h-full"
-                        >
-                          {/* Header */}
-                          <div className="flex items-start justify-between gap-3 mb-2">
-                            <div className="min-w-0">
-                              <h3 className="font-semibold text-gray-900 truncate">
-                                {incident.trackingNumber}
-                              </h3>
-                              <p className="text-sm text-gray-600 truncate">
-                                {incident.incidentType}
-                              </p>
-                            </div>
+                      recentIncidents
+                        .slice(0, isLargeDesktop ? 4 : 3)
+                        .map((incident, index) => (
+                          <motion.div
+                            key={incident.id}
+                            initial={{ opacity: 0, y: 12 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.25, delay: index * 0.06 }}
+                            className="rounded-xl border border-gray-200 bg-white hover:bg-gray-50 transition-colors p-5 flex flex-col h-full"
+                          >
+                            {/* Header */}
+                            <div className="flex items-start justify-between gap-3 mb-2">
+                              <div className="min-w-0">
+                                <h3 className="font-semibold text-gray-900 truncate">
+                                  {incident.trackingNumber}
+                                </h3>
+                                <p className="text-sm text-gray-600 truncate">
+                                  {incident.incidentType}
+                                </p>
+                              </div>
 
-                            {/* Status pill */}
-                            <span
-                              className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium whitespace-nowrap ${
-                                incident.status === "Pending"
-                                  ? "border-yellow-200 text-yellow-800 bg-yellow-50"
-                                  : incident.status === "In Progress"
-                                  ? "border-blue-200 text-blue-800 bg-blue-50"
-                                  : "border-green-200 text-green-800 bg-green-50"
-                              }`}
-                            >
+                              {/* Status pill */}
                               <span
-                                className={`h-1.5 w-1.5 rounded-full ${
+                                className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium whitespace-nowrap ${
                                   incident.status === "Pending"
-                                    ? "bg-yellow-500"
+                                    ? "border-yellow-200 text-yellow-800 bg-yellow-50"
                                     : incident.status === "In Progress"
-                                    ? "bg-blue-500"
-                                    : "bg-green-500"
+                                    ? "border-blue-200 text-blue-800 bg-blue-50"
+                                    : "border-green-200 text-green-800 bg-green-50"
                                 }`}
-                              />
-                              {incident.status}
-                            </span>
-                          </div>
-
-                          {/* Meta */}
-                          <div className="space-y-2 text-sm text-gray-700 mb-3">
-                            <div className="flex items-center text-gray-600">
-                              <Clock className="h-4 w-4 mr-1 text-gray-400" />
-                              {formatDate(incident.submittedAt)}
-                            </div>
-                            <div className="flex items-center text-gray-600">
-                              <Calendar className="h-4 w-4 mr-1 text-gray-400" />
-                              Est.{" "}
-                              {formatEstimatedDate(
-                                getEstimatedResolution(
-                                  incident.submittedAt,
-                                  incident.priorityLevel || "LOW",
-                                  incident.estimatedResolutionDate
-                                ).toISOString()
-                              )}
-                            </div>
-                            <div className="flex items-start text-gray-600">
-                              <AlertCircle className="h-4 w-4 mr-1 text-gray-400 mt-0.5 flex-shrink-0" />
-                              <a
-                                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                                  incident.location
-                                )}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-[13px] text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
                               >
-                                {formatLocationCompact(incident)}
-                              </a>
+                                <span
+                                  className={`h-1.5 w-1.5 rounded-full ${
+                                    incident.status === "Pending"
+                                      ? "bg-yellow-500"
+                                      : incident.status === "In Progress"
+                                      ? "bg-blue-500"
+                                      : "bg-green-500"
+                                  }`}
+                                />
+                                {incident.status}
+                              </span>
                             </div>
-                          </div>
 
-                          {/* Description */}
-                          <p className="text-sm text-gray-800 line-clamp-2 mb-4">
-                            {incident.description}
-                          </p>
+                            {/* Meta */}
+                            <div className="space-y-2 text-sm text-gray-700 mb-3">
+                              <div className="flex items-center text-gray-600">
+                                <Clock className="h-4 w-4 mr-1 text-gray-400" />
+                                {formatDate(incident.submittedAt)}
+                              </div>
+                              <div className="flex items-center text-gray-600">
+                                <Calendar className="h-4 w-4 mr-1 text-gray-400" />
+                                Est.{" "}
+                                {formatEstimatedDate(
+                                  getEstimatedResolution(
+                                    incident.submittedAt,
+                                    incident.priorityLevel || "LOW",
+                                    incident.estimatedResolutionDate
+                                  ).toISOString()
+                                )}
+                              </div>
+                              <div className="flex items-start text-gray-600">
+                                <AlertCircle className="h-4 w-4 mr-1 text-gray-400 mt-0.5 flex-shrink-0" />
+                                <a
+                                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                                    incident.location
+                                  )}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-[13px] text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                                >
+                                  {formatLocationCompact(incident)}
+                                </a>
+                              </div>
+                            </div>
 
-                          {/* Action */}
-                          <div className="mt-auto pt-2">
-                            <Button
-                              variant="outline"
-                              className="w-full border-[#8B0000] text-[#8B0000] hover:bg-[#8B0000]/5"
-                              onClick={() => {
-                                if (incident.status === "Resolved") {
-                                  router.push(
-                                    `/incidents/tracking/${incident.trackingNumber}`
-                                  );
-                                } else if (incident.status === "In Progress") {
-                                  router.push(
-                                    `/office-admin/approved-cases/${incident.id}/update`
-                                  );
-                                } else {
-                                  router.push(
-                                    `/office-admin/incidents/${incident.id}`
-                                  );
-                                }
-                              }}
-                            >
-                              <Eye size={16} className="mr-2" /> View Details
-                            </Button>
-                          </div>
-                        </motion.div>
-                      ))
+                            {/* Description */}
+                            <p className="text-sm text-gray-800 line-clamp-2 mb-4">
+                              {incident.description}
+                            </p>
+
+                            {/* Action */}
+                            <div className="mt-auto pt-2">
+                              <Button
+                                variant="outline"
+                                className="w-full border-[#8B0000] text-[#8B0000] hover:bg-[#8B0000]/5"
+                                onClick={() => {
+                                  if (incident.status === "Resolved") {
+                                    router.push(
+                                      `/incidents/tracking/${incident.trackingNumber}`
+                                    );
+                                  } else if (
+                                    incident.status === "In Progress"
+                                  ) {
+                                    router.push(
+                                      `/office-admin/approved-cases/${incident.id}/update`
+                                    );
+                                  } else {
+                                    router.push(
+                                      `/office-admin/incidents/${incident.id}`
+                                    );
+                                  }
+                                }}
+                              >
+                                <Eye size={16} className="mr-2" /> View Details
+                              </Button>
+                            </div>
+                          </motion.div>
+                        ))
                     ) : (
                       // Empty State Card
                       <motion.div
@@ -613,7 +652,13 @@ export default function OfficeAdminDashboard() {
                 </div>
 
                 {/* Recent Incidents Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-3 2xl:grid-cols-4 gap-6 mb-8">
+                <div
+                  className={`grid gap-6 mb-8 ${
+                    isLargeDesktop
+                      ? "grid-cols-4"
+                      : "grid-cols-1 md:grid-cols-3"
+                  }`}
+                >
                   {(searchQuery ? filteredIncidents : recentIncidents).length >
                   0 ? (
                     (searchQuery ? filteredIncidents : recentIncidents).map(
