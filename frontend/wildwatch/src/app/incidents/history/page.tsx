@@ -992,7 +992,7 @@ export default function IncidentHistoryPage() {
                         <th className="px-3 py-3 text-left text-xs font-medium text-[#8B0000] uppercase tracking-wider">
                           Finished Date
                         </th>
-                        <th className="px-3 py-3 text-center text-xs font-medium text-[#8B0000] uppercase tracking-wider">
+                        <th className="px-3 py-3 text-center text-xs font-medium text-[#8B0000] uppercase tracking-wider sticky right-0 bg-[#8B0000]/5 z-10">
                           Actions
                         </th>
                       </tr>
@@ -1104,7 +1104,7 @@ export default function IncidentHistoryPage() {
                                 ? formatDateOnly(incident.finishedDate)
                                 : "-"}
                             </td>
-                            <td className="px-3 py-3 whitespace-nowrap text-center">
+                            <td className="px-3 py-3 whitespace-nowrap text-center sticky right-0 bg-white z-10">
                               <Button
                                 variant="outline"
                                 size="icon"
