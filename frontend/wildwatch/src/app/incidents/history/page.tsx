@@ -634,14 +634,6 @@ export default function IncidentHistoryPage() {
             ? "Reporter prefers to remain anonymous. This can be changed by the office admin."
             : "Reporter is identified in the report",
         },
-        {
-          label: "Submitted By",
-          value: fullIncident.isAnonymous ? "Anonymous" : "Identified",
-          color: fullIncident.isAnonymous ? "#6b7280" : "#0f766e",
-          description: fullIncident.isAnonymous
-            ? "Report was submitted anonymously"
-            : "Reporter information is available",
-        },
       ]);
 
       /* ---------------------------- NARRATIVE ---------------------------------- */
