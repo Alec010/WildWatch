@@ -1082,13 +1082,54 @@ export default function ReportScreen() {
         );
       }
 
-      // Create FormData
-      const formData = new FormData();
+      // Dynamically import react-native-blob-util only when needed (not in Expo Go)
+      // This avoids loading native modules at import time
+      let RNFetchBlob: any;
+      try {
+        // Try different import patterns - react-native-blob-util may export differently
+        const module = require("react-native-blob-util");
+        RNFetchBlob = module.default || module;
+        
+        // Verify the module is actually available
+        if (!RNFetchBlob || typeof RNFetchBlob.fetch !== "function") {
+          throw new Error("react-native-blob-util module loaded but fetch method not available");
+        }
+      } catch (error: any) {
+        // Log the actual error for debugging
+        console.error("❌ [SUBMISSION] react-native-blob-util import error:", error);
+        console.error("❌ [SUBMISSION] Error details:", {
+          message: error?.message,
+          code: error?.code,
+          stack: error?.stack?.substring(0, 200),
+        });
+        
+        // Provide more helpful error message
+        const errorMessage = error?.message || "Unknown error";
+        if (errorMessage.includes("Cannot find module")) {
+          throw new Error(
+            "react-native-blob-util is not installed. Please run: npm install react-native-blob-util and rebuild your APK."
+          );
+        } else if (errorMessage.includes("Native module")) {
+          throw new Error(
+            "react-native-blob-util native module not linked. Please rebuild your APK after installing the package."
+          );
+        } else {
+          throw new Error(
+            `react-native-blob-util error: ${errorMessage}. Please ensure the package is installed and the APK is rebuilt.`
+          );
+        }
+      }
 
-      // Add incidentData as form field
-      formData.append("incidentData", JSON.stringify(incidentData));
+      // Prepare form data array for react-native-blob-util
+      const formDataArray: any[] = [];
 
-      // Verify and prepare files for FormData
+      // Add incidentData
+      formDataArray.push({
+        name: "incidentData",
+        data: JSON.stringify(incidentData),
+      });
+
+      // Verify and prepare files for react-native-blob-util
       for (let i = 0; i < evidenceFiles.length; i++) {
         const file = evidenceFiles[i];
         if (file.uri) {
@@ -1170,89 +1211,136 @@ export default function ReportScreen() {
             );
           }
 
-          // Add file to FormData
-          // For React Native, FormData requires an object with uri, type, and name
-          // This format works in both Expo Go and production builds (iOS/Android)
-          const fileObject: any = {
-            uri: normalizedUri,
-            type: file.type || "image/jpeg",
-            name: file.name || `evidence_${i}.jpg`,
-          };
-
-          // Ensure proper file extension for type detection
+          // Determine MIME type
+          let mimeType = file.type || "image/jpeg";
           if (!file.type) {
             const extension = file.name?.split(".").pop()?.toLowerCase();
             if (extension === "png") {
-              fileObject.type = "image/png";
+              mimeType = "image/png";
             } else if (extension === "jpg" || extension === "jpeg") {
-              fileObject.type = "image/jpeg";
+              mimeType = "image/jpeg";
             } else if (extension === "mp4") {
-              fileObject.type = "video/mp4";
+              mimeType = "video/mp4";
             } else if (extension === "mov") {
-              fileObject.type = "video/quicktime";
+              mimeType = "video/quicktime";
             }
           }
 
-          formData.append("files", fileObject);
+          // Prepare file for react-native-blob-util upload
+          // RNFetchBlob needs the file path without file:// prefix
+          // Handle both file:// and file:/// formats
+          let filePath = normalizedUri;
+          if (filePath.startsWith("file:///")) {
+            // Remove file:/// (three slashes) - common on Android
+            filePath = filePath.replace("file:///", "/");
+          } else if (filePath.startsWith("file://")) {
+            // Remove file:// (two slashes)
+            filePath = filePath.replace("file://", "");
+          }
+
+          // Ensure path starts with / for absolute paths on Android
+          if (
+            Platform.OS === "android" &&
+            !filePath.startsWith("/") &&
+            !filePath.startsWith("content://")
+          ) {
+            filePath = "/" + filePath;
+          }
+
+          // Add file to form data array for react-native-blob-util
+          formDataArray.push({
+            name: "files",
+            filename: file.name || `evidence_${i}.jpg`,
+            type: mimeType,
+            data: RNFetchBlob.wrap(filePath),
+          });
 
           console.log(
-            `✅ [SUBMISSION] Added file ${i + 1}: ${file.name} (${
-              fileObject.type
-            })`
+            `✅ [SUBMISSION] Added file ${i + 1} for react-native-blob-util: ${file.name} (${mimeType})`
           );
         }
       }
 
-      // Use axios for multipart form data upload
-      // IMPORTANT: Do NOT set Content-Type header manually - axios will set it automatically
-      // with the correct boundary for multipart/form-data. Setting it manually breaks the upload.
-      // Using axios directly (not the api instance) to avoid default JSON Content-Type header
-      const uploadResponse = await axios.post(url, formData, {
-        headers: {
-          Authorization: `Bearer ${currentToken}`, // Use currentToken from storage instead of state
-          // Do NOT set Content-Type - axios will automatically set:
-          // Content-Type: multipart/form-data; boundary=----WebKitFormBoundary...
-        },
-        timeout: SUBMISSION_TIMEOUT,
-        // In React Native, FormData is handled natively by axios
-        // No transformRequest needed - FormData works directly
-      });
+      // Use react-native-blob-util for multipart form data upload
+      // This library handles file uploads reliably in React Native, avoiding axios/XMLHttpRequest issues
+      // Note: react-native-blob-util requires native modules and only works in production builds (APK), not Expo Go
+      try {
+        // Use RNFetchBlob.fetch() directly (working pattern from successful implementation)
+        // This simpler API is more reliable than config().fetch()
+        const uploadResponse = await RNFetchBlob.fetch(
+          "POST",
+          url,
+          {
+            Authorization: `Bearer ${currentToken}`,
+            "Content-Type": "multipart/form-data", // Explicit Content-Type header
+          },
+          formDataArray
+        );
 
-      const result = {
-        status: uploadResponse.status,
-        data: uploadResponse.data,
-        ok: uploadResponse.status >= 200 && uploadResponse.status < 300,
-      };
+        // Parse response
+        const responseText = await uploadResponse.text();
+        let responseData;
+        try {
+          responseData = JSON.parse(responseText);
+        } catch {
+          responseData = responseText;
+        }
 
-      const requestDuration = ((Date.now() - startTime) / 1000).toFixed(2);
-      console.log(
-        `✅ [SUBMISSION] Response received in ${requestDuration}s - Status: ${result.status}`
-      );
+        const status = uploadResponse.info().status;
+        const result = {
+          status: status,
+          data: responseData,
+          ok: status >= 200 && status < 300,
+        };
 
-      // Check if request was successful
-      if (!result.ok) {
-        const errorObj: any = new Error("Server returned error");
-        errorObj.status = result.status;
-        errorObj.data = result.data;
-        throw errorObj;
+        const requestDuration = ((Date.now() - startTime) / 1000).toFixed(2);
+        console.log(
+          `✅ [SUBMISSION] Response received in ${requestDuration}s - Status: ${result.status}`
+        );
+
+        // Check if request was successful
+        if (!result.ok) {
+          const errorObj: any = new Error(
+            result.data?.message || "Server returned error"
+          );
+          errorObj.status = result.status;
+          errorObj.data = result.data;
+          errorObj.response = { status: result.status, data: result.data }; // For compatibility with error handlers
+          throw errorObj;
+        }
+
+        setProcessingPhase("finalizing");
+
+        const finalResponseData = result.data;
+
+        console.log("🎉 [SUBMISSION] Report submitted successfully!", {
+          trackingNumber: finalResponseData.trackingNumber,
+          assignedOffice: finalResponseData.assignedOffice?.name,
+        });
+
+        // Hide processing modal and show success modal
+        setShowProcessingModal(false);
+        setSubmissionResult({
+          trackingNumber: finalResponseData.trackingNumber,
+          assignedOffice: finalResponseData.assignedOffice,
+        });
+        setShowSuccessModal(true);
+      } catch (blobUtilError: any) {
+        console.error("❌ [SUBMISSION] react-native-blob-util upload error:", blobUtilError);
+        
+        // Handle timeout errors
+        if (blobUtilError.message?.includes("timeout") || blobUtilError.message?.includes("TIMEOUT")) {
+          const timeoutError: any = new Error(
+            "Request timed out. The upload is taking too long. Please try again with a better connection."
+          );
+          timeoutError.code = "ETIMEDOUT";
+          timeoutError.name = "TimeoutError";
+          throw timeoutError;
+        }
+        
+        // Re-throw other errors
+        throw blobUtilError;
       }
-
-      setProcessingPhase("finalizing");
-
-      const responseData = result.data;
-
-      console.log("🎉 [SUBMISSION] Report submitted successfully!", {
-        trackingNumber: responseData.trackingNumber,
-        assignedOffice: responseData.assignedOffice?.name,
-      });
-
-      // Hide processing modal and show success modal
-      setShowProcessingModal(false);
-      setSubmissionResult({
-        trackingNumber: responseData.trackingNumber,
-        assignedOffice: responseData.assignedOffice,
-      });
-      setShowSuccessModal(true);
     } catch (submitError: any) {
       console.error("💥 [SUBMISSION] Upload error:", {
         name: submitError.name,
