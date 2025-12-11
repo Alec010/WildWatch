@@ -21,20 +21,20 @@ import {
   Layers,
   ArrowUpRight,
   Activity,
+  Shield,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Inter } from "next/font/google";
 import { API_BASE_URL } from "@/utils/api";
 import { motion } from "framer-motion";
 import { filterIncidentsByPrivacy } from "@/utils/anonymization";
 import {
   formatRelativeDate,
   formatDateWithYear,
+  formatDateOnly,
   parseUTCDate,
 } from "@/utils/dateUtils";
+import { formatLocationForTable } from "@/utils/locationFormatter";
 import { PageLoader } from "@/components/PageLoader";
-
-const inter = Inter({ subsets: ["latin"] });
 
 interface Incident {
   id: string; // UUID from backend
@@ -46,6 +46,15 @@ interface Incident {
   status: string;
   priorityLevel?: "HIGH" | "MEDIUM" | "LOW" | null;
   estimatedResolutionDate?: string;
+  // Optional location data fields for enhanced formatting
+  formattedAddress?: string;
+  buildingName?: string;
+  buildingCode?: string;
+  room?: string;
+  building?: {
+    fullName?: string;
+    code?: string;
+  };
 }
 
 export default function CaseTrackingPage() {
@@ -143,7 +152,7 @@ export default function CaseTrackingPage() {
   };
 
   const formatEstimatedDate = (dateString: string) => {
-    return formatDateWithYear(dateString);
+    return formatDateOnly(dateString);
   };
 
   const getActivityIcon = (activityType: string) => {
@@ -174,6 +183,62 @@ export default function CaseTrackingPage() {
       default:
         return "bg-gradient-to-br from-gray-500 to-gray-600";
     }
+  };
+
+  // Helper function to get status styling
+  const getStatusStyles = (status: string) => {
+    const normalizedStatus = status.toLowerCase();
+    if (normalizedStatus === "pending") {
+      return {
+        border: "border-l-4 border-l-amber-500",
+        badge:
+          "bg-gradient-to-r from-amber-50 to-amber-100 text-amber-700 border border-amber-200",
+        icon: "bg-gradient-to-br from-amber-400 to-amber-500",
+        accent: "from-amber-500/10 to-amber-500/5",
+      };
+    } else if (normalizedStatus === "in progress") {
+      return {
+        border: "border-l-4 border-l-blue-500",
+        badge:
+          "bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 border border-blue-200",
+        icon: "bg-gradient-to-br from-blue-400 to-blue-500",
+        accent: "from-blue-500/10 to-blue-500/5",
+      };
+    } else {
+      return {
+        border: "border-l-4 border-l-green-500",
+        badge:
+          "bg-gradient-to-r from-green-50 to-green-100 text-green-700 border border-green-200",
+        icon: "bg-gradient-to-br from-green-400 to-green-500",
+        accent: "from-green-500/10 to-green-500/5",
+      };
+    }
+  };
+
+  // Helper function to get priority styling
+  const getPriorityStyles = (priority?: string | null) => {
+    if (!priority) return null;
+    const normalizedPriority = priority.toLowerCase();
+    if (normalizedPriority === "high") {
+      return {
+        badge:
+          "bg-gradient-to-r from-red-500 to-red-600 text-white shadow-md shadow-red-500/30",
+        dot: "bg-red-500",
+      };
+    } else if (normalizedPriority === "medium") {
+      return {
+        badge:
+          "bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md shadow-orange-500/30",
+        dot: "bg-orange-500",
+      };
+    } else if (normalizedPriority === "low") {
+      return {
+        badge:
+          "bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-md shadow-emerald-500/30",
+        dot: "bg-emerald-500",
+      };
+    }
+    return null;
   };
 
   // Only show incidents matching selected status and search
@@ -210,9 +275,7 @@ export default function CaseTrackingPage() {
 
   if (loading) {
     return (
-      <div
-        className={`flex-1 flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9] ${inter.className}`}
-      >
+      <div className="flex-1 flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9]">
         <Sidebar />
 
         {/* Main Content Area */}
@@ -235,9 +298,7 @@ export default function CaseTrackingPage() {
 
   if (error) {
     return (
-      <div
-        className={`flex-1 flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9] ${inter.className}`}
-      >
+      <div className="flex-1 flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9]">
         <Sidebar />
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {/* Navbar */}
@@ -287,9 +348,7 @@ export default function CaseTrackingPage() {
   }
 
   return (
-    <div
-      className={`flex-1 flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9] ${inter.className}`}
-    >
+    <div className="flex-1 flex bg-gradient-to-br from-[#f8f5f5] to-[#fff9f9]">
       <Sidebar />
 
       {/* Main Content Area */}
@@ -370,14 +429,22 @@ export default function CaseTrackingPage() {
             </div>
 
             {/* Filters Section */}
-            <div className="bg-white rounded-xl shadow-md p-4 mb-6 border border-gray-100">
-              <div className="flex items-center gap-2 mb-4">
-                <Filter className="h-5 w-5 text-[#8B0000]" />
-                <h3 className="font-medium text-gray-800">Filters</h3>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.2 }}
+              className="bg-gradient-to-br from-white to-[#fff9f9] rounded-xl shadow-md p-6 mb-8 border border-[#f0e0e0] relative overflow-hidden"
+            >
+              <div className="flex items-center gap-2 mb-6">
+                <div className="bg-gradient-to-br from-[#8B0000] to-[#6B0000] p-2 rounded-lg shadow-md">
+                  <Filter className="h-5 w-5 text-white" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-800">Filters</h3>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <h4 className="text-sm font-medium text-gray-600 mb-2">
+                  <h4 className="text-sm font-medium text-gray-600 mb-3 flex items-center">
+                    <Activity className="mr-2 h-4 w-4 text-[#8B0000]" />
                     Status
                   </h4>
                   <div className="flex flex-wrap gap-2">
@@ -387,8 +454,8 @@ export default function CaseTrackingPage() {
                         onClick={() => setSelectedStatus(status)}
                         className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                           selectedStatus === status
-                            ? "bg-[#8B0000] text-white shadow-md"
-                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                            ? "bg-gradient-to-r from-[#8B0000] to-[#6B0000] text-white shadow-md"
+                            : "bg-white/50 text-gray-700 hover:bg-white border border-gray-200"
                         }`}
                       >
                         {status}
@@ -398,7 +465,8 @@ export default function CaseTrackingPage() {
                 </div>
 
                 <div>
-                  <h4 className="text-sm font-medium text-gray-600 mb-2">
+                  <h4 className="text-sm font-medium text-gray-600 mb-3 flex items-center">
+                    <AlertTriangle className="mr-2 h-4 w-4 text-[#8B0000]" />
                     Priority
                   </h4>
                   <div className="flex flex-wrap gap-2">
@@ -409,13 +477,13 @@ export default function CaseTrackingPage() {
                         className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                           selectedPriority === priority
                             ? priority === "HIGH"
-                              ? "bg-red-500 text-white shadow-md"
+                              ? "bg-gradient-to-r from-red-500 to-red-600 text-white shadow-md"
                               : priority === "MEDIUM"
-                              ? "bg-orange-500 text-white shadow-md"
+                              ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md"
                               : priority === "LOW"
-                              ? "bg-green-500 text-white shadow-md"
-                              : "bg-[#8B0000] text-white shadow-md"
-                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                              ? "bg-gradient-to-r from-green-500 to-green-600 text-white shadow-md"
+                              : "bg-gradient-to-r from-[#8B0000] to-[#6B0000] text-white shadow-md"
+                            : "bg-white/50 text-gray-700 hover:bg-white border border-gray-200"
                         }`}
                       >
                         {priority === "All"
@@ -427,142 +495,211 @@ export default function CaseTrackingPage() {
                   </div>
                 </div>
               </div>
-            </div>
+            </motion.div>
 
             {/* Incident Cards */}
-            <div className="mb-10">
-              <div className="flex items-center justify_between mb-4">
-                <h2 className="text-xl font-bold text-[#8B0000] flex items-center">
-                  <Layers className="mr-2 h-5 w-5" />
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.3 }}
+              className="mb-10"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-semibold text-gray-800 flex items-center">
+                  <div className="bg-gradient-to-br from-[#8B0000] to-[#6B0000] p-2 rounded-lg shadow-md mr-3">
+                    <Layers className="h-5 w-5 text-white" />
+                  </div>
                   Your Cases
-                  <span className="ml-2 text-sm bg-[#8B0000]/10 text-[#8B0000] px-2 py-0.5 rounded-full">
+                  <span className="ml-3 text-sm bg-[#8B0000]/10 text-[#8B0000] px-3 py-1 rounded-full font-semibold">
                     {filteredCases.length}
                   </span>
                 </h2>
-                <div className="text-sm text-gray-500">
+                <div className="text-sm text-gray-500 bg-white/50 px-3 py-1.5 rounded-lg border border-gray-200">
                   Showing {filteredCases.length} of {incidents.length} cases
                 </div>
               </div>
 
               {filteredCases.length === 0 ? (
-                <div className="bg-white rounded-xl shadow-md p-8 text-center border border-gray-100">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Search className="h-8 w-8 text-gray-400" />
-                  </div>
-                  <h3 className="text-lg font-medium text_gray-800 mb-2">
-                    No cases found
-                  </h3>
-                  <p className="text-gray-500 max-w-md mx-auto">
-                    We couldn't find any cases matching your current filters.
-                    Try adjusting your search or filters.
-                  </p>
-                  <Button
-                    variant="outline"
-                    className="mt-4"
-                    onClick={() => {
-                      setSelectedStatus("All");
-                      setSelectedPriority("All");
-                      setSearch("");
-                    }}
-                  >
-                    Clear Filters
-                  </Button>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 gap-4 overflow-visible">
-                  {filteredCases.map((item, index) => (
-                    <motion.div
-                      key={item.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3, delay: index * 0.05 }}
-                      className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 border border-gray-100 overflow-visible group"
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="bg-gradient-to-br from-white to-[#fff9f9] rounded-xl shadow-md p-12 text-center border border-[#f0e0e0] relative overflow-hidden"
+                >
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-gray-100/50 to-transparent rounded-bl-full"></div>
+                  <div className="relative z-10">
+                    <div className="w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <Search className="h-10 w-10 text-gray-400" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-gray-800 mb-3">
+                      No cases found
+                    </h3>
+                    <p className="text-gray-600 max-w-md mx-auto mb-6">
+                      We couldn't find any cases matching your current filters.
+                      Try adjusting your search or filters.
+                    </p>
+                    <Button
+                      variant="outline"
+                      className="border-[#8B0000] text-[#8B0000] hover:bg-[#8B0000] hover:text-white"
+                      onClick={() => {
+                        setSelectedStatus("All");
+                        setSelectedPriority("All");
+                        setSearch("");
+                      }}
                     >
-                      <div className="flex flex-col md:flex-row">
+                      Clear Filters
+                    </Button>
+                  </div>
+                </motion.div>
+              ) : (
+                <div className="grid grid-cols-1 gap-6">
+                  {filteredCases.map((item, index) => {
+                    const statusStyles = getStatusStyles(item.status);
+                    const priorityStyles = getPriorityStyles(
+                      item.priorityLevel
+                    );
+                    return (
+                      <motion.div
+                        key={item.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3, delay: index * 0.05 }}
+                        whileHover={{ y: -2 }}
+                        className="bg-gradient-to-br from-white to-[#fff9f9] rounded-xl shadow-md border border-[#f0e0e0] relative overflow-hidden group cursor-pointer hover:shadow-lg transition-all duration-300"
+                        onClick={() =>
+                          goToCase(
+                            item.trackingNumber ? item.trackingNumber : item.id
+                          )
+                        }
+                      >
+                        {/* Decorative gradient overlay */}
                         <div
-                          className={`w-full md:w-2 ${
-                            item.status === "Pending"
-                              ? "bg-yellow-500"
-                              : item.status === "In Progress"
-                              ? "bg-blue-500"
-                              : "bg-green-500"
-                          }`}
+                          className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${statusStyles.accent} rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity duration-300`}
                         ></div>
-                        <div className="p-5 flex-1">
-                          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <h3 className="font-semibold text-[#8B0000]">
-                                  {item.trackingNumber
-                                    ? item.trackingNumber
-                                    : item.caseNumber
-                                    ? item.caseNumber
-                                    : formatCaseNumber(index)}
-                                </h3>
-                                <div className="flex items-center gap-2">
+
+                        <div className="relative p-6">
+                          {/* Header Section */}
+                          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-6">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-3 mb-3">
+                                <div className="bg-gradient-to-br from-[#8B0000] to-[#6B0000] p-3 rounded-lg shadow-md flex-shrink-0">
+                                  <Shield className="h-6 w-6 text-white" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <h1 className="text-2xl font-bold text-[#8B0000] mb-1">
+                                    Case{" "}
+                                    {item.trackingNumber
+                                      ? item.trackingNumber
+                                      : item.caseNumber
+                                      ? item.caseNumber
+                                      : formatCaseNumber(index)}
+                                  </h1>
+                                  <p className="text-gray-600 text-sm">
+                                    Security Incident Report
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-2 mt-3">
+                                {/* Priority chip */}
+                                {priorityStyles && (
                                   <span
-                                    className={`px-2 py-0.5 text-xs rounded-full ${
-                                      item.status === "Pending"
-                                        ? "bg-yellow-100 text-yellow-800"
-                                        : item.status === "In Progress"
-                                        ? "bg-blue-100 text-blue-800"
+                                    className={`px-3 py-1 text-sm font-medium rounded-full ${
+                                      item.priorityLevel === "HIGH"
+                                        ? "bg-red-100 text-red-800"
+                                        : item.priorityLevel === "MEDIUM"
+                                        ? "bg-amber-100 text-amber-800"
                                         : "bg-green-100 text-green-800"
                                     }`}
                                   >
-                                    {item.status}
+                                    {item.priorityLevel} Priority
                                   </span>
-                                  {item.estimatedResolutionDate && (
-                                    <div className="relative group">
-                                      <Calendar className="h-4 w-4 text-[#800000] cursor-help transition-all duration-200 group-hover:scale-110 group-hover:text-[#A00000]" />
-                                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-3 px-4 py-3 bg-[#8B0000] text-white text-sm rounded-lg shadow-lg opacity-0 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300 whitespace-nowrap z-[9999] pointer-events-none overflow-visible group-hover:animate-in group-hover:slide-in-from-bottom-2 group-hover:fade-in-0">
-                                        <div className="font-medium">
-                                          Est. Resolution
-                                        </div>
-                                        <div className="text-xs text-gray-100 mt-1">
-                                          {formatEstimatedDate(
-                                            item.estimatedResolutionDate
-                                          )}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
+                                )}
+                                <span
+                                  className={`px-3 py-1 text-sm font-medium rounded-full ${
+                                    item.status === "Pending"
+                                      ? "bg-yellow-100 text-yellow-800"
+                                      : item.status === "In Progress"
+                                      ? "bg-blue-100 text-blue-800"
+                                      : "bg-green-100 text-green-800"
+                                  }`}
+                                >
+                                  {item.status}
+                                </span>
                               </div>
-                              <h4 className="text-gray-800 font-medium mt-1">
-                                {item.incidentType}
-                              </h4>
                             </div>
-                            <div className="flex items-center gap-6 text-sm text-gray-500">
-                              <div className="flex items-center gap-1">
-                                <Calendar className="h-4 w-4" />
-                                <span>{item.dateOfIncident}</span>
+
+                            {/* Action Button */}
+                            <Button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                goToCase(
+                                  item.trackingNumber
+                                    ? item.trackingNumber
+                                    : item.id
+                                );
+                              }}
+                              className="bg-gradient-to-r from-[#8B0000] to-[#6B0000] hover:from-[#6B0000] hover:to-[#800000] text-white shadow-md hover:shadow-lg transition-all duration-200 flex-shrink-0"
+                              size="sm"
+                            >
+                              <Eye size={16} className="mr-2" /> View Details
+                            </Button>
+                          </div>
+
+                          {/* Incident Type */}
+                          <div className="mb-6">
+                            <h2 className="text-lg font-semibold text-gray-800 flex items-center">
+                              <FileText className="mr-2 h-5 w-5 text-[#8B0000]" />
+                              {item.incidentType}
+                            </h2>
+                          </div>
+
+                          {/* Details Grid */}
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            {/* Incident Date */}
+                            <div className="bg-white/50 rounded-lg p-4 border border-gray-100">
+                              <div className="text-sm font-medium text-gray-500 mb-1 flex items-center">
+                                <Calendar className="mr-1 h-4 w-4" />
+                                Incident Date
                               </div>
-                              <div className="flex items-center gap-1">
-                                <MapPin className="h-4 w-4" />
-                                <span>{item.location}</span>
+                              <p className="text-gray-800 font-semibold">
+                                {item.dateOfIncident}
+                              </p>
+                            </div>
+
+                            {/* Estimated Resolution Date */}
+                            {item.estimatedResolutionDate ? (
+                              <div className="bg-white/50 rounded-lg p-4 border border-gray-100">
+                                <div className="text-sm font-medium text-gray-500 mb-1 flex items-center">
+                                  <Calendar className="mr-1 h-4 w-4 text-[#8B0000]" />
+                                  Est. Resolution
+                                </div>
+                                <p className="text-[#8B0000] font-semibold">
+                                  {formatEstimatedDate(
+                                    item.estimatedResolutionDate
+                                  )}
+                                </p>
                               </div>
-                              <Button
-                                onClick={() =>
-                                  goToCase(
-                                    item.trackingNumber
-                                      ? item.trackingNumber
-                                      : item.id
-                                  )
-                                }
-                                className="bg-[#8B0000] hover:bg-[#6B0000] text-white shadow-sm"
-                                size="sm"
-                              >
-                                <Eye size={14} className="mr-1" /> View Details
-                              </Button>
+                            ) : (
+                              <div></div>
+                            )}
+
+                            {/* Location */}
+                            <div className="bg-white/50 rounded-lg p-4 border border-gray-100">
+                              <div className="text-sm font-medium text-gray-500 mb-1 flex items-center">
+                                <MapPin className="mr-1 h-4 w-4" />
+                                Location
+                              </div>
+                              <p className="text-gray-800 font-semibold truncate">
+                                {formatLocationForTable(item)}
+                              </p>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    </motion.div>
-                  ))}
+                      </motion.div>
+                    );
+                  })}
                 </div>
               )}
-            </div>
+            </motion.div>
           </div>
         </div>
       </div>

@@ -1047,24 +1047,7 @@ export default function ReportScreen() {
         RAW_ENV: process.env.EXPO_PUBLIC_API_BASE_URL,
       });
 
-      // Construct the full URL
-      // Note: config.API.BASE_URL should already include /api if set correctly in Expo
-      // Example: https://wildwatch-zgaw.onrender.com/api
-      const endpoint = "/incidents";
-
-      // ✅ FIX: Ensure no double slashes in URL construction
-      const baseUrl = config.API.BASE_URL.endsWith("/")
-        ? config.API.BASE_URL.slice(0, -1)
-        : config.API.BASE_URL;
-      const endpointPath = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
-      const url = `${baseUrl}${endpointPath}`;
-
-      console.log("🌐 [SUBMISSION] Full endpoint URL:", url);
-      console.log("🌐 [SUBMISSION] Base URL from config:", config.API.BASE_URL);
-      console.log("🌐 [SUBMISSION] Endpoint path:", endpoint);
-      console.log("🌐 [SUBMISSION] Constructed URL:", url);
-
-      // Validate that BASE_URL is set
+      // ✅ Validate that BASE_URL is set before proceeding
       if (
         !config.API.BASE_URL ||
         config.API.BASE_URL === "undefined" ||
@@ -1077,9 +1060,14 @@ export default function ReportScreen() {
           "❌ [SUBMISSION] Raw env value:",
           process.env.EXPO_PUBLIC_API_BASE_URL
         );
-        throw new Error(
-          "API_BASE_URL is not configured. Please rebuild your app with environment variables set in Expo."
+        Alert.alert(
+          "Configuration Error",
+          "API endpoint is not configured. Please rebuild the app with proper environment variables.",
+          [{ text: "OK" }]
         );
+        setIsSubmitting(false);
+        setShowProcessingModal(false);
+        return;
       }
 
       // Dynamically import react-native-blob-util only when needed (not in Expo Go)
@@ -1138,17 +1126,19 @@ export default function ReportScreen() {
             file.name
           );
 
-          // Normalize URI for both iOS and Android production builds
+          // ✅ IMPROVED: Better URI normalization for APK builds
           // iOS: Uses file:// format
           // Android: Can use file://, content://, or file paths
           let normalizedUri = file.uri;
 
-          // Handle Android file paths that aren't properly formatted
           if (Platform.OS === "android") {
-            if (
+            // In APK builds, file URIs can be content://, file://, or absolute paths
+            if (normalizedUri.startsWith("content://")) {
+              // Content URIs work directly in APK - no normalization needed
+              // These are used by Android's MediaStore and work natively
+            } else if (
               !normalizedUri.startsWith("file://") &&
               !normalizedUri.startsWith("http") &&
-              !normalizedUri.startsWith("content://") &&
               !normalizedUri.startsWith("ph://") // Photo library on iOS
             ) {
               // Convert relative or absolute paths to file:// URI
@@ -1156,17 +1146,16 @@ export default function ReportScreen() {
                 ? `file://${normalizedUri}`
                 : `file:///${normalizedUri}`;
             }
-          }
-
-          // iOS typically already has file:// prefix, but ensure it's correct
-          if (
-            Platform.OS === "ios" &&
-            !normalizedUri.startsWith("file://") &&
-            !normalizedUri.startsWith("ph://")
-          ) {
-            normalizedUri = normalizedUri.startsWith("/")
-              ? `file://${normalizedUri}`
-              : `file:///${normalizedUri}`;
+          } else if (Platform.OS === "ios") {
+            // iOS typically already has file:// prefix, but ensure it's correct
+            if (
+              !normalizedUri.startsWith("file://") &&
+              !normalizedUri.startsWith("ph://")
+            ) {
+              normalizedUri = normalizedUri.startsWith("/")
+                ? `file://${normalizedUri}`
+                : `file:///${normalizedUri}`;
+            }
           }
 
           // Verify file exists - critical for production builds
@@ -1342,10 +1331,27 @@ export default function ReportScreen() {
         throw blobUtilError;
       }
     } catch (submitError: any) {
+      // ✅ ENHANCED: Better error logging for APK debugging
       console.error("💥 [SUBMISSION] Upload error:", {
         name: submitError.name,
         message: submitError.message,
         code: submitError.code,
+        response: submitError.response ? {
+          status: submitError.response.status,
+          statusText: submitError.response.statusText,
+          data: submitError.response.data,
+        } : null,
+        request: submitError.request ? {
+          url: submitError.config?.url || submitError.request.url,
+          method: submitError.config?.method || submitError.request.method,
+        } : null,
+        config: {
+          baseURL: submitError.config?.baseURL,
+          url: submitError.config?.url,
+          timeout: submitError.config?.timeout,
+        },
+        platform: Platform.OS,
+        apiBaseUrl: config.API.BASE_URL,
         error: submitError,
       });
 

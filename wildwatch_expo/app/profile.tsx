@@ -24,6 +24,7 @@ import type {
 } from "../src/features/users/models/UserProfileModels";
 import { storage } from "../lib/storage";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { performLogout } from "../lib/auth";
 import { config } from "../lib/config";
 import Colors from "../constants/Colors";
 import { useThemeColor } from "../components/Themed";
@@ -895,41 +896,17 @@ export default function ProfileScreen() {
         text: "Logout",
         onPress: async () => {
           try {
-            // ✅ COMPREHENSIVE CLEANUP: Clear ALL tokens and session data
-            console.log("🧹 [LOGOUT] Starting comprehensive data cleanup...");
-
-            // ✅ FIX: Clear profile state FIRST to prevent UI showing old data
+            // Clear local profile state immediately for UI responsiveness
             setUserProfile(null);
-            // Clear all user data (tokens, OAuth data, form data, chat, etc.)
-            await storage.clearAllUserData();
-
-            // ✅ ADDITIONAL SAFETY: Explicitly remove OAuth-related items
-            // (These should be cleared by clearAllUserData, but adding for extra safety)
-            await Promise.all([
-              AsyncStorage.removeItem("pendingOAuthToken"),
-              AsyncStorage.removeItem("oauthUserData"),
-              AsyncStorage.removeItem("authToken"),
-            ]);
-
-            console.log(
-              "✅ [LOGOUT] All tokens and storage data cleared successfully"
-            );
-
-            // Navigate to login screen
-            router.replace("/auth/login" as never);
+            // Use centralized logout function
+            await performLogout();
           } catch (error) {
-            console.error("❌ [LOGOUT] Error during cleanup:", error);
-            // Even if cleanup fails, still navigate to login
-            // User will need to log in again anyway
+            console.error("❌ [LOGOUT] Error during logout:", error);
+            // Even if cleanup fails, still show success message
             Alert.alert(
               "Logout",
               "Logged out successfully. Some cached data may remain.",
-              [
-                {
-                  text: "OK",
-                  onPress: () => router.replace("/auth/login" as never),
-                },
-              ]
+              [{ text: "OK" }]
             );
           }
         },

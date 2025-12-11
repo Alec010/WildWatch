@@ -43,7 +43,7 @@ public interface IncidentRatingRepository extends JpaRepository<IncidentRating, 
            "FROM User u " +
            "LEFT JOIN Incident i ON i.submittedBy.id = u.id " +
            "LEFT JOIN IncidentRating r ON r.incident.id = i.id " +
-           "WHERE u.points > 0 " +
+           "WHERE u.points > 0 AND u.role = 'REGULAR_USER' " +
            "GROUP BY u.id, u.firstName, u.lastName, u.userRank " +
            "ORDER BY points DESC " +
            "LIMIT 10")

@@ -38,6 +38,16 @@ export const authAPI = {
     });
     return response.data;
   },
+  logout: async (): Promise<{ message: string }> => {
+    try {
+      const response = await api.post<{ message: string }>('/auth/logout');
+      return response.data;
+    } catch (error) {
+      // Even if backend logout fails, we still want to clear local data
+      console.warn('Backend logout failed, but continuing with local cleanup');
+      throw error;
+    }
+  },
 };
 
 
