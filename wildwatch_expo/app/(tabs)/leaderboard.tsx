@@ -671,12 +671,6 @@ export default function LeaderboardScreen() {
                   >
                     Learn more about the recognition system
                   </Text>
-                  <Ionicons
-                    name="chevron-down"
-                    size={16}
-                    color={palette.brand}
-                    style={{ marginLeft: 4 }}
-                  />
                 </TouchableOpacity>
               </View>
             </View>

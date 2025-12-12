@@ -301,7 +301,10 @@ export default function ReportScreen() {
   const [generatedTags, setGeneratedTags] = useState<string[]>([]);
   const [isGeneratingTags, setIsGeneratingTags] = useState(false);
   const [tagsError, setTagsError] = useState<string | null>(null);
-  const [tagSelectError, setTagSelectError] = useState<string | null>(null);
+  
+  // Debounce refs for auto-generation
+  const typingDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const blurDelayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Image picker state
   const [isUploading, setIsUploading] = useState(false);
@@ -607,6 +610,15 @@ export default function ReportScreen() {
           ? "Location updated: You are within CITU campus grounds"
           : "Location updated: You are outside CITU campus grounds";
         console.log(statusMessage);
+      }
+      
+      // Auto-generate tags if location changed and description is available
+      if (form.description.trim().length >= 10 && token && !isGeneratingTags) {
+        // Small delay to ensure form state is updated
+        const autoGenTimer = setTimeout(() => {
+          generateTags();
+        }, 500);
+        return () => clearTimeout(autoGenTimer);
       }
     }
   }, [
@@ -969,7 +981,8 @@ export default function ReportScreen() {
       distanceFromCampusCenter: form.distanceFromCampusCenter,
       description: form.description.trim(),
       preferAnonymous: form.preferAnonymous,
-      tags: form.tags,
+      tags: form.tags, // Selected display tags (3-5)
+      allTags: form.allTags || [], // All 20 generated tags for backend
       witnesses: witnesses
         .filter((w) => {
           // Include witnesses that have either:
@@ -1762,28 +1775,206 @@ export default function ReportScreen() {
     );
   };
 
-  const handleTagClick = (tag: string) => {
-    setTagSelectError(null);
-    if (form.tags.includes(tag)) {
-      // Allow deletion only if we have more than 3 tags (minimum 3)
-      if (form.tags.length > 3) {
-        toggleTag(tag);
-      } else {
-        setTagSelectError(
-          "You must keep at least 3 tags. You can remove up to 2 tags maximum."
+  // Function to select 5 unique tags for display, filtering out similar tags (from web version)
+  const selectDisplayTags = (allTags: string[]): string[] => {
+    if (allTags.length === 0) return [];
+
+    // Shuffle the tags array to randomize selection order
+    const shuffledTags = [...allTags];
+    for (let i = shuffledTags.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffledTags[i], shuffledTags[j]] = [shuffledTags[j], shuffledTags[i]];
+    }
+
+    const selected: string[] = [];
+    const seenNormalized = new Set<string>();
+    const seenBuildingPatterns = new Set<string>(); // Track "-Building" patterns
+
+    // Helper function to normalize tag for comparison (case-insensitive)
+    const normalizeTag = (tag: string): string => {
+      return tag.toLowerCase().trim();
+    };
+
+    // Extract words from a tag (split by hyphens, spaces, etc.)
+    const extractWords = (tag: string): string[] => {
+      const normalized = normalizeTag(tag);
+      return normalized.split(/[^a-z0-9]+/).filter((w) => w.length > 0);
+    };
+
+    // Extract words from selected location (buildingName, buildingCode, formattedAddress)
+    const getLocationWords = (): string[] => {
+      const locationWords: string[] = [];
+
+      // Extract words from buildingName
+      if (form.buildingName) {
+        locationWords.push(...extractWords(form.buildingName));
+      }
+
+      // Extract words from buildingCode
+      if (form.buildingCode) {
+        locationWords.push(...extractWords(form.buildingCode));
+      }
+
+      // Extract words from formattedAddress (but be more selective - only significant words)
+      if (form.formattedAddress) {
+        const addressWords = extractWords(form.formattedAddress);
+        // Filter out common address words like "street", "avenue", "road", etc.
+        const commonWords = [
+          "street",
+          "st",
+          "avenue",
+          "ave",
+          "road",
+          "rd",
+          "boulevard",
+          "blvd",
+          "drive",
+          "dr",
+          "lane",
+          "ln",
+        ];
+        locationWords.push(
+          ...addressWords.filter(
+            (w) => !commonWords.includes(w) && w.length >= 2
+          )
         );
       }
-    } else {
-      // This shouldn't happen in the new flow, but keeping for safety
-      if (form.tags.length >= 5) {
-        setTagSelectError("You can select up to 5 tags only.");
-        return;
+
+      return locationWords;
+    };
+
+    // Check if tag contains any word from the selected location
+    const containsLocationWord = (
+      tag: string,
+      locationWords: string[]
+    ): boolean => {
+      const tagWords = extractWords(tag);
+      for (const locationWord of locationWords) {
+        if (locationWord.length >= 2) {
+          for (const tagWord of tagWords) {
+            if (tagWord === locationWord) {
+              return true;
+            }
+          }
+        }
       }
-      toggleTag(tag);
+      return false;
+    };
+
+    // Get location words once
+    const locationWords = getLocationWords();
+
+    // Helper function to check if two tags are similar
+    const areSimilar = (tag1: string, tag2: string): boolean => {
+      const norm1 = normalizeTag(tag1);
+      const norm2 = normalizeTag(tag2);
+
+      // Exact match (case-insensitive) - e.g., "NGE" === "Nge"
+      if (norm1 === norm2) return true;
+
+      // Extract words from both tags
+      const words1 = extractWords(tag1);
+      const words2 = extractWords(tag2);
+
+      // If tags share any word (length >= 2), they're similar
+      for (const word1 of words1) {
+        for (const word2 of words2) {
+          // Exact word match (case-insensitive) - minimum 2 characters to avoid single letters
+          if (word1 === word2 && word1.length >= 2) {
+            return true;
+          }
+        }
+      }
+
+      // Check if one tag is contained in the other (e.g., "ST" in "ST-Building")
+      if (norm1.length >= 2 && norm2.length >= 2) {
+        // Check if the shorter tag appears as a complete word in the longer tag
+        const shorter = norm1.length <= norm2.length ? norm1 : norm2;
+        const longer = norm1.length > norm2.length ? norm1 : norm2;
+
+        // Extract words from both
+        const shorterWords = extractWords(shorter);
+        const longerWords = extractWords(longer);
+
+        // If shorter is a single word and it appears in longer's words, they're similar
+        if (shorterWords.length === 1 && longerWords.length > 1) {
+          const shortWord = shorterWords[0];
+          if (shortWord.length >= 2) {
+            for (const longWord of longerWords) {
+              if (shortWord === longWord) {
+                return true;
+              }
+            }
+          }
+        }
+
+        // Also check if shorter tag is a prefix/suffix of longer tag
+        if (
+          longer.startsWith(shorter + "-") ||
+          longer.startsWith(shorter + " ") ||
+          longer.endsWith("-" + shorter) ||
+          longer.endsWith(" " + shorter) ||
+          longer === shorter
+        ) {
+          if (shorter.length >= 2) {
+            return true;
+          }
+        }
+      }
+
+      return false;
+    };
+
+    // Iterate through shuffled tags and select unique ones
+    for (const tag of shuffledTags) {
+      if (selected.length >= 5) break;
+
+      const normalized = normalizeTag(tag);
+
+      // Skip if we've already seen this exact tag (case-insensitive)
+      if (seenNormalized.has(normalized)) continue;
+
+      // Filter out tags that contain words from the selected location
+      if (containsLocationWord(tag, locationWords)) {
+        continue;
+      }
+
+      // For tags ending with "-Building", only show one (regardless of prefix)
+      const isBuildingTag =
+        normalized.endsWith("-building") || normalized.endsWith(" building");
+
+      if (isBuildingTag) {
+        // If we've already seen a "-Building" tag, skip this one
+        if (seenBuildingPatterns.has("building")) {
+          continue;
+        }
+
+        // Mark that we've seen a "-Building" tag
+        seenBuildingPatterns.add("building");
+      }
+
+      // Check if we've already selected a similar tag
+      let isSimilar = false;
+      for (const seenTag of selected) {
+        if (areSimilar(tag, seenTag)) {
+          isSimilar = true;
+          break;
+        }
+      }
+
+      // If not similar to any selected tag, add it
+      if (!isSimilar) {
+        selected.push(tag);
+        seenNormalized.add(normalized);
+      }
     }
+
+    return selected;
   };
 
-  // Manual generate tags (with user feedback)
+  // Tags are now read-only (AI-selected), so no tag click handler needed
+
+  // Generate tags (manual or auto)
   const generateTags = async () => {
     if (!token) {
       Alert.alert("Error", "You must be logged in to generate tags");
@@ -1823,29 +2014,36 @@ export default function ReportScreen() {
 
       // Handle response format: allTags (all 20 generated tags) and top5Tags (top 5 scored tags)
       const allGeneratedTags = data.allTags || data.tags || [];
-      const top5Tags =
-        data.top5Tags ||
-        data.top5ScoredTags?.map((ts: any) => ts.tag) ||
-        allGeneratedTags.slice(0, 5);
-
-      // Store all generated tags (20 tags) for display
+      
+      // Store all generated tags (20 tags) for backend submission
+      updateForm("allTags", allGeneratedTags);
       setGeneratedTags(allGeneratedTags);
 
-      // Auto-select the top 5 scored tags (best weighted tags from backend)
-      updateForm("tags", top5Tags);
+      // Calculate display tags using smart selection (like web version)
+      const displayTags = selectDisplayTags(allGeneratedTags);
+      
+      // Store display tags (3-5 tags for UI)
+      updateForm("tags", displayTags);
 
       const totalGenerated = data.totalGenerated || allGeneratedTags.length;
-      Alert.alert(
-        "Success",
-        `Tags generated successfully! Generated ${totalGenerated} tags. Selected top 5 most relevant based on weighted scoring.`
-      );
+      
+      // Only show alert for manual generation, not auto-generation
+      if (!typingDebounceRef.current) {
+        Alert.alert(
+          "Success",
+          `Tags generated successfully! Generated ${totalGenerated} tags. Selected top 5 most relevant based on weighted scoring.`
+        );
+      }
     } catch (error: any) {
       console.error("Error generating tags:", error);
       setTagsError(error.message || "Failed to generate tags");
-      Alert.alert(
-        "Error",
-        error.message || "Failed to generate tags. Please try again."
-      );
+      // Only show alert for manual generation, not auto-generation
+      if (!typingDebounceRef.current) {
+        Alert.alert(
+          "Error",
+          error.message || "Failed to generate tags. Please try again."
+        );
+      }
     } finally {
       setIsGeneratingTags(false);
     }
@@ -2285,7 +2483,52 @@ export default function ReportScreen() {
                       onChangeText={(text) => {
                         if (text.length <= 1000) {
                           updateForm("description", text);
+                          
+                          // Auto-generate tags when user types in description field (debounced)
+                          // Clear existing debounce timer
+                          if (typingDebounceRef.current) {
+                            clearTimeout(typingDebounceRef.current);
+                          }
+
+                          // Set new debounce timer (3.5 seconds after user stops typing)
+                          typingDebounceRef.current = setTimeout(() => {
+                            // Check if description and location are available
+                            if (
+                              text.trim().length >= 10 &&
+                              (form.location ||
+                                (form.latitude && form.longitude)) &&
+                              !isGeneratingTags &&
+                              token
+                            ) {
+                              generateTags();
+                            }
+                          }, 3500);
                         }
+                      }}
+                      onBlur={() => {
+                        // Clear typing debounce timer
+                        if (typingDebounceRef.current) {
+                          clearTimeout(typingDebounceRef.current);
+                          typingDebounceRef.current = null;
+                        }
+
+                        // Set delay timer for blur (1 second after leaving field)
+                        if (blurDelayRef.current) {
+                          clearTimeout(blurDelayRef.current);
+                        }
+
+                        blurDelayRef.current = setTimeout(() => {
+                          // Check if description and location are available
+                          if (
+                            form.description.trim().length >= 10 &&
+                            (form.location ||
+                              (form.latitude && form.longitude)) &&
+                            !isGeneratingTags &&
+                            token
+                          ) {
+                            generateTags();
+                          }
+                        }, 1000);
                       }}
                       multiline
                       numberOfLines={6}
@@ -2319,81 +2562,16 @@ export default function ReportScreen() {
                       >
                         AI-Generated Tags
                       </Text>
+                      <Text
+                        style={{
+                          fontSize: fontSize - 2,
+                          color: "#6B7280",
+                          marginTop: 4,
+                        }}
+                      >
+                        Tags will be automatically generated as you type
+                      </Text>
                     </View>
-
-                    {/* Generate Tags Button - Always visible */}
-                    <TouchableOpacity
-                      onPress={generateTags}
-                      disabled={
-                        isGeneratingTags ||
-                        !form.description.trim() ||
-                        !form.latitude ||
-                        !form.longitude
-                      }
-                      style={{
-                        backgroundColor:
-                          isGeneratingTags ||
-                          !form.description.trim() ||
-                          !form.latitude ||
-                          !form.longitude
-                            ? "#E5E7EB"
-                            : "#8B0000",
-                        borderRadius: 12,
-                        paddingVertical: 16,
-                        paddingHorizontal: 20,
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexDirection: "row",
-                        marginBottom: 16,
-                        shadowColor:
-                          isGeneratingTags ||
-                          !form.description.trim() ||
-                          !form.latitude ||
-                          !form.longitude
-                            ? "#000"
-                            : "#8B0000",
-                        shadowOffset: { width: 0, height: 2 },
-                        shadowOpacity:
-                          isGeneratingTags ||
-                          !form.description.trim() ||
-                          !form.latitude ||
-                          !form.longitude
-                            ? 0.1
-                            : 0.2,
-                        shadowRadius: 4,
-                        elevation: 3,
-                      }}
-                    >
-                      {isGeneratingTags ? (
-                        <>
-                          <ActivityIndicator size="small" color="#FFFFFF" />
-                          <Text
-                            style={{
-                              color: "#FFFFFF",
-                              fontSize: fontSize,
-                              fontWeight: "600",
-                              marginLeft: 12,
-                            }}
-                          >
-                            Generating Tags...
-                          </Text>
-                        </>
-                      ) : (
-                        <>
-                          <Ionicons name="sparkles" size={22} color="#FFFFFF" />
-                          <Text
-                            style={{
-                              color: "#FFFFFF",
-                              fontSize: fontSize,
-                              fontWeight: "600",
-                              marginLeft: 12,
-                            }}
-                          >
-                            Generate Tags
-                          </Text>
-                        </>
-                      )}
-                    </TouchableOpacity>
 
                     {/* Auto-generation Loading Indicator */}
                     {isGeneratingTags &&
@@ -2446,57 +2624,59 @@ export default function ReportScreen() {
                         </View>
                       )}
 
-                    {/* Info Card */}
-                    <View
-                      style={{
-                        backgroundColor: "#FFFBEB",
-                        borderRadius: 12,
-                        padding: 16,
-                        borderWidth: 1,
-                        borderColor: "#FEF3C7",
-                        marginBottom: 16,
-                        shadowColor: "#F59E0B",
-                        shadowOffset: { width: 0, height: 1 },
-                        shadowOpacity: 0.1,
-                        shadowRadius: 3,
-                        elevation: 2,
-                      }}
-                    >
+                    {/* Info Card - Only show when tags are generated */}
+                    {(form.allTags && form.allTags.length > 0) && (
                       <View
-                        style={{ flexDirection: "row", alignItems: "center" }}
+                        style={{
+                          backgroundColor: "#FFFBEB",
+                          borderRadius: 12,
+                          padding: 16,
+                          borderWidth: 1,
+                          borderColor: "#FEF3C7",
+                          marginBottom: 16,
+                          shadowColor: "#F59E0B",
+                          shadowOffset: { width: 0, height: 1 },
+                          shadowOpacity: 0.1,
+                          shadowRadius: 3,
+                          elevation: 2,
+                        }}
                       >
                         <View
-                          style={{
-                            width: 32,
-                            height: 32,
-                            borderRadius: 16,
-                            backgroundColor: "#FEF3C7",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            marginRight: 16,
-                            shadowColor: "#F59E0B",
-                            shadowOffset: { width: 0, height: 1 },
-                            shadowOpacity: 0.2,
-                            shadowRadius: 2,
-                            elevation: 1,
-                          }}
+                          style={{ flexDirection: "row", alignItems: "center" }}
                         >
-                          <Ionicons name="bulb" size={18} color="#D97706" />
-                        </View>
-                        <View style={{ flex: 1 }}>
-                          <Text
+                          <View
                             style={{
-                              color: "#92400E",
-                              fontSize: fontSize - 1,
-                              fontWeight: "600",
-                              lineHeight: (fontSize - 1) * 1.3,
+                              width: 32,
+                              height: 32,
+                              borderRadius: 16,
+                              backgroundColor: "#FEF3C7",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              marginRight: 16,
+                              shadowColor: "#F59E0B",
+                              shadowOffset: { width: 0, height: 1 },
+                              shadowOpacity: 0.2,
+                              shadowRadius: 2,
+                              elevation: 1,
                             }}
                           >
-                            You can remove up to 2 tags (minimum 3 required)
+                            <Ionicons name="bulb" size={18} color="#D97706" />
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text
+                              style={{
+                                color: "#92400E",
+                                fontSize: fontSize - 1,
+                                fontWeight: "600",
+                                lineHeight: (fontSize - 1) * 1.3,
+                              }}
+                          >
+                            AI has selected the most relevant tags for your incident
                           </Text>
+                          </View>
                         </View>
                       </View>
-                    </View>
+                    )}
 
                     {/* Error Messages */}
                     {tagsError && (
@@ -2533,39 +2713,6 @@ export default function ReportScreen() {
                       </View>
                     )}
 
-                    {tagSelectError && (
-                      <View
-                        style={{
-                          backgroundColor: "#FEF3F2",
-                          borderWidth: 1,
-                          borderColor: "#FECACA",
-                          borderRadius: 8,
-                          padding: 12,
-                          marginBottom: 16,
-                        }}
-                      >
-                        <View
-                          style={{ flexDirection: "row", alignItems: "center" }}
-                        >
-                          <Ionicons
-                            name="information-circle"
-                            size={16}
-                            color="#DC2626"
-                          />
-                          <Text
-                            style={{
-                              color: "#DC2626",
-                              fontSize: fontSize - 2,
-                              fontWeight: "500",
-                              marginLeft: 8,
-                              flex: 1,
-                            }}
-                          >
-                            {tagSelectError}
-                          </Text>
-                        </View>
-                      </View>
-                    )}
 
                     {/* Selected Tags */}
                     {form.tags.length > 0 && (
@@ -2687,13 +2834,12 @@ export default function ReportScreen() {
                           }}
                         >
                           {form.tags.map((tag, index) => (
-                            <TouchableOpacity
+                            <View
                               key={index}
-                              onPress={() => handleTagClick(tag)}
                               style={{
                                 paddingHorizontal: 14,
                                 paddingVertical: 8,
-                                borderRadius: 20,
+                                borderRadius: 6,
                                 backgroundColor: "#8B0000",
                                 borderWidth: 1,
                                 borderColor: "#8B0000",
@@ -2711,17 +2857,11 @@ export default function ReportScreen() {
                                   color: "#FFFFFF",
                                   fontSize: fontSize - 2,
                                   fontWeight: "500",
-                                  marginRight: 8,
                                 }}
                               >
                                 {tag}
                               </Text>
-                              <Ionicons
-                                name="close"
-                                size={16}
-                                color="#FFFFFF"
-                              />
-                            </TouchableOpacity>
+                            </View>
                           ))}
                         </View>
 

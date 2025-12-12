@@ -36,6 +36,7 @@ export interface ReportForm {
   description: string;
   assignedOffice: string | null;
   preferAnonymous: boolean;
-  tags: string[];
+  tags: string[]; // Selected display tags (3-5 tags)
+  allTags?: string[]; // All 20 generated tags for backend submission
 }
 

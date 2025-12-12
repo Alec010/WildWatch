@@ -32,7 +32,8 @@ export const useReportForm = () => {
       description: '',
       assignedOffice: null,
       preferAnonymous: false,
-      tags: []
+      tags: [],
+      allTags: []
     };
   });
 
@@ -58,7 +59,8 @@ export const useReportForm = () => {
       description: '',
       assignedOffice: null,
       preferAnonymous: false,
-      tags: []
+      tags: [],
+      allTags: []
     });
   }, []);
 
@@ -98,7 +100,7 @@ export const useReportForm = () => {
           return prev;
         }
       } else {
-        // This shouldn't happen in the new flow, but keeping for safety
+        // Allow adding tags from allTags (up to 5 max)
         if (prev.tags.length >= 5) {
           return prev; // Don't add if we're at maximum
         }
