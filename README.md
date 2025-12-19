@@ -546,11 +546,17 @@ WildWatch/
 
 ## Developers
 
-- **Alec R. Arela** - BSIT-3
+- **Alec R. Arela** - BSIT-4
   - *Kill them with kindness*
 
-- **Jhean Hecari B. Caag** - BSIT-3
+- **Jhean Hecari B. Caag** - BSIT-4
   - *Life goes on...*
 
-- **Jermaine L. Gadiano** - BSIT-3
+- **Jermaine L. Gadiano** - BSIT-4
   - *If You Begin To Regret, You'll Dull Your Future Decisions And Let Others Make Your Choices For You.*
+
+- **Katrina Amores** - BSIT-4
+  - *Progress over perfection.*
+
+- **Joshua Daniel Pusing** - BSIT-4
+  - *Code with purpose, build with passion.*
